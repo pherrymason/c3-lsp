@@ -136,7 +136,10 @@ func formOneBranchRule(ruleName string, ruleBranches []string) string {
 	builder.WriteString(makeHeader(ruleName))
 
 	branch := strings.Fields(ruleBranches[0])
-	if len(branch) == 1 {
+	if ruleBranches[0] == "" {
+		// special case for empty rules
+		builder.WriteString("optional(seq()),")
+	} else if len(branch) == 1 {
 		builder.WriteString("$.")
 		builder.WriteString(branch[0])
 		builder.WriteString(",")
