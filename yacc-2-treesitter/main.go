@@ -51,7 +51,7 @@ func convert(languageName, inputFile string) (string, error) {
 	content3 := removeSemanticActions(strings.TrimSpace(content2))
 
 	var builder strings.Builder
-	builder.WriteString(precedenceRules())
+	builder.WriteString(c3PrecedenceRules())
 	builder.WriteString(
 		fmt.Sprintf(
 			"module.exports = grammar({\n"+
@@ -62,7 +62,6 @@ func convert(languageName, inputFile string) (string, error) {
 		),
 	)
 
-	//rules := strings.Split(content3, ";")
 	rules := splitByDelimiter(content3, ";")
 	for _, rule := range rules {
 		if strings.TrimSpace(rule) == "" {
@@ -74,7 +73,6 @@ func convert(languageName, inputFile string) (string, error) {
 			println("lele")
 		}
 		splitRule := splitByDelimiter(strings.TrimSpace(rule), ":")
-		//splitRule := strings.Split(strings.TrimSpace(rule), ":")
 
 		ruleName := strings.TrimSpace(splitRule[0])
 		ruleBranches := splitByDelimiter(splitRule[1], "|")
@@ -89,8 +87,7 @@ func convert(languageName, inputFile string) (string, error) {
 		} else {
 			formedRule = formManyBranchRule(ruleName, ruleBranches)
 		}
-		// Hacer algo con la regla en Go
-		// Por ejemplo, imprimir la regla
+
 		println(formedRule)
 		builder.WriteString(formedRule)
 	}
@@ -107,43 +104,18 @@ func splitByDelimiter(input string, delimiter string) []string {
 
 	for i := 0; i < len(input); i++ {
 		if strings.HasPrefix(input[i:], delimiter) && !isInQuotes {
-			// Encontramos el delimitador fuera de comillas,
-			// agrega la regla actual a los resultados
 			result = append(result, strings.TrimSpace(currentRule))
 			currentRule = ""
-			i += len(delimiter) - 1 // Saltar el delimitador
+			i += len(delimiter) - 1 // skip delimiter
 		} else if input[i] == '\'' {
-			// Cambia el estado de isInQuotes cuando encontramos comillas simples
+			// Changes state of isInQuotes when finding quotes
 			isInQuotes = !isInQuotes
 			currentRule += string(input[i])
 		} else {
-			// Añade el carácter actual a la regla actual
 			currentRule += string(input[i])
 		}
 	}
-	/*
-		for _, char := range input {
-			switch char {
-			case ';':
-				if !isInQuotes {
-					// Encontramos un ';' fuera de comillas, agrega la regla actual a los resultados
-					result = append(result, strings.TrimSpace(currentRule))
-					currentRule = ""
-				} else {
-					// Si estamos dentro de comillas, simplemente añade el ';' a la regla actual
-					currentRule += string(char)
-				}
-			case '\'':
-				// Cambia el estado de isInQuotes cuando encontramos comillas simples
-				isInQuotes = !isInQuotes
-				currentRule += string(char)
-			default:
-				// Añade el carácter actual a la regla actual
-				currentRule += string(char)
-			}
-		}
-	*/
-	// Agrega la última regla después del último ';'
+
 	result = append(result, strings.TrimSpace(currentRule))
 
 	return result
@@ -200,7 +172,6 @@ func formManyBranchRule(ruleName string, ruleBranches []string) string {
 }
 
 func makeHeader(ruleName string) string {
-	// Implementa la lógica para generar la cabecera en Go
 	return fmt.Sprintf("%s: $ => ", ruleName)
 }
 
@@ -241,7 +212,7 @@ func countNonEmptyStrings(text []string) int {
 	return count
 }
 
-func precedenceRules() string {
+func c3PrecedenceRules() string {
 	prec := `
 const PREC = {
   // () [] . ++ --
