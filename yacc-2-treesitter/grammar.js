@@ -1025,7 +1025,12 @@ module.exports = grammar({
             ),
         ),
 
-        initializer_list: $ => $.'',
+        initializer_list: $ => seq(
+            '{',
+            $.opt_arg_list_trailing,
+            '}',
+        ),
+
         ct_case_stmt: $ => choice(
             seq(
                 $.CT_CASE,
@@ -1289,13 +1294,17 @@ module.exports = grammar({
                 $.IF,
                 $.optional_label,
                 $.paren_cond,
-                '',
+                '{',
+                $.switch_body,
+                '}',
             ),
             seq(
                 $.IF,
                 $.optional_label,
                 $.paren_cond,
-                '',
+                '{',
+                $.switch_body,
+                '}',
                 $.else_part,
             ),
             seq(
@@ -1659,21 +1668,27 @@ module.exports = grammar({
             ),
             seq(
                 $.ASM,
-                '',
+                '{',
+                $.asm_stmts,
+                '}',
             ),
             seq(
                 $.ASM,
                 $.AT_IDENT,
-                '',
+                '{',
+                $.asm_stmts,
+                '}',
             ),
             seq(
                 $.ASM,
-                '',
+                '{',
+                '}',
             ),
             seq(
                 $.ASM,
                 $.AT_IDENT,
-                '',
+                '{',
+                '}',
             ),
         ),
 
@@ -1707,7 +1722,12 @@ module.exports = grammar({
             ';',
         ),
 
-        compound_statement: $ => $.'',
+        compound_statement: $ => seq(
+            '{',
+            $.opt_stmt_list,
+            '}',
+        ),
+
         statement_list: $ => choice(
             $.statement,
             seq(
@@ -1725,24 +1745,30 @@ module.exports = grammar({
             seq(
                 $.SWITCH,
                 $.optional_label,
-                '',
+                '{',
+                $.switch_body,
+                '}',
             ),
             seq(
                 $.SWITCH,
                 $.optional_label,
-                '',
+                '{',
+                '}',
             ),
             seq(
                 $.SWITCH,
                 $.optional_label,
                 $.paren_cond,
-                '',
+                '{',
+                $.switch_body,
+                '}',
             ),
             seq(
                 $.SWITCH,
                 $.optional_label,
                 $.paren_cond,
-                '',
+                '{',
+                '}',
             ),
         ),
 
@@ -1960,7 +1986,12 @@ module.exports = grammar({
             $.struct_body,
         ),
 
-        struct_body: $ => $.'',
+        struct_body: $ => seq(
+            '{',
+            $.struct_declaration_list,
+            '}',
+        ),
+
         struct_declaration_list: $ => choice(
             $.struct_member_decl,
             seq(
@@ -2054,7 +2085,9 @@ module.exports = grammar({
             $.opt_interface_impl,
             $.enum_spec,
             $.opt_attributes,
-            '',
+            '{',
+            $.enum_list,
+            '}',
         ),
 
         faults: $ => choice(
@@ -2072,14 +2105,19 @@ module.exports = grammar({
                 $.TYPE_IDENT,
                 $.opt_interface_impl,
                 $.opt_attributes,
-                '',
+                '{',
+                $.faults,
+                '}',
             ),
             seq(
                 $.FAULT,
                 $.TYPE_IDENT,
                 $.opt_interface_impl,
                 $.opt_attributes,
-                '',
+                '{',
+                $.faults,
+                ',',
+                '}',
             ),
         ),
 
@@ -2366,13 +2404,17 @@ module.exports = grammar({
                 ')',
                 $.opt_attributes,
                 '=',
-                '',
+                '{',
+                $.opt_attributes,
+                '}',
             ),
             seq(
                 $.AT_TYPE_IDENT,
                 $.opt_attributes,
                 '=',
-                '',
+                '{',
+                $.opt_attributes,
+                '}',
             ),
         ),
 
@@ -2445,12 +2487,15 @@ $ => choice(
     seq(
         $.INTERFACE,
         $.TYPE_IDENT,
-        '',
+        '{',
+        '}',
     ),
     seq(
         $.INTERFACE,
         $.TYPE_IDENT,
-        '',
+        '{',
+        $.interface_body,
+        '}',
     ),
 ),
 

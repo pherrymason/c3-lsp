@@ -68,7 +68,7 @@ func convert(languageName, inputFile string) (string, error) {
 			continue
 		}
 
-		has := strings.HasPrefix(strings.TrimSpace(rule), "range_expr")
+		has := strings.HasPrefix(strings.TrimSpace(rule), "initializer_list")
 		if has {
 			println("lele")
 		}
@@ -122,7 +122,7 @@ func splitByDelimiter(input string, delimiter string) []string {
 }
 
 func removeSemanticActions(rule string) string {
-	semanticActionsRegex := regexp.MustCompile(`\{(.|\n)+?\}`)
+	semanticActionsRegex := regexp.MustCompile(`(?:^|[^'"])(\{(?:.|\n)+?\})(?:[^'"]|$)`)
 	commentsRegex := regexp.MustCompile(`(//.*?\n|/\*(.|\n)*?\*/)`)
 
 	result := semanticActionsRegex.ReplaceAllString(rule, "")
