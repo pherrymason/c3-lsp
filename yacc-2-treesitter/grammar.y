@@ -1187,7 +1187,7 @@ define_ident
 
 define_declaration
 	: DEF define_ident opt_attributes ';'
-	| DEF define_attribute opt_attributes';'
+	| DEF define_attribute opt_attributes ';'
 	| DEF TYPE_IDENT opt_attributes '=' typedef_type opt_attributes ';'
 	;
 

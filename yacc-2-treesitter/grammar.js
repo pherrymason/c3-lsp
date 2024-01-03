@@ -2460,201 +2460,173 @@ module.exports = grammar({
             seq(
                 $.DEF,
                 $.define_attribute,
-                $.opt_attributes';',
-),
-    seq(
-        $.DEF,
-        $.TYPE_IDENT,
-        $.opt_attributes,
-        '=',
-        $.typedef_type,
-        $.opt_attributes,
-        ';',
-    ),
-),
+                $.opt_attributes,
+                ';',
+            ),
+            seq(
+                $.DEF,
+                $.TYPE_IDENT,
+                $.opt_attributes,
+                '=',
+                $.typedef_type,
+                $.opt_attributes,
+                ';',
+            ),
+        ),
 
-interface_body: $ => choice(
-    $.func_defintion_decl,
-    seq(
-        $.interface_body,
-        $.func_defintion_decl,
-    ),
-),
+        interface_body: $ => choice(
+            $.func_defintion_decl,
+            seq(
+                $.interface_body,
+                $.func_defintion_decl,
+            ),
+        ),
 
-    interface_declaration
-:
-$ => choice(
-    seq(
-        $.INTERFACE,
-        $.TYPE_IDENT,
-        '{',
-        '}',
-    ),
-    seq(
-        $.INTERFACE,
-        $.TYPE_IDENT,
-        '{',
-        $.interface_body,
-        '}',
-    ),
-),
+        interface_declaration: $ => choice(
+            seq(
+                $.INTERFACE,
+                $.TYPE_IDENT,
+                '{',
+                '}',
+            ),
+            seq(
+                $.INTERFACE,
+                $.TYPE_IDENT,
+                '{',
+                $.interface_body,
+                '}',
+            ),
+        ),
 
-    distinct_declaration
-:
-$ => seq(
-    $.DISTINCT,
-    $.TYPE_IDENT,
-    $.opt_interface_impl,
-    $.opt_attributes,
-    '=',
-    $.opt_inline,
-    $.type,
-    ';',
-),
+        distinct_declaration: $ => seq(
+            $.DISTINCT,
+            $.TYPE_IDENT,
+            $.opt_interface_impl,
+            $.opt_attributes,
+            '=',
+            $.opt_inline,
+            $.type,
+            ';',
+        ),
 
-    tl_ct_if
-:
-$ => seq(
-    $.CT_IF,
-    $.constant_expr,
-    ':',
-    $.opt_tl_stmts,
-    $.tl_ct_if_tail,
-),
+        tl_ct_if: $ => seq(
+            $.CT_IF,
+            $.constant_expr,
+            ':',
+            $.opt_tl_stmts,
+            $.tl_ct_if_tail,
+        ),
 
-    tl_ct_if_tail
-:
-$ => choice(
-    $.CT_ENDIF,
-    seq(
-        $.CT_ELSE,
-        $.opt_tl_stmts,
-        $.CT_ENDIF,
-    ),
-),
+        tl_ct_if_tail: $ => choice(
+            $.CT_ENDIF,
+            seq(
+                $.CT_ELSE,
+                $.opt_tl_stmts,
+                $.CT_ENDIF,
+            ),
+        ),
 
-    tl_ct_switch
-:
-$ => seq(
-    $.ct_switch,
-    $.tl_ct_switch_body,
-    $.CT_ENDSWITCH,
-),
+        tl_ct_switch: $ => seq(
+            $.ct_switch,
+            $.tl_ct_switch_body,
+            $.CT_ENDSWITCH,
+        ),
 
-    module_param
-:
-$ => choice(
-    $.CONST_IDENT,
-    $.TYPE_IDENT,
-),
+        module_param: $ => choice(
+            $.CONST_IDENT,
+            $.TYPE_IDENT,
+        ),
 
-    module_params
-:
-$ => choice(
-    $.module_param,
-    seq(
-        $.module_params,
-        ',',
-        $.module_param,
-    ),
-),
+        module_params: $ => choice(
+            $.module_param,
+            seq(
+                $.module_params,
+                ',',
+                $.module_param,
+            ),
+        ),
 
-    module
-:
-$ => choice(
-    seq(
-        $.MODULE,
-        $.path_ident,
-        $.opt_attributes,
-        ';',
-    ),
-    seq(
-        $.MODULE,
-        $.path_ident,
-        $.LGENPAR,
-        $.module_params,
-        $.RGENPAR,
-        $.opt_attributes,
-        ';',
-    ),
-),
+        module: $ => choice(
+            seq(
+                $.MODULE,
+                $.path_ident,
+                $.opt_attributes,
+                ';',
+            ),
+            seq(
+                $.MODULE,
+                $.path_ident,
+                $.LGENPAR,
+                $.module_params,
+                $.RGENPAR,
+                $.opt_attributes,
+                ';',
+            ),
+        ),
 
-    import_paths
-:
-$ => choice(
-    $.path_ident,
-    seq(
-        $.path_ident,
-        ',',
-        $.path_ident,
-    ),
-),
+        import_paths: $ => choice(
+            $.path_ident,
+            seq(
+                $.path_ident,
+                ',',
+                $.path_ident,
+            ),
+        ),
 
-    import_decl
-:
-$ => seq(
-    $.IMPORT,
-    $.import_paths,
-    $.opt_attributes,
-    ';',
-),
+        import_decl: $ => seq(
+            $.IMPORT,
+            $.import_paths,
+            $.opt_attributes,
+            ';',
+        ),
 
-    translation_unit
-:
-$ => choice(
-    $.top_level_statements,
-    $.empty,
-),
+        translation_unit: $ => choice(
+            $.top_level_statements,
+            $.empty,
+        ),
 
-    top_level_statements
-:
-$ => choice(
-    $.top_level,
-    seq(
-        $.top_level_statements,
-        $.top_level,
-    ),
-),
+        top_level_statements: $ => choice(
+            $.top_level,
+            seq(
+                $.top_level_statements,
+                $.top_level,
+            ),
+        ),
 
-    opt_extern
-:
-$ => choice(
-    $.EXTERN,
-    $.empty,
-),
+        opt_extern: $ => choice(
+            $.EXTERN,
+            $.empty,
+        ),
 
-    top_level
-:
-$ => choice(
-    $.module,
-    $.import_decl,
-    seq(
-        $.opt_extern,
-        $.func_definition,
-    ),
-    seq(
-        $.opt_extern,
-        $.const_declaration,
-    ),
-    seq(
-        $.opt_extern,
-        $.global_declaration,
-    ),
-    $.ct_assert_stmt,
-    $.ct_echo_stmt,
-    $.ct_include_stmt,
-    $.tl_ct_if,
-    $.tl_ct_switch,
-    $.struct_declaration,
-    $.fault_declaration,
-    $.enum_declaration,
-    $.macro_declaration,
-    $.define_declaration,
-    $.bitstruct_declaration,
-    $.distinct_declaration,
-    $.interface_declaration,
-),
+        top_level: $ => choice(
+            $.module,
+            $.import_decl,
+            seq(
+                $.opt_extern,
+                $.func_definition,
+            ),
+            seq(
+                $.opt_extern,
+                $.const_declaration,
+            ),
+            seq(
+                $.opt_extern,
+                $.global_declaration,
+            ),
+            $.ct_assert_stmt,
+            $.ct_echo_stmt,
+            $.ct_include_stmt,
+            $.tl_ct_if,
+            $.tl_ct_switch,
+            $.struct_declaration,
+            $.fault_declaration,
+            $.enum_declaration,
+            $.macro_declaration,
+            $.define_declaration,
+            $.bitstruct_declaration,
+            $.distinct_declaration,
+            $.interface_declaration,
+        ),
 
-}
-})
-;
+    }
+});
