@@ -69,10 +69,15 @@ func convert(languageName, inputFile string) (string, error) {
 			continue
 		}
 
-		splitRule := strings.Split(strings.TrimSpace(rule), ":")
-		//splitRule := splitByDelimiter(strings.TrimSpace(rule))
+		has := strings.HasPrefix(strings.TrimSpace(rule), "range_expr")
+		if has {
+			println("lele")
+		}
+		splitRule := splitByDelimiter(strings.TrimSpace(rule), ":")
+		//splitRule := strings.Split(strings.TrimSpace(rule), ":")
+
 		ruleName := strings.TrimSpace(splitRule[0])
-		ruleBranches := strings.Split(splitRule[1], "|")
+		ruleBranches := splitByDelimiter(splitRule[1], "|")
 
 		if len(ruleBranches) == 0 {
 			fmt.Printf("Rule %s has no branches\n", ruleName)
@@ -110,12 +115,34 @@ func splitByDelimiter(input string, delimiter string) []string {
 		} else if input[i] == '\'' {
 			// Cambia el estado de isInQuotes cuando encontramos comillas simples
 			isInQuotes = !isInQuotes
+			currentRule += string(input[i])
 		} else {
 			// Añade el carácter actual a la regla actual
 			currentRule += string(input[i])
 		}
 	}
-
+	/*
+		for _, char := range input {
+			switch char {
+			case ';':
+				if !isInQuotes {
+					// Encontramos un ';' fuera de comillas, agrega la regla actual a los resultados
+					result = append(result, strings.TrimSpace(currentRule))
+					currentRule = ""
+				} else {
+					// Si estamos dentro de comillas, simplemente añade el ';' a la regla actual
+					currentRule += string(char)
+				}
+			case '\'':
+				// Cambia el estado de isInQuotes cuando encontramos comillas simples
+				isInQuotes = !isInQuotes
+				currentRule += string(char)
+			default:
+				// Añade el carácter actual a la regla actual
+				currentRule += string(char)
+			}
+		}
+	*/
 	// Agrega la última regla después del último ';'
 	result = append(result, strings.TrimSpace(currentRule))
 
