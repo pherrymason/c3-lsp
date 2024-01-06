@@ -1,0 +1,23 @@
+{
+  "name": "c3-lsp",
+  "displayName": "c3-lsp",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.40.0"
+  },
+  "activationEvents": [
+    "onLanguage:c3"
+  ],
+  "contributes": {
+      "languages": [
+        {
+          "id": "c3",
+          "extensions": [".c3"]
+        }
+      ]
+  },
+  "main": "./extension.js",
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}
