@@ -21,8 +21,6 @@ func (l *Language) BuildCompletionList(text string, line protocol.UInteger, char
 	for _, tag := range l.identifiers {
 		items = append(items, protocol.CompletionItem{
 			Label: tag,
-			//InsertText: s.buildInsertForTag(tag.Name, prefix, notebook.Config),
-			//Detail:     stringPtr(fmt.Sprintf("%d %s", tag.NoteCount, strutil.Pluralize("note", tag.NoteCount))),
 		})
 	}
 
@@ -30,7 +28,14 @@ func (l *Language) BuildCompletionList(text string, line protocol.UInteger, char
 }
 
 func debugParser(n string) {
-	f, _ := os.Create("/Volumes/Development/raul/c3/go-lsp/parsing.txt")
+	workingDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// Crear el archivo en el directorio de trabajo actual
+	filePath := workingDir + "/parsing.txt"
+	f, _ := os.Create(filePath)
 	defer f.Close()
 
 	d2 := []byte(n)

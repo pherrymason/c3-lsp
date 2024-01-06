@@ -26,7 +26,6 @@ func FindIdentifiers(source string) []string {
 	// Query with predicates
 	query := `(
 		(identifier) @constant
-		
 	)`
 
 	sourceCode := []byte(source)
@@ -34,9 +33,6 @@ func FindIdentifiers(source string) []string {
 	q, _ := sitter.NewQuery([]byte(query), GetLanguage())
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, n.RootNode())
-
-	//parsed := fmt.Sprint(n.RootNode())
-	//fmt.Print(parsed)
 
 	// Iterate over query results
 	var identifiers []string
@@ -49,7 +45,6 @@ func FindIdentifiers(source string) []string {
 		// Apply predicates filtering
 		m = qc.FilterPredicates(m, sourceCode)
 		for _, c := range m.Captures {
-			//fmt.Println(c.Node.Content(sourceCode))
 			content := c.Node.Content(sourceCode)
 			if _, exists := found[content]; !exists {
 				found[content] = true
@@ -57,8 +52,6 @@ func FindIdentifiers(source string) []string {
 			}
 		}
 	}
-
-	// Remove duplicates
 
 	return identifiers
 }
