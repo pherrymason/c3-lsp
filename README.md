@@ -1,4 +1,6 @@
 # C3 LSP
+![build result](https://github.com/pherrymason/c3-lsp/actions/workflows/main.yml/badge.svg)  
+
 WIP LSP for [C3 language](https://github.com/c3lang/c3c)  
 Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 
