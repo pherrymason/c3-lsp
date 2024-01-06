@@ -17,14 +17,6 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document) {
 }
 
 func (l *Language) BuildCompletionList(text string, line protocol.UInteger, character protocol.UInteger) []protocol.CompletionItem {
-	/*parser := sitter.NewParser()
-	parser.SetLanguage(c3.GetLanguage())
-
-	sourceCode := []byte(text)
-	tree := parser.Parse(nil, sourceCode)
-	n := tree.RootNode()
-
-	debugParser(fmt.Sprint(n))*/
 	var items []protocol.CompletionItem
 	for _, tag := range l.identifiers {
 		items = append(items, protocol.CompletionItem{
@@ -33,10 +25,6 @@ func (l *Language) BuildCompletionList(text string, line protocol.UInteger, char
 			//Detail:     stringPtr(fmt.Sprintf("%d %s", tag.NoteCount, strutil.Pluralize("note", tag.NoteCount))),
 		})
 	}
-
-	items = append(items, protocol.CompletionItem{
-		Label: "talcual jejejeje",
-	})
 
 	return items
 }

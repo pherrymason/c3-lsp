@@ -40,6 +40,7 @@ func FindIdentifiers(source string) []string {
 
 	// Iterate over query results
 	var identifiers []string
+	found := make(map[string]bool)
 	for {
 		m, ok := qc.NextMatch()
 		if !ok {
@@ -49,9 +50,15 @@ func FindIdentifiers(source string) []string {
 		m = qc.FilterPredicates(m, sourceCode)
 		for _, c := range m.Captures {
 			//fmt.Println(c.Node.Content(sourceCode))
-			identifiers = append(identifiers, c.Node.Content(sourceCode))
+			content := c.Node.Content(sourceCode)
+			if _, exists := found[content]; !exists {
+				found[content] = true
+				identifiers = append(identifiers, content)
+			}
 		}
 	}
+
+	// Remove duplicates
 
 	return identifiers
 }
