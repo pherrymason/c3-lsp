@@ -1,9 +1,10 @@
-package c3
+package lsp
 
 import (
 	"fmt"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 	"strings"
 	"testing"
 )
@@ -13,7 +14,18 @@ func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
 
 	identifiers := FindIdentifiers(source, false)
 
-	assert.Equal(t, []string{"var0", "var1"}, identifiers)
+	assert.Equal(t, []Identifier{
+		{
+			name:                "var0",
+			kind:                protocol.CompletionItemKindVariable,
+			declarationPosition: protocol.Position{0, 4},
+		},
+		{
+			name:                "var1",
+			kind:                protocol.CompletionItemKindVariable,
+			declarationPosition: protocol.Position{0, 18},
+		},
+	}, identifiers)
 }
 
 func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
@@ -21,19 +33,35 @@ func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
 
 	identifiers := FindIdentifiers(source, false)
 
-	assert.Equal(t, []string{"var0", "var1"}, identifiers)
+	assert.Equal(t, []Identifier{
+		{
+			name:                "var0",
+			kind:                protocol.CompletionItemKindVariable,
+			declarationPosition: protocol.Position{0, 4},
+		},
+		{
+			name:                "var1",
+			kind:                protocol.CompletionItemKindVariable,
+			declarationPosition: protocol.Position{0, 18},
+		},
+	}, identifiers)
 }
 
 func TestFindIdentifiers_finds_function_declaration_identifiers(t *testing.T) {
-	source := `
-	fn void test() {
+	source := `fn void test() {
 		return 1;
 	}
 	`
 
 	identifiers := FindIdentifiers(source, false)
 
-	assert.Equal(t, []string{"test"}, identifiers)
+	assert.Equal(t, []Identifier{
+		{
+			name:                "test",
+			kind:                protocol.CompletionItemKindFunction,
+			declarationPosition: protocol.Position{0, 8},
+		},
+	}, identifiers)
 }
 
 func dfs(n *sitter.Node, level int) {

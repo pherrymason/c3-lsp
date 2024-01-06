@@ -2,25 +2,30 @@ package lsp
 
 import "C"
 import (
-	"github.com/pherrymason/c3-lsp/c3"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"os"
 )
 
+type Identifier struct {
+	name                string
+	kind                protocol.CompletionItemKind
+	declarationPosition protocol.Position
+}
+
 type Language struct {
-	identifiers []string
+	identifiers []Identifier
 }
 
 func (l *Language) RefreshDocumentIdentifiers(doc *document) {
 	// Reparse document and find identifiers
-	l.identifiers = c3.FindIdentifiers(doc.Content)
+	l.identifiers = FindIdentifiers(doc.Content, false)
 }
 
 func (l *Language) BuildCompletionList(text string, line protocol.UInteger, character protocol.UInteger) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 	for _, tag := range l.identifiers {
 		items = append(items, protocol.CompletionItem{
-			Label: tag,
+			Label: tag.name,
 		})
 	}
 

@@ -1,4 +1,4 @@
-package c3
+package lsp
 
 //#include "tree_sitter/parser.h"
 //TSLanguage *tree_sitter_c3();
@@ -6,6 +6,7 @@ import "C"
 import (
 	"fmt"
 	sitter "github.com/smacker/go-tree-sitter"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 	"unsafe"
 )
 
@@ -21,7 +22,7 @@ func GetLanguage() *sitter.Language {
 	return sitter.NewLanguage(ptr)
 }
 
-func FindIdentifiers(source string, debug bool) []string {
+func FindIdentifiers(source string, debug bool) []Identifier {
 	parser := getParser()
 
 	sourceCode := []byte(source)
@@ -39,7 +40,7 @@ func FindIdentifiers(source string, debug bool) []string {
 	return identifiers
 }
 
-func FindVariableDeclarations(sourceCode []byte, n *sitter.Tree) []string {
+func FindVariableDeclarations(sourceCode []byte, n *sitter.Tree) []Identifier {
 	query := `(var_declaration (identifier) @variable_name)`
 	q, err := sitter.NewQuery([]byte(query), GetLanguage())
 	if err != nil {
@@ -49,7 +50,7 @@ func FindVariableDeclarations(sourceCode []byte, n *sitter.Tree) []string {
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, n.RootNode())
 
-	var identifiers []string
+	var identifiers []Identifier
 	found := make(map[string]bool)
 	for {
 		m, ok := qc.NextMatch()
@@ -63,7 +64,13 @@ func FindVariableDeclarations(sourceCode []byte, n *sitter.Tree) []string {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifiers = append(identifiers, content)
+				identifier := Identifier{
+					name:                content,
+					kind:                protocol.CompletionItemKindVariable,
+					declarationPosition: protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
+				}
+
+				identifiers = append(identifiers, identifier)
 			}
 		}
 	}
@@ -71,7 +78,7 @@ func FindVariableDeclarations(sourceCode []byte, n *sitter.Tree) []string {
 	return identifiers
 }
 
-func FindFunctionDeclarations(sourceCode []byte, n *sitter.Tree) []string {
+func FindFunctionDeclarations(sourceCode []byte, n *sitter.Tree) []Identifier {
 	query := `(function_declaration name: (identifier) @function_name)`
 	q, err := sitter.NewQuery([]byte(query), GetLanguage())
 	if err != nil {
@@ -81,7 +88,7 @@ func FindFunctionDeclarations(sourceCode []byte, n *sitter.Tree) []string {
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, n.RootNode())
 
-	var identifiers []string
+	var identifiers []Identifier
 	found := make(map[string]bool)
 	for {
 		m, ok := qc.NextMatch()
@@ -95,7 +102,13 @@ func FindFunctionDeclarations(sourceCode []byte, n *sitter.Tree) []string {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifiers = append(identifiers, content)
+				identifier := Identifier{
+					name:                content,
+					kind:                protocol.CompletionItemKindFunction,
+					declarationPosition: protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
+				}
+
+				identifiers = append(identifiers, identifier)
 			}
 		}
 	}
