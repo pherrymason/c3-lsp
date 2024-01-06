@@ -18,12 +18,12 @@ func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
 		{
 			name:                "var0",
 			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{0, 4},
+			declarationPosition: protocol.Position{Character: 4},
 		},
 		{
 			name:                "var1",
 			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{0, 18},
+			declarationPosition: protocol.Position{Character: 18},
 		},
 	}, identifiers)
 }
@@ -37,12 +37,12 @@ func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
 		{
 			name:                "var0",
 			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{0, 4},
+			declarationPosition: protocol.Position{Character: 4},
 		},
 		{
 			name:                "var1",
 			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{0, 18},
+			declarationPosition: protocol.Position{Character: 18},
 		},
 	}, identifiers)
 }
@@ -59,7 +59,31 @@ func TestFindIdentifiers_finds_function_declaration_identifiers(t *testing.T) {
 		{
 			name:                "test",
 			kind:                protocol.CompletionItemKindFunction,
-			declarationPosition: protocol.Position{0, 8},
+			declarationPosition: protocol.Position{Character: 8},
+		},
+	}, identifiers)
+}
+
+func TestFindIdentifiers_should_find_different_types(t *testing.T) {
+	source := `
+	int var0 = 2;
+	fn void test() {
+		return 1;
+	}
+	`
+
+	identifiers := FindIdentifiers(source, false)
+
+	assert.Equal(t, []Identifier{
+		{
+			name:                "var0",
+			kind:                protocol.CompletionItemKindVariable,
+			declarationPosition: protocol.Position{Line: 1, Character: 5},
+		},
+		{
+			name:                "test",
+			kind:                protocol.CompletionItemKindFunction,
+			declarationPosition: protocol.Position{Line: 2, Character: 9},
 		},
 	}, identifiers)
 }

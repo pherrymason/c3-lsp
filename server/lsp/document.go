@@ -6,6 +6,7 @@ import (
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
+	"unicode"
 )
 
 type documentStore struct {
@@ -69,6 +70,53 @@ func (s *documentStore) Get(pathOrURI string) (*document, bool) {
 
 	d, ok := s.documents[path]
 	return d, ok
+}
+
+func (s *documentStore) FindDeclaration(language *Language, doc *document, params *protocol.DeclarationParams) (protocol.Location, bool) {
+
+	word := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
+	identifier, err := language.FindIdentifierDeclaration(word)
+	found := err == nil
+
+	return protocol.Location{
+		URI: doc.URI,
+		Range: protocol.Range{
+			protocol.Position{identifier.declarationPosition.Line, identifier.declarationPosition.Character},
+			protocol.Position{identifier.declarationPosition.Line, identifier.declarationPosition.Character + 1},
+		},
+	}, found
+	/*
+		OriginSelectionRange: &protocol.Range{
+			protocol.Position{0, 0},
+			protocol.Position{0, 0},
+		},
+		TargetURI: doc.URI,
+		TargetSelectionRange:
+	}*/
+}
+
+func wordInPosition(texto string, posicion int) string {
+	// Encontrar el inicio de la palabra
+	inicioPalabra := 0
+	for i := posicion; i >= 0; i-- {
+		if !unicode.IsLetter(rune(texto[i])) {
+			inicioPalabra = i + 1
+			break
+		}
+	}
+
+	// Encontrar el final de la palabra
+	finalPalabra := len(texto) - 1
+	for i := posicion; i < len(texto); i++ {
+		if !unicode.IsLetter(rune(texto[i])) {
+			finalPalabra = i - 1
+			break
+		}
+	}
+
+	// Extraer la palabra
+	palabra := texto[inicioPalabra : finalPalabra+1]
+	return palabra
 }
 
 type document struct {

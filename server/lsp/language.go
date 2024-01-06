@@ -2,6 +2,7 @@ package lsp
 
 import "C"
 import (
+	"errors"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"os"
 )
@@ -26,10 +27,21 @@ func (l *Language) BuildCompletionList(text string, line protocol.UInteger, char
 	for _, tag := range l.identifiers {
 		items = append(items, protocol.CompletionItem{
 			Label: tag.name,
+			Kind:  &tag.kind,
 		})
 	}
 
 	return items
+}
+
+func (l *Language) FindIdentifierDeclaration(identifier string) (Identifier, error) {
+	for i := 0; i < len(l.identifiers); i++ {
+		if l.identifiers[i].name == identifier {
+			return l.identifiers[i], nil
+		}
+	}
+
+	return Identifier{}, errors.New("no se encontró el string en el array")
 }
 
 func debugParser(n string) {

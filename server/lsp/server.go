@@ -77,10 +77,7 @@ func NewServer(opts ServerOpts) *Server {
 
 		if doc != nil {
 			server.language.RefreshDocumentIdentifiers(doc)
-			//server.refreshDiagnosticsOfDocument(doc, context.Notify, false)
 		}
-
-		glspServer.Log.Debug("GOOD!!!!!!")
 
 		return nil
 	}
@@ -92,7 +89,7 @@ func NewServer(opts ServerOpts) *Server {
 		}
 
 		doc.ApplyChanges(params.ContentChanges)
-		//server.refreshDiagnosticsOfDocument(doc, context.Notify, true)
+		server.language.RefreshDocumentIdentifiers(doc)
 		return nil
 	}
 
@@ -106,13 +103,18 @@ func NewServer(opts ServerOpts) *Server {
 	}
 
 	handler.TextDocumentDeclaration = func(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
+		doc, ok := server.documents.Get(params.TextDocument.URI)
+		if !ok {
+			return nil, nil
+		}
 
-		//doc, ok := server.documents.Get(params.TextDocument.URI)
-		//if !ok {
-		//	return nil, nil
-		//}
+		declaration, found := server.documents.FindDeclaration(&server.language, doc, params)
 
-		return nil, nil
+		if found {
+			return declaration, nil
+		} else {
+			return nil, nil
+		}
 	}
 
 	handler.TextDocumentCompletion = func(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
@@ -123,13 +125,6 @@ func NewServer(opts ServerOpts) *Server {
 		}
 
 		suggestions := server.language.BuildCompletionList(doc.Content, params.Position.Line+1, params.Position.Character-1)
-
-		/*
-			mapped := lo.Map(
-				suggestions,
-				func(item protocol.CompletionItem) {
-
-				})*/
 
 		return suggestions, nil
 	}

@@ -7,6 +7,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 ## Server
 Features:
 - Naïve auto completion items from same document.
+- Go to declaration (variables and functions, only on same file).
 
 
 
