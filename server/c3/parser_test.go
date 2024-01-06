@@ -26,7 +26,7 @@ func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
 
 func TestFindIdentifiers_finds_function_declaration_identifiers(t *testing.T) {
 	source := `
-	func void test() {
+	fn void test() {
 		return 1;
 	}
 	`
