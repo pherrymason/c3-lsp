@@ -7,7 +7,9 @@ Features:
 
 
 ## YACC to TreeSitter 
-Script based on https://github.com/miks1965/yacc-to-tree-sitter to convert C3 yacc grammar file to treesitter grammar.js
+Experiment based on https://github.com/miks1965/yacc-to-tree-sitter to convert C3 yacc grammar file to treesitter grammar.js
+
+It is not complete, as it ignores lexical rules.
 
 
 
@@ -18,8 +20,7 @@ Script based on https://github.com/miks1965/yacc-to-tree-sitter to convert C3 ya
 
 
 
-
-### Useful links:
+## Useful links:
 - treesitter
   - Queries docs: https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries
   - Tree-sitter - a new parsing system for programming tools (video) https://www.thestrangeloop.com/2018/tree-sitter---a-new-parsing-system-for-programming-tools.html
