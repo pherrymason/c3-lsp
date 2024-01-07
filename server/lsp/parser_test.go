@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -15,19 +16,19 @@ func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
 
 	identifiers := FindIdentifiers(&doc)
 
-	assert.Equal(t, []Identifier{
-		{
-			name:                "var0",
-			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{Character: 4},
-			documentURI:         "x",
-		},
-		{
-			name:                "var1",
-			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{Character: 18},
-			documentURI:         "x",
-		},
+	assert.Equal(t, []Indexable{
+		indexables.NewVariableIndexable(
+			"var0",
+			"x",
+			protocol.Position{Character: 4},
+			protocol.CompletionItemKindVariable,
+		),
+		indexables.NewVariableIndexable(
+			"var1",
+			"x",
+			protocol.Position{Character: 18},
+			protocol.CompletionItemKindVariable,
+		),
 	}, identifiers)
 }
 
@@ -37,19 +38,19 @@ func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
 
 	identifiers := FindIdentifiers(&doc)
 
-	assert.Equal(t, []Identifier{
-		{
-			name:                "var0",
-			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{Character: 4},
-			documentURI:         "x",
-		},
-		{
-			name:                "var1",
-			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{Character: 18},
-			documentURI:         "x",
-		},
+	assert.Equal(t, []Indexable{
+		indexables.NewVariableIndexable(
+			"var0",
+			"x",
+			protocol.Position{Character: 4},
+			protocol.CompletionItemKindVariable,
+		),
+		indexables.NewVariableIndexable(
+			"var1",
+			"x",
+			protocol.Position{Character: 18},
+			protocol.CompletionItemKindVariable,
+		),
 	}, identifiers)
 }
 
@@ -62,13 +63,13 @@ func TestFindIdentifiers_finds_function_declaration_identifiers(t *testing.T) {
 
 	identifiers := FindIdentifiers(&doc)
 
-	assert.Equal(t, []Identifier{
-		{
-			name:                "test",
-			kind:                protocol.CompletionItemKindFunction,
-			declarationPosition: protocol.Position{Character: 8},
-			documentURI:         "x",
-		},
+	assert.Equal(t, []Indexable{
+		indexables.NewFunctionIndexable(
+			"test",
+			"x",
+			protocol.Position{Character: 8},
+			protocol.CompletionItemKindFunction,
+		),
 	}, identifiers)
 }
 
@@ -83,19 +84,19 @@ func TestFindIdentifiers_should_find_different_types(t *testing.T) {
 
 	identifiers := FindIdentifiers(&doc)
 
-	assert.Equal(t, []Identifier{
-		{
-			name:                "var0",
-			kind:                protocol.CompletionItemKindVariable,
-			declarationPosition: protocol.Position{Line: 1, Character: 5},
-			documentURI:         "x",
-		},
-		{
-			name:                "test",
-			kind:                protocol.CompletionItemKindFunction,
-			declarationPosition: protocol.Position{Line: 2, Character: 9},
-			documentURI:         "x",
-		},
+	assert.Equal(t, []Indexable{
+		indexables.NewVariableIndexable(
+			"var0",
+			"x",
+			protocol.Position{Line: 1, Character: 5},
+			protocol.CompletionItemKindVariable,
+		),
+		indexables.NewFunctionIndexable(
+			"test",
+			"x",
+			protocol.Position{Line: 2, Character: 9},
+			protocol.CompletionItemKindFunction,
+		),
 	}, identifiers)
 }
 

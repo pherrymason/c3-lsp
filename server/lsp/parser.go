@@ -4,6 +4,7 @@ package lsp
 //TSLanguage *tree_sitter_c3();
 import "C"
 import (
+	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"unsafe"
@@ -36,17 +37,18 @@ func GetParsedTreeFromString(source string) *sitter.Tree {
 	return n
 }
 
-func FindIdentifiers(doc *Document) []Identifier {
-	// Iterate over query results
+func FindIdentifiers(doc *Document) []Indexable {
 	variableIdentifiers := FindVariableDeclarations(doc)
 	functionIdentifiers := FindFunctionDeclarations(doc)
 
-	identifiers := append(variableIdentifiers, functionIdentifiers...)
+	var elements []Indexable
+	elements = append(elements, variableIdentifiers...)
+	elements = append(elements, functionIdentifiers...)
 
-	return identifiers
+	return elements
 }
 
-func FindVariableDeclarations(doc *Document) []Identifier {
+func FindVariableDeclarations(doc *Document) []Indexable {
 	query := `(var_declaration (identifier) @variable_name)`
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {
@@ -56,7 +58,7 @@ func FindVariableDeclarations(doc *Document) []Identifier {
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, doc.parsedTree.RootNode())
 
-	var identifiers []Identifier
+	var identifiers []Indexable
 	found := make(map[string]bool)
 	sourceCode := []byte(doc.Content)
 	for {
@@ -71,12 +73,12 @@ func FindVariableDeclarations(doc *Document) []Identifier {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifier := Identifier{
-					name:                content,
-					kind:                protocol.CompletionItemKindVariable,
-					declarationPosition: protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
-					documentURI:         doc.URI,
-				}
+				identifier := indexables.NewVariableIndexable(
+					content,
+					doc.URI,
+					protocol.Position{Line: c.Node.StartPoint().Row, Character: c.Node.StartPoint().Column},
+					protocol.CompletionItemKindVariable,
+				)
 
 				identifiers = append(identifiers, identifier)
 			}
@@ -86,7 +88,7 @@ func FindVariableDeclarations(doc *Document) []Identifier {
 	return identifiers
 }
 
-func FindFunctionDeclarations(doc *Document) []Identifier {
+func FindFunctionDeclarations(doc *Document) []Indexable {
 	query := `(function_declaration name: (identifier) @function_name)`
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {
@@ -96,7 +98,7 @@ func FindFunctionDeclarations(doc *Document) []Identifier {
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, doc.parsedTree.RootNode())
 
-	var identifiers []Identifier
+	var identifiers []Indexable
 	found := make(map[string]bool)
 	sourceCode := []byte(doc.Content)
 	for {
@@ -111,12 +113,12 @@ func FindFunctionDeclarations(doc *Document) []Identifier {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifier := Identifier{
-					name:                content,
-					kind:                protocol.CompletionItemKindFunction,
-					declarationPosition: protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
-					documentURI:         doc.URI,
-				}
+				identifier := indexables.NewFunctionIndexable(
+					content,
+					doc.URI,
+					protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
+					protocol.CompletionItemKindFunction,
+				)
 
 				identifiers = append(identifiers, identifier)
 			}

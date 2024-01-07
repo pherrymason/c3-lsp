@@ -105,6 +105,35 @@ func NewServer(opts ServerOpts) *Server {
 		return nil
 	}
 
+	handler.TextDocumentHover = func(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+		doc, ok := server.documents.Get(params.TextDocument.URI)
+		if !ok {
+			return nil, nil
+		}
+		word := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
+
+		server.server.Log.Debug(fmt.Sprint("HOVER requested: ", word))
+
+		identifier, err := server.language.FindIdentifierDeclaration(word)
+		if err != nil {
+			return &protocol.Hover{
+				Contents: protocol.MarkupContent{
+					Kind:  protocol.MarkupKindMarkdown,
+					Value: "not found",
+				},
+			}, nil
+		}
+
+		//contents := server.language.FindHoverInformation("x")
+
+		return &protocol.Hover{
+			Contents: protocol.MarkupContent{
+				Kind:  protocol.MarkupKindMarkdown,
+				Value: identifier.GetName(),
+			},
+		}, nil
+	}
+
 	handler.TextDocumentDeclaration = func(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
 		doc, ok := server.documents.Get(params.TextDocument.URI)
 		if !ok {
@@ -116,10 +145,10 @@ func NewServer(opts ServerOpts) *Server {
 
 		if err == nil {
 			return protocol.Location{
-				URI: identifier.documentURI,
+				URI: identifier.GetDocumentURI(),
 				Range: protocol.Range{
-					protocol.Position{identifier.declarationPosition.Line, identifier.declarationPosition.Character},
-					protocol.Position{identifier.declarationPosition.Line, identifier.declarationPosition.Character + 1},
+					protocol.Position{identifier.GetDeclarationPosition().Line, identifier.GetDeclarationPosition().Character},
+					protocol.Position{identifier.GetDeclarationPosition().Line, identifier.GetDeclarationPosition().Character + 1},
 				},
 			}, nil
 		}
