@@ -6,7 +6,6 @@ import (
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"unicode"
 )
 
 type documentStore struct {
@@ -70,48 +69,4 @@ func (s *documentStore) Get(pathOrURI string) (*Document, bool) {
 
 	d, ok := s.documents[path]
 	return d, ok
-}
-
-func (s *documentStore) FindDeclaration(language *Language, doc *Document, params *protocol.DeclarationParams) (protocol.Location, bool) {
-
-	word := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
-	identifier, err := language.FindIdentifierDeclaration(word)
-	found := err == nil
-
-	return protocol.Location{
-		URI: doc.URI,
-		Range: protocol.Range{
-			protocol.Position{identifier.declarationPosition.Line, identifier.declarationPosition.Character},
-			protocol.Position{identifier.declarationPosition.Line, identifier.declarationPosition.Character + 1},
-		},
-	}, found
-	/*
-		OriginSelectionRange: &protocol.Range{
-			protocol.Position{0, 0},
-			protocol.Position{0, 0},
-		},
-		TargetURI: doc.URI,
-		TargetSelectionRange:
-	}*/
-}
-
-func wordInPosition(text string, position int) string {
-	wordStart := 0
-	for i := position; i >= 0; i-- {
-		if !unicode.IsLetter(rune(text[i])) {
-			wordStart = i + 1
-			break
-		}
-	}
-
-	wordEnd := len(text) - 1
-	for i := position; i < len(text); i++ {
-		if !unicode.IsLetter(rune(text[i])) {
-			wordEnd = i - 1
-			break
-		}
-	}
-
-	word := text[wordStart : wordEnd+1]
-	return word
 }

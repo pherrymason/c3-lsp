@@ -20,11 +20,13 @@ func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
 			name:                "var0",
 			kind:                protocol.CompletionItemKindVariable,
 			declarationPosition: protocol.Position{Character: 4},
+			documentURI:         "x",
 		},
 		{
 			name:                "var1",
 			kind:                protocol.CompletionItemKindVariable,
 			declarationPosition: protocol.Position{Character: 18},
+			documentURI:         "x",
 		},
 	}, identifiers)
 }
@@ -40,11 +42,13 @@ func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
 			name:                "var0",
 			kind:                protocol.CompletionItemKindVariable,
 			declarationPosition: protocol.Position{Character: 4},
+			documentURI:         "x",
 		},
 		{
 			name:                "var1",
 			kind:                protocol.CompletionItemKindVariable,
 			declarationPosition: protocol.Position{Character: 18},
+			documentURI:         "x",
 		},
 	}, identifiers)
 }
@@ -63,6 +67,7 @@ func TestFindIdentifiers_finds_function_declaration_identifiers(t *testing.T) {
 			name:                "test",
 			kind:                protocol.CompletionItemKindFunction,
 			declarationPosition: protocol.Position{Character: 8},
+			documentURI:         "x",
 		},
 	}, identifiers)
 }
@@ -83,11 +88,13 @@ func TestFindIdentifiers_should_find_different_types(t *testing.T) {
 			name:                "var0",
 			kind:                protocol.CompletionItemKindVariable,
 			declarationPosition: protocol.Position{Line: 1, Character: 5},
+			documentURI:         "x",
 		},
 		{
 			name:                "test",
 			kind:                protocol.CompletionItemKindFunction,
 			declarationPosition: protocol.Position{Line: 2, Character: 9},
+			documentURI:         "x",
 		},
 	}, identifiers)
 }

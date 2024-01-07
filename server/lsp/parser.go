@@ -75,6 +75,7 @@ func FindVariableDeclarations(doc *Document) []Identifier {
 					name:                content,
 					kind:                protocol.CompletionItemKindVariable,
 					declarationPosition: protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
+					documentURI:         doc.URI,
 				}
 
 				identifiers = append(identifiers, identifier)
@@ -114,6 +115,7 @@ func FindFunctionDeclarations(doc *Document) []Identifier {
 					name:                content,
 					kind:                protocol.CompletionItemKindFunction,
 					declarationPosition: protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
+					documentURI:         doc.URI,
 				}
 
 				identifiers = append(identifiers, identifier)

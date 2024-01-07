@@ -9,9 +9,11 @@ import (
 type IdentifierCollection []Identifier
 
 type Identifier struct {
-	name                string
-	kind                protocol.CompletionItemKind
+	name string
+	kind protocol.CompletionItemKind
+
 	declarationPosition protocol.Position
+	documentURI         protocol.DocumentUri
 }
 
 // Language will be the center of knowledge of everything parsed.
@@ -49,20 +51,15 @@ func (l *Language) BuildCompletionList(text string, line protocol.UInteger, char
 }
 
 func (l *Language) FindIdentifierDeclaration(identifier string) (Identifier, error) {
-	for _, value := range l.identifiersByDocument {
+	for docIdx, value := range l.identifiersByDocument {
+		docIdx = docIdx
 		for _, stored_identifier := range value {
 			if stored_identifier.name == identifier {
 				return stored_identifier, nil
 			}
 		}
 	}
-	/*
-		for i := 0; i < len(l.deprecatedIdentifiers); i++ {
-			if l.deprecatedIdentifiers[i].name == identifier {
-				return l.deprecatedIdentifiers[i], nil
-			}
-		}
-	*/
+
 	return Identifier{}, errors.New("no se encontró el string en el array")
 }
 

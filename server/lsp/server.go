@@ -111,13 +111,20 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 
-		declaration, found := server.documents.FindDeclaration(&server.language, doc, params)
+		word := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
+		identifier, err := server.language.FindIdentifierDeclaration(word)
 
-		if found {
-			return declaration, nil
-		} else {
-			return nil, nil
+		if err == nil {
+			return protocol.Location{
+				URI: identifier.documentURI,
+				Range: protocol.Range{
+					protocol.Position{identifier.declarationPosition.Line, identifier.declarationPosition.Character},
+					protocol.Position{identifier.declarationPosition.Line, identifier.declarationPosition.Character + 1},
+				},
+			}, nil
 		}
+
+		return nil, nil
 	}
 
 	handler.TextDocumentCompletion = func(context *glsp.Context, params *protocol.CompletionParams) (any, error) {

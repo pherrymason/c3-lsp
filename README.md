@@ -6,9 +6,8 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 
 ## Server
 Features:
-- Naïve auto completion items from same document.
-- Go to declaration (variables and functions, only on same file).
-
+- Naïve auto completion items of variables and function names defined in the workspace.
+- Go to declaration (variables and functions).
 
 
 ## YACC to TreeSitter 
