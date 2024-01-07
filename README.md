@@ -11,9 +11,12 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [x] Go to declaration.
 
 **TODO list**
+- [ ] Index scopes to improve hover and Auto Completion.
 - [ ] Index struct members and methods
 - [ ] Include type information to indexed variables.
 - [ ] Hover information
+  - [~] Variable information: 
+  - [ ] Function signature
 - [ ] Offer information about stdlib?
 - [ ] Go to definition
 - [ ] Go to type definition
