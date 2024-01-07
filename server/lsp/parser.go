@@ -4,7 +4,6 @@ package lsp
 //TSLanguage *tree_sitter_c3();
 import "C"
 import (
-	"fmt"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"unsafe"
@@ -12,46 +11,54 @@ import (
 
 func getParser() *sitter.Parser {
 	parser := sitter.NewParser()
-	parser.SetLanguage(GetLanguage())
+	parser.SetLanguage(getLanguage())
 
 	return parser
 }
 
-func GetLanguage() *sitter.Language {
+func getLanguage() *sitter.Language {
 	ptr := unsafe.Pointer(C.tree_sitter_c3())
 	return sitter.NewLanguage(ptr)
 }
 
-func FindIdentifiers(source string, debug bool) []Identifier {
+func GetParsedTree(source []byte) *sitter.Tree {
 	parser := getParser()
+	n := parser.Parse(nil, source)
 
+	return n
+}
+
+func GetParsedTreeFromString(source string) *sitter.Tree {
 	sourceCode := []byte(source)
+	parser := getParser()
 	n := parser.Parse(nil, sourceCode)
-	if debug {
-		fmt.Print(n.RootNode())
-	}
 
+	return n
+}
+
+func FindIdentifiers(doc *Document) []Identifier {
 	// Iterate over query results
-	variableIdentifiers := FindVariableDeclarations(sourceCode, n)
-	functionIdentifiers := FindFunctionDeclarations(sourceCode, n)
+	variableIdentifiers := FindVariableDeclarations(doc)
+	functionIdentifiers := FindFunctionDeclarations(doc)
 
 	identifiers := append(variableIdentifiers, functionIdentifiers...)
 
 	return identifiers
 }
 
-func FindVariableDeclarations(sourceCode []byte, n *sitter.Tree) []Identifier {
+func FindVariableDeclarations(doc *Document) []Identifier {
 	query := `(var_declaration (identifier) @variable_name)`
-	q, err := sitter.NewQuery([]byte(query), GetLanguage())
+	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {
 		panic(err)
 	}
 
 	qc := sitter.NewQueryCursor()
-	qc.Exec(q, n.RootNode())
+	qc.Exec(q, doc.parsedTree.RootNode())
 
 	var identifiers []Identifier
 	found := make(map[string]bool)
+	sourceCode := []byte(doc.Content)
 	for {
 		m, ok := qc.NextMatch()
 		if !ok {
@@ -78,18 +85,19 @@ func FindVariableDeclarations(sourceCode []byte, n *sitter.Tree) []Identifier {
 	return identifiers
 }
 
-func FindFunctionDeclarations(sourceCode []byte, n *sitter.Tree) []Identifier {
+func FindFunctionDeclarations(doc *Document) []Identifier {
 	query := `(function_declaration name: (identifier) @function_name)`
-	q, err := sitter.NewQuery([]byte(query), GetLanguage())
+	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {
 		panic(err)
 	}
 
 	qc := sitter.NewQueryCursor()
-	qc.Exec(q, n.RootNode())
+	qc.Exec(q, doc.parsedTree.RootNode())
 
 	var identifiers []Identifier
 	found := make(map[string]bool)
+	sourceCode := []byte(doc.Content)
 	for {
 		m, ok := qc.NextMatch()
 		if !ok {

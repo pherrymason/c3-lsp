@@ -11,8 +11,9 @@ import (
 
 func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
 	source := "int var0 = 3; int var1 = 4;"
+	doc := NewDocumentFromString("x", source)
 
-	identifiers := FindIdentifiers(source, false)
+	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Identifier{
 		{
@@ -30,8 +31,9 @@ func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
 
 func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
 	source := "int var0 = 3; int var1 = 4; var1 = 2+3;"
+	doc := NewDocumentFromString("x", source)
 
-	identifiers := FindIdentifiers(source, false)
+	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Identifier{
 		{
@@ -52,8 +54,9 @@ func TestFindIdentifiers_finds_function_declaration_identifiers(t *testing.T) {
 		return 1;
 	}
 	`
+	doc := NewDocumentFromString("x", source)
 
-	identifiers := FindIdentifiers(source, false)
+	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Identifier{
 		{
@@ -71,8 +74,9 @@ func TestFindIdentifiers_should_find_different_types(t *testing.T) {
 		return 1;
 	}
 	`
+	doc := NewDocumentFromString("x", source)
 
-	identifiers := FindIdentifiers(source, false)
+	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Identifier{
 		{

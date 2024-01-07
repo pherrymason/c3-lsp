@@ -1,8 +1,11 @@
-package utils
+package fs
 
 import (
+	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -52,19 +55,6 @@ func (fs *FileStorage) Rel(path string) (string, error) {
 	return filepath.Rel(fs.workingDir, path)
 }
 
-func (fs *FileStorage) Canonical(path string) string {
-	path = filepath.Clean(path)
-
-	resolvedPath, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		//fs.logger.Err(err)
-	} else {
-		path = resolvedPath
-	}
-
-	return path
-}
-
 func (fs *FileStorage) FileExists(path string) (bool, error) {
 	fi, err := fs.fileInfo(path)
 	if err != nil {
@@ -94,13 +84,13 @@ func (fs *FileStorage) IsDescendantOf(dir string, path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	dir = fs.Canonical(dir)
+	dir = GetCanonicalPath(dir)
 
 	path, err = fs.Abs(path)
 	if err != nil {
 		return false, err
 	}
-	path = fs.Canonical(path)
+	path = GetCanonicalPath(path)
 
 	path, err = filepath.Rel(dir, path)
 	if err != nil {
@@ -131,4 +121,64 @@ func (fs *FileStorage) Write(path string, content []byte) error {
 	defer f.Close()
 	_, err = f.Write(content)
 	return err
+}
+
+func GetCanonicalPath(path string) string {
+	path = filepath.Clean(path)
+
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		//fs.logger.Err(err)
+	} else {
+		path = resolvedPath
+	}
+
+	return path
+}
+
+func ScanForC3(basePath string) ([]string, error) {
+	var files []string
+	extension := "c3"
+
+	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && filepath.Ext(path) == "."+extension {
+			files = append(files, path)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}
+
+func UriToPath(uri string) (string, error) {
+	s := strings.ReplaceAll(uri, "%5C", "/")
+	parsed, err := url.Parse(s)
+	if err != nil {
+		return "", err
+	}
+	if parsed.Scheme != "file" {
+		return "", errors.New("URI was not a file:// URI")
+	}
+
+	if runtime.GOOS == "windows" {
+		// In Windows "file:///c:/tmp/foo.md" is parsed to "/c:/tmp/foo.md".
+		// Strip the first character to get a valid path.
+		if strings.Contains(parsed.Path[1:], ":") {
+			// url.Parse() behaves differently with "file:///c:/..." and "file://c:/..."
+			return parsed.Path[1:], nil
+		} else {
+			// if the windows drive is not included in Path it will be in Host
+			return parsed.Host + "/" + parsed.Path[1:], nil
+		}
+	}
+	return parsed.Path, nil
 }

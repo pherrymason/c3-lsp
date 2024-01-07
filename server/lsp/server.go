@@ -2,7 +2,7 @@ package lsp
 
 import (
 	"fmt"
-	"github.com/pherrymason/c3-lsp/utils"
+	"github.com/pherrymason/c3-lsp/fs"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
@@ -24,7 +24,7 @@ type ServerOpts struct {
 	//Logger         *util.ProxyLogger
 	//Notebooks      *core.NotebookStore
 	//TemplateLoader core.TemplateLoader
-	FS utils.FileStorage
+	FS fs.FileStorage
 }
 
 var log commonlog.Logger
@@ -42,6 +42,7 @@ func NewServer(opts ServerOpts) *Server {
 	server := &Server{
 		server:    glspServer,
 		documents: newDocumentStore(opts.FS, &glspServer.Log),
+		language:  NewLanguage(),
 	}
 
 	handler.Initialized = initialized
@@ -58,6 +59,8 @@ func NewServer(opts ServerOpts) *Server {
 			Save:      boolPtr(true),
 		}
 		capabilities.DeclarationProvider = true
+		server.documents.rootURI = *params.RootURI
+		server.indexWorkspace()
 
 		return protocol.InitializeResult{
 			Capabilities: capabilities,
@@ -133,6 +136,11 @@ func NewServer(opts ServerOpts) *Server {
 		return params, nil
 	}
 
+	handler.WorkspaceDidChangeWorkspaceFolders = func(context *glsp.Context, params *protocol.DidChangeWorkspaceFoldersParams) error {
+
+		return nil
+	}
+
 	return server
 }
 
@@ -142,6 +150,12 @@ func (s *Server) Run() error {
 }
 
 func initialized(context *glsp.Context, params *protocol.InitializedParams) error {
+	/*
+		context.Notify(protocol.ServerWorkspaceWorkspaceFolders, protocol.PublishDiagnosticsParams{
+			URI:         doc.URI,
+			Diagnostics: diagnostics,
+		})*/
+
 	return nil
 }
 
@@ -153,4 +167,15 @@ func shutdown(context *glsp.Context) error {
 func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
 	protocol.SetTraceValue(params.Value)
 	return nil
+}
+
+func (s *Server) indexWorkspace() {
+	path, _ := fs.UriToPath(s.documents.rootURI)
+	files, _ := fs.ScanForC3(fs.GetCanonicalPath(path))
+	s.server.Log.Debug(fmt.Sprint("Workspace FILES:", len(files), files))
+
+	for _, filePath := range files {
+		doc := NewDocumentFromFilePath(filePath)
+		s.language.RefreshDocumentIdentifiers(&doc)
+	}
 }
