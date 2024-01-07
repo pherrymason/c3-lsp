@@ -6,8 +6,9 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 
 ## Server
 Features:
-- Naïve auto completion items of variables and function names defined in the workspace.
-- Go to declaration (variables and functions).
+- [x] Indexes workspace variables and function definitions
+- [x] Naïve auto completion items of variables and function names defined in the workspace.
+- [x] Go to declaration.
 
 **TODO list**
 - [ ] Index struct members and methods
