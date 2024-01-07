@@ -2,7 +2,7 @@ package indexables
 
 import protocol "github.com/tliron/glsp/protocol_3_16"
 
-type FunctionIndexable struct {
+type Function struct {
 	Name                string
 	ReturnType          string
 	DocumentURI         protocol.DocumentUri
@@ -10,8 +10,8 @@ type FunctionIndexable struct {
 	Kind                protocol.CompletionItemKind
 }
 
-func NewFunctionIndexable(name string, uri protocol.DocumentUri, position protocol.Position, kind protocol.CompletionItemKind) FunctionIndexable {
-	return FunctionIndexable{
+func NewFunction(name string, uri protocol.DocumentUri, position protocol.Position, kind protocol.CompletionItemKind) Function {
+	return Function{
 		Name:                name,
 		ReturnType:          "??",
 		DocumentURI:         uri,
@@ -20,18 +20,18 @@ func NewFunctionIndexable(name string, uri protocol.DocumentUri, position protoc
 	}
 }
 
-func (f FunctionIndexable) GetName() string {
+func (f Function) GetName() string {
 	return f.Name
 }
 
-func (f FunctionIndexable) GetKind() protocol.CompletionItemKind {
+func (f Function) GetKind() protocol.CompletionItemKind {
 	return f.Kind
 }
 
-func (f FunctionIndexable) GetDocumentURI() protocol.DocumentUri {
+func (f Function) GetDocumentURI() protocol.DocumentUri {
 	return f.DocumentURI
 }
 
-func (f FunctionIndexable) GetDeclarationPosition() protocol.Position {
+func (f Function) GetDeclarationPosition() protocol.Position {
 	return f.DeclarationPosition
 }

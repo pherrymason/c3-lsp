@@ -17,8 +17,8 @@ func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
 	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Indexable{
-		indexables.NewVariableIndexable("var0", "??", "x", protocol.Position{Character: 4}, protocol.CompletionItemKindVariable),
-		indexables.NewVariableIndexable("var1", "??", "x", protocol.Position{Character: 18}, protocol.CompletionItemKindVariable),
+		indexables.NewVariable("var0", "??", "x", protocol.Position{Character: 4}, protocol.CompletionItemKindVariable),
+		indexables.NewVariable("var1", "??", "x", protocol.Position{Character: 18}, protocol.CompletionItemKindVariable),
 	}, identifiers)
 }
 
@@ -29,8 +29,8 @@ func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
 	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Indexable{
-		indexables.NewVariableIndexable("var0", "??", "x", protocol.Position{Character: 4}, protocol.CompletionItemKindVariable),
-		indexables.NewVariableIndexable("var1", "??", "x", protocol.Position{Character: 18}, protocol.CompletionItemKindVariable),
+		indexables.NewVariable("var0", "??", "x", protocol.Position{Character: 4}, protocol.CompletionItemKindVariable),
+		indexables.NewVariable("var1", "??", "x", protocol.Position{Character: 18}, protocol.CompletionItemKindVariable),
 	}, identifiers)
 }
 
@@ -44,7 +44,7 @@ func TestFindIdentifiers_finds_function_declaration_identifiers(t *testing.T) {
 	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Indexable{
-		indexables.NewFunctionIndexable(
+		indexables.NewFunction(
 			"test",
 			"x",
 			protocol.Position{Character: 8},
@@ -65,8 +65,8 @@ func TestFindIdentifiers_should_find_different_types(t *testing.T) {
 	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Indexable{
-		indexables.NewVariableIndexable("var0", "??", "x", protocol.Position{Line: 1, Character: 5}, protocol.CompletionItemKindVariable),
-		indexables.NewFunctionIndexable(
+		indexables.NewVariable("var0", "??", "x", protocol.Position{Line: 1, Character: 5}, protocol.CompletionItemKindVariable),
+		indexables.NewFunction(
 			"test",
 			"x",
 			protocol.Position{Line: 2, Character: 9},

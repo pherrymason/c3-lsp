@@ -10,7 +10,7 @@ type Variable struct {
 	Kind                protocol.CompletionItemKind
 }
 
-func NewVariableIndexable(name string, variableType string, uri protocol.DocumentUri, position protocol.Position, kind protocol.CompletionItemKind) Variable {
+func NewVariable(name string, variableType string, uri protocol.DocumentUri, position protocol.Position, kind protocol.CompletionItemKind) Variable {
 	return Variable{
 		Name:                name,
 		Type:                variableType,

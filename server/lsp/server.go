@@ -144,7 +144,7 @@ func NewServer(opts ServerOpts) *Server {
 				},
 			}
 
-		case indexables.FunctionIndexable:
+		case indexables.Function:
 			hover = protocol.Hover{
 				Contents: protocol.MarkupContent{
 					Kind:  protocol.MarkupKindMarkdown,

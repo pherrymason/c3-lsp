@@ -80,7 +80,7 @@ func FindVariableDeclarations(doc *Document) []Indexable {
 				typeNodeContent := typeNode.Content(sourceCode)
 
 				found[content] = true
-				identifier := indexables.NewVariableIndexable(content, typeNodeContent, doc.URI, protocol.Position{Line: c.Node.StartPoint().Row, Character: c.Node.StartPoint().Column}, protocol.CompletionItemKindVariable)
+				identifier := indexables.NewVariable(content, typeNodeContent, doc.URI, protocol.Position{Line: c.Node.StartPoint().Row, Character: c.Node.StartPoint().Column}, protocol.CompletionItemKindVariable)
 
 				identifiers = append(identifiers, identifier)
 			}
@@ -115,7 +115,7 @@ func FindFunctionDeclarations(doc *Document) []Indexable {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifier := indexables.NewFunctionIndexable(
+				identifier := indexables.NewFunction(
 					content,
 					doc.URI,
 					protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
