@@ -62,8 +62,7 @@ func (s *documentStore) Get(pathOrURI string) (*Document, bool) {
 	s.logger.Debugf("normalized path:%s", path)
 
 	if err != nil {
-		s.logger.Errorf("ERRROR normaliznado path: %s", err)
-		//s.logger.Err(err)
+		s.logger.Errorf("Could not normalize path: %s", err)
 		return nil, false
 	}
 

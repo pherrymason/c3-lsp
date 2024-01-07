@@ -9,17 +9,22 @@ Features:
 - Naïve auto completion items of variables and function names defined in the workspace.
 - Go to declaration (variables and functions).
 
+**TODO list**
+- [ ] Index struct members and methods
+- [ ] Include type information to indexed variables.
+- [ ] Hover information
+- [ ] Go to definition
+- [ ] Go to type definition
+- [ ] Go to implementation
+- [ ] Find references
+- [ ] Improve Completion feature by having context into account
+- [ ] Rename
+
 
 ## YACC to TreeSitter 
-Experiment based on https://github.com/miks1965/yacc-to-tree-sitter to convert C3 yacc grammar file to treesitter grammar.js
+**Experiment** based on https://github.com/miks1965/yacc-to-tree-sitter to convert C3 yacc grammar file to treesitter grammar.js
 
 It is not complete, as it ignores lexical rules.
-
-
-
-
-
-
 
 
 
