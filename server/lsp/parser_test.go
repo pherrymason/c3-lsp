@@ -17,18 +17,8 @@ func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
 	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Indexable{
-		indexables.NewVariableIndexable(
-			"var0",
-			"x",
-			protocol.Position{Character: 4},
-			protocol.CompletionItemKindVariable,
-		),
-		indexables.NewVariableIndexable(
-			"var1",
-			"x",
-			protocol.Position{Character: 18},
-			protocol.CompletionItemKindVariable,
-		),
+		indexables.NewVariableIndexable("var0", "??", "x", protocol.Position{Character: 4}, protocol.CompletionItemKindVariable),
+		indexables.NewVariableIndexable("var1", "??", "x", protocol.Position{Character: 18}, protocol.CompletionItemKindVariable),
 	}, identifiers)
 }
 
@@ -39,18 +29,8 @@ func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
 	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Indexable{
-		indexables.NewVariableIndexable(
-			"var0",
-			"x",
-			protocol.Position{Character: 4},
-			protocol.CompletionItemKindVariable,
-		),
-		indexables.NewVariableIndexable(
-			"var1",
-			"x",
-			protocol.Position{Character: 18},
-			protocol.CompletionItemKindVariable,
-		),
+		indexables.NewVariableIndexable("var0", "??", "x", protocol.Position{Character: 4}, protocol.CompletionItemKindVariable),
+		indexables.NewVariableIndexable("var1", "??", "x", protocol.Position{Character: 18}, protocol.CompletionItemKindVariable),
 	}, identifiers)
 }
 
@@ -85,12 +65,7 @@ func TestFindIdentifiers_should_find_different_types(t *testing.T) {
 	identifiers := FindIdentifiers(&doc)
 
 	assert.Equal(t, []Indexable{
-		indexables.NewVariableIndexable(
-			"var0",
-			"x",
-			protocol.Position{Line: 1, Character: 5},
-			protocol.CompletionItemKindVariable,
-		),
+		indexables.NewVariableIndexable("var0", "??", "x", protocol.Position{Line: 1, Character: 5}, protocol.CompletionItemKindVariable),
 		indexables.NewFunctionIndexable(
 			"test",
 			"x",

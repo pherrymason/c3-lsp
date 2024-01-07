@@ -19,7 +19,7 @@ func TestWordInPosition(t *testing.T) {
 	source := "hello this is expected bye_bye"
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			word := wordInPosition(source, tt.position)
+			word, _ := wordInPosition(source, tt.position)
 
 			assert.Equal(t, tt.expected, word)
 		})

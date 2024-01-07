@@ -3,6 +3,7 @@ package lsp
 import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/fs"
+	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
@@ -110,7 +111,16 @@ func NewServer(opts ServerOpts) *Server {
 		if !ok {
 			return nil, nil
 		}
-		word := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
+
+		server.server.Log.Debug(fmt.Sprint("HOVER requested on ", len(doc.Content), params.Position.IndexIn(doc.Content)))
+		word, err := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
+		if word == "out" {
+			err = nil
+		}
+		if err != nil {
+			server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
+			return nil, nil
+		}
 
 		server.server.Log.Debug(fmt.Sprint("HOVER requested: ", word))
 
@@ -124,14 +134,30 @@ func NewServer(opts ServerOpts) *Server {
 			}, nil
 		}
 
-		//contents := server.language.FindHoverInformation("x")
+		var hover protocol.Hover
+		switch v := identifier.(type) {
+		case indexables.Variable:
+			hover = protocol.Hover{
+				Contents: protocol.MarkupContent{
+					Kind:  protocol.MarkupKindMarkdown,
+					Value: fmt.Sprintf("%s %s", v.GetType(), v.GetName()),
+				},
+			}
 
-		return &protocol.Hover{
-			Contents: protocol.MarkupContent{
-				Kind:  protocol.MarkupKindMarkdown,
-				Value: identifier.GetName(),
-			},
-		}, nil
+		case indexables.FunctionIndexable:
+			hover = protocol.Hover{
+				Contents: protocol.MarkupContent{
+					Kind:  protocol.MarkupKindMarkdown,
+					Value: fmt.Sprintf("%s", v.GetName()),
+				},
+			}
+		case indexables.Struct:
+			fmt.Printf("Struct: %s, Members: %v\n", v.GetName(), v.Members)
+		default:
+			fmt.Println("Tipo desconocido")
+		}
+
+		return &hover, nil
 	}
 
 	handler.TextDocumentDeclaration = func(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
@@ -140,7 +166,13 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 
-		word := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
+		word, err := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
+		if err != nil {
+			server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
+
+			return nil, nil
+		}
+
 		identifier, err := server.language.FindIdentifierDeclaration(word)
 
 		if err == nil {

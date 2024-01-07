@@ -10,14 +10,18 @@ type Variable struct {
 	Kind                protocol.CompletionItemKind
 }
 
-func NewVariableIndexable(name string, uri protocol.DocumentUri, position protocol.Position, kind protocol.CompletionItemKind) Variable {
+func NewVariableIndexable(name string, variableType string, uri protocol.DocumentUri, position protocol.Position, kind protocol.CompletionItemKind) Variable {
 	return Variable{
 		Name:                name,
-		Type:                "??",
+		Type:                variableType,
 		DocumentURI:         uri,
 		DeclarationPosition: position,
 		Kind:                kind,
 	}
+}
+
+func (v Variable) GetType() string {
+	return v.Type
 }
 
 func (v Variable) GetName() string {

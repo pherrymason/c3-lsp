@@ -49,7 +49,9 @@ func FindIdentifiers(doc *Document) []Indexable {
 }
 
 func FindVariableDeclarations(doc *Document) []Indexable {
-	query := `(var_declaration (identifier) @variable_name)`
+	query := `(var_declaration
+		name: (identifier) @variable_name
+	)`
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {
 		panic(err)
@@ -57,6 +59,7 @@ func FindVariableDeclarations(doc *Document) []Indexable {
 
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, doc.parsedTree.RootNode())
+	doc.parsedTree.RootNode().FieldNameForChild(1)
 
 	var identifiers []Indexable
 	found := make(map[string]bool)
@@ -70,15 +73,14 @@ func FindVariableDeclarations(doc *Document) []Indexable {
 		m = qc.FilterPredicates(m, sourceCode)
 		for _, c := range m.Captures {
 			content := c.Node.Content(sourceCode)
-			c.Node.Parent().Type()
+
 			if _, exists := found[content]; !exists {
+				// Find type
+				typeNode := c.Node.PrevSibling()
+				typeNodeContent := typeNode.Content(sourceCode)
+
 				found[content] = true
-				identifier := indexables.NewVariableIndexable(
-					content,
-					doc.URI,
-					protocol.Position{Line: c.Node.StartPoint().Row, Character: c.Node.StartPoint().Column},
-					protocol.CompletionItemKindVariable,
-				)
+				identifier := indexables.NewVariableIndexable(content, typeNodeContent, doc.URI, protocol.Position{Line: c.Node.StartPoint().Row, Character: c.Node.StartPoint().Column}, protocol.CompletionItemKindVariable)
 
 				identifiers = append(identifiers, identifier)
 			}
