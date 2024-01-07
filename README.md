@@ -14,6 +14,7 @@ Features:
 - [ ] Index struct members and methods
 - [ ] Include type information to indexed variables.
 - [ ] Hover information
+- [ ] Offer information about stdlib?
 - [ ] Go to definition
 - [ ] Go to type definition
 - [ ] Go to implementation
