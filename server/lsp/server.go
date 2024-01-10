@@ -3,7 +3,6 @@ package lsp
 import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/fs"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
@@ -75,7 +74,7 @@ func NewServer(opts ServerOpts) *Server {
 	handler.TextDocumentDidOpen = func(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
 		doc, err := server.documents.DidOpen(*params, context.Notify)
 		if err != nil {
-			glspServer.Log.Debug("COULD NOT OPEN!")
+			glspServer.Log.Debug("Could not open file document.")
 			return err
 		}
 
@@ -113,48 +112,10 @@ func NewServer(opts ServerOpts) *Server {
 		}
 
 		server.server.Log.Debug(fmt.Sprint("HOVER requested on ", len(doc.Content), params.Position.IndexIn(doc.Content)))
-		word, err := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
-		if word == "out" {
-			err = nil
-		}
+		hover, err := server.language.FindHoverInformation(doc, params)
 		if err != nil {
 			server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
 			return nil, nil
-		}
-
-		server.server.Log.Debug(fmt.Sprint("HOVER requested: ", word))
-
-		identifier, err := server.language.FindIdentifierDeclaration(word)
-		if err != nil {
-			return &protocol.Hover{
-				Contents: protocol.MarkupContent{
-					Kind:  protocol.MarkupKindMarkdown,
-					Value: "not found",
-				},
-			}, nil
-		}
-
-		var hover protocol.Hover
-		switch v := identifier.(type) {
-		case indexables.Variable:
-			hover = protocol.Hover{
-				Contents: protocol.MarkupContent{
-					Kind:  protocol.MarkupKindMarkdown,
-					Value: fmt.Sprintf("%s %s", v.GetType(), v.GetName()),
-				},
-			}
-
-		case indexables.Function:
-			hover = protocol.Hover{
-				Contents: protocol.MarkupContent{
-					Kind:  protocol.MarkupKindMarkdown,
-					Value: fmt.Sprintf("%s", v.GetName()),
-				},
-			}
-		case indexables.Struct:
-			fmt.Printf("Struct: %s, Members: %v\n", v.GetName(), v.Members)
-		default:
-			fmt.Println("Tipo desconocido")
 		}
 
 		return &hover, nil
@@ -166,22 +127,19 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 
-		word, err := wordInPosition(doc.Content, params.Position.IndexIn(doc.Content))
+		word, err := doc.WordInPosition(params.Position)
 		if err != nil {
 			server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
 
 			return nil, nil
 		}
 
-		identifier, err := server.language.FindIdentifierDeclaration(word)
+		identifier, err := server.language.FindSymbolDeclarationInWorkspace(doc.URI, word, params.Position)
 
 		if err == nil {
 			return protocol.Location{
-				URI: identifier.GetDocumentURI(),
-				Range: protocol.Range{
-					protocol.Position{identifier.GetDeclarationPosition().Line, identifier.GetDeclarationPosition().Character},
-					protocol.Position{identifier.GetDeclarationPosition().Line, identifier.GetDeclarationPosition().Character + 1},
-				},
+				URI:   identifier.GetDocumentURI(),
+				Range: identifier.GetDeclarationRange(),
 			}, nil
 		}
 
@@ -191,7 +149,7 @@ func NewServer(opts ServerOpts) *Server {
 	handler.TextDocumentCompletion = func(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
 		doc, ok := server.documents.Get(params.TextDocumentPositionParams.TextDocument.URI)
 		if !ok {
-			glspServer.Log.Debug(fmt.Sprintf("MIERDERRRR: %s", params.TextDocumentPositionParams.TextDocument.URI))
+			glspServer.Log.Debug(fmt.Sprintf("Could not find document: %s", params.TextDocumentPositionParams.TextDocument.URI))
 			return nil, nil
 		}
 

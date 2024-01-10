@@ -1,9 +1,11 @@
 package lsp
 
 import (
+	"errors"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"os"
+	"unicode"
 )
 
 type Document struct {
@@ -69,4 +71,42 @@ func (d *Document) ApplyChanges(changes []interface{}) {
 	}
 
 	d.lines = nil
+	// TODO This next line can be optimized by reparsing only what changed.
+	d.parsedTree = GetParsedTreeFromString(d.Content)
+}
+
+func (d *Document) WordInPosition(position protocol.Position) (string, error) {
+	index := position.IndexIn(d.Content)
+	return d.WordInIndex(index)
+}
+
+func (d *Document) WordInIndex(index int) (string, error) {
+	text := d.Content
+
+	wordStart := 0
+	for i := index; i >= 0; i-- {
+		if !(unicode.IsLetter(rune(text[i])) || unicode.IsDigit(rune(text[i])) || text[i] == '_') {
+			wordStart = i + 1
+			break
+		}
+	}
+
+	wordEnd := len(text) - 1
+	for i := index; i < len(text); i++ {
+		if !(unicode.IsLetter(rune(text[i])) || unicode.IsDigit(rune(text[i])) || text[i] == '_') {
+			wordEnd = i - 1
+			break
+		}
+	}
+
+	if wordStart > len(text) {
+		return "", errors.New("wordStart out of bounds")
+	} else if wordEnd > len(text) {
+		return "", errors.New("wordEnd out of bounds")
+	} else if wordStart > wordEnd {
+		return "", errors.New("wordStart > wordEnd!")
+	}
+
+	word := text[wordStart : wordEnd+1]
+	return word, nil
 }

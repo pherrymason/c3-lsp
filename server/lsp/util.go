@@ -1,8 +1,8 @@
 package lsp
 
 import (
-	"errors"
-	"unicode"
+	sitter "github.com/smacker/go-tree-sitter"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func boolPtr(v bool) *bool {
@@ -10,31 +10,24 @@ func boolPtr(v bool) *bool {
 	return &b
 }
 
-func wordInPosition(text string, position int) (string, error) {
-	wordStart := 0
-	for i := position; i >= 0; i-- {
-		if !(unicode.IsLetter(rune(text[i])) || unicode.IsDigit(rune(text[i])) || text[i] == '_') {
-			wordStart = i + 1
-			break
-		}
-	}
+func treeSitterPoint2Position(point sitter.Point) protocol.Position {
+	return protocol.Position{Line: point.Row, Character: point.Column}
+}
 
-	wordEnd := len(text) - 1
-	for i := position; i < len(text); i++ {
-		if !(unicode.IsLetter(rune(text[i])) || unicode.IsDigit(rune(text[i])) || text[i] == '_') {
-			wordEnd = i - 1
-			break
-		}
+func treeSitterPoints2Range(start sitter.Point, end sitter.Point) protocol.Range {
+	return protocol.Range{
+		Start: treeSitterPoint2Position(start),
+		End:   treeSitterPoint2Position(end),
 	}
+}
 
-	if wordStart > len(text) {
-		return "", errors.New("wordStart out of bounds")
-	} else if wordEnd > len(text) {
-		return "", errors.New("wordEnd out of bounds")
-	} else if wordStart > wordEnd {
-		return "", errors.New("wordStart > wordEnd!")
+func NewPosition(line protocol.UInteger, char protocol.UInteger) protocol.Position {
+	return protocol.Position{Line: line, Character: char}
+}
+
+func NewRange(startLine protocol.UInteger, startChar protocol.UInteger, endLine protocol.UInteger, endChar protocol.UInteger) protocol.Range {
+	return protocol.Range{
+		Start: NewPosition(startLine, startChar),
+		End:   NewPosition(endLine, endChar),
 	}
-
-	word := text[wordStart : wordEnd+1]
-	return word, nil
 }
