@@ -9,14 +9,30 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [x] Indexes workspace variables and function definitions
 - [x] Naïve auto completion items of variables and function names defined in the workspace.
 - [x] Go to declaration.
+  - Variable
+  - Function
+- [x] Hover:
+  - Variable usages.
+  - Function calls.
 
 **TODO list**
-- [ ] Index scopes and its hierarchy to improve hover and Auto Completion.
-- [ ] Index struct members and methods
+- [x] Index scopes and its hierarchy to improve hover and Auto Completion.
+- [ ] Index Symbols
+  - [x] Variables
+  - [x] Functions
+  - [ ] Function arguments
+  - [x] Enums
+  - [ ] Structs
+  - [ ] Struct members
+  - [ ] imports
+  - [ ] macros
 - [ ] Include type information to indexed variables.
 - [ ] Hover information
-  - [ ] Variable information: WIP. unreliable because of lacking of scope makes returning wrong definitions.
-  - [ ] Function signature
+  - [x] Variable declarations
+  - [x] Function calls
+  - [ ] enumerators
+  - [ ] struct properties
+  - [ ] struct methods
 - [ ] Offer information about stdlib?
 - [ ] Go to definition
 - [ ] Go to type definition
