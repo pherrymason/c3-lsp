@@ -18,15 +18,15 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 **TODO list**
 - [x] Index scopes and its hierarchy to improve hover and Auto Completion.
 - [ ] Index Symbols
-  - [x] Variables
+  - [x] Variables & type
   - [x] Functions
   - [ ] Function arguments
+  - [ ] Function return type
   - [x] Enums
   - [ ] Structs
   - [ ] Struct members
   - [ ] imports
   - [ ] macros
-- [ ] Include type information to indexed variables.
 - [ ] Hover information
   - [x] Variable declarations
   - [x] Function calls
