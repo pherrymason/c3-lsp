@@ -18,3 +18,12 @@ type BaseIndexable struct {
 	documentRange   protocol.Range
 	Kind            protocol.CompletionItemKind
 }
+
+func NewBaseIndexable(docId protocol.DocumentUri, idRange protocol.Range, docRange protocol.Range, kind protocol.CompletionItemKind) BaseIndexable {
+	return BaseIndexable{
+		documentURI:     docId,
+		identifierRange: idRange,
+		documentRange:   docRange,
+		Kind:            kind,
+	}
+}

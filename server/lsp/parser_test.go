@@ -128,8 +128,9 @@ func TestFindSymbols_finds_function_root_and_global_enum_declarations(t *testing
 			indexables.NewEnumerator("BLUE", "", NewRange(0, 21, 0, 25)),
 			indexables.NewEnumerator("GREEN", "", NewRange(0, 27, 0, 32)),
 		},
-		NewRange(0, 0, 0, 0),
 		NewRange(0, 5, 0, 11),
+		NewRange(0, 0, 0, 34),
+		"x",
 	)
 	expectedRoot.AddEnum(&enum)
 	assert.Equal(t, &enum, symbols.Enums["Colors"])

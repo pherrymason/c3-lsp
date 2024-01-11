@@ -18,10 +18,11 @@ const FunctionDeclarationQuery = `(function_declaration
         name: (identifier) @function_name
         body: (_) @body
     )`
-const EnumDeclaration = `(enum_declaration
-	name: (type_identifier) @enum_name
-	body: (_) @body
-)`
+const EnumDeclaration = `(enum_declaration) @enum_dec`
+
+//	name: (type_identifier) @enum_name
+//	body: (_) @body
+//)`
 
 func getParser() *sitter.Parser {
 	parser := sitter.NewParser()
@@ -74,7 +75,7 @@ func FindSymbols(doc *Document) indexables.Function {
 		protocol.CompletionItemKindModule, // Best value found
 	)
 
-	var tempEnum *indexables.Enum
+	//var tempEnum *indexables.Enum
 
 	for {
 		m, ok := qc.NextMatch()
@@ -102,26 +103,9 @@ func FindSymbols(doc *Document) indexables.Function {
 					functionsMap[content] = &identifier
 					scopeTree.AddFunction(&identifier)
 				}
-			} else if c.Node.Parent().Type() == "enum_declaration" {
-				if nodeType == "enumerators" {
-					enumerators := []indexables.Enumerator{}
-					for i := uint32(0); i < c.Node.ChildCount(); i++ {
-						enumeratorNode := c.Node.Child(int(i))
-						if enumeratorNode.Type() == "enumerator" {
-							enumerators = append(
-								enumerators,
-								indexables.NewEnumerator(enumeratorNode.Child(0).Content(sourceCode), "",
-									treeSitterPoints2Range(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()),
-								),
-							)
-						}
-					}
-					tempEnum.AddEnumerators(enumerators)
-				} else if nodeType == "type_identifier" {
-					enum := nodeToEnum(doc, c.Node, sourceCode, content)
-					scopeTree.AddEnum(&enum)
-					tempEnum = &enum
-				}
+			} else if c.Node.Type() == "enum_declaration" {
+				enum := nodeToEnum(doc, c.Node, sourceCode)
+				scopeTree.AddEnum(&enum)
 			} else if nodeType == "compound_statement" {
 				variables := FindVariableDeclarations(doc, c.Node)
 
@@ -158,14 +142,43 @@ func nodeToVariable(doc *Document, node *sitter.Node, sourceCode []byte, content
 	return variable
 }
 
-func nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte, content string) indexables.Enum {
+func nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte) indexables.Enum {
+	nodesCount := node.ChildCount()
+	nameNode := node.Child(1)
+
+	baseType := ""
+	bodyIndex := 3
+	if nodesCount == 4 {
+		// Enum without base_type
+	} else {
+		// Enum with base_type
+		baseType = "?"
+		bodyIndex = 4
+	}
+
+	enumeratorsNode := node.Child(bodyIndex)
+	enumerators := []indexables.Enumerator{}
+	for i := uint32(0); i < enumeratorsNode.ChildCount(); i++ {
+		enumeratorNode := enumeratorsNode.Child(int(i))
+		if enumeratorNode.Type() == "enumerator" {
+			enumerators = append(
+				enumerators,
+				indexables.NewEnumerator(
+					enumeratorNode.Child(0).Content(sourceCode),
+					"",
+					treeSitterPoints2Range(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()),
+				),
+			)
+		}
+	}
 
 	enum := indexables.NewEnum(
-		content,
-		"",
-		[]indexables.Enumerator{},
-		NewRange(0, 0, 0, 0),
+		nameNode.Content(sourceCode),
+		baseType,
+		enumerators,
+		treeSitterPoints2Range(nameNode.StartPoint(), nameNode.EndPoint()),
 		treeSitterPoints2Range(node.StartPoint(), node.EndPoint()),
+		doc.URI,
 	)
 
 	return enum

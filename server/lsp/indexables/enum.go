@@ -2,23 +2,6 @@ package indexables
 
 import protocol "github.com/tliron/glsp/protocol_3_16"
 
-type Enumerator struct {
-	name  string
-	value string
-	BaseIndexable
-}
-
-func NewEnumerator(name string, value string, identifierPosition protocol.Range) Enumerator {
-	return Enumerator{
-		name:  name,
-		value: value,
-		BaseIndexable: BaseIndexable{
-			identifierRange: identifierPosition,
-			Kind:            protocol.CompletionItemKindEnumMember,
-		},
-	}
-}
-
 type Enum struct {
 	name        string
 	baseType    string
@@ -26,12 +9,13 @@ type Enum struct {
 	BaseIndexable
 }
 
-func NewEnum(name string, baseType string, enumerators []Enumerator, identifierRangePosition protocol.Range, documentRangePosition protocol.Range) Enum {
+func NewEnum(name string, baseType string, enumerators []Enumerator, identifierRangePosition protocol.Range, documentRangePosition protocol.Range, docId protocol.DocumentUri) Enum {
 	return Enum{
 		name:        name,
 		baseType:    baseType,
 		enumerators: enumerators,
 		BaseIndexable: BaseIndexable{
+			documentURI:     docId,
 			identifierRange: identifierRangePosition,
 			documentRange:   documentRangePosition,
 			Kind:            protocol.CompletionItemKindEnum,
