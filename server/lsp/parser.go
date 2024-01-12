@@ -53,14 +53,12 @@ func GetParsedTreeFromString(source string) *sitter.Tree {
 	return n
 }
 
-func (p *Parser) FindSymbols(doc *Document) idx.Function {
+func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 	query := `[
 	(source_file ` + VarDeclarationQuery + `)
 	(source_file ` + EnumDeclaration + `)	
 	(source_file ` + StructDeclaration + `)
 	` + FunctionDeclarationQuery + `]`
-
-	//fmt.Println(doc.parsedTree.RootNode())
 
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {

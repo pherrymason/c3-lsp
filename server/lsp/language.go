@@ -22,7 +22,7 @@ func NewLanguage() Language {
 }
 
 func (l *Language) RefreshDocumentIdentifiers(doc *Document, parser *Parser) {
-	l.functionTreeByDocument[doc.URI] = parser.FindSymbols(doc)
+	l.functionTreeByDocument[doc.URI] = parser.ExtractSymbols(doc)
 }
 
 func (l *Language) BuildCompletionList(text string, line protocol.UInteger, character protocol.UInteger) []protocol.CompletionItem {
@@ -156,6 +156,8 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		}
 	}
 
+	_struct, foundStructInThisScope := function.Structs[identifier]
+
 	for _, child := range function.ChildrenFunctions {
 		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, mode); result != nil {
 			return result, resultDepth
@@ -172,6 +174,10 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 
 	if foundEnumInThisScope {
 		return enum, depth
+	}
+
+	if foundStructInThisScope {
+		return _struct, depth
 	}
 
 	return nil, depth

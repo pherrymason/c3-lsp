@@ -89,7 +89,7 @@ func TestFindSymbols_finds_function_root_and_global_variables_declarations(t *te
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
 
-	symbols := parser.FindSymbols(&doc)
+	symbols := parser.ExtractSymbols(&doc)
 
 	expectedRoot := idx.NewAnonymousScopeFunction(
 		"main",
@@ -114,7 +114,7 @@ func TestFindSymbols_finds_function_root_and_global_enum_declarations(t *testing
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
 
-	symbols := parser.FindSymbols(&doc)
+	symbols := parser.ExtractSymbols(&doc)
 
 	expectedRoot := idx.NewAnonymousScopeFunction(
 		"main",
@@ -143,7 +143,7 @@ func TestFindSymbols_finds_function_root_and_global_enum_with_base_type_declarat
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
 
-	symbols := parser.FindSymbols(&doc)
+	symbols := parser.ExtractSymbols(&doc)
 
 	expectedRoot := idx.NewAnonymousScopeFunction(
 		"main",
@@ -175,7 +175,7 @@ func TestFindSymbols_finds_function_root_and_global_struct_declarations(t *testi
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
 
-	symbols := parser.FindSymbols(&doc)
+	symbols := parser.ExtractSymbols(&doc)
 
 	expectedStruct := idx.NewStruct(
 		"MyStructure",
@@ -199,7 +199,7 @@ func TestFindSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	`
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
-	tree := parser.FindSymbols(&doc)
+	tree := parser.ExtractSymbols(&doc)
 
 	function1 := idx.NewFunction("test", "x",
 		idx.NewRange(0, 8, 0, 12),

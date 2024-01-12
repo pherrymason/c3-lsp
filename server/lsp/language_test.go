@@ -87,7 +87,7 @@ func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UI
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
 }
-func createVariable(name string, baseType string, docId string, sL uint, sC uint, eL uint, eC uint) indexables.Indexable {
+func createVariable(docId string, name string, baseType string, sL uint, sC uint, eL uint, eC uint) indexables.Indexable {
 	return indexables.Variable{
 		Name: name,
 		Type: baseType,
@@ -100,7 +100,7 @@ func createVariable(name string, baseType string, docId string, sL uint, sC uint
 	}
 }
 
-func createEnum(name string, docId string, variants []indexables.Enumerator, idRange [4]uint, docRange [4]uint) *indexables.Enum {
+func createEnum(docId string, name string, variants []indexables.Enumerator, idRange [4]uint, docRange [4]uint) *indexables.Enum {
 	enum := indexables.NewEnum(
 		name,
 		"",
@@ -119,6 +119,14 @@ func createEnumerator(name string, pRange [4]uint) indexables.Enumerator {
 	return enumerator
 }
 
+func createStruct(docId string, name string, members []indexables.StructMember) indexables.Indexable {
+	return indexables.NewStruct(
+		name,
+		members,
+		docId,
+	)
+}
+
 func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.T) {
 	cases := []struct {
 		name               string
@@ -128,23 +136,21 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 		cursorPositionChar protocol.UInteger
 		expected           indexables.Indexable
 	}{
-		{"variable", `int value=1;value=3;`, "value", 0, 13, createVariable("value", "int", "x", 0, 4, 0, 9)},
+		{"variable",
+			`int value=1;value=3;`,
+			"value",
+			0, 13,
+			createVariable("x", "value", "int", 0, 4, 0, 9)},
 		{
 			"enum declaration",
 			`enum Colors = { RED, BLUE, GREEN };Colors foo = RED;`,
 			"Colors",
 			0, 36,
-			createEnum(
-				"Colors",
-				"x",
-				[]indexables.Enumerator{
-					indexables.NewEnumerator("RED", "", indexables.NewRange(0, 16, 0, 19)),
-					indexables.NewEnumerator("BLUE", "", indexables.NewRange(0, 21, 0, 25)),
-					indexables.NewEnumerator("GREEN", "", indexables.NewRange(0, 27, 0, 32)),
-				},
-				[4]uint{0, 5, 0, 11},
-				[4]uint{0, 0, 0, 34},
-			),
+			createEnum("x", "Colors", []indexables.Enumerator{
+				indexables.NewEnumerator("RED", "", indexables.NewRange(0, 16, 0, 19)),
+				indexables.NewEnumerator("BLUE", "", indexables.NewRange(0, 21, 0, 25)),
+				indexables.NewEnumerator("GREEN", "", indexables.NewRange(0, 27, 0, 32)),
+			}, [4]uint{0, 5, 0, 11}, [4]uint{0, 0, 0, 34}),
 		},
 		{
 			"enum enumerator",
@@ -152,6 +158,16 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			"RED",
 			0, 49,
 			createEnumerator("RED", [4]uint{0, 16, 0, 19}),
+		},
+		{
+			"struct",
+			`struct MyStructure {bool enabled; char key;} MyStructure value;`,
+			"MyStructure",
+			0, 47,
+			createStruct("x", "MyStructure", []indexables.StructMember{
+				indexables.NewStructMember("enabled", "bool"),
+				indexables.NewStructMember("key", "char"),
+			}),
 		},
 	}
 
