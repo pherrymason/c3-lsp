@@ -10,6 +10,8 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [x] Naïve auto completion items of variables and function names defined in the workspace.
 - [x] Go to declaration.
   - Variable
+  - Enum
+  - Struct
   - Function
 - [x] Hover:
   - Variable usages.
@@ -22,8 +24,8 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
   - [x] Functions
   - [ ] Function arguments
   - [ ] Function return type
-  - [x] Enums
-  - [ ] Structs
+  - [x] Enums + Enumerators
+  - [x] Structs
   - [ ] Struct members
   - [ ] imports
   - [ ] macros
