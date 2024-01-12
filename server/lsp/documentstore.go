@@ -31,7 +31,7 @@ func (s *documentStore) normalizePath(pathOrUri string) (string, error) {
 	return fs.GetCanonicalPath(path), nil
 }
 
-func (s *documentStore) DidOpen(params protocol.DidOpenTextDocumentParams, notify glsp.NotifyFunc) (*Document, error) {
+func (s *documentStore) DidOpen(params protocol.DidOpenTextDocumentParams, notify glsp.NotifyFunc, parser *Parser) (*Document, error) {
 	langID := params.TextDocument.LanguageID
 	if langID != "c3" {
 		return nil, nil

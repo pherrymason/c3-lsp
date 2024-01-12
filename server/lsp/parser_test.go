@@ -87,8 +87,9 @@ func TestFindIdentifiers_should_assign_different_scopes_to_same_name_identifiers
 func TestFindSymbols_finds_function_root_and_global_variables_declarations(t *testing.T) {
 	source := `int value = 1;`
 	doc := NewDocumentFromString("x", source)
+	parser := createParser()
 
-	symbols := FindSymbols(&doc)
+	symbols := parser.FindSymbols(&doc)
 
 	expectedRoot := idx.NewAnonymousScopeFunction(
 		"main",
@@ -109,10 +110,11 @@ func TestFindSymbols_finds_function_root_and_global_variables_declarations(t *te
 }
 
 func TestFindSymbols_finds_function_root_and_global_enum_declarations(t *testing.T) {
-	source := `enum Colors = { RED, BLUE, GREEN };`
+	source := `enum Colors { RED, BLUE, GREEN };`
 	doc := NewDocumentFromString("x", source)
+	parser := createParser()
 
-	symbols := FindSymbols(&doc)
+	symbols := parser.FindSymbols(&doc)
 
 	expectedRoot := idx.NewAnonymousScopeFunction(
 		"main",
@@ -124,12 +126,41 @@ func TestFindSymbols_finds_function_root_and_global_enum_declarations(t *testing
 		"Colors",
 		"",
 		[]idx.Enumerator{
-			idx.NewEnumerator("RED", "", idx.NewRange(0, 16, 0, 19)),
-			idx.NewEnumerator("BLUE", "", idx.NewRange(0, 21, 0, 25)),
-			idx.NewEnumerator("GREEN", "", idx.NewRange(0, 27, 0, 32)),
+			idx.NewEnumerator("RED", "", idx.NewRange(0, 14, 0, 17)),
+			idx.NewEnumerator("BLUE", "", idx.NewRange(0, 19, 0, 23)),
+			idx.NewEnumerator("GREEN", "", idx.NewRange(0, 25, 0, 30)),
 		},
 		idx.NewRange(0, 5, 0, 11),
-		idx.NewRange(0, 0, 0, 34),
+		idx.NewRange(0, 0, 0, 32),
+		"x",
+	)
+	expectedRoot.AddEnum(&enum)
+	assert.Equal(t, &enum, symbols.Enums["Colors"])
+}
+
+func TestFindSymbols_finds_function_root_and_global_enum_with_base_type_declarations(t *testing.T) {
+	source := `enum Colors:int { RED, BLUE, GREEN };`
+	doc := NewDocumentFromString("x", source)
+	parser := createParser()
+
+	symbols := parser.FindSymbols(&doc)
+
+	expectedRoot := idx.NewAnonymousScopeFunction(
+		"main",
+		"x",
+		idx.NewRange(0, 0, 0, 35),
+		protocol.CompletionItemKindModule,
+	)
+	enum := idx.NewEnum(
+		"Colors",
+		"",
+		[]idx.Enumerator{
+			idx.NewEnumerator("RED", "", idx.NewRange(0, 18, 0, 21)),
+			idx.NewEnumerator("BLUE", "", idx.NewRange(0, 23, 0, 27)),
+			idx.NewEnumerator("GREEN", "", idx.NewRange(0, 29, 0, 34)),
+		},
+		idx.NewRange(0, 5, 0, 11),
+		idx.NewRange(0, 0, 0, 36),
 		"x",
 	)
 	expectedRoot.AddEnum(&enum)
@@ -145,8 +176,8 @@ func TestFindSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	}
 	`
 	doc := NewDocumentFromString("x", source)
-
-	tree := FindSymbols(&doc)
+	parser := createParser()
+	tree := parser.FindSymbols(&doc)
 
 	function1 := idx.NewFunction("test", "x",
 		idx.NewRange(0, 8, 0, 12),

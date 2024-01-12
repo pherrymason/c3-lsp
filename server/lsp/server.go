@@ -5,6 +5,7 @@ import (
 	"github.com/pherrymason/c3-lsp/fs"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
+	_ "github.com/tliron/commonlog/simple"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	glspserv "github.com/tliron/glsp/server"
@@ -14,6 +15,7 @@ type Server struct {
 	server    *glspserv.Server
 	documents *documentStore
 	language  Language
+	parser    Parser
 }
 
 // ServerOpts holds the options to create a new Server.
@@ -27,8 +29,6 @@ type ServerOpts struct {
 	FS fs.FileStorage
 }
 
-var log commonlog.Logger
-
 func NewServer(opts ServerOpts) *Server {
 	lsName := "C3-LSP"
 	version := "0.0.1"
@@ -39,10 +39,15 @@ func NewServer(opts ServerOpts) *Server {
 	handler := protocol.Handler{}
 	glspServer := glspserv.NewServer(&handler, lsName, true)
 
+	logger := commonlog.GetLogger("C3-LSP.parser")
+
 	server := &Server{
 		server:    glspServer,
 		documents: newDocumentStore(opts.FS, &glspServer.Log),
 		language:  NewLanguage(),
+		parser: Parser{
+			logger: logger,
+		},
 	}
 
 	handler.Initialized = initialized
@@ -72,14 +77,14 @@ func NewServer(opts ServerOpts) *Server {
 	}
 
 	handler.TextDocumentDidOpen = func(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
-		doc, err := server.documents.DidOpen(*params, context.Notify)
+		doc, err := server.documents.DidOpen(*params, context.Notify, &server.parser)
 		if err != nil {
 			glspServer.Log.Debug("Could not open file document.")
 			return err
 		}
 
 		if doc != nil {
-			server.language.RefreshDocumentIdentifiers(doc)
+			server.language.RefreshDocumentIdentifiers(doc, &server.parser)
 		}
 
 		return nil
@@ -92,7 +97,7 @@ func NewServer(opts ServerOpts) *Server {
 		}
 
 		doc.ApplyChanges(params.ContentChanges)
-		server.language.RefreshDocumentIdentifiers(doc)
+		server.language.RefreshDocumentIdentifiers(doc, &server.parser)
 		return nil
 	}
 
@@ -201,7 +206,8 @@ func (s *Server) indexWorkspace() {
 	s.server.Log.Debug(fmt.Sprint("Workspace FILES:", len(files), files))
 
 	for _, filePath := range files {
+		s.server.Log.Debug(fmt.Sprint("Parsing ", filePath))
 		doc := NewDocumentFromFilePath(filePath)
-		s.language.RefreshDocumentIdentifiers(&doc)
+		s.language.RefreshDocumentIdentifiers(&doc, &s.parser)
 	}
 }

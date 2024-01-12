@@ -7,6 +7,7 @@ import (
 	"fmt"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
+	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"unsafe"
 )
@@ -19,6 +20,10 @@ const FunctionDeclarationQuery = `(function_declaration
         body: (_) @body
     )`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
+
+type Parser struct {
+	logger commonlog.Logger
+}
 
 func getParser() *sitter.Parser {
 	parser := sitter.NewParser()
@@ -47,7 +52,7 @@ func GetParsedTreeFromString(source string) *sitter.Tree {
 	return n
 }
 
-func FindSymbols(doc *Document) idx.Function {
+func (p *Parser) FindSymbols(doc *Document) idx.Function {
 	query := `[
 	(source_file ` + VarDeclarationQuery + `)
 	(source_file ` + EnumDeclaration + `)		
@@ -85,7 +90,7 @@ func FindSymbols(doc *Document) idx.Function {
 			if nodeType == "identifier" {
 				switch c.Node.Parent().Type() {
 				case "var_declaration":
-					variable := nodeToVariable(doc, c.Node, sourceCode, content)
+					variable := p.nodeToVariable(doc, c.Node, sourceCode, content)
 					scopeTree.AddVariables([]idx.Variable{
 						variable,
 					})
@@ -100,10 +105,10 @@ func FindSymbols(doc *Document) idx.Function {
 					scopeTree.AddFunction(&identifier)
 				}
 			} else if c.Node.Type() == "enum_declaration" {
-				enum := nodeToEnum(doc, c.Node, sourceCode)
+				enum := p.nodeToEnum(doc, c.Node, sourceCode)
 				scopeTree.AddEnum(&enum)
 			} else if nodeType == "compound_statement" {
-				variables := FindVariableDeclarations(doc, c.Node)
+				variables := p.FindVariableDeclarations(doc, c.Node)
 
 				// TODO Previous node has the info about which function is belongs to.
 				idNode := c.Node.Parent().ChildByFieldName("name")
@@ -123,7 +128,7 @@ func FindSymbols(doc *Document) idx.Function {
 	return scopeTree
 }
 
-func nodeToVariable(doc *Document, node *sitter.Node, sourceCode []byte, content string) idx.Variable {
+func (p *Parser) nodeToVariable(doc *Document, node *sitter.Node, sourceCode []byte, content string) idx.Variable {
 	typeNode := node.PrevSibling()
 	typeNodeContent := typeNode.Content(sourceCode)
 	variable := idx.NewVariable(
@@ -138,21 +143,17 @@ func nodeToVariable(doc *Document, node *sitter.Node, sourceCode []byte, content
 	return variable
 }
 
-func nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte) idx.Enum {
+func (p *Parser) nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte) idx.Enum {
 	nodesCount := node.ChildCount()
 	nameNode := node.Child(1)
 
 	baseType := ""
-	bodyIndex := 3
-	if nodesCount == 4 {
-		// Enum without base_type
-	} else {
-		// Enum with base_type
-		baseType = "?"
-		bodyIndex = 4
-	}
+	bodyIndex := int(nodesCount - 1)
+
+	//	p.logger.Debug(fmt.Sprint(node.Content(sourceCode), ": Child count:", nodesCount))
 
 	enumeratorsNode := node.Child(bodyIndex)
+
 	enumerators := []idx.Enumerator{}
 	for i := uint32(0); i < enumeratorsNode.ChildCount(); i++ {
 		enumeratorNode := enumeratorsNode.Child(int(i))
@@ -180,6 +181,7 @@ func nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte) idx.Enum {
 	return enum
 }
 
+/**
 func FindIdentifiers(doc *Document) []idx.Indexable {
 	//variableIdentifiers := FindVariableDeclarations(doc, doc.parsedTree.RootNode())
 	functionIdentifiers := FindFunctionDeclarations(doc)
@@ -189,9 +191,9 @@ func FindIdentifiers(doc *Document) []idx.Indexable {
 	elements = append(elements, functionIdentifiers...)
 
 	return elements
-}
+}*/
 
-func FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {
+func (p *Parser) FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {
 	query := VarDeclarationQuery
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {
@@ -216,7 +218,7 @@ func FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {
 
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				variable := nodeToVariable(doc, c.Node, sourceCode, content)
+				variable := p.nodeToVariable(doc, c.Node, sourceCode, content)
 				identifiers = append(identifiers, variable)
 			}
 		}
@@ -225,7 +227,7 @@ func FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {
 	return identifiers
 }
 
-func FindFunctionDeclarations(doc *Document) []idx.Indexable {
+func (p *Parser) FindFunctionDeclarations(doc *Document) []idx.Indexable {
 	query := FunctionDeclarationQuery //`(function_declaration name: (identifier) @function_name)`
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {

@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/stretchr/testify/assert"
+	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"testing"
 )
 
 func TestLanguage_FindHoverInformation(t *testing.T) {
 	language := NewLanguage()
+	parser := createParser()
 
 	doc := NewDocumentFromString("x", `
 	int value = 1;
@@ -17,7 +19,7 @@ func TestLanguage_FindHoverInformation(t *testing.T) {
 		char value = 3;
 	}
 `)
-	language.RefreshDocumentIdentifiers(&doc)
+	language.RefreshDocumentIdentifiers(&doc, &parser)
 
 	params := protocol.HoverParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
@@ -43,18 +45,19 @@ func TestLanguage_FindHoverInformation(t *testing.T) {
 
 func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	language := NewLanguage()
+	parser := createParser()
 
 	doc := NewDocumentFromString("x", `
 	fn void main() {
 		importedMethod();
 	}
 `)
-	language.RefreshDocumentIdentifiers(&doc)
+	language.RefreshDocumentIdentifiers(&doc, &parser)
 
 	doc2 := NewDocumentFromString("y", `
 	fn void importedMethod() {}
 	`)
-	language.RefreshDocumentIdentifiers(&doc2)
+	language.RefreshDocumentIdentifiers(&doc2, &parser)
 
 	params := protocol.HoverParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
@@ -156,7 +159,8 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 		t.Run(tt.name, func(t *testing.T) {
 			doc := NewDocumentFromString("x", tt.sourceCode)
 			language := NewLanguage()
-			language.RefreshDocumentIdentifiers(&doc)
+			parser := createParser()
+			language.RefreshDocumentIdentifiers(&doc, &parser)
 
 			params := newDeclarationParams("x", tt.cursorPositionLine, tt.cursorPositionChar)
 
@@ -169,12 +173,12 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testing.T) {
 	language := NewLanguage()
-
+	parser := createParser()
 	doc := NewDocumentFromString("x", `
 		int value = 1;
 		value = 3;
 	`)
-	language.RefreshDocumentIdentifiers(&doc)
+	language.RefreshDocumentIdentifiers(&doc, &parser)
 
 	params := protocol.DeclarationParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
@@ -199,14 +203,14 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_function(t *testing.T) {
 	language := NewLanguage()
-
+	parser := createParser()
 	doc := NewDocumentFromString("x", `
 		int value = 1;
 		fn void main() {
 			value = 3;
 		}
 	`)
-	language.RefreshDocumentIdentifiers(&doc)
+	language.RefreshDocumentIdentifiers(&doc, &parser)
 
 	params := protocol.DeclarationParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
@@ -231,15 +235,15 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_func
 
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file(t *testing.T) {
 	language := NewLanguage()
-
+	parser := createParser()
 	doc := NewDocumentFromString("x", `
 		fn void main() {
 			value = 3;
 		}
 	`)
-	language.RefreshDocumentIdentifiers(&doc)
+	language.RefreshDocumentIdentifiers(&doc, &parser)
 	doc2 := NewDocumentFromString("y", `int value = 1;`)
-	language.RefreshDocumentIdentifiers(&doc2)
+	language.RefreshDocumentIdentifiers(&doc2, &parser)
 
 	params := protocol.DeclarationParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
@@ -260,4 +264,10 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file
 		protocol.CompletionItemKindVariable,
 	)
 	assert.Equal(t, expectedSymbol, symbol)
+}
+
+func createParser() Parser {
+	return Parser{
+		logger: commonlog.MockLogger{},
+	}
 }

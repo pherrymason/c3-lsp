@@ -21,8 +21,8 @@ func NewLanguage() Language {
 	}
 }
 
-func (l *Language) RefreshDocumentIdentifiers(doc *Document) {
-	l.functionTreeByDocument[doc.URI] = FindSymbols(doc)
+func (l *Language) RefreshDocumentIdentifiers(doc *Document, parser *Parser) {
+	l.functionTreeByDocument[doc.URI] = parser.FindSymbols(doc)
 }
 
 func (l *Language) BuildCompletionList(text string, line protocol.UInteger, character protocol.UInteger) []protocol.CompletionItem {

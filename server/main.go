@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/pherrymason/c3-lsp/lsp"
-	_ "github.com/tliron/commonlog/simple"
 )
 
 const version = "0.0.1"
