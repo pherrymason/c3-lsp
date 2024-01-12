@@ -8,12 +8,13 @@ type Struct struct {
 	BaseIndexable
 }
 
-func NewStruct(name string, members []StructMember, docId string) Struct {
+func NewStruct(name string, members []StructMember, docId string, idRange Range) Struct {
 	return Struct{
 		name:    name,
 		members: members,
 		BaseIndexable: BaseIndexable{
-			documentURI: docId,
+			identifierRange: idRange,
+			documentURI:     docId,
 		},
 	}
 }

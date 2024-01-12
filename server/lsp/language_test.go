@@ -119,11 +119,12 @@ func createEnumerator(name string, pRange [4]uint) indexables.Enumerator {
 	return enumerator
 }
 
-func createStruct(docId string, name string, members []indexables.StructMember) indexables.Indexable {
+func createStruct(docId string, name string, members []indexables.StructMember, idRange indexables.Range) indexables.Indexable {
 	return indexables.NewStruct(
 		name,
 		members,
 		docId,
+		idRange,
 	)
 }
 
@@ -167,7 +168,8 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			createStruct("x", "MyStructure", []indexables.StructMember{
 				indexables.NewStructMember("enabled", "bool"),
 				indexables.NewStructMember("key", "char"),
-			}),
+			},
+				indexables.NewRange(0, 7, 0, 18)),
 		},
 	}
 

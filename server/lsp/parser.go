@@ -147,7 +147,8 @@ func (p *Parser) nodeToVariable(doc *Document, node *sitter.Node, sourceCode []b
 }
 
 func (p *Parser) nodeToStruct(doc *Document, node *sitter.Node, sourceCode []byte) idx.Struct {
-	name := node.Child(1).Content(sourceCode)
+	nameNode := node.Child(1)
+	name := nameNode.Content(sourceCode)
 	// TODO parse attributes
 	bodyNode := node.Child(2)
 
@@ -166,7 +167,7 @@ func (p *Parser) nodeToStruct(doc *Document, node *sitter.Node, sourceCode []byt
 		}
 	}
 
-	_struct := idx.NewStruct(name, fields, doc.URI)
+	_struct := idx.NewStruct(name, fields, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()))
 
 	return _struct
 }

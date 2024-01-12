@@ -84,7 +84,7 @@ func TestFindIdentifiers_should_assign_different_scopes_to_same_name_identifiers
 	}, identifiers)
 }*/
 
-func TestFindSymbols_finds_function_root_and_global_variables_declarations(t *testing.T) {
+func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t *testing.T) {
 	source := `int value = 1;`
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
@@ -109,7 +109,7 @@ func TestFindSymbols_finds_function_root_and_global_variables_declarations(t *te
 	assert.Equal(t, expectedRoot, symbols)
 }
 
-func TestFindSymbols_finds_function_root_and_global_enum_declarations(t *testing.T) {
+func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *testing.T) {
 	source := `enum Colors { RED, BLUE, GREEN };`
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
@@ -138,7 +138,7 @@ func TestFindSymbols_finds_function_root_and_global_enum_declarations(t *testing
 	assert.Equal(t, &enum, symbols.Enums["Colors"])
 }
 
-func TestFindSymbols_finds_function_root_and_global_enum_with_base_type_declarations(t *testing.T) {
+func TestExtractSymbols_finds_function_root_and_global_enum_with_base_type_declarations(t *testing.T) {
 	source := `enum Colors:int { RED, BLUE, GREEN };`
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
@@ -167,7 +167,7 @@ func TestFindSymbols_finds_function_root_and_global_enum_with_base_type_declarat
 	assert.Equal(t, &enum, symbols.Enums["Colors"])
 }
 
-func TestFindSymbols_finds_function_root_and_global_struct_declarations(t *testing.T) {
+func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *testing.T) {
 	source := `struct MyStructure {
 		bool enabled;
 		char key;
@@ -184,12 +184,13 @@ func TestFindSymbols_finds_function_root_and_global_struct_declarations(t *testi
 			idx.NewStructMember("key", "char"),
 		},
 		"x",
+		idx.NewRange(0, 7, 0, 18),
 	)
 
 	assert.Equal(t, expectedStruct, symbols.Structs["MyStructure"])
 }
 
-func TestFindSymbols_finds_function_declaration_identifiers(t *testing.T) {
+func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	source := `fn void test() {
 		return 1;
 	}
