@@ -20,26 +20,21 @@ type Function struct {
 
 	Variables         map[string]Variable
 	Enums             map[string]*Enum
+	Structs           map[string]Struct
 	ChildrenFunctions map[string]*Function
 }
 
 func NewAnonymousScopeFunction(name string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
-	return Function{
-		_type:             Anonymous,
-		Name:              name,
-		ReturnType:        "??",
-		DocumentURI:       docId,
-		documentRange:     docRange,
-		Kind:              kind,
-		Variables:         make(map[string]Variable),
-		Enums:             make(map[string]*Enum),
-		ChildrenFunctions: make(map[string]*Function),
-	}
+	return newFunctionType(Anonymous, name, docId, Range{}, docRange, kind)
 }
 
 func NewFunction(name string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
+	return newFunctionType(UserDefined, name, docId, identifierRangePosition, docRange, kind)
+}
+
+func newFunctionType(fType FunctionType, name string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return Function{
-		_type:             UserDefined,
+		_type:             fType,
 		Name:              name,
 		ReturnType:        "??",
 		DocumentURI:       docId,
@@ -47,6 +42,8 @@ func NewFunction(name string, docId string, identifierRangePosition Range, docRa
 		documentRange:     docRange,
 		Kind:              kind,
 		Variables:         make(map[string]Variable),
+		Enums:             make(map[string]*Enum),
+		Structs:           make(map[string]Struct),
 		ChildrenFunctions: make(map[string]*Function),
 	}
 }
@@ -87,4 +84,8 @@ func (f *Function) AddEnum(enum *Enum) {
 
 func (f Function) AddFunction(f2 *Function) {
 	f.ChildrenFunctions[f2.Name] = f2
+}
+
+func (f Function) AddStruct(s Struct) {
+	f.Structs[s.name] = s
 }

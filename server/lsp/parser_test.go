@@ -167,6 +167,28 @@ func TestFindSymbols_finds_function_root_and_global_enum_with_base_type_declarat
 	assert.Equal(t, &enum, symbols.Enums["Colors"])
 }
 
+func TestFindSymbols_finds_function_root_and_global_struct_declarations(t *testing.T) {
+	source := `struct MyStructure {
+		bool enabled;
+		char key;
+	}`
+	doc := NewDocumentFromString("x", source)
+	parser := createParser()
+
+	symbols := parser.FindSymbols(&doc)
+
+	expectedStruct := idx.NewStruct(
+		"MyStructure",
+		[]idx.StructMember{
+			idx.NewStructMember("enabled", "bool"),
+			idx.NewStructMember("key", "char"),
+		},
+		"x",
+	)
+
+	assert.Equal(t, expectedStruct, symbols.Structs["MyStructure"])
+}
+
 func TestFindSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	source := `fn void test() {
 		return 1;

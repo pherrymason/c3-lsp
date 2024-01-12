@@ -3,16 +3,23 @@ package indexables
 import protocol "github.com/tliron/glsp/protocol_3_16"
 
 type Struct struct {
-	Name            string
-	Members         []string
-	DocumentURI     string
-	identifierRange Range
-	documentRange   Range
-	Kind            protocol.CompletionItemKind
+	name    string
+	members []StructMember
+	BaseIndexable
+}
+
+func NewStruct(name string, members []StructMember, docId string) Struct {
+	return Struct{
+		name:    name,
+		members: members,
+		BaseIndexable: BaseIndexable{
+			documentURI: docId,
+		},
+	}
 }
 
 func (s Struct) GetName() string {
-	return s.Name
+	return s.name
 }
 
 func (s Struct) GetKind() protocol.CompletionItemKind {
@@ -20,7 +27,7 @@ func (s Struct) GetKind() protocol.CompletionItemKind {
 }
 
 func (s Struct) GetDocumentURI() string {
-	return s.DocumentURI
+	return s.documentURI
 }
 
 func (s Struct) GetDeclarationRange() Range {
@@ -28,4 +35,16 @@ func (s Struct) GetDeclarationRange() Range {
 }
 func (s Struct) GetDocumentRange() Range {
 	return s.documentRange
+}
+
+type StructMember struct {
+	name     string
+	baseType string
+}
+
+func NewStructMember(name string, baseType string) StructMember {
+	return StructMember{
+		name:     name,
+		baseType: baseType,
+	}
 }

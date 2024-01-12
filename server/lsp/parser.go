@@ -20,6 +20,7 @@ const FunctionDeclarationQuery = `(function_declaration
         body: (_) @body
     )`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
+const StructDeclaration = `(struct_declaration) @struct_dec`
 
 type Parser struct {
 	logger commonlog.Logger
@@ -55,7 +56,8 @@ func GetParsedTreeFromString(source string) *sitter.Tree {
 func (p *Parser) FindSymbols(doc *Document) idx.Function {
 	query := `[
 	(source_file ` + VarDeclarationQuery + `)
-	(source_file ` + EnumDeclaration + `)		
+	(source_file ` + EnumDeclaration + `)	
+	(source_file ` + StructDeclaration + `)
 	` + FunctionDeclarationQuery + `]`
 
 	//fmt.Println(doc.parsedTree.RootNode())
@@ -104,9 +106,12 @@ func (p *Parser) FindSymbols(doc *Document) idx.Function {
 					functionsMap[content] = &identifier
 					scopeTree.AddFunction(&identifier)
 				}
-			} else if c.Node.Type() == "enum_declaration" {
+			} else if nodeType == "enum_declaration" {
 				enum := p.nodeToEnum(doc, c.Node, sourceCode)
 				scopeTree.AddEnum(&enum)
+			} else if nodeType == "struct_declaration" {
+				_struct := p.nodeToStruct(doc, c.Node, sourceCode)
+				scopeTree.AddStruct(_struct)
 			} else if nodeType == "compound_statement" {
 				variables := p.FindVariableDeclarations(doc, c.Node)
 
@@ -143,7 +148,33 @@ func (p *Parser) nodeToVariable(doc *Document, node *sitter.Node, sourceCode []b
 	return variable
 }
 
+func (p *Parser) nodeToStruct(doc *Document, node *sitter.Node, sourceCode []byte) idx.Struct {
+	name := node.Child(1).Content(sourceCode)
+	// TODO parse attributes
+	bodyNode := node.Child(2)
+
+	fields := make([]idx.StructMember, 0)
+
+	for i := uint32(0); i < bodyNode.ChildCount(); i++ {
+		child := bodyNode.Child(int(i))
+		switch child.Type() {
+		case "field_declaration":
+			fieldName := child.ChildByFieldName("name").Content(sourceCode)
+			fieldType := child.ChildByFieldName("type").Content(sourceCode)
+			fields = append(fields, idx.NewStructMember(fieldName, fieldType))
+
+		case "field_struct_declaration":
+		case "field_union_declaration":
+		}
+	}
+
+	_struct := idx.NewStruct(name, fields, doc.URI)
+
+	return _struct
+}
+
 func (p *Parser) nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte) idx.Enum {
+	// TODO parse attributes
 	nodesCount := node.ChildCount()
 	nameNode := node.Child(1)
 
@@ -180,18 +211,6 @@ func (p *Parser) nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte)
 
 	return enum
 }
-
-/**
-func FindIdentifiers(doc *Document) []idx.Indexable {
-	//variableIdentifiers := FindVariableDeclarations(doc, doc.parsedTree.RootNode())
-	functionIdentifiers := FindFunctionDeclarations(doc)
-
-	var elements []idx.Indexable
-	//elements = append(elements, variableIdentifiers...)
-	elements = append(elements, functionIdentifiers...)
-
-	return elements
-}*/
 
 func (p *Parser) FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {
 	query := VarDeclarationQuery
