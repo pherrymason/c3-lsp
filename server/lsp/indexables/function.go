@@ -13,9 +13,9 @@ type Function struct {
 	_type           FunctionType
 	Name            string
 	ReturnType      string
-	DocumentURI     protocol.DocumentUri
-	identifierRange protocol.Range
-	documentRange   protocol.Range
+	DocumentURI     string
+	identifierRange Range
+	documentRange   Range
 	Kind            protocol.CompletionItemKind
 
 	Variables         map[string]Variable
@@ -23,12 +23,12 @@ type Function struct {
 	ChildrenFunctions map[string]*Function
 }
 
-func NewAnonymousScopeFunction(name string, uri protocol.DocumentUri, docRange protocol.Range, kind protocol.CompletionItemKind) Function {
+func NewAnonymousScopeFunction(name string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
 	return Function{
 		_type:             Anonymous,
 		Name:              name,
 		ReturnType:        "??",
-		DocumentURI:       uri,
+		DocumentURI:       docId,
 		documentRange:     docRange,
 		Kind:              kind,
 		Variables:         make(map[string]Variable),
@@ -37,12 +37,12 @@ func NewAnonymousScopeFunction(name string, uri protocol.DocumentUri, docRange p
 	}
 }
 
-func NewFunction(name string, uri protocol.DocumentUri, identifierRangePosition protocol.Range, docRange protocol.Range, kind protocol.CompletionItemKind) Function {
+func NewFunction(name string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return Function{
 		_type:             UserDefined,
 		Name:              name,
 		ReturnType:        "??",
-		DocumentURI:       uri,
+		DocumentURI:       docId,
 		identifierRange:   identifierRangePosition,
 		documentRange:     docRange,
 		Kind:              kind,
@@ -59,19 +59,19 @@ func (f Function) GetKind() protocol.CompletionItemKind {
 	return f.Kind
 }
 
-func (f Function) GetDocumentURI() protocol.DocumentUri {
+func (f Function) GetDocumentURI() string {
 	return f.DocumentURI
 }
 
-func (f Function) GetDeclarationRange() protocol.Range {
+func (f Function) GetDeclarationRange() Range {
 	return f.identifierRange
 }
 
-func (f Function) GetDocumentRange() protocol.Range {
+func (f Function) GetDocumentRange() Range {
 	return f.documentRange
 }
 
-func (f *Function) SetEndRange(endPosition protocol.Position) {
+func (f *Function) SetEndRange(endPosition Position) {
 	f.documentRange.End = endPosition
 }
 

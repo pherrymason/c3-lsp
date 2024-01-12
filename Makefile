@@ -17,3 +17,6 @@ clone-tree-sitter:
 
 build-dev:
 	cd server && go build -gcflags="all=-N -l" -o c3-lsp
+
+test:
+	cd server && go test ./...

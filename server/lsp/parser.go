@@ -5,7 +5,7 @@ package lsp
 import "C"
 import (
 	"fmt"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"unsafe"
@@ -19,10 +19,6 @@ const FunctionDeclarationQuery = `(function_declaration
         body: (_) @body
     )`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
-
-//	name: (type_identifier) @enum_name
-//	body: (_) @body
-//)`
 
 func getParser() *sitter.Parser {
 	parser := sitter.NewParser()
@@ -51,7 +47,7 @@ func GetParsedTreeFromString(source string) *sitter.Tree {
 	return n
 }
 
-func FindSymbols(doc *Document) indexables.Function {
+func FindSymbols(doc *Document) idx.Function {
 	query := `[
 	(source_file ` + VarDeclarationQuery + `)
 	(source_file ` + EnumDeclaration + `)		
@@ -67,15 +63,15 @@ func FindSymbols(doc *Document) indexables.Function {
 	qc.Exec(q, doc.parsedTree.RootNode())
 	sourceCode := []byte(doc.Content)
 
-	functionsMap := make(map[string]*indexables.Function)
-	scopeTree := indexables.NewAnonymousScopeFunction(
+	functionsMap := make(map[string]*idx.Function)
+	scopeTree := idx.NewAnonymousScopeFunction(
 		"main",
 		doc.URI,
-		treeSitterPoints2Range(doc.parsedTree.RootNode().StartPoint(), doc.parsedTree.RootNode().EndPoint()),
+		idx.NewRangeFromSitterPositions(doc.parsedTree.RootNode().StartPoint(), doc.parsedTree.RootNode().EndPoint()),
 		protocol.CompletionItemKindModule, // Best value found
 	)
 
-	//var tempEnum *indexables.Enum
+	//var tempEnum *idx.Enum
 
 	for {
 		m, ok := qc.NextMatch()
@@ -90,15 +86,15 @@ func FindSymbols(doc *Document) indexables.Function {
 				switch c.Node.Parent().Type() {
 				case "var_declaration":
 					variable := nodeToVariable(doc, c.Node, sourceCode, content)
-					scopeTree.AddVariables([]indexables.Variable{
+					scopeTree.AddVariables([]idx.Variable{
 						variable,
 					})
 				case "function_declaration":
-					identifier := indexables.NewFunction(
+					identifier := idx.NewFunction(
 						content,
 						doc.URI,
-						treeSitterPoints2Range(c.Node.StartPoint(), c.Node.EndPoint()),
-						treeSitterPoints2Range(c.Node.StartPoint(), c.Node.EndPoint()),
+						idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()),
+						idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()),
 						protocol.CompletionItemKindFunction)
 					functionsMap[content] = &identifier
 					scopeTree.AddFunction(&identifier)
@@ -117,7 +113,7 @@ func FindSymbols(doc *Document) indexables.Function {
 				if !ok {
 					panic(fmt.Sprint("Could not find definition for ", functionName))
 				}
-				function.SetEndRange(treeSitterPoint2Position(c.Node.EndPoint()))
+				function.SetEndRange(idx.NewPositionFromSitterPoint(c.Node.EndPoint()))
 				function.AddVariables(variables)
 			}
 			//fmt.Println(c.Node.String(), content)
@@ -127,22 +123,22 @@ func FindSymbols(doc *Document) indexables.Function {
 	return scopeTree
 }
 
-func nodeToVariable(doc *Document, node *sitter.Node, sourceCode []byte, content string) indexables.Variable {
+func nodeToVariable(doc *Document, node *sitter.Node, sourceCode []byte, content string) idx.Variable {
 	typeNode := node.PrevSibling()
 	typeNodeContent := typeNode.Content(sourceCode)
-	variable := indexables.NewVariable(
+	variable := idx.NewVariable(
 		content,
 		typeNodeContent,
 		doc.URI,
-		treeSitterPoints2Range(node.StartPoint(), node.EndPoint()),
-		treeSitterPoints2Range(node.StartPoint(), node.EndPoint()), // TODO Should this include the var type range?
+		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), // TODO Should this include the var type range?
 		protocol.CompletionItemKindVariable,
 	)
 
 	return variable
 }
 
-func nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte) indexables.Enum {
+func nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte) idx.Enum {
 	nodesCount := node.ChildCount()
 	nameNode := node.Child(1)
 
@@ -157,45 +153,45 @@ func nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte) indexables.
 	}
 
 	enumeratorsNode := node.Child(bodyIndex)
-	enumerators := []indexables.Enumerator{}
+	enumerators := []idx.Enumerator{}
 	for i := uint32(0); i < enumeratorsNode.ChildCount(); i++ {
 		enumeratorNode := enumeratorsNode.Child(int(i))
 		if enumeratorNode.Type() == "enumerator" {
 			enumerators = append(
 				enumerators,
-				indexables.NewEnumerator(
+				idx.NewEnumerator(
 					enumeratorNode.Child(0).Content(sourceCode),
 					"",
-					treeSitterPoints2Range(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()),
+					idx.NewRangeFromSitterPositions(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()),
 				),
 			)
 		}
 	}
 
-	enum := indexables.NewEnum(
+	enum := idx.NewEnum(
 		nameNode.Content(sourceCode),
 		baseType,
 		enumerators,
-		treeSitterPoints2Range(nameNode.StartPoint(), nameNode.EndPoint()),
-		treeSitterPoints2Range(node.StartPoint(), node.EndPoint()),
+		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
 		doc.URI,
 	)
 
 	return enum
 }
 
-func FindIdentifiers(doc *Document) []indexables.Indexable {
+func FindIdentifiers(doc *Document) []idx.Indexable {
 	//variableIdentifiers := FindVariableDeclarations(doc, doc.parsedTree.RootNode())
 	functionIdentifiers := FindFunctionDeclarations(doc)
 
-	var elements []indexables.Indexable
+	var elements []idx.Indexable
 	//elements = append(elements, variableIdentifiers...)
 	elements = append(elements, functionIdentifiers...)
 
 	return elements
 }
 
-func FindVariableDeclarations(doc *Document, node *sitter.Node) []indexables.Variable {
+func FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {
 	query := VarDeclarationQuery
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {
@@ -205,7 +201,7 @@ func FindVariableDeclarations(doc *Document, node *sitter.Node) []indexables.Var
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, node)
 
-	var identifiers []indexables.Variable
+	var identifiers []idx.Variable
 	found := make(map[string]bool)
 	sourceCode := []byte(doc.Content)
 	for {
@@ -229,7 +225,7 @@ func FindVariableDeclarations(doc *Document, node *sitter.Node) []indexables.Var
 	return identifiers
 }
 
-func FindFunctionDeclarations(doc *Document) []indexables.Indexable {
+func FindFunctionDeclarations(doc *Document) []idx.Indexable {
 	query := FunctionDeclarationQuery //`(function_declaration name: (identifier) @function_name)`
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
 	if err != nil {
@@ -239,7 +235,7 @@ func FindFunctionDeclarations(doc *Document) []indexables.Indexable {
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, doc.parsedTree.RootNode())
 
-	var identifiers []indexables.Indexable
+	var identifiers []idx.Indexable
 	found := make(map[string]bool)
 	sourceCode := []byte(doc.Content)
 	for {
@@ -254,12 +250,12 @@ func FindFunctionDeclarations(doc *Document) []indexables.Indexable {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifier := indexables.NewFunction(
+				identifier := idx.NewFunction(
 					content,
 					doc.URI,
 					//protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
-					treeSitterPoints2Range(c.Node.StartPoint(), c.Node.EndPoint()),
-					treeSitterPoints2Range(c.Node.StartPoint(), c.Node.EndPoint()),
+					idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()),
+					idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()),
 					protocol.CompletionItemKindFunction)
 
 				identifiers = append(identifiers, identifier)

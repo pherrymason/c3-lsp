@@ -67,6 +67,7 @@ func (l *Language) FindHoverInformation(doc *Document, params *protocol.HoverPar
 
 	identifier := l.findClosestSymbolDeclaration(word, params.TextDocument.URI, params.Position)
 
+	// TODO: Move below code to a factory, and to be called from server so Language has less knowledge about LSP protocol.
 	// expected behaviour:
 	// hovering on variables: display variable type + any description
 	// hovering on functions: display function signature
@@ -134,7 +135,8 @@ func (l *Language) findSymbolDeclarationInDocPositionScope(identifier string, do
 }
 
 func findDeepFirst(identifier string, position protocol.Position, function *indexables.Function, depth uint, mode FindMode) (indexables.Indexable, uint) {
-	if mode == InPosition && !isPositionInsideRange(position, function.GetDocumentRange()) {
+	if mode == InPosition &&
+		!function.GetDeclarationRange().HasPosition(position) {
 		return nil, depth
 	}
 
@@ -142,7 +144,17 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		return function, depth
 	}
 
-	variable, foundInThisScope := function.Variables[identifier]
+	variable, foundVariableInThisScope := function.Variables[identifier]
+	enum, foundEnumInThisScope := function.Enums[identifier]
+	var enumerator indexables.Enumerator
+	foundEnumeratorInThisScope := false
+
+	for _, scopedEnums := range function.Enums {
+		if scopedEnums.HasEnumerator(identifier) {
+			enumerator = scopedEnums.GetEnumerator(identifier)
+			foundEnumeratorInThisScope = true
+		}
+	}
 
 	for _, child := range function.ChildrenFunctions {
 		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, mode); result != nil {
@@ -150,25 +162,17 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		}
 	}
 
-	if foundInThisScope {
+	if foundVariableInThisScope {
 		return variable, depth
 	}
 
-	return nil, depth
-}
-
-func isPositionInsideRange(position protocol.Position, rango protocol.Range) bool {
-	if position.Line >= rango.Start.Line && position.Line <= rango.End.Line {
-		// Exactly same line
-		if position.Line == rango.Start.Line && position.Line == rango.End.Line {
-			// Must be inside character ranges
-			if position.Character >= rango.Start.Character && position.Character <= rango.End.Character {
-				return true
-			}
-		} else {
-			return true
-		}
+	if foundEnumeratorInThisScope {
+		return enumerator, depth
 	}
 
-	return false
+	if foundEnumInThisScope {
+		return enum, depth
+	}
+
+	return nil, depth
 }

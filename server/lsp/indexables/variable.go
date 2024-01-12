@@ -8,7 +8,7 @@ type Variable struct {
 	BaseIndexable
 }
 
-func NewVariable(name string, variableType string, uri protocol.DocumentUri, identifierRangePosition protocol.Range, documentRangePosition protocol.Range, kind protocol.CompletionItemKind) Variable {
+func NewVariable(name string, variableType string, uri string, identifierRangePosition Range, documentRangePosition Range, kind protocol.CompletionItemKind) Variable {
 	return Variable{
 		Name: name,
 		Type: variableType,
@@ -33,13 +33,13 @@ func (v Variable) GetKind() protocol.CompletionItemKind {
 	return v.Kind
 }
 
-func (v Variable) GetDocumentURI() protocol.DocumentUri {
+func (v Variable) GetDocumentURI() string {
 	return v.documentURI
 }
 
-func (v Variable) GetDeclarationRange() protocol.Range {
+func (v Variable) GetDeclarationRange() Range {
 	return v.identifierRange
 }
-func (v Variable) GetDocumentRange() protocol.Range {
+func (v Variable) GetDocumentRange() Range {
 	return v.documentRange
 }

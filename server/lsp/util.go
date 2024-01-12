@@ -1,7 +1,7 @@
 package lsp
 
 import (
-	sitter "github.com/smacker/go-tree-sitter"
+	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -10,24 +10,13 @@ func boolPtr(v bool) *bool {
 	return &b
 }
 
-func treeSitterPoint2Position(point sitter.Point) protocol.Position {
-	return protocol.Position{Line: point.Row, Character: point.Column}
-}
-
-func treeSitterPoints2Range(start sitter.Point, end sitter.Point) protocol.Range {
+func lsp_NewRangeFromRange(idxRange idx.Range) protocol.Range {
 	return protocol.Range{
-		Start: treeSitterPoint2Position(start),
-		End:   treeSitterPoint2Position(end),
+		Start: protocol.Position{Line: protocol.UInteger(idxRange.Start.Line), Character: protocol.UInteger(idxRange.Start.Character)},
+		End:   protocol.Position{Line: protocol.UInteger(idxRange.End.Line), Character: protocol.UInteger(idxRange.End.Character)},
 	}
 }
 
-func NewPosition(line protocol.UInteger, char protocol.UInteger) protocol.Position {
-	return protocol.Position{Line: line, Character: char}
-}
-
-func NewRange(startLine protocol.UInteger, startChar protocol.UInteger, endLine protocol.UInteger, endChar protocol.UInteger) protocol.Range {
-	return protocol.Range{
-		Start: NewPosition(startLine, startChar),
-		End:   NewPosition(endLine, endChar),
-	}
+func lsp_NewPosition(line uint, char uint) protocol.Position {
+	return protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(char)}
 }

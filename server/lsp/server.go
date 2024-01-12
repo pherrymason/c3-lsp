@@ -139,7 +139,7 @@ func NewServer(opts ServerOpts) *Server {
 		if err == nil {
 			return protocol.Location{
 				URI:   identifier.GetDocumentURI(),
-				Range: identifier.GetDeclarationRange(),
+				Range: lsp_NewRangeFromRange(identifier.GetDeclarationRange()),
 			}, nil
 		}
 

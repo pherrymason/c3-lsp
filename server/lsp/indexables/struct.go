@@ -5,9 +5,9 @@ import protocol "github.com/tliron/glsp/protocol_3_16"
 type Struct struct {
 	Name            string
 	Members         []string
-	DocumentURI     protocol.URI
-	identifierRange protocol.Range
-	documentRange   protocol.Range
+	DocumentURI     string
+	identifierRange Range
+	documentRange   Range
 	Kind            protocol.CompletionItemKind
 }
 
@@ -19,13 +19,13 @@ func (s Struct) GetKind() protocol.CompletionItemKind {
 	return s.Kind
 }
 
-func (s Struct) GetDocumentURI() protocol.DocumentUri {
+func (s Struct) GetDocumentURI() string {
 	return s.DocumentURI
 }
 
-func (s Struct) GetDeclarationRange() protocol.Range {
+func (s Struct) GetDeclarationRange() Range {
 	return s.identifierRange
 }
-func (s Struct) GetDocumentRange() protocol.Range {
+func (s Struct) GetDocumentRange() Range {
 	return s.documentRange
 }

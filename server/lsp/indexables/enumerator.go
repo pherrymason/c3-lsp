@@ -8,7 +8,7 @@ type Enumerator struct {
 	BaseIndexable
 }
 
-func NewEnumerator(name string, value string, identifierPosition protocol.Range) Enumerator {
+func NewEnumerator(name string, value string, identifierPosition Range) Enumerator {
 	return Enumerator{
 		name:  name,
 		value: value,
@@ -27,14 +27,14 @@ func (e Enumerator) GetKind() protocol.CompletionItemKind {
 	return e.Kind
 }
 
-func (e Enumerator) GetDocumentURI() protocol.DocumentUri {
+func (e Enumerator) GetDocumentURI() string {
 	return e.documentURI
 }
 
-func (e Enumerator) GetDeclarationRange() protocol.Range {
+func (e Enumerator) GetDeclarationRange() Range {
 	return e.identifierRange
 }
 
-func (e Enumerator) GetDocumentRange() protocol.Range {
+func (e Enumerator) GetDocumentRange() Range {
 	return e.documentRange
 }
