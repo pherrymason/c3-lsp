@@ -224,6 +224,26 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	assert.Equal(t, &function2, tree.ChildrenFunctions["test2"], "second function")
 }
 
+func TestExtractSymbols_find_macro(t *testing.T) {
+	if true {
+		t.Skip("Incomplete until defining macros in grammar.js")
+	}
+
+	sourceCode := `
+	macro void log(LogLevel $level, String format, args...) {
+		if (log_level != OFF && $level <= log_level) {
+			io::fprintf(&log_file, "[%s] ", $level)!!;
+			io::fprintfn(&log_file, format, ...args)!!;
+		}
+	}`
+
+	_ = NewDocumentFromString("x", sourceCode)
+	//	parser := createParser()
+	//	tree := parser.ExtractSymbols(&doc)
+
+	assert.Equal(t, true, true)
+}
+
 func dfs(n *sitter.Node, level int) {
 	if n == nil {
 		return
