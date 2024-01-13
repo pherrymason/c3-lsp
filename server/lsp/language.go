@@ -86,7 +86,7 @@ func (l *Language) FindHoverInformation(doc *Document, params *protocol.HoverPar
 		hover = protocol.Hover{
 			Contents: protocol.MarkupContent{
 				Kind:  protocol.MarkupKindMarkdown,
-				Value: fmt.Sprintf("%s %s()", v.ReturnType, v.GetName()),
+				Value: fmt.Sprintf("%s %s()", v.GetReturnType(), v.GetName()),
 			},
 		}
 	case *indexables.Struct:
@@ -140,7 +140,7 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		return nil, depth
 	}
 
-	if identifier == function.Name {
+	if identifier == function.GetName() {
 		return function, depth
 	}
 

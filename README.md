@@ -22,8 +22,8 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [ ] Index Symbols
   - [x] Variables & type
   - [x] Functions
-  - [ ] Function arguments
-  - [ ] Function return type
+    - [ ] Function arguments
+    - [x] Function return type
   - [x] Enums + Enumerators
   - [x] Structs
   - [ ] Struct members

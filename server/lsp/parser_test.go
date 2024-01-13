@@ -193,22 +193,15 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	source := `fn void test() {
 		return 1;
 	}
-	fn void test2(){
+	fn int test2(int number, char ch){
 		return 2;
-	}
-	`
+	}`
 	doc := NewDocumentFromString("x", source)
 	parser := createParser()
 	tree := parser.ExtractSymbols(&doc)
 
-	function1 := idx.NewFunction("test", "x",
-		idx.NewRange(0, 8, 0, 12),
-		idx.NewRange(0, 8, 2, 2),
-		protocol.CompletionItemKindFunction)
-	function2 := idx.NewFunction("test2", "x",
-		idx.NewRange(3, 9, 3, 14),
-		idx.NewRange(3, 9, 5, 2),
-		protocol.CompletionItemKindFunction)
+	function1 := idx.NewFunction("test", "void", "x", idx.NewRange(0, 8, 0, 12), idx.NewRange(0, 8, 2, 2), protocol.CompletionItemKindFunction)
+	function2 := idx.NewFunction("test2", "int", "x", idx.NewRange(3, 8, 3, 13), idx.NewRange(3, 8, 5, 2), protocol.CompletionItemKindFunction)
 
 	root := idx.NewAnonymousScopeFunction(
 		"main",

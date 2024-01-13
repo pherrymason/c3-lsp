@@ -10,37 +10,37 @@ const (
 )
 
 type Function struct {
-	_type           FunctionType
-	Name            string
-	ReturnType      string
-	DocumentURI     string
-	identifierRange Range
-	documentRange   Range
-	Kind            protocol.CompletionItemKind
+	fType      FunctionType
+	name       string
+	returnType string
 
 	Variables         map[string]Variable
 	Enums             map[string]*Enum
 	Structs           map[string]Struct
 	ChildrenFunctions map[string]*Function
+
+	BaseIndexable
 }
 
 func NewAnonymousScopeFunction(name string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(Anonymous, name, docId, Range{}, docRange, kind)
+	return newFunctionType(Anonymous, name, "", docId, Range{}, docRange, kind)
 }
 
-func NewFunction(name string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(UserDefined, name, docId, identifierRangePosition, docRange, kind)
+func NewFunction(name string, returnType string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
+	return newFunctionType(UserDefined, name, returnType, docId, idRange, docRange, kind)
 }
 
-func newFunctionType(fType FunctionType, name string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
+func newFunctionType(fType FunctionType, name string, returnType string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return Function{
-		_type:             fType,
-		Name:              name,
-		ReturnType:        "??",
-		DocumentURI:       docId,
-		identifierRange:   identifierRangePosition,
-		documentRange:     docRange,
-		Kind:              kind,
+		fType:      fType,
+		name:       name,
+		returnType: returnType,
+		BaseIndexable: BaseIndexable{
+			documentURI:     docId,
+			identifierRange: identifierRangePosition,
+			documentRange:   docRange,
+			Kind:            kind,
+		},
 		Variables:         make(map[string]Variable),
 		Enums:             make(map[string]*Enum),
 		Structs:           make(map[string]Struct),
@@ -49,7 +49,11 @@ func newFunctionType(fType FunctionType, name string, docId string, identifierRa
 }
 
 func (f Function) GetName() string {
-	return f.Name
+	return f.name
+}
+
+func (f Function) GetReturnType() string {
+	return f.returnType
 }
 
 func (f Function) GetKind() protocol.CompletionItemKind {
@@ -57,7 +61,7 @@ func (f Function) GetKind() protocol.CompletionItemKind {
 }
 
 func (f Function) GetDocumentURI() string {
-	return f.DocumentURI
+	return f.documentURI
 }
 
 func (f Function) GetDeclarationRange() Range {
@@ -83,7 +87,7 @@ func (f *Function) AddEnum(enum *Enum) {
 }
 
 func (f Function) AddFunction(f2 *Function) {
-	f.ChildrenFunctions[f2.Name] = f2
+	f.ChildrenFunctions[f2.name] = f2
 }
 
 func (f Function) AddStruct(s Struct) {

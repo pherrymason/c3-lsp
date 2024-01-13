@@ -97,10 +97,8 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 				case "function_declaration":
 					identifier := idx.NewFunction(
 						content,
-						doc.URI,
-						idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()),
-						idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()),
-						protocol.CompletionItemKindFunction)
+						c.Node.Parent().ChildByFieldName("return_type").Content(sourceCode),
+						doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), protocol.CompletionItemKindFunction)
 					functionsMap[content] = &identifier
 					scopeTree.AddFunction(&identifier)
 				}
@@ -265,13 +263,7 @@ func (p *Parser) FindFunctionDeclarations(doc *Document) []idx.Indexable {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifier := idx.NewFunction(
-					content,
-					doc.URI,
-					//protocol.Position{c.Node.StartPoint().Row, c.Node.StartPoint().Column},
-					idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()),
-					idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()),
-					protocol.CompletionItemKindFunction)
+				identifier := idx.NewFunction(content, "", doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), protocol.CompletionItemKindFunction)
 
 				identifiers = append(identifiers, identifier)
 			}

@@ -72,7 +72,7 @@ func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	expectedHover := protocol.Hover{
 		Contents: protocol.MarkupContent{
 			Kind:  protocol.MarkupKindMarkdown,
-			Value: fmt.Sprintf("?? importedMethod()"),
+			Value: fmt.Sprintf("void importedMethod()"),
 		},
 	}
 	assert.Equal(t, expectedHover, hover)
