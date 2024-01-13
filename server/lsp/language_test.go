@@ -166,8 +166,8 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			"MyStructure",
 			0, 47,
 			createStruct("x", "MyStructure", []idx.StructMember{
-				idx.NewStructMember("enabled", "bool", idx.NewRange(0, 2, 0, 12)),
-				idx.NewStructMember("key", "char", idx.NewRange(0, 2, 0, 12)),
+				idx.NewStructMember("enabled", "bool", idx.NewRange(0, 20, 0, 33)),
+				idx.NewStructMember("key", "char", idx.NewRange(0, 34, 0, 43)),
 			},
 				idx.NewRange(0, 7, 0, 18)),
 		},
