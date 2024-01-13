@@ -180,8 +180,8 @@ func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *te
 	expectedStruct := idx.NewStruct(
 		"MyStructure",
 		[]idx.StructMember{
-			idx.NewStructMember("enabled", "bool"),
-			idx.NewStructMember("key", "char"),
+			idx.NewStructMember("enabled", "bool", idx.NewRange(1, 2, 1, 15)),
+			idx.NewStructMember("key", "char", idx.NewRange(2, 2, 2, 11)),
 		},
 		"x",
 		idx.NewRange(0, 7, 0, 18),

@@ -160,7 +160,7 @@ func (p *Parser) nodeToStruct(doc *Document, node *sitter.Node, sourceCode []byt
 		case "field_declaration":
 			fieldName := child.ChildByFieldName("name").Content(sourceCode)
 			fieldType := child.ChildByFieldName("type").Content(sourceCode)
-			fields = append(fields, idx.NewStructMember(fieldName, fieldType))
+			fields = append(fields, idx.NewStructMember(fieldName, fieldType, idx.NewRangeFromSitterPositions(child.StartPoint(), child.EndPoint())))
 
 		case "field_struct_declaration":
 		case "field_union_declaration":

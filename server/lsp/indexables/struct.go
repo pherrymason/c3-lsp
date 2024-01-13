@@ -41,11 +41,13 @@ func (s Struct) GetDocumentRange() Range {
 type StructMember struct {
 	name     string
 	baseType string
+	posRange Range
 }
 
-func NewStructMember(name string, baseType string) StructMember {
+func NewStructMember(name string, baseType string, posRange Range) StructMember {
 	return StructMember{
 		name:     name,
 		baseType: baseType,
+		posRange: posRange,
 	}
 }

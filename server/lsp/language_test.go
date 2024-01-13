@@ -2,7 +2,7 @@ package lsp
 
 import (
 	"fmt"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -87,40 +87,40 @@ func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UI
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
 }
-func createVariable(docId string, name string, baseType string, sL uint, sC uint, eL uint, eC uint) indexables.Indexable {
-	return indexables.Variable{
+func createVariable(docId string, name string, baseType string, sL uint, sC uint, eL uint, eC uint) idx.Indexable {
+	return idx.Variable{
 		Name: name,
 		Type: baseType,
-		BaseIndexable: indexables.NewBaseIndexable(
+		BaseIndexable: idx.NewBaseIndexable(
 			docId,
-			indexables.NewRange(sL, sC, eL, eC),
-			indexables.NewRange(sL, sC, eL, eC),
+			idx.NewRange(sL, sC, eL, eC),
+			idx.NewRange(sL, sC, eL, eC),
 			protocol.CompletionItemKindVariable,
 		),
 	}
 }
 
-func createEnum(docId string, name string, variants []indexables.Enumerator, idRange [4]uint, docRange [4]uint) *indexables.Enum {
-	enum := indexables.NewEnum(
+func createEnum(docId string, name string, variants []idx.Enumerator, idRange [4]uint, docRange [4]uint) *idx.Enum {
+	enum := idx.NewEnum(
 		name,
 		"",
 		variants,
-		indexables.NewRange(idRange[0], idRange[1], idRange[2], idRange[3]),
-		indexables.NewRange(docRange[0], docRange[1], docRange[2], docRange[3]),
+		idx.NewRange(idRange[0], idRange[1], idRange[2], idRange[3]),
+		idx.NewRange(docRange[0], docRange[1], docRange[2], docRange[3]),
 		docId,
 	)
 
 	return &enum
 }
 
-func createEnumerator(name string, pRange [4]uint) indexables.Enumerator {
-	enumerator := indexables.NewEnumerator(name, "", indexables.NewRange(pRange[0], pRange[1], pRange[2], pRange[3]))
+func createEnumerator(name string, pRange [4]uint) idx.Enumerator {
+	enumerator := idx.NewEnumerator(name, "", idx.NewRange(pRange[0], pRange[1], pRange[2], pRange[3]))
 
 	return enumerator
 }
 
-func createStruct(docId string, name string, members []indexables.StructMember, idRange indexables.Range) indexables.Indexable {
-	return indexables.NewStruct(
+func createStruct(docId string, name string, members []idx.StructMember, idRange idx.Range) idx.Indexable {
+	return idx.NewStruct(
 		name,
 		members,
 		docId,
@@ -135,7 +135,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 		highlightedWord    string
 		cursorPositionLine protocol.UInteger
 		cursorPositionChar protocol.UInteger
-		expected           indexables.Indexable
+		expected           idx.Indexable
 	}{
 		{"variable",
 			`int value=1;value=3;`,
@@ -147,10 +147,10 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			`enum Colors = { RED, BLUE, GREEN };Colors foo = RED;`,
 			"Colors",
 			0, 36,
-			createEnum("x", "Colors", []indexables.Enumerator{
-				indexables.NewEnumerator("RED", "", indexables.NewRange(0, 16, 0, 19)),
-				indexables.NewEnumerator("BLUE", "", indexables.NewRange(0, 21, 0, 25)),
-				indexables.NewEnumerator("GREEN", "", indexables.NewRange(0, 27, 0, 32)),
+			createEnum("x", "Colors", []idx.Enumerator{
+				idx.NewEnumerator("RED", "", idx.NewRange(0, 16, 0, 19)),
+				idx.NewEnumerator("BLUE", "", idx.NewRange(0, 21, 0, 25)),
+				idx.NewEnumerator("GREEN", "", idx.NewRange(0, 27, 0, 32)),
 			}, [4]uint{0, 5, 0, 11}, [4]uint{0, 0, 0, 34}),
 		},
 		{
@@ -165,11 +165,11 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			`struct MyStructure {bool enabled; char key;} MyStructure value;`,
 			"MyStructure",
 			0, 47,
-			createStruct("x", "MyStructure", []indexables.StructMember{
-				indexables.NewStructMember("enabled", "bool"),
-				indexables.NewStructMember("key", "char"),
+			createStruct("x", "MyStructure", []idx.StructMember{
+				idx.NewStructMember("enabled", "bool", idx.NewRange(0, 2, 0, 12)),
+				idx.NewStructMember("key", "char", idx.NewRange(0, 2, 0, 12)),
 			},
-				indexables.NewRange(0, 7, 0, 18)),
+				idx.NewRange(0, 7, 0, 18)),
 		},
 	}
 
@@ -208,12 +208,12 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := indexables.NewVariable(
+	expectedSymbol := idx.NewVariable(
 		"value",
 		"int",
 		"x",
-		indexables.NewRange(1, 6, 1, 11),
-		indexables.NewRange(1, 6, 1, 11),
+		idx.NewRange(1, 6, 1, 11),
+		idx.NewRange(1, 6, 1, 11),
 		protocol.CompletionItemKindVariable,
 	)
 	assert.Equal(t, expectedSymbol, symbol)
@@ -240,12 +240,12 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_func
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := indexables.NewVariable(
+	expectedSymbol := idx.NewVariable(
 		"value",
 		"int",
 		"x",
-		indexables.NewRange(1, 6, 1, 11),
-		indexables.NewRange(1, 6, 1, 11),
+		idx.NewRange(1, 6, 1, 11),
+		idx.NewRange(1, 6, 1, 11),
 		protocol.CompletionItemKindVariable,
 	)
 	assert.Equal(t, expectedSymbol, symbol)
@@ -273,12 +273,12 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := indexables.NewVariable(
+	expectedSymbol := idx.NewVariable(
 		"value",
 		"int",
 		"y",
-		indexables.NewRange(0, 4, 0, 9),
-		indexables.NewRange(0, 4, 0, 9),
+		idx.NewRange(0, 4, 0, 9),
+		idx.NewRange(0, 4, 0, 9),
 		protocol.CompletionItemKindVariable,
 	)
 	assert.Equal(t, expectedSymbol, symbol)
