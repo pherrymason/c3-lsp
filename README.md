@@ -25,8 +25,9 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
     - [ ] Function arguments
     - [x] Function return type
   - [x] Enums + Enumerators
+    - [ ] base type 
   - [x] Structs
-  - [ ] Struct members
+    - [ ] Struct members
   - [ ] imports
   - [ ] macros: **Needs to update grammar.js**
 - [ ] Hover information
