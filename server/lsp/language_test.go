@@ -208,14 +208,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariable(
-		"value",
-		"int",
-		"x",
-		idx.NewRange(1, 6, 1, 11),
-		idx.NewRange(1, 6, 1, 11),
-		protocol.CompletionItemKindVariable,
-	)
+	expectedSymbol := idx.NewVariable("value", "int", "x", idx.NewRange(1, 6, 1, 11), idx.NewRange(1, 6, 1, 11))
 	assert.Equal(t, expectedSymbol, symbol)
 }
 
@@ -240,14 +233,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_func
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariable(
-		"value",
-		"int",
-		"x",
-		idx.NewRange(1, 6, 1, 11),
-		idx.NewRange(1, 6, 1, 11),
-		protocol.CompletionItemKindVariable,
-	)
+	expectedSymbol := idx.NewVariable("value", "int", "x", idx.NewRange(1, 6, 1, 11), idx.NewRange(1, 6, 1, 11))
 	assert.Equal(t, expectedSymbol, symbol)
 }
 
@@ -273,14 +259,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariable(
-		"value",
-		"int",
-		"y",
-		idx.NewRange(0, 4, 0, 9),
-		idx.NewRange(0, 4, 0, 9),
-		protocol.CompletionItemKindVariable,
-	)
+	expectedSymbol := idx.NewVariable("value", "int", "y", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 4, 0, 9))
 	assert.Equal(t, expectedSymbol, symbol)
 }
 

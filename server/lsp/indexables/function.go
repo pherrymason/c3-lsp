@@ -10,10 +10,10 @@ const (
 )
 
 type Function struct {
-	fType      FunctionType
-	name       string
-	returnType string
-	arguments  []string // Used to list which variables are defined in function signature. They are fully defined in Variables
+	fType       FunctionType
+	name        string
+	returnType  string
+	argumentIds []string // Used to list which variables are defined in function signature. They are fully defined in Variables
 
 	Variables         map[string]Variable
 	Enums             map[string]*Enum
@@ -24,18 +24,19 @@ type Function struct {
 }
 
 func NewAnonymousScopeFunction(name string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(Anonymous, name, "", docId, Range{}, docRange, kind)
+	return newFunctionType(Anonymous, name, "", nil, docId, Range{}, docRange, kind)
 }
 
-func NewFunction(name string, returnType string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(UserDefined, name, returnType, docId, idRange, docRange, kind)
+func NewFunction(name string, returnType string, argumentIds []string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
+	return newFunctionType(UserDefined, name, returnType, argumentIds, docId, idRange, docRange, kind)
 }
 
-func newFunctionType(fType FunctionType, name string, returnType string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
+func newFunctionType(fType FunctionType, name string, returnType string, argumentIds []string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return Function{
-		fType:      fType,
-		name:       name,
-		returnType: returnType,
+		fType:       fType,
+		name:        name,
+		returnType:  returnType,
+		argumentIds: argumentIds,
 		BaseIndexable: BaseIndexable{
 			documentURI:     docId,
 			identifierRange: identifierRangePosition,

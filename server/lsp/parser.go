@@ -107,17 +107,10 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 	return scopeTree
 }
 
-func (p *Parser) nodeToVariable(doc *Document, node *sitter.Node, sourceCode []byte, content string) idx.Variable {
-	typeNode := node.PrevSibling()
+func (p *Parser) nodeToVariable(doc *Document, identifierNode *sitter.Node, sourceCode []byte, content string) idx.Variable {
+	typeNode := identifierNode.PrevSibling()
 	typeNodeContent := typeNode.Content(sourceCode)
-	variable := idx.NewVariable(
-		content,
-		typeNodeContent,
-		doc.URI,
-		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), // TODO Should this include the var type range?
-		protocol.CompletionItemKindVariable,
-	)
+	variable := idx.NewVariable(content, typeNodeContent, doc.URI, idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()))
 
 	return variable
 }
@@ -125,13 +118,33 @@ func (p *Parser) nodeToVariable(doc *Document, node *sitter.Node, sourceCode []b
 func (p *Parser) nodeToFunction(doc *Document, node *sitter.Node, sourceCode []byte) idx.Function {
 
 	nameNode := node.ChildByFieldName("name")
-	symbol := idx.NewFunction(
-		nameNode.Content(sourceCode),
-		node.ChildByFieldName("return_type").Content(sourceCode),
-		doc.URI,
-		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
+
+	// Extract function arguments
+	arguments := []idx.Variable{}
+	parameters := node.ChildByFieldName("parameters")
+	for i := uint32(0); i < parameters.ChildCount(); i++ {
+		argNode := parameters.Child(int(i))
+		switch argNode.Type() {
+		case "parameter":
+			for j := uint32(0); j < argNode.ChildCount(); j++ {
+				arggNode := argNode.Child(int(j))
+				switch arggNode.Type() {
+				case "identifier":
+					arguments = append(arguments, p.nodeToVariable(doc, arggNode, sourceCode, arggNode.Content(sourceCode)))
+				}
+			}
+		}
+	}
+
+	var argumentIds []string
+	for _, arg := range arguments {
+		argumentIds = append(argumentIds, arg.GetName())
+	}
+
+	symbol := idx.NewFunction(nameNode.Content(sourceCode), node.ChildByFieldName("return_type").Content(sourceCode), argumentIds, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
 
 	variables := p.FindVariableDeclarations(doc, node)
+	variables = append(arguments, variables...)
 
 	// TODO Previous node has the info about which function is belongs to.
 
@@ -259,7 +272,7 @@ func (p *Parser) FindFunctionDeclarations(doc *Document) []idx.Indexable {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifier := idx.NewFunction(content, "", doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), protocol.CompletionItemKindFunction)
+				identifier := idx.NewFunction(content, "", []string{}, doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), protocol.CompletionItemKindFunction)
 
 				identifiers = append(identifiers, identifier)
 			}

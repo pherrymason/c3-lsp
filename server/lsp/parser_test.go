@@ -98,12 +98,7 @@ func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t 
 		protocol.CompletionItemKindModule,
 	)
 	expectedRoot.AddVariables([]idx.Variable{
-		idx.NewVariable(
-			"value",
-			"int",
-			"x",
-			idx.NewRange(0, 4, 0, 9),
-			idx.NewRange(0, 4, 0, 9), protocol.CompletionItemKindVariable),
+		idx.NewVariable("value", "int", "x", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 4, 0, 9)),
 	})
 
 	assert.Equal(t, expectedRoot, symbols)
@@ -196,16 +191,23 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	fn int test2(int number, char ch){
 		return 2;
 	}`
-	doc := NewDocumentFromString("x", source)
+	docId := "x"
+	doc := NewDocumentFromString(docId, source)
 	parser := createParser()
 	tree := parser.ExtractSymbols(&doc)
 
-	function1 := idx.NewFunction("test", "void", "x", idx.NewRange(0, 8, 0, 12), idx.NewRange(0, 0, 2, 2), protocol.CompletionItemKindFunction)
-	function2 := idx.NewFunction("test2", "int", "x", idx.NewRange(3, 8, 3, 13), idx.NewRange(3, 1, 5, 2), protocol.CompletionItemKindFunction)
+	function1 := idx.NewFunction("test", "void", nil, docId, idx.NewRange(0, 8, 0, 12), idx.NewRange(0, 0, 2, 2), protocol.CompletionItemKindFunction)
+	function2 := idx.NewFunction("test2", "int", []string{"number", "ch"}, docId, idx.NewRange(3, 8, 3, 34), idx.NewRange(3, 1, 5, 2), protocol.CompletionItemKindFunction)
+
+	var1 := idx.NewVariable("number", "int", docId,
+		idx.NewRange(3, 18, 3, 24), idx.NewRange(3, 18, 3, 24))
+	var2 := idx.NewVariable("ch", "char", docId,
+		idx.NewRange(3, 31, 3, 33), idx.NewRange(3, 31, 3, 33))
+	function2.AddVariables([]idx.Variable{var1, var2})
 
 	root := idx.NewAnonymousScopeFunction(
 		"main",
-		"x",
+		docId,
 		idx.NewRange(0, 0, 0, 14),
 		protocol.CompletionItemKindModule,
 	)
