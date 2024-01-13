@@ -28,6 +28,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
     - [ ] base type 
   - [x] Structs
     - [ ] Struct members
+    - [ ] Struct methods
   - [ ] imports
   - [ ] macros: **Needs to update grammar.js**
 - [ ] Hover information
