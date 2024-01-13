@@ -113,8 +113,8 @@ func createEnum(docId string, name string, variants []idx.Enumerator, idRange [4
 	return &enum
 }
 
-func createEnumerator(name string, pRange [4]uint) idx.Enumerator {
-	enumerator := idx.NewEnumerator(name, "", idx.NewRange(pRange[0], pRange[1], pRange[2], pRange[3]), "")
+func createEnumerator(name string, docId string, pRange [4]uint) idx.Enumerator {
+	enumerator := idx.NewEnumerator(name, "", idx.NewRange(pRange[0], pRange[1], pRange[2], pRange[3]), docId)
 
 	return enumerator
 }
@@ -148,9 +148,9 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			"Colors",
 			0, 36,
 			createEnum("x", "Colors", []idx.Enumerator{
-				idx.NewEnumerator("RED", "", idx.NewRange(0, 16, 0, 19), ""),
-				idx.NewEnumerator("BLUE", "", idx.NewRange(0, 21, 0, 25), ""),
-				idx.NewEnumerator("GREEN", "", idx.NewRange(0, 27, 0, 32), ""),
+				idx.NewEnumerator("RED", "", idx.NewRange(0, 16, 0, 19), "x"),
+				idx.NewEnumerator("BLUE", "", idx.NewRange(0, 21, 0, 25), "x"),
+				idx.NewEnumerator("GREEN", "", idx.NewRange(0, 27, 0, 32), "x"),
 			}, [4]uint{0, 5, 0, 11}, [4]uint{0, 0, 0, 34}),
 		},
 		{
@@ -158,7 +158,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			`enum Colors = { RED, BLUE, GREEN };Colors foo = RED;`,
 			"RED",
 			0, 49,
-			createEnumerator("RED", [4]uint{0, 16, 0, 19}),
+			createEnumerator("RED", "x", [4]uint{0, 16, 0, 19}),
 		},
 		{
 			"struct",
