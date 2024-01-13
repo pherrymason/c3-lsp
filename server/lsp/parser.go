@@ -4,7 +4,6 @@ package lsp
 //TSLanguage *tree_sitter_c3();
 import "C"
 import (
-	"fmt"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/tliron/commonlog"
@@ -15,10 +14,7 @@ import (
 const VarDeclarationQuery = `(var_declaration
 		name: (identifier) @variable_name
 	)`
-const FunctionDeclarationQuery = `(function_declaration
-        name: (identifier) @function_name
-        body: (_) @body
-    )`
+const FunctionDeclarationQuery = `(function_declaration) @function_dec`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
 const StructDeclaration = `(struct_declaration) @struct_dec`
 
@@ -68,7 +64,7 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 	qc.Exec(q, doc.parsedTree.RootNode())
 	sourceCode := []byte(doc.Content)
 
-	functionsMap := make(map[string]*idx.Function)
+	//functionsMap := make(map[string]*idx.Function)
 	scopeTree := idx.NewAnonymousScopeFunction(
 		"main",
 		doc.URI,
@@ -94,35 +90,17 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 					scopeTree.AddVariables([]idx.Variable{
 						variable,
 					})
-				case "function_declaration":
-					identifier := idx.NewFunction(
-						content,
-						c.Node.Parent().ChildByFieldName("return_type").Content(sourceCode),
-						doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), protocol.CompletionItemKindFunction)
-					functionsMap[content] = &identifier
-					scopeTree.AddFunction(&identifier)
 				}
+			} else if nodeType == "function_declaration" {
+				function := p.nodeToFunction(doc, c.Node, sourceCode)
+				scopeTree.AddFunction(&function)
 			} else if nodeType == "enum_declaration" {
 				enum := p.nodeToEnum(doc, c.Node, sourceCode)
 				scopeTree.AddEnum(&enum)
 			} else if nodeType == "struct_declaration" {
 				_struct := p.nodeToStruct(doc, c.Node, sourceCode)
 				scopeTree.AddStruct(_struct)
-			} else if nodeType == "compound_statement" {
-				variables := p.FindVariableDeclarations(doc, c.Node)
-
-				// TODO Previous node has the info about which function is belongs to.
-				idNode := c.Node.Parent().ChildByFieldName("name")
-				functionName := idNode.Content(sourceCode)
-
-				function, ok := functionsMap[functionName]
-				if !ok {
-					panic(fmt.Sprint("Could not find definition for ", functionName))
-				}
-				function.SetEndRange(idx.NewPositionFromSitterPoint(c.Node.EndPoint()))
-				function.AddVariables(variables)
 			}
-			//fmt.Println(c.Node.String(), content)
 		}
 	}
 
@@ -142,6 +120,24 @@ func (p *Parser) nodeToVariable(doc *Document, node *sitter.Node, sourceCode []b
 	)
 
 	return variable
+}
+
+func (p *Parser) nodeToFunction(doc *Document, node *sitter.Node, sourceCode []byte) idx.Function {
+
+	nameNode := node.ChildByFieldName("name")
+	symbol := idx.NewFunction(
+		nameNode.Content(sourceCode),
+		node.ChildByFieldName("return_type").Content(sourceCode),
+		doc.URI,
+		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
+
+	variables := p.FindVariableDeclarations(doc, node)
+
+	// TODO Previous node has the info about which function is belongs to.
+
+	symbol.AddVariables(variables)
+
+	return symbol
 }
 
 func (p *Parser) nodeToStruct(doc *Document, node *sitter.Node, sourceCode []byte) idx.Struct {

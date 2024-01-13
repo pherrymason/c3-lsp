@@ -13,6 +13,7 @@ type Function struct {
 	fType      FunctionType
 	name       string
 	returnType string
+	arguments  []string // Used to list which variables are defined in function signature. They are fully defined in Variables
 
 	Variables         map[string]Variable
 	Enums             map[string]*Enum
@@ -70,10 +71,6 @@ func (f Function) GetDeclarationRange() Range {
 
 func (f Function) GetDocumentRange() Range {
 	return f.documentRange
-}
-
-func (f *Function) SetEndRange(endPosition Position) {
-	f.documentRange.End = endPosition
 }
 
 func (f *Function) AddVariables(variables []Variable) {
