@@ -114,7 +114,7 @@ func createEnum(docId string, name string, variants []idx.Enumerator, idRange [4
 }
 
 func createEnumerator(name string, pRange [4]uint) idx.Enumerator {
-	enumerator := idx.NewEnumerator(name, "", idx.NewRange(pRange[0], pRange[1], pRange[2], pRange[3]))
+	enumerator := idx.NewEnumerator(name, "", idx.NewRange(pRange[0], pRange[1], pRange[2], pRange[3]), "")
 
 	return enumerator
 }
@@ -148,9 +148,9 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			"Colors",
 			0, 36,
 			createEnum("x", "Colors", []idx.Enumerator{
-				idx.NewEnumerator("RED", "", idx.NewRange(0, 16, 0, 19)),
-				idx.NewEnumerator("BLUE", "", idx.NewRange(0, 21, 0, 25)),
-				idx.NewEnumerator("GREEN", "", idx.NewRange(0, 27, 0, 32)),
+				idx.NewEnumerator("RED", "", idx.NewRange(0, 16, 0, 19), ""),
+				idx.NewEnumerator("BLUE", "", idx.NewRange(0, 21, 0, 25), ""),
+				idx.NewEnumerator("GREEN", "", idx.NewRange(0, 27, 0, 32), ""),
 			}, [4]uint{0, 5, 0, 11}, [4]uint{0, 0, 0, 34}),
 		},
 		{

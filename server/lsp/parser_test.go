@@ -125,15 +125,14 @@ func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *test
 	enum := idx.NewEnum(
 		"Colors",
 		"",
-		[]idx.Enumerator{
-			idx.NewEnumerator("RED", "", idx.NewRange(0, 14, 0, 17)),
-			idx.NewEnumerator("BLUE", "", idx.NewRange(0, 19, 0, 23)),
-			idx.NewEnumerator("GREEN", "", idx.NewRange(0, 25, 0, 30)),
-		},
+		[]idx.Enumerator{},
 		idx.NewRange(0, 5, 0, 11),
 		idx.NewRange(0, 0, 0, 32),
 		"x",
 	)
+	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 14, 0, 17))
+	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 19, 0, 23))
+	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 25, 0, 30))
 	expectedRoot.AddEnum(&enum)
 	assert.Equal(t, &enum, symbols.Enums["Colors"])
 }
@@ -154,15 +153,15 @@ func TestExtractSymbols_finds_function_root_and_global_enum_with_base_type_decla
 	enum := idx.NewEnum(
 		"Colors",
 		"",
-		[]idx.Enumerator{
-			idx.NewEnumerator("RED", "", idx.NewRange(0, 18, 0, 21)),
-			idx.NewEnumerator("BLUE", "", idx.NewRange(0, 23, 0, 27)),
-			idx.NewEnumerator("GREEN", "", idx.NewRange(0, 29, 0, 34)),
-		},
+		[]idx.Enumerator{},
 		idx.NewRange(0, 5, 0, 11),
 		idx.NewRange(0, 0, 0, 36),
 		"x",
 	)
+	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 18, 0, 21))
+	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 23, 0, 27))
+	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 29, 0, 34))
+
 	expectedRoot.AddEnum(&enum)
 	assert.Equal(t, &enum, symbols.Enums["Colors"])
 }

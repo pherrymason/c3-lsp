@@ -181,32 +181,27 @@ func (p *Parser) nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte)
 	bodyIndex := int(nodesCount - 1)
 
 	//	p.logger.Debug(fmt.Sprint(node.Content(sourceCode), ": Child count:", nodesCount))
-
-	enumeratorsNode := node.Child(bodyIndex)
-
-	enumerators := []idx.Enumerator{}
-	for i := uint32(0); i < enumeratorsNode.ChildCount(); i++ {
-		enumeratorNode := enumeratorsNode.Child(int(i))
-		if enumeratorNode.Type() == "enumerator" {
-			enumerators = append(
-				enumerators,
-				idx.NewEnumerator(
-					enumeratorNode.Child(0).Content(sourceCode),
-					"",
-					idx.NewRangeFromSitterPositions(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()),
-				),
-			)
-		}
-	}
-
 	enum := idx.NewEnum(
 		nameNode.Content(sourceCode),
 		baseType,
-		enumerators,
+		[]idx.Enumerator{},
 		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
 		doc.URI,
 	)
+
+	enumeratorsNode := node.Child(bodyIndex)
+
+	for i := uint32(0); i < enumeratorsNode.ChildCount(); i++ {
+		enumeratorNode := enumeratorsNode.Child(int(i))
+		if enumeratorNode.Type() == "enumerator" {
+			enum.RegisterEnumerator(
+				enumeratorNode.Child(0).Content(sourceCode),
+				"",
+				idx.NewRangeFromSitterPositions(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()),
+			)
+		}
+	}
 
 	return enum
 }

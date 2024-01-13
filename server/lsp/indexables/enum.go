@@ -46,6 +46,11 @@ func (e Enum) GetDocumentRange() Range {
 	return e.identifierRange
 }
 
+func (e *Enum) RegisterEnumerator(name string, value string, posRange Range) {
+	e.enumerators = append(e.enumerators,
+		NewEnumerator(name, value, posRange, e.documentURI))
+}
+
 func (e *Enum) AddEnumerators(enumerators []Enumerator) {
 	e.enumerators = enumerators
 }

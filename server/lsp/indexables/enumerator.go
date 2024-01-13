@@ -8,11 +8,12 @@ type Enumerator struct {
 	BaseIndexable
 }
 
-func NewEnumerator(name string, value string, identifierPosition Range) Enumerator {
+func NewEnumerator(name string, value string, identifierPosition Range, docId string) Enumerator {
 	return Enumerator{
 		name:  name,
 		value: value,
 		BaseIndexable: BaseIndexable{
+			documentURI:     docId,
 			identifierRange: identifierPosition,
 			Kind:            protocol.CompletionItemKindEnumMember,
 		},
