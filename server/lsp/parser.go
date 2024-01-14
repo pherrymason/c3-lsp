@@ -130,13 +130,7 @@ func (p *Parser) nodeToFunction(doc *Document, node *sitter.Node, sourceCode []b
 		argNode := parameters.Child(int(i))
 		switch argNode.Type() {
 		case "parameter":
-			for j := uint32(0); j < argNode.ChildCount(); j++ {
-				identifierNode := argNode.Child(int(j))
-				switch identifierNode.Type() {
-				case "identifier":
-					arguments = append(arguments, p.nodeToVariable(doc, argNode, identifierNode, sourceCode, identifierNode.Content(sourceCode)))
-				}
-			}
+			arguments = append(arguments, p.nodeToArgument(doc, argNode, sourceCode))
 		}
 	}
 
@@ -155,6 +149,40 @@ func (p *Parser) nodeToFunction(doc *Document, node *sitter.Node, sourceCode []b
 	symbol.AddVariables(variables)
 
 	return symbol
+}
+
+// nodeToArgument Very similar to nodeToVariable, but arguments have optional identifiers (for example when using `self` for struct methods)
+func (p *Parser) nodeToArgument(doc *Document, argNode *sitter.Node, sourceCode []byte) idx.Variable {
+	var identifier string = ""
+	var idRange idx.Range
+	var argType string = ""
+	if argNode.ChildCount() == 2 {
+		if argNode.Child(0).Type() == "identifier" {
+			// argument without type
+			idNode := argNode.Child(0)
+			identifier = idNode.Content(sourceCode)
+			idRange = idx.NewRangeFromSitterPositions(idNode.StartPoint(), idNode.EndPoint())
+		} else {
+			// first node is type
+			argType = argNode.Child(0).Content(sourceCode)
+
+			idNode := argNode.Child(1)
+			identifier = idNode.Content(sourceCode)
+			idRange = idx.NewRangeFromSitterPositions(idNode.StartPoint(), idNode.EndPoint())
+		}
+	} else if argNode.ChildCount() == 1 {
+		idNode := argNode.Child(0)
+		identifier = idNode.Content(sourceCode)
+		idRange = idx.NewRangeFromSitterPositions(idNode.StartPoint(), idNode.EndPoint())
+	}
+
+	variable := idx.NewVariable(
+		identifier,
+		argType,
+		doc.URI,
+		idRange, idx.NewRangeFromSitterPositions(argNode.StartPoint(), argNode.EndPoint()))
+
+	return variable
 }
 
 func (p *Parser) nodeToStruct(doc *Document, node *sitter.Node, sourceCode []byte) idx.Struct {
@@ -191,7 +219,6 @@ func (p *Parser) nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte)
 	baseType := ""
 	bodyIndex := int(nodesCount - 1)
 
-	//	p.logger.Debug(fmt.Sprint(node.Content(sourceCode), ": Child count:", nodesCount))
 	enum := idx.NewEnum(
 		nameNode.Content(sourceCode),
 		baseType,

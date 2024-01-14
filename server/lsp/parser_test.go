@@ -190,6 +190,9 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	}
 	fn int test2(int number, char ch) {
 		return 2;
+	}
+	fn Object* UserStruct.method(&self, int* pointer) {
+		return 1;
 	}`
 	docId := "x"
 	doc := NewDocumentFromString(docId, source)
@@ -218,6 +221,23 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 		WithDocumentRange(3, 1, 5, 2).
 		Build()
 
+	functionMethod := idx.NewFunctionBuilder("method", "Object*", "x").
+		WithArgument(
+			idx.NewVariableBuilder("self", "", "x").
+				WithIdentifierRange(6, 31, 6, 35).
+				WithDocumentRange(6, 31, 6, 35).
+				Build(),
+		).
+		WithArgument(
+			idx.NewVariableBuilder("pointer", "int*", "x").
+				WithIdentifierRange(6, 42, 6, 49).
+				WithDocumentRange(6, 37, 6, 49).
+				Build(),
+		).
+		WithIdentifierRange(6, 23, 6, 29).
+		WithDocumentRange(6, 1, 8, 2).
+		Build()
+
 	root := idx.NewAnonymousScopeFunction(
 		"main",
 		docId,
@@ -229,6 +249,7 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 
 	assertSameFunction(t, &function1, tree.ChildrenFunctions["test"])
 	assertSameFunction(t, &function2, tree.ChildrenFunctions["test2"])
+	assertSameFunction(t, &functionMethod, tree.ChildrenFunctions["method"])
 }
 
 func keys[K comparable, V any](m map[K]V) []K {

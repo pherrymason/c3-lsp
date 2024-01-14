@@ -566,7 +566,7 @@ module.exports = grammar({
         parameter: ($) =>
             choice(
                 seq(
-                    $._type,
+                    field("type",$._type),
                     optional(seq($.identifier, optional(seq("=", $._initializer))))
                 ),
                 seq(optional($._type), $.identifier, optional(seq("=", $._initializer)))

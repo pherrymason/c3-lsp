@@ -22,12 +22,12 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [ ] Index Symbols
   - [x] Variables & type
   - [x] Functions
-    - [ ] Function arguments
+    - [x] Function arguments
     - [x] Function return type
   - [x] Enums + Enumerators
     - [ ] base type 
   - [x] Structs
-    - [ ] Struct members
+    - [x] Struct members
     - [ ] Struct methods
   - [ ] imports
   - [ ] macros: **Needs to update grammar.js**
