@@ -256,7 +256,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	source := `
 	def Kilo = int;
 	def KiloPtr = Kilo*;
-	def Feature = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
+	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
 	def MyMap = HashMap(<String, Feature>);
 	`
 	doc := NewDocumentFromString("x", source)
@@ -276,6 +276,12 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithDocumentRange(2, 1, 2, 21).
 		Build()
 
+	expectedDefFunction := idx.NewDefBuilder("MyFunction", "x").
+		WithResolvesTo("fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)").
+		WithIdentifierRange(3, 5, 3, 15).
+		WithDocumentRange(3, 1, 3, 74).
+		Build()
+
 	expectedDefTypeWithGenerics := idx.NewDefBuilder("MyMap", "x").
 		WithResolvesTo("HashMap(<String, Feature>)").
 		WithIdentifierRange(4, 5, 4, 10).
@@ -284,6 +290,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	assert.Equal(t, expectedDefKilo, symbols.Defs["Kilo"])
 	assert.Equal(t, expectedDefKiloPtr, symbols.Defs["KiloPtr"])
+	assert.Equal(t, expectedDefFunction, symbols.Defs["MyFunction"])
 
 	assert.Equal(t, expectedDefTypeWithGenerics, symbols.Defs["MyMap"])
 }
