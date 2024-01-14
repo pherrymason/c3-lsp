@@ -4,7 +4,6 @@ import (
 	"fmt"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/stretchr/testify/assert"
-	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"testing"
 )
@@ -251,10 +250,4 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file
 		Build()
 
 	assert.Equal(t, expectedSymbol, symbol)
-}
-
-func createParser() Parser {
-	return Parser{
-		logger: commonlog.MockLogger{},
-	}
 }

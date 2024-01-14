@@ -188,7 +188,7 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	source := `fn void test() {
 		return 1;
 	}
-	fn int test2(int number, char ch){
+	fn int test2(int number, char ch) {
 		return 2;
 	}`
 	docId := "x"
@@ -196,16 +196,27 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	parser := createParser()
 	tree := parser.ExtractSymbols(&doc)
 
-	function1 := idx.NewFunction("test", "void", nil, docId, idx.NewRange(0, 8, 0, 12), idx.NewRange(0, 0, 2, 2), protocol.CompletionItemKindFunction)
-	function2 := idx.NewFunction("test2", "int", []string{"number", "ch"}, docId, idx.NewRange(3, 8, 3, 34), idx.NewRange(3, 1, 5, 2), protocol.CompletionItemKindFunction)
+	function1 := idx.NewFunctionBuilder("test", "void", "x").
+		WithIdentifierRange(0, 8, 0, 12).
+		WithDocumentRange(0, 0, 2, 2).
+		Build()
 
-	var1 := idx.NewVariable("number", "int", docId,
-		idx.NewRange(3, 18, 3, 24),
-		idx.NewRange(3, 14, 3, 24))
-	var2 := idx.NewVariable("ch", "char", docId,
-		idx.NewRange(3, 31, 3, 33),
-		idx.NewRange(3, 26, 3, 33))
-	function2.AddVariables([]idx.Variable{var1, var2})
+	function2 := idx.NewFunctionBuilder("test2", "int", "x").
+		WithArgument(
+			idx.NewVariableBuilder("number", "int", "x").
+				WithIdentifierRange(3, 18, 3, 24).
+				WithDocumentRange(3, 14, 3, 24).
+				Build(),
+		).
+		WithArgument(
+			idx.NewVariableBuilder("ch", "char", "x").
+				WithIdentifierRange(3, 31, 3, 33).
+				WithDocumentRange(3, 26, 3, 33).
+				Build(),
+		).
+		WithIdentifierRange(3, 8, 3, 34).
+		WithDocumentRange(3, 1, 5, 2).
+		Build()
 
 	root := idx.NewAnonymousScopeFunction(
 		"main",

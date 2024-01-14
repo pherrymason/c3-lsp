@@ -4,6 +4,7 @@ import (
 	"fmt"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/stretchr/testify/assert"
+	"github.com/tliron/commonlog"
 	"testing"
 )
 
@@ -30,6 +31,12 @@ func assertSameFunction(t *testing.T, expected *idx.Function, actual *idx.Functi
 	assert.Equal(t, keys(expected.ChildrenFunctions), keys(actual.ChildrenFunctions))
 	for key, value := range expected.ChildrenFunctions {
 		assertSameFunction(t, value, actual.ChildrenFunctions[key])
+	}
+}
+
+func createParser() Parser {
+	return Parser{
+		logger: commonlog.MockLogger{},
 	}
 }
 
