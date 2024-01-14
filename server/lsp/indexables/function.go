@@ -28,7 +28,7 @@ type Function struct {
 }
 
 func NewAnonymousScopeFunction(name string, module string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(Anonymous, name, module, nil, "", docId, Range{}, docRange, kind)
+	return newFunctionType(Anonymous, name, module, nil, module, docId, Range{}, docRange, kind)
 }
 
 func NewFunction(name string, returnType string, argumentIds []string, module string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {

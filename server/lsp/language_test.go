@@ -12,7 +12,7 @@ func TestLanguage_FindHoverInformation(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
 
-	doc := NewDocumentFromString("x", `
+	doc := NewDocumentFromString("x", "", `
 	int value = 1;
 	fn void main() {
 		char value = 3;
@@ -46,14 +46,14 @@ func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
 
-	doc := NewDocumentFromString("x", `
+	doc := NewDocumentFromString("x", "x", `
 	fn void main() {
 		importedMethod();
 	}
 `)
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 
-	doc2 := NewDocumentFromString("y", `
+	doc2 := NewDocumentFromString("y", "x", `
 	fn void importedMethod() {}
 	`)
 	language.RefreshDocumentIdentifiers(&doc2, &parser)
@@ -87,6 +87,7 @@ func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UI
 	}
 }
 func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.T) {
+	module := "mod"
 	cases := []struct {
 		name               string
 		sourceCode         string
@@ -99,7 +100,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			`int value=1;value=3;`,
 			"value",
 			0, 13,
-			idx.NewVariableBuilder("value", "int", "x").
+			idx.NewVariableBuilder("value", "int", module, "x").
 				WithIdentifierRange(0, 4, 0, 9).
 				WithDocumentRange(0, 0, 0, 12).
 				Build()},
@@ -108,7 +109,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			`enum Colors = { RED, BLUE, GREEN };Colors foo = RED;`,
 			"Colors",
 			0, 36,
-			idx.NewEnumBuilder("Colors", "", "x").
+			idx.NewEnumBuilder("Colors", "", module, "x").
 				WithIdentifierRange(0, 5, 0, 11).
 				WithDocumentRange(0, 0, 0, 34).
 				WithEnumerator(
@@ -142,11 +143,10 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			`struct MyStructure {bool enabled; char key;} MyStructure value;`,
 			"MyStructure",
 			0, 47,
-			createStruct("x", "MyStructure", []idx.StructMember{
+			createStruct("x", module, "MyStructure", []idx.StructMember{
 				idx.NewStructMember("enabled", "bool", idx.NewRange(0, 20, 0, 33)),
 				idx.NewStructMember("key", "char", idx.NewRange(0, 34, 0, 43)),
-			},
-				idx.NewRange(0, 7, 0, 18)),
+			}, idx.NewRange(0, 7, 0, 18)),
 		},
 		{
 			"def",
@@ -163,7 +163,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			doc := NewDocumentFromString("x", tt.sourceCode)
+			doc := NewDocumentFromString("x", module, tt.sourceCode)
 			language := NewLanguage()
 			parser := createParser()
 			language.RefreshDocumentIdentifiers(&doc, &parser)
@@ -180,7 +180,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
-	doc := NewDocumentFromString("x", `
+	doc := NewDocumentFromString("x", "mod", `
 		int value = 1;
 		value = 3;
 	`)
@@ -196,7 +196,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariableBuilder("value", "int", "x").
+	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "x").
 		WithIdentifierRange(1, 6, 1, 11).
 		WithDocumentRange(1, 2, 1, 16).
 		Build()
@@ -207,7 +207,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_function(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
-	doc := NewDocumentFromString("x", `
+	doc := NewDocumentFromString("x", "mod", `
 		int value = 1;
 		fn void main() {
 			value = 3;
@@ -225,7 +225,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_func
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariableBuilder("value", "int", "x").
+	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "x").
 		WithIdentifierRange(1, 6, 1, 11).
 		WithDocumentRange(1, 2, 1, 16).
 		Build()
@@ -236,13 +236,13 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_func
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
-	doc := NewDocumentFromString("x", `
+	doc := NewDocumentFromString("x", "mod", `
 		fn void main() {
 			value = 3;
 		}
 	`)
 	language.RefreshDocumentIdentifiers(&doc, &parser)
-	doc2 := NewDocumentFromString("y", `int value = 1;`)
+	doc2 := NewDocumentFromString("y", "mod", `int value = 1;`)
 	language.RefreshDocumentIdentifiers(&doc2, &parser)
 
 	params := protocol.DeclarationParams{
@@ -255,7 +255,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariableBuilder("value", "int", "y").
+	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "y").
 		WithIdentifierRange(0, 4, 0, 9).
 		WithDocumentRange(0, 0, 0, 14).
 		Build()

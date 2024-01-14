@@ -6,12 +6,13 @@ type EnumBuilder struct {
 	enum Enum
 }
 
-func NewEnumBuilder(name string, baseType string, docId string) *EnumBuilder {
+func NewEnumBuilder(name string, baseType string, module string, docId string) *EnumBuilder {
 	return &EnumBuilder{
 		enum: Enum{
 			name:     name,
 			baseType: baseType,
 			BaseIndexable: BaseIndexable{
+				module:      module,
 				documentURI: docId,
 				Kind:        protocol.CompletionItemKindEnum,
 			},

@@ -49,6 +49,10 @@ func (s *documentStore) DidOpen(params protocol.DidOpenTextDocumentParams, notif
 		Path:       path,
 		Content:    params.TextDocument.Text,
 	}
+
+	moduleName := parser.ExtractModuleName(doc)
+	doc.ModuleName = moduleName
+
 	s.documents[path] = doc
 	return doc, nil
 }

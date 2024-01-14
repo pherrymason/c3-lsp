@@ -86,14 +86,14 @@ func TestFindIdentifiers_should_assign_different_scopes_to_same_name_identifiers
 
 func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t *testing.T) {
 	source := `int value = 1;`
-	doc := NewDocumentFromString("x", source)
+	doc := NewDocumentFromString("x", "file_3", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
 
-	expectedRoot := idx.NewAnonymousScopeFunction("main", "", "x", idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
+	expectedRoot := idx.NewAnonymousScopeFunction("main", "file_3", "x", idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
 	expectedRoot.AddVariables([]idx.Variable{
-		idx.NewVariable("value", "int", "", "x", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 0, 0, 14)),
+		idx.NewVariable("value", "int", "file_3", "x", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 0, 0, 14)),
 	})
 
 	assert.Equal(t, expectedRoot, symbols)
@@ -101,13 +101,13 @@ func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t 
 
 func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *testing.T) {
 	source := `enum Colors { RED, BLUE, GREEN };`
-	doc := NewDocumentFromString("x", source)
+	doc := NewDocumentFromString("x", "x", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
 
-	expectedRoot := idx.NewAnonymousScopeFunction("main", "", "x", idx.NewRange(0, 0, 0, 35), protocol.CompletionItemKindModule)
-	enum := idx.NewEnum("Colors", "", []idx.Enumerator{}, "", "x", idx.NewRange(0, 5, 0, 11), idx.NewRange(0, 0, 0, 32))
+	expectedRoot := idx.NewAnonymousScopeFunction("main", "x", "x", idx.NewRange(0, 0, 0, 35), protocol.CompletionItemKindModule)
+	enum := idx.NewEnum("Colors", "", []idx.Enumerator{}, "x", "x", idx.NewRange(0, 5, 0, 11), idx.NewRange(0, 0, 0, 32))
 	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 14, 0, 17))
 	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 19, 0, 23))
 	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 25, 0, 30))
@@ -117,13 +117,13 @@ func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *test
 
 func TestExtractSymbols_finds_function_root_and_global_enum_with_base_type_declarations(t *testing.T) {
 	source := `enum Colors:int { RED, BLUE, GREEN };`
-	doc := NewDocumentFromString("x", source)
+	doc := NewDocumentFromString("x", "x", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
 
-	expectedRoot := idx.NewAnonymousScopeFunction("main", "", "x", idx.NewRange(0, 0, 0, 35), protocol.CompletionItemKindModule)
-	enum := idx.NewEnum("Colors", "", []idx.Enumerator{}, "", "x", idx.NewRange(0, 5, 0, 11), idx.NewRange(0, 0, 0, 36))
+	expectedRoot := idx.NewAnonymousScopeFunction("main", "x", "x", idx.NewRange(0, 0, 0, 35), protocol.CompletionItemKindModule)
+	enum := idx.NewEnum("Colors", "", []idx.Enumerator{}, "x", "x", idx.NewRange(0, 5, 0, 11), idx.NewRange(0, 0, 0, 36))
 	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 18, 0, 21))
 	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 23, 0, 27))
 	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 29, 0, 34))
@@ -137,7 +137,7 @@ func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *te
 		bool enabled;
 		char key;
 	}`
-	doc := NewDocumentFromString("x", source)
+	doc := NewDocumentFromString("x", "x", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
@@ -145,7 +145,7 @@ func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *te
 	expectedStruct := idx.NewStruct("MyStructure", []idx.StructMember{
 		idx.NewStructMember("enabled", "bool", idx.NewRange(1, 2, 1, 15)),
 		idx.NewStructMember("key", "char", idx.NewRange(2, 2, 2, 11)),
-	}, "", "x", idx.NewRange(0, 7, 0, 18))
+	}, "x", "x", idx.NewRange(0, 7, 0, 18))
 
 	assert.Equal(t, expectedStruct, symbols.Structs["MyStructure"])
 }
@@ -161,24 +161,24 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 		return 1;
 	}`
 	docId := "x"
-	doc := NewDocumentFromString(docId, source)
+	doc := NewDocumentFromString(docId, "mod", source)
 	parser := createParser()
 	tree := parser.ExtractSymbols(&doc)
 
-	function1 := idx.NewFunctionBuilder("test", "void", "x").
+	function1 := idx.NewFunctionBuilder("test", "void", "mod", "x").
 		WithIdentifierRange(0, 8, 0, 12).
 		WithDocumentRange(0, 0, 2, 2).
 		Build()
 
-	function2 := idx.NewFunctionBuilder("test2", "int", "x").
+	function2 := idx.NewFunctionBuilder("test2", "int", "mod", "x").
 		WithArgument(
-			idx.NewVariableBuilder("number", "int", "x").
+			idx.NewVariableBuilder("number", "int", "mod", "x").
 				WithIdentifierRange(3, 18, 3, 24).
 				WithDocumentRange(3, 14, 3, 24).
 				Build(),
 		).
 		WithArgument(
-			idx.NewVariableBuilder("ch", "char", "x").
+			idx.NewVariableBuilder("ch", "char", "mod", "x").
 				WithIdentifierRange(3, 31, 3, 33).
 				WithDocumentRange(3, 26, 3, 33).
 				Build(),
@@ -187,15 +187,15 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 		WithDocumentRange(3, 1, 5, 2).
 		Build()
 
-	functionMethod := idx.NewFunctionBuilder("method", "Object*", "x").
+	functionMethod := idx.NewFunctionBuilder("method", "Object*", "mod", "x").
 		WithArgument(
-			idx.NewVariableBuilder("self", "", "x").
+			idx.NewVariableBuilder("self", "", "mod", "x").
 				WithIdentifierRange(6, 31, 6, 35).
 				WithDocumentRange(6, 31, 6, 35).
 				Build(),
 		).
 		WithArgument(
-			idx.NewVariableBuilder("pointer", "int*", "x").
+			idx.NewVariableBuilder("pointer", "int*", "mod", "x").
 				WithIdentifierRange(6, 42, 6, 49).
 				WithDocumentRange(6, 37, 6, 49).
 				Build(),
@@ -204,7 +204,7 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 		WithDocumentRange(6, 1, 8, 2).
 		Build()
 
-	root := idx.NewAnonymousScopeFunction("main", "", docId, idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
+	root := idx.NewAnonymousScopeFunction("main", "mod", docId, idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
 	root.AddFunction(&function1)
 	root.AddFunction(&function2)
 
@@ -220,7 +220,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
 	def MyMap = HashMap(<String, Feature>);
 	`
-	doc := NewDocumentFromString("x", source)
+	doc := NewDocumentFromString("x", "x", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
@@ -269,7 +269,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 		}
 	}`
 
-	_ = NewDocumentFromString("x", sourceCode)
+	_ = NewDocumentFromString("x", "x", sourceCode)
 	//	parser := createParser()
 	//	tree := parser.ExtractSymbols(&doc)
 

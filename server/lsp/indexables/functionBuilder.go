@@ -6,7 +6,7 @@ type FunctionBuilder struct {
 	function Function
 }
 
-func NewFunctionBuilder(name string, returnType string, docId string) *FunctionBuilder {
+func NewFunctionBuilder(name string, returnType string, module string, docId string) *FunctionBuilder {
 	return &FunctionBuilder{
 		function: Function{
 			fType:             UserDefined,
@@ -18,6 +18,7 @@ func NewFunctionBuilder(name string, returnType string, docId string) *FunctionB
 			Structs:           make(map[string]Struct),
 			ChildrenFunctions: make(map[string]*Function),
 			BaseIndexable: BaseIndexable{
+				module:      module,
 				documentURI: docId,
 				Kind:        protocol.CompletionItemKindFunction,
 			},

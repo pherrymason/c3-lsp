@@ -40,8 +40,8 @@ func createParser() Parser {
 	}
 }
 
-func createStruct(docId string, name string, members []idx.StructMember, idRange idx.Range) idx.Indexable {
-	return idx.NewStruct(name, members, "", docId, idRange)
+func createStruct(docId string, module string, name string, members []idx.StructMember, idRange idx.Range) idx.Indexable {
+	return idx.NewStruct(name, members, module, docId, idRange)
 }
 
 func assertSameVariable(t *testing.T, expected idx.Variable, actual idx.Variable) {

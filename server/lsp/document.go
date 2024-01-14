@@ -10,6 +10,7 @@ import (
 
 type Document struct {
 	parsedTree              *sitter.Tree
+	ModuleName              string
 	URI                     protocol.DocumentUri
 	Path                    string
 	NeedsRefreshDiagnostics bool
@@ -49,9 +50,10 @@ func NewDocumentFromFilePath(documentPath string) Document {
 	}
 }
 
-func NewDocumentFromString(documentPath string, documentContent string) Document {
+func NewDocumentFromString(documentPath string, moduleName string, documentContent string) Document {
 	return Document{
 		parsedTree: GetParsedTreeFromString(documentContent),
+		ModuleName: moduleName,
 		URI:        documentPath,
 		Path:       documentPath,
 		Content:    documentContent,

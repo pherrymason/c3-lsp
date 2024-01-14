@@ -7,12 +7,13 @@ type VariableBuilder struct {
 }
 
 // NewVariableBuilder
-func NewVariableBuilder(name string, variableType string, docId string) *VariableBuilder {
+func NewVariableBuilder(name string, variableType string, module string, docId string) *VariableBuilder {
 	return &VariableBuilder{
 		variable: Variable{
 			name: name,
 			Type: variableType,
 			BaseIndexable: BaseIndexable{
+				module:      module,
 				documentURI: docId,
 				Kind:        protocol.CompletionItemKindVariable,
 			},
