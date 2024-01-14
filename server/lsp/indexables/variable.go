@@ -1,6 +1,9 @@
 package indexables
 
-import protocol "github.com/tliron/glsp/protocol_3_16"
+import (
+	"fmt"
+	protocol "github.com/tliron/glsp/protocol_3_16"
+)
 
 type Variable struct {
 	Name string
@@ -42,4 +45,8 @@ func (v Variable) GetDeclarationRange() Range {
 }
 func (v Variable) GetDocumentRange() Range {
 	return v.documentRange
+}
+
+func (v Variable) GetHoverInfo() string {
+	return fmt.Sprintf("%s %s", v.GetType(), v.GetName())
 }

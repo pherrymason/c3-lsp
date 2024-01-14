@@ -3,7 +3,6 @@ package lsp
 import "C"
 import (
 	"errors"
-	"fmt"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -67,30 +66,15 @@ func (l *Language) FindHoverInformation(doc *Document, params *protocol.HoverPar
 
 	identifier := l.findClosestSymbolDeclaration(word, params.TextDocument.URI, params.Position)
 
-	// TODO: Move below code to a factory, and to be called from server so Language has less knowledge about LSP protocol.
 	// expected behaviour:
 	// hovering on variables: display variable type + any description
 	// hovering on functions: display function signature
 	// hovering on members: same as variable
-	var hover protocol.Hover
-	switch v := identifier.(type) {
-	case indexables.Variable:
-		hover = protocol.Hover{
-			Contents: protocol.MarkupContent{
-				Kind:  protocol.MarkupKindMarkdown,
-				Value: fmt.Sprintf("%s %s", v.GetType(), v.GetName()),
-			},
-		}
-
-	case *indexables.Function:
-		hover = protocol.Hover{
-			Contents: protocol.MarkupContent{
-				Kind:  protocol.MarkupKindMarkdown,
-				Value: fmt.Sprintf("%s %s()", v.GetReturnType(), v.GetName()),
-			},
-		}
-	case *indexables.Struct:
-	default:
+	hover := protocol.Hover{
+		Contents: protocol.MarkupContent{
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: identifier.GetHoverInfo(),
+		},
 	}
 
 	return hover, nil

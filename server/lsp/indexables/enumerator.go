@@ -1,6 +1,9 @@
 package indexables
 
-import "github.com/tliron/glsp/protocol_3_16"
+import (
+	"fmt"
+	"github.com/tliron/glsp/protocol_3_16"
+)
 
 type Enumerator struct {
 	name  string
@@ -38,4 +41,8 @@ func (e Enumerator) GetDeclarationRange() Range {
 
 func (e Enumerator) GetDocumentRange() Range {
 	return e.documentRange
+}
+
+func (e Enumerator) GetHoverInfo() string {
+	return fmt.Sprintf("%s: %s", e.name, e.value)
 }

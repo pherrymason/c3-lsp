@@ -74,3 +74,7 @@ func (e Enum) GetEnumerator(identifier string) Enumerator {
 
 	panic(fmt.Sprint(identifier, " enumerator not found"))
 }
+
+func (e Enum) GetHoverInfo() string {
+	return e.name
+}

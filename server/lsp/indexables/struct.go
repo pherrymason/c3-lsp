@@ -1,6 +1,9 @@
 package indexables
 
-import protocol "github.com/tliron/glsp/protocol_3_16"
+import (
+	"fmt"
+	protocol "github.com/tliron/glsp/protocol_3_16"
+)
 
 type Struct struct {
 	name    string
@@ -50,4 +53,8 @@ func NewStructMember(name string, baseType string, posRange Range) StructMember 
 		baseType: baseType,
 		posRange: posRange,
 	}
+}
+
+func (s Struct) GetHoverInfo() string {
+	return fmt.Sprintf("%s", s.name)
 }

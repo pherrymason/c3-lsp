@@ -11,6 +11,7 @@ type Indexable interface {
 	GetDocumentURI() string
 	GetDeclarationRange() Range
 	GetDocumentRange() Range
+	GetHoverInfo() string
 }
 
 type IndexableCollection []Indexable

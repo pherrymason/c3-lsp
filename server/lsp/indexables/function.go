@@ -1,6 +1,9 @@
 package indexables
 
-import protocol "github.com/tliron/glsp/protocol_3_16"
+import (
+	"fmt"
+	protocol "github.com/tliron/glsp/protocol_3_16"
+)
 
 type FunctionType int
 
@@ -98,4 +101,8 @@ func (f Function) AddFunction(f2 *Function) {
 
 func (f Function) AddStruct(s Struct) {
 	f.Structs[s.name] = s
+}
+
+func (f Function) GetHoverInfo() string {
+	return fmt.Sprintf("%s %s()", f.GetReturnType(), f.GetName())
 }
