@@ -30,6 +30,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
     - [x] Struct members
     - [ ] Struct methods
   - [ ] imports
+  - [~] defines
   - [ ] macros: **Needs to update grammar.js**
 - [ ] Hover information
   - [x] Variable declarations

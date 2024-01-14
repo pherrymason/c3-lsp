@@ -128,40 +128,42 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		return function, depth
 	}
 
-	variable, foundVariableInThisScope := function.Variables[identifier]
-	enum, foundEnumInThisScope := function.Enums[identifier]
-	var enumerator indexables.Enumerator
-	foundEnumeratorInThisScope := false
-
-	for _, scopedEnums := range function.Enums {
-		if scopedEnums.HasEnumerator(identifier) {
-			enumerator = scopedEnums.GetEnumerator(identifier)
-			foundEnumeratorInThisScope = true
-		}
-	}
-
-	_struct, foundStructInThisScope := function.Structs[identifier]
-
 	for _, child := range function.ChildrenFunctions {
 		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, mode); result != nil {
 			return result, resultDepth
 		}
 	}
 
+	variable, foundVariableInThisScope := function.Variables[identifier]
 	if foundVariableInThisScope {
 		return variable, depth
 	}
 
-	if foundEnumeratorInThisScope {
-		return enumerator, depth
-	}
-
+	enum, foundEnumInThisScope := function.Enums[identifier]
 	if foundEnumInThisScope {
 		return enum, depth
 	}
 
+	var enumerator indexables.Enumerator
+	foundEnumeratorInThisScope := false
+	for _, scopedEnums := range function.Enums {
+		if scopedEnums.HasEnumerator(identifier) {
+			enumerator = scopedEnums.GetEnumerator(identifier)
+			foundEnumeratorInThisScope = true
+		}
+	}
+	if foundEnumeratorInThisScope {
+		return enumerator, depth
+	}
+
+	_struct, foundStructInThisScope := function.Structs[identifier]
 	if foundStructInThisScope {
 		return _struct, depth
+	}
+
+	def, foundDefInScope := function.Defs[identifier]
+	if foundDefInScope {
+		return def, depth
 	}
 
 	return nil, depth

@@ -148,6 +148,17 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			},
 				idx.NewRange(0, 7, 0, 18)),
 		},
+		{
+			"def",
+			"def Kilo = int;Kilo value = 3;",
+			"Kilo",
+			0, 17,
+			idx.NewDefBuilder("Kilo", "x").
+				WithResolvesTo("int").
+				WithIdentifierRange(0, 4, 0, 8).
+				WithDocumentRange(0, 0, 0, 15).
+				Build(),
+		},
 	}
 
 	for _, tt := range cases {
