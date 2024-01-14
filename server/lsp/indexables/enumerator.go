@@ -11,11 +11,12 @@ type Enumerator struct {
 	BaseIndexable
 }
 
-func NewEnumerator(name string, value string, identifierPosition Range, docId string) Enumerator {
+func NewEnumerator(name string, value string, module string, identifierPosition Range, docId string) Enumerator {
 	return Enumerator{
 		name:  name,
 		value: value,
 		BaseIndexable: BaseIndexable{
+			module:          module,
 			documentURI:     docId,
 			identifierRange: identifierPosition,
 			Kind:            protocol.CompletionItemKindEnumMember,
@@ -29,6 +30,10 @@ func (e Enumerator) GetName() string {
 
 func (e Enumerator) GetKind() protocol.CompletionItemKind {
 	return e.Kind
+}
+
+func (e Enumerator) GetModule() string {
+	return e.module
 }
 
 func (e Enumerator) GetDocumentURI() string {

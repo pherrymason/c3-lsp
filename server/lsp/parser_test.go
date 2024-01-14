@@ -91,14 +91,9 @@ func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t 
 
 	symbols := parser.ExtractSymbols(&doc)
 
-	expectedRoot := idx.NewAnonymousScopeFunction(
-		"main",
-		"x",
-		idx.NewRange(0, 0, 0, 14),
-		protocol.CompletionItemKindModule,
-	)
+	expectedRoot := idx.NewAnonymousScopeFunction("main", "", "x", idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
 	expectedRoot.AddVariables([]idx.Variable{
-		idx.NewVariable("value", "int", "x", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 0, 0, 14)),
+		idx.NewVariable("value", "int", "", "x", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 0, 0, 14)),
 	})
 
 	assert.Equal(t, expectedRoot, symbols)
@@ -111,20 +106,8 @@ func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *test
 
 	symbols := parser.ExtractSymbols(&doc)
 
-	expectedRoot := idx.NewAnonymousScopeFunction(
-		"main",
-		"x",
-		idx.NewRange(0, 0, 0, 35),
-		protocol.CompletionItemKindModule,
-	)
-	enum := idx.NewEnum(
-		"Colors",
-		"",
-		[]idx.Enumerator{},
-		idx.NewRange(0, 5, 0, 11),
-		idx.NewRange(0, 0, 0, 32),
-		"x",
-	)
+	expectedRoot := idx.NewAnonymousScopeFunction("main", "", "x", idx.NewRange(0, 0, 0, 35), protocol.CompletionItemKindModule)
+	enum := idx.NewEnum("Colors", "", []idx.Enumerator{}, "", "x", idx.NewRange(0, 5, 0, 11), idx.NewRange(0, 0, 0, 32))
 	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 14, 0, 17))
 	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 19, 0, 23))
 	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 25, 0, 30))
@@ -139,20 +122,8 @@ func TestExtractSymbols_finds_function_root_and_global_enum_with_base_type_decla
 
 	symbols := parser.ExtractSymbols(&doc)
 
-	expectedRoot := idx.NewAnonymousScopeFunction(
-		"main",
-		"x",
-		idx.NewRange(0, 0, 0, 35),
-		protocol.CompletionItemKindModule,
-	)
-	enum := idx.NewEnum(
-		"Colors",
-		"",
-		[]idx.Enumerator{},
-		idx.NewRange(0, 5, 0, 11),
-		idx.NewRange(0, 0, 0, 36),
-		"x",
-	)
+	expectedRoot := idx.NewAnonymousScopeFunction("main", "", "x", idx.NewRange(0, 0, 0, 35), protocol.CompletionItemKindModule)
+	enum := idx.NewEnum("Colors", "", []idx.Enumerator{}, "", "x", idx.NewRange(0, 5, 0, 11), idx.NewRange(0, 0, 0, 36))
 	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 18, 0, 21))
 	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 23, 0, 27))
 	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 29, 0, 34))
@@ -171,15 +142,10 @@ func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *te
 
 	symbols := parser.ExtractSymbols(&doc)
 
-	expectedStruct := idx.NewStruct(
-		"MyStructure",
-		[]idx.StructMember{
-			idx.NewStructMember("enabled", "bool", idx.NewRange(1, 2, 1, 15)),
-			idx.NewStructMember("key", "char", idx.NewRange(2, 2, 2, 11)),
-		},
-		"x",
-		idx.NewRange(0, 7, 0, 18),
-	)
+	expectedStruct := idx.NewStruct("MyStructure", []idx.StructMember{
+		idx.NewStructMember("enabled", "bool", idx.NewRange(1, 2, 1, 15)),
+		idx.NewStructMember("key", "char", idx.NewRange(2, 2, 2, 11)),
+	}, "", "x", idx.NewRange(0, 7, 0, 18))
 
 	assert.Equal(t, expectedStruct, symbols.Structs["MyStructure"])
 }
@@ -238,12 +204,7 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 		WithDocumentRange(6, 1, 8, 2).
 		Build()
 
-	root := idx.NewAnonymousScopeFunction(
-		"main",
-		docId,
-		idx.NewRange(0, 0, 0, 14),
-		protocol.CompletionItemKindModule,
-	)
+	root := idx.NewAnonymousScopeFunction("main", "", docId, idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
 	root.AddFunction(&function1)
 	root.AddFunction(&function2)
 

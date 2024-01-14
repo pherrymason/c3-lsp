@@ -11,11 +11,12 @@ type Def struct {
 	BaseIndexable
 }
 
-func NewDef(name string, resolvesTo string, docId string, idRange Range, docRange Range) Def {
+func NewDef(name string, resolvesTo string, module string, docId string, idRange Range, docRange Range) Def {
 	return Def{
 		name:       name,
 		resolvesTo: resolvesTo,
 		BaseIndexable: BaseIndexable{
+			module:          module,
 			documentURI:     docId,
 			identifierRange: idRange,
 			documentRange:   docRange,
@@ -26,6 +27,10 @@ func NewDef(name string, resolvesTo string, docId string, idRange Range, docRang
 
 func (d Def) GetName() string {
 	return d.name
+}
+
+func (d Def) GetModule() string {
+	return d.module
 }
 
 func (d Def) GetKind() protocol.CompletionItemKind {

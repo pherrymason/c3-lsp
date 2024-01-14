@@ -12,12 +12,13 @@ type Enum struct {
 	BaseIndexable
 }
 
-func NewEnum(name string, baseType string, enumerators []Enumerator, identifierRangePosition Range, documentRangePosition Range, docId string) Enum {
+func NewEnum(name string, baseType string, enumerators []Enumerator, module string, docId string, identifierRangePosition Range, documentRangePosition Range) Enum {
 	return Enum{
 		name:        name,
 		baseType:    baseType,
 		enumerators: enumerators,
 		BaseIndexable: BaseIndexable{
+			module:          module,
 			documentURI:     docId,
 			identifierRange: identifierRangePosition,
 			documentRange:   documentRangePosition,
@@ -28,6 +29,10 @@ func NewEnum(name string, baseType string, enumerators []Enumerator, identifierR
 
 func (e Enum) GetName() string {
 	return e.name
+}
+
+func (e Enum) GetModule() string {
+	return e.module
 }
 
 func (e Enum) GetKind() protocol.CompletionItemKind {
@@ -48,7 +53,7 @@ func (e Enum) GetDocumentRange() Range {
 
 func (e *Enum) RegisterEnumerator(name string, value string, posRange Range) {
 	e.enumerators = append(e.enumerators,
-		NewEnumerator(name, value, posRange, e.documentURI))
+		NewEnumerator(name, value, "", posRange, e.documentURI))
 }
 
 func (e *Enum) AddEnumerators(enumerators []Enumerator) {

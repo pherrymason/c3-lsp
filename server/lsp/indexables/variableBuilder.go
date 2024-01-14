@@ -10,7 +10,7 @@ type VariableBuilder struct {
 func NewVariableBuilder(name string, variableType string, docId string) *VariableBuilder {
 	return &VariableBuilder{
 		variable: Variable{
-			Name: name,
+			name: name,
 			Type: variableType,
 			BaseIndexable: BaseIndexable{
 				documentURI: docId,

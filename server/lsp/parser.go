@@ -67,12 +67,7 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 	sourceCode := []byte(doc.Content)
 
 	//functionsMap := make(map[string]*idx.Function)
-	scopeTree := idx.NewAnonymousScopeFunction(
-		"main",
-		doc.URI,
-		idx.NewRangeFromSitterPositions(doc.parsedTree.RootNode().StartPoint(), doc.parsedTree.RootNode().EndPoint()),
-		protocol.CompletionItemKindModule, // Best value found
-	)
+	scopeTree := idx.NewAnonymousScopeFunction("main", "", doc.URI, idx.NewRangeFromSitterPositions(doc.parsedTree.RootNode().StartPoint(), doc.parsedTree.RootNode().EndPoint()), protocol.CompletionItemKindModule)
 
 	for {
 		m, ok := qc.NextMatch()
@@ -113,11 +108,7 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 func (p *Parser) nodeToVariable(doc *Document, variableNode *sitter.Node, identifierNode *sitter.Node, sourceCode []byte, content string) idx.Variable {
 	typeNode := identifierNode.PrevSibling()
 	typeNodeContent := typeNode.Content(sourceCode)
-	variable := idx.NewVariable(
-		content,
-		typeNodeContent,
-		doc.URI,
-		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(variableNode.StartPoint(), variableNode.EndPoint()))
+	variable := idx.NewVariable(content, typeNodeContent, "", doc.URI, idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(variableNode.StartPoint(), variableNode.EndPoint()))
 
 	return variable
 }
@@ -142,7 +133,7 @@ func (p *Parser) nodeToFunction(doc *Document, node *sitter.Node, sourceCode []b
 		argumentIds = append(argumentIds, arg.GetName())
 	}
 
-	symbol := idx.NewFunction(nameNode.Content(sourceCode), node.ChildByFieldName("return_type").Content(sourceCode), argumentIds, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
+	symbol := idx.NewFunction(nameNode.Content(sourceCode), node.ChildByFieldName("return_type").Content(sourceCode), argumentIds, "", doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
 
 	variables := p.FindVariableDeclarations(doc, node)
 	variables = append(arguments, variables...)
@@ -179,11 +170,7 @@ func (p *Parser) nodeToArgument(doc *Document, argNode *sitter.Node, sourceCode 
 		idRange = idx.NewRangeFromSitterPositions(idNode.StartPoint(), idNode.EndPoint())
 	}
 
-	variable := idx.NewVariable(
-		identifier,
-		argType,
-		doc.URI,
-		idRange, idx.NewRangeFromSitterPositions(argNode.StartPoint(), argNode.EndPoint()))
+	variable := idx.NewVariable(identifier, argType, "", doc.URI, idRange, idx.NewRangeFromSitterPositions(argNode.StartPoint(), argNode.EndPoint()))
 
 	return variable
 }
@@ -209,7 +196,7 @@ func (p *Parser) nodeToStruct(doc *Document, node *sitter.Node, sourceCode []byt
 		}
 	}
 
-	_struct := idx.NewStruct(name, fields, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()))
+	_struct := idx.NewStruct(name, fields, "", doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()))
 
 	return _struct
 }
@@ -222,14 +209,7 @@ func (p *Parser) nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte)
 	baseType := ""
 	bodyIndex := int(nodesCount - 1)
 
-	enum := idx.NewEnum(
-		nameNode.Content(sourceCode),
-		baseType,
-		[]idx.Enumerator{},
-		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
-		doc.URI,
-	)
+	enum := idx.NewEnum(nameNode.Content(sourceCode), baseType, []idx.Enumerator{}, "", doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()))
 
 	enumeratorsNode := node.Child(bodyIndex)
 
@@ -255,7 +235,7 @@ func (p *Parser) nodeToDef(doc *Document, node *sitter.Node, sourceCode []byte) 
 		definition += node.Child(int(i)).Content(sourceCode)
 	}
 
-	return idx.NewDef(identifierNode.Content(sourceCode), definition, doc.URI, idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()))
+	return idx.NewDef(identifierNode.Content(sourceCode), definition, "", doc.URI, idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()))
 }
 
 func (p *Parser) FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {
@@ -317,7 +297,7 @@ func (p *Parser) FindFunctionDeclarations(doc *Document) []idx.Indexable {
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifier := idx.NewFunction(content, "", []string{}, doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), protocol.CompletionItemKindFunction)
+				identifier := idx.NewFunction(content, "", []string{}, "", doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), protocol.CompletionItemKindFunction)
 
 				identifiers = append(identifiers, identifier)
 			}

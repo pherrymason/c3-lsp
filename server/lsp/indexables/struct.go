@@ -11,19 +11,24 @@ type Struct struct {
 	BaseIndexable
 }
 
-func NewStruct(name string, members []StructMember, docId string, idRange Range) Struct {
+func NewStruct(name string, members []StructMember, module string, docId string, idRange Range) Struct {
 	return Struct{
 		name:    name,
 		members: members,
 		BaseIndexable: BaseIndexable{
-			identifierRange: idRange,
+			module:          module,
 			documentURI:     docId,
+			identifierRange: idRange,
 		},
 	}
 }
 
 func (s Struct) GetName() string {
 	return s.name
+}
+
+func (s Struct) GetModule() string {
+	return s.module
 }
 
 func (s Struct) GetKind() protocol.CompletionItemKind {

@@ -64,7 +64,10 @@ func (l *Language) FindHoverInformation(doc *Document, params *protocol.HoverPar
 		return protocol.Hover{}, err
 	}
 
-	identifier := l.findClosestSymbolDeclaration(word, params.TextDocument.URI, params.Position)
+	symbol := l.findClosestSymbolDeclaration(word, params.TextDocument.URI, params.Position)
+	if symbol == nil {
+		return protocol.Hover{}, nil
+	}
 
 	// expected behaviour:
 	// hovering on variables: display variable type + any description
@@ -73,7 +76,7 @@ func (l *Language) FindHoverInformation(doc *Document, params *protocol.HoverPar
 	hover := protocol.Hover{
 		Contents: protocol.MarkupContent{
 			Kind:  protocol.MarkupKindMarkdown,
-			Value: identifier.GetHoverInfo(),
+			Value: symbol.GetHoverInfo(),
 		},
 	}
 

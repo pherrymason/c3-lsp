@@ -11,12 +11,15 @@ type Indexable interface {
 	GetDocumentURI() string
 	GetDeclarationRange() Range
 	GetDocumentRange() Range
+	GetModule() string
+
 	GetHoverInfo() string
 }
 
 type IndexableCollection []Indexable
 
 type BaseIndexable struct {
+	module          string
 	documentURI     string
 	identifierRange Range
 	documentRange   Range

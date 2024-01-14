@@ -27,21 +27,22 @@ type Function struct {
 	BaseIndexable
 }
 
-func NewAnonymousScopeFunction(name string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(Anonymous, name, "", nil, docId, Range{}, docRange, kind)
+func NewAnonymousScopeFunction(name string, module string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
+	return newFunctionType(Anonymous, name, module, nil, "", docId, Range{}, docRange, kind)
 }
 
-func NewFunction(name string, returnType string, argumentIds []string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(UserDefined, name, returnType, argumentIds, docId, idRange, docRange, kind)
+func NewFunction(name string, returnType string, argumentIds []string, module string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
+	return newFunctionType(UserDefined, name, returnType, argumentIds, module, docId, idRange, docRange, kind)
 }
 
-func newFunctionType(fType FunctionType, name string, returnType string, argumentIds []string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
+func newFunctionType(fType FunctionType, name string, returnType string, argumentIds []string, module string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return Function{
 		fType:       fType,
 		name:        name,
 		returnType:  returnType,
 		argumentIds: argumentIds,
 		BaseIndexable: BaseIndexable{
+			module:          module,
 			documentURI:     docId,
 			identifierRange: identifierRangePosition,
 			documentRange:   docRange,
@@ -75,6 +76,10 @@ func (f Function) GetKind() protocol.CompletionItemKind {
 	return f.Kind
 }
 
+func (f Function) GetModule() string {
+	return f.module
+}
+
 func (f Function) GetDocumentURI() string {
 	return f.documentURI
 }
@@ -89,7 +94,7 @@ func (f Function) GetDocumentRange() Range {
 
 func (f *Function) AddVariables(variables []Variable) {
 	for _, variable := range variables {
-		f.Variables[variable.Name] = variable
+		f.Variables[variable.name] = variable
 	}
 }
 
