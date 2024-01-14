@@ -45,5 +45,5 @@ func (d Def) GetDocumentRange() Range {
 }
 
 func (d Def) GetHoverInfo() string {
-	return fmt.Sprintf("def %s = ???", d.name)
+	return fmt.Sprintf("def %s = %s", d.name, d.resolvesTo)
 }
