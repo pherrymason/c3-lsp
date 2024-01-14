@@ -6,13 +6,15 @@ import (
 )
 
 type Def struct {
-	name string
+	name       string
+	resolvesTo string
 	BaseIndexable
 }
 
-func NewDef(name string, docId string, idRange Range, docRange Range) Def {
+func NewDef(name string, resolvesTo string, docId string, idRange Range, docRange Range) Def {
 	return Def{
-		name: name,
+		name:       name,
+		resolvesTo: resolvesTo,
 		BaseIndexable: BaseIndexable{
 			documentURI:     docId,
 			identifierRange: idRange,

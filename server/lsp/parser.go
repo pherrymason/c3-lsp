@@ -249,14 +249,9 @@ func (p *Parser) nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte)
 
 func (p *Parser) nodeToDef(doc *Document, node *sitter.Node, sourceCode []byte) idx.Def {
 	identifierNode := node.Child(1)
-	//definition := node.Child(4)
+	definition := node.Child(3)
 
-	return idx.NewDef(
-		identifierNode.Content(sourceCode),
-		doc.URI,
-		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
-	)
+	return idx.NewDef(identifierNode.Content(sourceCode), definition.Content(sourceCode), doc.URI, idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()))
 }
 
 func (p *Parser) FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {

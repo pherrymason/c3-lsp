@@ -263,11 +263,13 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	symbols := parser.ExtractSymbols(&doc)
 
 	expectedDefKilo := idx.NewDefBuilder("Kilo", "x").
+		WithResolvesTo("int").
 		WithIdentifierRange(1, 5, 1, 9).
 		WithDocumentRange(1, 1, 1, 16).
 		Build()
 
 	expectedDefKiloPtr := idx.NewDefBuilder("KiloPtr", "x").
+		WithResolvesTo("Kilo*").
 		WithIdentifierRange(2, 5, 2, 12).
 		WithDocumentRange(2, 1, 2, 21).
 		Build()

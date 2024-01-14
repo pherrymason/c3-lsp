@@ -18,6 +18,11 @@ func NewDefBuilder(name string, docId string) *DefBuilder {
 	}
 }
 
+func (d *DefBuilder) WithResolvesTo(resolvesTo string) *DefBuilder {
+	d.def.resolvesTo = resolvesTo
+	return d
+}
+
 func (d *DefBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *DefBuilder {
 	d.def.BaseIndexable.identifierRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return d
