@@ -87,47 +87,6 @@ func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UI
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
 }
-func createVariable(docId string, name string, baseType string, sL uint, sC uint, eL uint, eC uint) idx.Indexable {
-	return idx.Variable{
-		Name: name,
-		Type: baseType,
-		BaseIndexable: idx.NewBaseIndexable(
-			docId,
-			idx.NewRange(sL, sC, eL, eC),
-			idx.NewRange(sL, sC, eL, eC),
-			protocol.CompletionItemKindVariable,
-		),
-	}
-}
-
-func createEnum(docId string, name string, variants []idx.Enumerator, idRange [4]uint, docRange [4]uint) *idx.Enum {
-	enum := idx.NewEnum(
-		name,
-		"",
-		variants,
-		idx.NewRange(idRange[0], idRange[1], idRange[2], idRange[3]),
-		idx.NewRange(docRange[0], docRange[1], docRange[2], docRange[3]),
-		docId,
-	)
-
-	return &enum
-}
-
-func createEnumerator(name string, docId string, pRange [4]uint) idx.Enumerator {
-	enumerator := idx.NewEnumerator(name, "", idx.NewRange(pRange[0], pRange[1], pRange[2], pRange[3]), docId)
-
-	return enumerator
-}
-
-func createStruct(docId string, name string, members []idx.StructMember, idRange idx.Range) idx.Indexable {
-	return idx.NewStruct(
-		name,
-		members,
-		docId,
-		idRange,
-	)
-}
-
 func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.T) {
 	cases := []struct {
 		name               string
@@ -141,24 +100,43 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			`int value=1;value=3;`,
 			"value",
 			0, 13,
-			createVariable("x", "value", "int", 0, 4, 0, 9)},
+			idx.NewVariableBuilder("value", "int", "x").
+				WithIdentifierRange(0, 4, 0, 9).
+				WithDocumentRange(0, 0, 0, 12).
+				Build()},
 		{
 			"enum declaration",
 			`enum Colors = { RED, BLUE, GREEN };Colors foo = RED;`,
 			"Colors",
 			0, 36,
-			createEnum("x", "Colors", []idx.Enumerator{
-				idx.NewEnumerator("RED", "", idx.NewRange(0, 16, 0, 19), "x"),
-				idx.NewEnumerator("BLUE", "", idx.NewRange(0, 21, 0, 25), "x"),
-				idx.NewEnumerator("GREEN", "", idx.NewRange(0, 27, 0, 32), "x"),
-			}, [4]uint{0, 5, 0, 11}, [4]uint{0, 0, 0, 34}),
+			idx.NewEnumBuilder("Colors", "", "x").
+				WithIdentifierRange(0, 5, 0, 11).
+				WithDocumentRange(0, 0, 0, 34).
+				WithEnumerator(
+					idx.NewEnumeratorBuilder("RED", "x").
+						WithIdentifierRange(0, 16, 0, 19).
+						Build(),
+				).
+				WithEnumerator(
+					idx.NewEnumeratorBuilder("BLUE", "x").
+						WithIdentifierRange(0, 21, 0, 25).
+						Build(),
+				).
+				WithEnumerator(
+					idx.NewEnumeratorBuilder("GREEN", "x").
+						WithIdentifierRange(0, 27, 0, 32).
+						Build(),
+				).
+				Build(),
 		},
 		{
 			"enum enumerator",
 			`enum Colors = { RED, BLUE, GREEN };Colors foo = RED;`,
 			"RED",
 			0, 49,
-			createEnumerator("RED", "x", [4]uint{0, 16, 0, 19}),
+			idx.NewEnumeratorBuilder("RED", "x").
+				WithIdentifierRange(0, 16, 0, 19).
+				Build(),
 		},
 		{
 			"struct",
@@ -208,7 +186,11 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariable("value", "int", "x", idx.NewRange(1, 6, 1, 11), idx.NewRange(1, 6, 1, 11))
+	expectedSymbol := idx.NewVariableBuilder("value", "int", "x").
+		WithIdentifierRange(1, 6, 1, 11).
+		WithDocumentRange(1, 2, 1, 16).
+		Build()
+
 	assert.Equal(t, expectedSymbol, symbol)
 }
 
@@ -233,7 +215,11 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_func
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariable("value", "int", "x", idx.NewRange(1, 6, 1, 11), idx.NewRange(1, 6, 1, 11))
+	expectedSymbol := idx.NewVariableBuilder("value", "int", "x").
+		WithIdentifierRange(1, 6, 1, 11).
+		WithDocumentRange(1, 2, 1, 16).
+		Build()
+
 	assert.Equal(t, expectedSymbol, symbol)
 }
 
@@ -259,7 +245,11 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file
 
 	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, "value", params.Position)
 
-	expectedSymbol := idx.NewVariable("value", "int", "y", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 4, 0, 9))
+	expectedSymbol := idx.NewVariableBuilder("value", "int", "y").
+		WithIdentifierRange(0, 4, 0, 9).
+		WithDocumentRange(0, 0, 0, 14).
+		Build()
+
 	assert.Equal(t, expectedSymbol, symbol)
 }
 

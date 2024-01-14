@@ -86,7 +86,7 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 			if nodeType == "identifier" {
 				switch c.Node.Parent().Type() {
 				case "var_declaration":
-					variable := p.nodeToVariable(doc, c.Node, sourceCode, content)
+					variable := p.nodeToVariable(doc, c.Node.Parent(), c.Node, sourceCode, content)
 					scopeTree.AddVariables([]idx.Variable{
 						variable,
 					})
@@ -107,10 +107,14 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 	return scopeTree
 }
 
-func (p *Parser) nodeToVariable(doc *Document, identifierNode *sitter.Node, sourceCode []byte, content string) idx.Variable {
+func (p *Parser) nodeToVariable(doc *Document, variableNode *sitter.Node, identifierNode *sitter.Node, sourceCode []byte, content string) idx.Variable {
 	typeNode := identifierNode.PrevSibling()
 	typeNodeContent := typeNode.Content(sourceCode)
-	variable := idx.NewVariable(content, typeNodeContent, doc.URI, idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()))
+	variable := idx.NewVariable(
+		content,
+		typeNodeContent,
+		doc.URI,
+		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(variableNode.StartPoint(), variableNode.EndPoint()))
 
 	return variable
 }
@@ -127,10 +131,10 @@ func (p *Parser) nodeToFunction(doc *Document, node *sitter.Node, sourceCode []b
 		switch argNode.Type() {
 		case "parameter":
 			for j := uint32(0); j < argNode.ChildCount(); j++ {
-				arggNode := argNode.Child(int(j))
-				switch arggNode.Type() {
+				identifierNode := argNode.Child(int(j))
+				switch identifierNode.Type() {
 				case "identifier":
-					arguments = append(arguments, p.nodeToVariable(doc, arggNode, sourceCode, arggNode.Content(sourceCode)))
+					arguments = append(arguments, p.nodeToVariable(doc, argNode, identifierNode, sourceCode, identifierNode.Content(sourceCode)))
 				}
 			}
 		}
@@ -238,7 +242,7 @@ func (p *Parser) FindVariableDeclarations(doc *Document, node *sitter.Node) []id
 
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				variable := p.nodeToVariable(doc, c.Node, sourceCode, content)
+				variable := p.nodeToVariable(doc, c.Node.Parent(), c.Node, sourceCode, content)
 				identifiers = append(identifiers, variable)
 			}
 		}

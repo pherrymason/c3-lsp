@@ -50,12 +50,20 @@ func newFunctionType(fType FunctionType, name string, returnType string, argumen
 	}
 }
 
+func (f Function) FunctionType() FunctionType {
+	return f.fType
+}
+
 func (f Function) GetName() string {
 	return f.name
 }
 
 func (f Function) GetReturnType() string {
 	return f.returnType
+}
+
+func (f Function) ArgumentIds() []string {
+	return f.argumentIds
 }
 
 func (f Function) GetKind() protocol.CompletionItemKind {

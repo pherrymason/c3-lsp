@@ -98,7 +98,7 @@ func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t 
 		protocol.CompletionItemKindModule,
 	)
 	expectedRoot.AddVariables([]idx.Variable{
-		idx.NewVariable("value", "int", "x", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 4, 0, 9)),
+		idx.NewVariable("value", "int", "x", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 0, 0, 14)),
 	})
 
 	assert.Equal(t, expectedRoot, symbols)
@@ -200,9 +200,11 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	function2 := idx.NewFunction("test2", "int", []string{"number", "ch"}, docId, idx.NewRange(3, 8, 3, 34), idx.NewRange(3, 1, 5, 2), protocol.CompletionItemKindFunction)
 
 	var1 := idx.NewVariable("number", "int", docId,
-		idx.NewRange(3, 18, 3, 24), idx.NewRange(3, 18, 3, 24))
+		idx.NewRange(3, 18, 3, 24),
+		idx.NewRange(3, 14, 3, 24))
 	var2 := idx.NewVariable("ch", "char", docId,
-		idx.NewRange(3, 31, 3, 33), idx.NewRange(3, 31, 3, 33))
+		idx.NewRange(3, 31, 3, 33),
+		idx.NewRange(3, 26, 3, 33))
 	function2.AddVariables([]idx.Variable{var1, var2})
 
 	root := idx.NewAnonymousScopeFunction(
@@ -214,9 +216,25 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	root.AddFunction(&function1)
 	root.AddFunction(&function2)
 
-	fmt.Println(tree.ChildrenFunctions)
-	assert.Equal(t, &function1, tree.ChildrenFunctions["test"], "first function")
-	assert.Equal(t, &function2, tree.ChildrenFunctions["test2"], "second function")
+	assertSameFunction(t, &function1, tree.ChildrenFunctions["test"])
+	assertSameFunction(t, &function2, tree.ChildrenFunctions["test2"])
+}
+
+func keys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func assertSameVariable(t *testing.T, expected idx.Variable, actual idx.Variable) {
+	assert.Equal(t, expected.GetName(), actual.GetName())
+	assert.Equal(t, expected.GetType(), actual.GetType(), expected.GetName())
+	assert.Equal(t, expected.GetDocumentURI(), actual.GetDocumentURI(), expected.GetName())
+	assertSameRange(t, expected.GetDeclarationRange(), actual.GetDeclarationRange(), fmt.Sprint("Variable  declaration range:", expected.GetName()))
+	assertSameRange(t, expected.GetDocumentRange(), actual.GetDocumentRange(), fmt.Sprint("Variable document range:", expected.GetName()))
+	assert.Equal(t, expected.GetKind(), actual.GetKind(), expected.GetName())
 }
 
 func TestExtractSymbols_find_macro(t *testing.T) {
