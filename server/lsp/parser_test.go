@@ -252,21 +252,28 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	assertSameFunction(t, &functionMethod, tree.ChildrenFunctions["method"])
 }
 
-func keys[K comparable, V any](m map[K]V) []K {
-	keys := make([]K, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
+func TestExtractSymbols_finds_definition(t *testing.T) {
+	source := `
+	def Kilo = int;
+	def KiloPtr = Kilo*;
+	`
+	doc := NewDocumentFromString("x", source)
+	parser := createParser()
 
-func assertSameVariable(t *testing.T, expected idx.Variable, actual idx.Variable) {
-	assert.Equal(t, expected.GetName(), actual.GetName())
-	assert.Equal(t, expected.GetType(), actual.GetType(), expected.GetName())
-	assert.Equal(t, expected.GetDocumentURI(), actual.GetDocumentURI(), expected.GetName())
-	assertSameRange(t, expected.GetDeclarationRange(), actual.GetDeclarationRange(), fmt.Sprint("Variable  declaration range:", expected.GetName()))
-	assertSameRange(t, expected.GetDocumentRange(), actual.GetDocumentRange(), fmt.Sprint("Variable document range:", expected.GetName()))
-	assert.Equal(t, expected.GetKind(), actual.GetKind(), expected.GetName())
+	symbols := parser.ExtractSymbols(&doc)
+
+	expectedDefKilo := idx.NewDefBuilder("Kilo", "x").
+		WithIdentifierRange(1, 5, 1, 9).
+		WithDocumentRange(1, 1, 1, 16).
+		Build()
+
+	expectedDefKiloPtr := idx.NewDefBuilder("KiloPtr", "x").
+		WithIdentifierRange(2, 5, 2, 12).
+		WithDocumentRange(2, 1, 2, 21).
+		Build()
+
+	assert.Equal(t, expectedDefKilo, symbols.Defs["Kilo"])
+	assert.Equal(t, expectedDefKiloPtr, symbols.Defs["KiloPtr"])
 }
 
 func TestExtractSymbols_find_macro(t *testing.T) {

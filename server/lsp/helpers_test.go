@@ -28,7 +28,7 @@ func assertSameFunction(t *testing.T, expected *idx.Function, actual *idx.Functi
 	assert.Equal(t, expected.Enums, actual.Enums, expected.GetName())
 	assert.Equal(t, expected.Structs, actual.Structs, expected.GetName())
 
-	assert.Equal(t, keys(expected.ChildrenFunctions), keys(actual.ChildrenFunctions))
+	assert.Equal(t, Keys(expected.ChildrenFunctions), Keys(actual.ChildrenFunctions))
 	for key, value := range expected.ChildrenFunctions {
 		assertSameFunction(t, value, actual.ChildrenFunctions[key])
 	}
@@ -47,4 +47,13 @@ func createStruct(docId string, name string, members []idx.StructMember, idRange
 		docId,
 		idRange,
 	)
+}
+
+func assertSameVariable(t *testing.T, expected idx.Variable, actual idx.Variable) {
+	assert.Equal(t, expected.GetName(), actual.GetName())
+	assert.Equal(t, expected.GetType(), actual.GetType(), expected.GetName())
+	assert.Equal(t, expected.GetDocumentURI(), actual.GetDocumentURI(), expected.GetName())
+	assertSameRange(t, expected.GetDeclarationRange(), actual.GetDeclarationRange(), fmt.Sprint("Variable  declaration range:", expected.GetName()))
+	assertSameRange(t, expected.GetDocumentRange(), actual.GetDocumentRange(), fmt.Sprint("Variable document range:", expected.GetName()))
+	assert.Equal(t, expected.GetKind(), actual.GetKind(), expected.GetName())
 }

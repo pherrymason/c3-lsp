@@ -10,6 +10,14 @@ func boolPtr(v bool) *bool {
 	return &b
 }
 
+func Keys[K comparable, V any](m map[K]V) []K {
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func lsp_NewRangeFromRange(idxRange idx.Range) protocol.Range {
 	return protocol.Range{
 		Start: protocol.Position{Line: protocol.UInteger(idxRange.Start.Line), Character: protocol.UInteger(idxRange.Start.Character)},

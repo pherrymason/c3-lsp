@@ -17,6 +17,7 @@ const VarDeclarationQuery = `(var_declaration
 const FunctionDeclarationQuery = `(function_declaration) @function_dec`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
 const StructDeclaration = `(struct_declaration) @struct_dec`
+const DefineDeclaration = `(define_declaration) @def_dec`
 
 type Parser struct {
 	logger commonlog.Logger
@@ -54,6 +55,7 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 	(source_file ` + VarDeclarationQuery + `)
 	(source_file ` + EnumDeclaration + `)	
 	(source_file ` + StructDeclaration + `)
+	(source_file ` + DefineDeclaration + `)
 	` + FunctionDeclarationQuery + `]`
 
 	q, err := sitter.NewQuery([]byte(query), getLanguage())
@@ -71,8 +73,6 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 		idx.NewRangeFromSitterPositions(doc.parsedTree.RootNode().StartPoint(), doc.parsedTree.RootNode().EndPoint()),
 		protocol.CompletionItemKindModule, // Best value found
 	)
-
-	//var tempEnum *idx.Enum
 
 	for {
 		m, ok := qc.NextMatch()
@@ -100,6 +100,9 @@ func (p *Parser) ExtractSymbols(doc *Document) idx.Function {
 			} else if nodeType == "struct_declaration" {
 				_struct := p.nodeToStruct(doc, c.Node, sourceCode)
 				scopeTree.AddStruct(_struct)
+			} else if nodeType == "define_declaration" {
+				def := p.nodeToDef(doc, c.Node, sourceCode)
+				scopeTree.AddDef(def)
 			}
 		}
 	}
@@ -242,6 +245,18 @@ func (p *Parser) nodeToEnum(doc *Document, node *sitter.Node, sourceCode []byte)
 	}
 
 	return enum
+}
+
+func (p *Parser) nodeToDef(doc *Document, node *sitter.Node, sourceCode []byte) idx.Def {
+	identifierNode := node.Child(1)
+	//definition := node.Child(4)
+
+	return idx.NewDef(
+		identifierNode.Content(sourceCode),
+		doc.URI,
+		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()),
+		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+	)
 }
 
 func (p *Parser) FindVariableDeclarations(doc *Document, node *sitter.Node) []idx.Variable {

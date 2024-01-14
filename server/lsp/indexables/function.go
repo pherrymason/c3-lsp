@@ -21,6 +21,7 @@ type Function struct {
 	Variables         map[string]Variable
 	Enums             map[string]*Enum
 	Structs           map[string]Struct
+	Defs              map[string]Def
 	ChildrenFunctions map[string]*Function
 
 	BaseIndexable
@@ -49,6 +50,7 @@ func newFunctionType(fType FunctionType, name string, returnType string, argumen
 		Variables:         make(map[string]Variable),
 		Enums:             make(map[string]*Enum),
 		Structs:           make(map[string]Struct),
+		Defs:              make(map[string]Def),
 		ChildrenFunctions: make(map[string]*Function),
 	}
 }
@@ -105,4 +107,8 @@ func (f Function) AddStruct(s Struct) {
 
 func (f Function) GetHoverInfo() string {
 	return fmt.Sprintf("%s %s()", f.GetReturnType(), f.GetName())
+}
+
+func (f Function) AddDef(def Def) {
+	f.Defs[def.GetName()] = def
 }
