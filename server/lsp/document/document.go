@@ -1,21 +1,50 @@
-package lsp
+package document
 
 import (
 	"errors"
+	"github.com/pherrymason/c3-lsp/lsp/cst"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"os"
 	"unicode"
 )
 
 type Document struct {
-	parsedTree              *sitter.Tree
+	ContextSyntaxTree       *sitter.Tree
 	ModuleName              string
 	URI                     protocol.DocumentUri
-	Path                    string
 	NeedsRefreshDiagnostics bool
 	Content                 string
 	lines                   []string
+}
+
+func NewDocument(docId protocol.DocumentUri, moduleName string, documentContent string) Document {
+	return Document{
+		ContextSyntaxTree:       cst.GetParsedTreeFromString(documentContent),
+		ModuleName:              moduleName,
+		URI:                     docId,
+		NeedsRefreshDiagnostics: false,
+		Content:                 documentContent,
+	}
+}
+
+// ApplyChanges updates the content of the Document from LSP textDocument/didChange events.
+func (d *Document) ApplyChanges(changes []interface{}) {
+	for _, change := range changes {
+		switch c := change.(type) {
+		case protocol.TextDocumentContentChangeEvent:
+			startIndex, endIndex := c.Range.IndexesIn(d.Content)
+			d.Content = d.Content[:startIndex] + c.Text + d.Content[endIndex:]
+		case protocol.TextDocumentContentChangeEventWhole:
+			d.Content = c.Text
+		}
+	}
+
+	//d.lines = nil
+	d.updateParsedTree()
+	d.ContextSyntaxTree = cst.GetParsedTreeFromString(d.Content)
+}
+func (d *Document) updateParsedTree() {
+	// TODO
 	// should the Document store the parsed CTS?
 	// would allow parsing incrementally and be faster
 	// // change 1 -> true
@@ -37,44 +66,6 @@ type Document struct {
 	//    		    Column: 12,
 	//    		},
 	//		})
-}
-
-func NewDocumentFromFilePath(documentPath string) Document {
-	content, _ := os.ReadFile(documentPath)
-
-	return Document{
-		parsedTree: GetParsedTree(content),
-		URI:        documentPath,
-		Path:       documentPath,
-		Content:    string(content),
-	}
-}
-
-func NewDocumentFromString(documentPath string, moduleName string, documentContent string) Document {
-	return Document{
-		parsedTree: GetParsedTreeFromString(documentContent),
-		ModuleName: moduleName,
-		URI:        documentPath,
-		Path:       documentPath,
-		Content:    documentContent,
-	}
-}
-
-// ApplyChanges updates the content of the Document from LSP textDocument/didChange events.
-func (d *Document) ApplyChanges(changes []interface{}) {
-	for _, change := range changes {
-		switch c := change.(type) {
-		case protocol.TextDocumentContentChangeEvent:
-			startIndex, endIndex := c.Range.IndexesIn(d.Content)
-			d.Content = d.Content[:startIndex] + c.Text + d.Content[endIndex:]
-		case protocol.TextDocumentContentChangeEventWhole:
-			d.Content = c.Text
-		}
-	}
-
-	d.lines = nil
-	// TODO This next line can be optimized by reparsing only what changed.
-	d.parsedTree = GetParsedTreeFromString(d.Content)
 }
 
 func (d *Document) WordInPosition(position protocol.Position) (string, error) {

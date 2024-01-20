@@ -14,9 +14,9 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 			returnType:        returnType,
 			argumentIds:       nil,
 			Variables:         make(map[string]Variable),
-			Enums:             make(map[string]*Enum),
+			Enums:             make(map[string]Enum),
 			Structs:           make(map[string]Struct),
-			ChildrenFunctions: make(map[string]*Function),
+			ChildrenFunctions: make(map[string]Function),
 			BaseIndexable: BaseIndexable{
 				module:      module,
 				documentURI: docId,

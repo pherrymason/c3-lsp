@@ -1,18 +1,26 @@
-package lsp
+package language
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	p "github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/stretchr/testify/assert"
+	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"testing"
 )
+
+func createParser() p.Parser {
+	logger := &commonlog.MockLogger{}
+	return p.NewParser(logger)
+}
 
 func TestLanguage_FindHoverInformation(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
 
-	doc := NewDocumentFromString("x", "", `
+	doc := document.NewDocument("x", "", `
 	int value = 1;
 	fn void main() {
 		char value = 3;
@@ -46,14 +54,14 @@ func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
 
-	doc := NewDocumentFromString("x", "x", `
+	doc := document.NewDocument("x", "x", `
 	fn void main() {
 		importedMethod();
 	}
 `)
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 
-	doc2 := NewDocumentFromString("y", "x", `
+	doc2 := document.NewDocument("y", "x", `
 	fn void importedMethod() {}
 	`)
 	language.RefreshDocumentIdentifiers(&doc2, &parser)
@@ -61,7 +69,7 @@ func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	params := protocol.HoverParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 			protocol.TextDocumentIdentifier{URI: "x"},
-			lsp_NewPosition(2, 8),
+			protocol.Position{Line: 2, Character: 8},
 		},
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
@@ -143,10 +151,11 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 			`struct MyStructure {bool enabled; char key;} MyStructure value;`,
 			"MyStructure",
 			0, 47,
-			createStruct("x", module, "MyStructure", []idx.StructMember{
-				idx.NewStructMember("enabled", "bool", idx.NewRange(0, 20, 0, 33)),
-				idx.NewStructMember("key", "char", idx.NewRange(0, 34, 0, 43)),
-			}, idx.NewRange(0, 7, 0, 18)),
+			idx.NewStructBuilder("MyStructure", module, "x").
+				WithStructMember("enabled", "bool", idx.NewRange(0, 20, 0, 33)).
+				WithStructMember("key", "char", idx.NewRange(0, 34, 0, 43)).
+				WithIdentifierRange(0, 7, 0, 18).
+				Build(),
 		},
 		{
 			"def",
@@ -163,7 +172,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			doc := NewDocumentFromString("x", module, tt.sourceCode)
+			doc := document.NewDocument("x", module, tt.sourceCode)
 			language := NewLanguage()
 			parser := createParser()
 			language.RefreshDocumentIdentifiers(&doc, &parser)
@@ -180,7 +189,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
-	doc := NewDocumentFromString("x", "mod", `
+	doc := document.NewDocument("x", "mod", `
 		int value = 1;
 		value = 3;
 	`)
@@ -207,7 +216,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_function(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
-	doc := NewDocumentFromString("x", "mod", `
+	doc := document.NewDocument("x", "mod", `
 		int value = 1;
 		fn void main() {
 			value = 3;
@@ -236,13 +245,13 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_func
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
-	doc := NewDocumentFromString("x", "mod", `
+	doc := document.NewDocument("x", "mod", `
 		fn void main() {
 			value = 3;
 		}
 	`)
 	language.RefreshDocumentIdentifiers(&doc, &parser)
-	doc2 := NewDocumentFromString("y", "mod", `int value = 1;`)
+	doc2 := document.NewDocument("y", "mod", `int value = 1;`)
 	language.RefreshDocumentIdentifiers(&doc2, &parser)
 
 	params := protocol.DeclarationParams{

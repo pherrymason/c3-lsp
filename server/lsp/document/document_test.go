@@ -1,4 +1,4 @@
-package lsp
+package document
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ func TestWordInIndex(t *testing.T) {
 	}
 
 	source := "hello this is expected bye_bye"
-	doc := NewDocumentFromString("x", "x", source)
+	doc := NewDocument("x", "x", source)
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			word, _ := doc.WordInIndex(tt.position)

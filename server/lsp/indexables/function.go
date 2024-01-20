@@ -19,10 +19,10 @@ type Function struct {
 	argumentIds []string // Used to list which variables are defined in function signature. They are fully defined in Variables
 
 	Variables         map[string]Variable
-	Enums             map[string]*Enum
+	Enums             map[string]Enum
 	Structs           map[string]Struct
 	Defs              map[string]Def
-	ChildrenFunctions map[string]*Function
+	ChildrenFunctions map[string]Function
 
 	BaseIndexable
 }
@@ -49,10 +49,10 @@ func newFunctionType(fType FunctionType, name string, returnType string, argumen
 			Kind:            kind,
 		},
 		Variables:         make(map[string]Variable),
-		Enums:             make(map[string]*Enum),
+		Enums:             make(map[string]Enum),
 		Structs:           make(map[string]Struct),
 		Defs:              make(map[string]Def),
-		ChildrenFunctions: make(map[string]*Function),
+		ChildrenFunctions: make(map[string]Function),
 	}
 }
 
@@ -98,11 +98,15 @@ func (f *Function) AddVariables(variables []Variable) {
 	}
 }
 
-func (f *Function) AddEnum(enum *Enum) {
+func (f *Function) AddVariable(variable Variable) {
+	f.Variables[variable.name] = variable
+}
+
+func (f *Function) AddEnum(enum Enum) {
 	f.Enums[enum.name] = enum
 }
 
-func (f Function) AddFunction(f2 *Function) {
+func (f Function) AddFunction(f2 Function) {
 	f.ChildrenFunctions[f2.name] = f2
 }
 

@@ -3,6 +3,7 @@ package lsp
 import (
 	"fmt"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 	"testing"
@@ -25,23 +26,20 @@ func assertSameFunction(t *testing.T, expected *idx.Function, actual *idx.Functi
 
 	assert.Equal(t, expected.GetKind(), actual.GetKind(), expected.GetName())
 	assert.Equal(t, expected.Variables, actual.Variables, expected.GetName())
+	/*
+		for key, value := range expected.Variables {
+			assertSameVariable()
+		}
+	*/
+
 	assert.Equal(t, expected.Enums, actual.Enums, expected.GetName())
 	assert.Equal(t, expected.Structs, actual.Structs, expected.GetName())
 
 	assert.Equal(t, Keys(expected.ChildrenFunctions), Keys(actual.ChildrenFunctions))
 	for key, value := range expected.ChildrenFunctions {
-		assertSameFunction(t, value, actual.ChildrenFunctions[key])
+		function := actual.ChildrenFunctions[key]
+		assertSameFunction(t, &value, &function)
 	}
-}
-
-func createParser() Parser {
-	return Parser{
-		logger: commonlog.MockLogger{},
-	}
-}
-
-func createStruct(docId string, module string, name string, members []idx.StructMember, idRange idx.Range) idx.Indexable {
-	return idx.NewStruct(name, members, module, docId, idRange)
 }
 
 func assertSameVariable(t *testing.T, expected idx.Variable, actual idx.Variable) {
@@ -51,4 +49,14 @@ func assertSameVariable(t *testing.T, expected idx.Variable, actual idx.Variable
 	assertSameRange(t, expected.GetDeclarationRange(), actual.GetDeclarationRange(), fmt.Sprint("Variable  declaration range:", expected.GetName()))
 	assertSameRange(t, expected.GetDocumentRange(), actual.GetDocumentRange(), fmt.Sprint("Variable document range:", expected.GetName()))
 	assert.Equal(t, expected.GetKind(), actual.GetKind(), expected.GetName())
+}
+
+func createParser() parser.Parser {
+	return parser.Parser{
+		Logger: commonlog.MockLogger{},
+	}
+}
+
+func createStruct(docId string, module string, name string, members []idx.StructMember, idRange idx.Range) idx.Indexable {
+	return idx.NewStruct(name, members, module, docId, idRange)
 }

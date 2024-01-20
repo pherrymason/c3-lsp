@@ -3,19 +3,22 @@ package lsp
 import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/fs"
+	l "github.com/pherrymason/c3-lsp/lsp/language"
+	p "github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	_ "github.com/tliron/commonlog/simple"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	glspserv "github.com/tliron/glsp/server"
+	"os"
 )
 
 type Server struct {
 	server    *glspserv.Server
 	documents *documentStore
-	language  Language
-	parser    Parser
+	language  l.Language
+	parser    p.Parser
 }
 
 // ServerOpts holds the options to create a new Server.
@@ -44,10 +47,8 @@ func NewServer(opts ServerOpts) *Server {
 	server := &Server{
 		server:    glspServer,
 		documents: newDocumentStore(opts.FS, &glspServer.Log),
-		language:  NewLanguage(),
-		parser: Parser{
-			logger: logger,
-		},
+		language:  l.NewLanguage(),
+		parser:    p.NewParser(&logger),
 	}
 
 	handler.Initialized = initialized
@@ -77,7 +78,7 @@ func NewServer(opts ServerOpts) *Server {
 	}
 
 	handler.TextDocumentDidOpen = func(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
-		doc, err := server.documents.DidOpen(*params, context.Notify, &server.parser)
+		doc, err := server.documents.Open(*params, context.Notify, &server.parser)
 		if err != nil {
 			glspServer.Log.Debug("Could not open file document.")
 			return err
@@ -97,6 +98,7 @@ func NewServer(opts ServerOpts) *Server {
 		}
 
 		doc.ApplyChanges(params.ContentChanges)
+
 		server.language.RefreshDocumentIdentifiers(doc, &server.parser)
 		return nil
 	}
@@ -207,7 +209,9 @@ func (s *Server) indexWorkspace() {
 
 	for _, filePath := range files {
 		s.server.Log.Debug(fmt.Sprint("Parsing ", filePath))
-		doc := NewDocumentFromFilePath(filePath)
+
+		content, _ := os.ReadFile(filePath)
+		doc := NewDocumentFromString(filePath, string(content))
 		s.language.RefreshDocumentIdentifiers(&doc, &s.parser)
 	}
 }

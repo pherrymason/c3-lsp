@@ -36,8 +36,8 @@ func (eb *EnumBuilder) WithEnumerator(enumerator Enumerator) *EnumBuilder {
 	return eb
 }
 
-func (eb *EnumBuilder) Build() *Enum {
-	return &eb.enum
+func (eb *EnumBuilder) Build() Enum {
+	return eb.enum
 }
 
 // EnumeratorBuilder

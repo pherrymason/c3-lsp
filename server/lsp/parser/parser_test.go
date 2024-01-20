@@ -1,10 +1,12 @@
-package lsp
+package parser
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
+	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"strings"
 	"testing"
@@ -84,11 +86,15 @@ func TestFindIdentifiers_should_assign_different_scopes_to_same_name_identifiers
 	}, identifiers)
 }*/
 
+func createParser() Parser {
+	logger := &commonlog.MockLogger{}
+	return NewParser(logger)
+}
+
 func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t *testing.T) {
 	source := `int value = 1;`
-	doc := NewDocumentFromString("x", "file_3", source)
+	doc := document.NewDocument("x", "file_3", source)
 	parser := createParser()
-
 	symbols := parser.ExtractSymbols(&doc)
 
 	expectedRoot := idx.NewAnonymousScopeFunction("main", "file_3", "x", idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
@@ -101,7 +107,7 @@ func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t 
 
 func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *testing.T) {
 	source := `enum Colors { RED, BLUE, GREEN };`
-	doc := NewDocumentFromString("x", "x", source)
+	doc := document.NewDocument("x", "x", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
@@ -111,13 +117,13 @@ func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *test
 	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 14, 0, 17))
 	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 19, 0, 23))
 	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 25, 0, 30))
-	expectedRoot.AddEnum(&enum)
-	assert.Equal(t, &enum, symbols.Enums["Colors"])
+	expectedRoot.AddEnum(enum)
+	assert.Equal(t, enum, symbols.Enums["Colors"])
 }
 
 func TestExtractSymbols_finds_function_root_and_global_enum_with_base_type_declarations(t *testing.T) {
 	source := `enum Colors:int { RED, BLUE, GREEN };`
-	doc := NewDocumentFromString("x", "x", source)
+	doc := document.NewDocument("x", "x", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
@@ -128,8 +134,8 @@ func TestExtractSymbols_finds_function_root_and_global_enum_with_base_type_decla
 	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 23, 0, 27))
 	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 29, 0, 34))
 
-	expectedRoot.AddEnum(&enum)
-	assert.Equal(t, &enum, symbols.Enums["Colors"])
+	expectedRoot.AddEnum(enum)
+	assert.Equal(t, enum, symbols.Enums["Colors"])
 }
 
 func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *testing.T) {
@@ -137,7 +143,7 @@ func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *te
 		bool enabled;
 		char key;
 	}`
-	doc := NewDocumentFromString("x", "x", source)
+	doc := document.NewDocument("x", "x", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
@@ -161,7 +167,7 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 		return 1;
 	}`
 	docId := "x"
-	doc := NewDocumentFromString(docId, "mod", source)
+	doc := document.NewDocument(docId, "mod", source)
 	parser := createParser()
 	tree := parser.ExtractSymbols(&doc)
 
@@ -205,12 +211,12 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 		Build()
 
 	root := idx.NewAnonymousScopeFunction("main", "mod", docId, idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
-	root.AddFunction(&function1)
-	root.AddFunction(&function2)
+	root.AddFunction(function1)
+	root.AddFunction(function2)
 
-	assertSameFunction(t, &function1, tree.ChildrenFunctions["test"])
-	assertSameFunction(t, &function2, tree.ChildrenFunctions["test2"])
-	assertSameFunction(t, &functionMethod, tree.ChildrenFunctions["method"])
+	assertSameFunction(t, function1, tree.ChildrenFunctions["test"])
+	assertSameFunction(t, function2, tree.ChildrenFunctions["test2"])
+	assertSameFunction(t, functionMethod, tree.ChildrenFunctions["method"])
 }
 
 func TestExtractSymbols_finds_definition(t *testing.T) {
@@ -220,7 +226,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
 	def MyMap = HashMap(<String, Feature>);
 	`
-	doc := NewDocumentFromString("x", "x", source)
+	doc := document.NewDocument("x", "x", source)
 	parser := createParser()
 
 	symbols := parser.ExtractSymbols(&doc)
@@ -269,7 +275,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 		}
 	}`
 
-	_ = NewDocumentFromString("x", "x", sourceCode)
+	_ = document.NewDocument("x", "x", sourceCode)
 	//	parser := createParser()
 	//	tree := parser.ExtractSymbols(&doc)
 

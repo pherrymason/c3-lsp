@@ -2,6 +2,8 @@ package lsp
 
 import (
 	"github.com/pherrymason/c3-lsp/fs"
+	"github.com/pherrymason/c3-lsp/lsp/document"
+	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
@@ -10,14 +12,14 @@ import (
 
 type documentStore struct {
 	rootURI   string
-	documents map[string]*Document
+	documents map[string]*document.Document
 	fs        fs.FileStorage
 	logger    commonlog.Logger
 }
 
 func newDocumentStore(fs fs.FileStorage, logger *commonlog.Logger) *documentStore {
 	return &documentStore{
-		documents: map[string]*Document{},
+		documents: map[string]*document.Document{},
 		fs:        fs,
 		logger:    *logger,
 	}
@@ -31,7 +33,7 @@ func (s *documentStore) normalizePath(pathOrUri string) (string, error) {
 	return fs.GetCanonicalPath(path), nil
 }
 
-func (s *documentStore) DidOpen(params protocol.DidOpenTextDocumentParams, notify glsp.NotifyFunc, parser *Parser) (*Document, error) {
+func (s *documentStore) Open(params protocol.DidOpenTextDocumentParams, notify glsp.NotifyFunc, parser *parser.Parser) (*document.Document, error) {
 	langID := params.TextDocument.LanguageID
 	if langID != "c3" {
 		return nil, nil
@@ -43,25 +45,20 @@ func (s *documentStore) DidOpen(params protocol.DidOpenTextDocumentParams, notif
 	if err != nil {
 		return nil, err
 	}
-	doc := &Document{
-		parsedTree: GetParsedTreeFromString(params.TextDocument.Text),
-		URI:        uri,
-		Path:       path,
-		Content:    params.TextDocument.Text,
-	}
+	doc := NewDocumentFromString(uri, params.TextDocument.Text)
 
-	moduleName := parser.ExtractModuleName(doc)
+	moduleName := parser.ExtractModuleName(&doc)
 	doc.ModuleName = moduleName
 
-	s.documents[path] = doc
-	return doc, nil
+	s.documents[path] = &doc
+	return &doc, nil
 }
 
 func (s *documentStore) Close(uri protocol.DocumentUri) {
 	delete(s.documents, uri)
 }
 
-func (s *documentStore) Get(pathOrURI string) (*Document, bool) {
+func (s *documentStore) Get(pathOrURI string) (*document.Document, bool) {
 	path, err := s.normalizePath(pathOrURI)
 	s.logger.Debugf("normalized path:%s", path)
 

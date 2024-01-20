@@ -1,32 +1,36 @@
-package lsp
+package language
 
 import "C"
 import (
 	"errors"
+	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
+	"github.com/pherrymason/c3-lsp/lsp/parser"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 // Language will be the center of knowledge of everything parsed.
 type Language struct {
-	indexablesByDocument   map[protocol.DocumentUri]indexables.IndexableCollection
+	index                  IndexStore
+	symbolsByModule        map[protocol.DocumentUri]indexables.IndexableCollection
 	functionTreeByDocument map[protocol.DocumentUri]indexables.Function
 }
 
 func NewLanguage() Language {
 	return Language{
-		indexablesByDocument:   make(map[protocol.DocumentUri]indexables.IndexableCollection),
+		index:                  NewIndexStore(),
+		symbolsByModule:        make(map[protocol.DocumentUri]indexables.IndexableCollection),
 		functionTreeByDocument: make(map[protocol.DocumentUri]indexables.Function),
 	}
 }
 
-func (l *Language) RefreshDocumentIdentifiers(doc *Document, parser *Parser) {
+func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
 	l.functionTreeByDocument[doc.URI] = parser.ExtractSymbols(doc)
 }
 
 func (l *Language) BuildCompletionList(text string, line protocol.UInteger, character protocol.UInteger) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
-	for _, value := range l.indexablesByDocument {
+	for _, value := range l.symbolsByModule {
 		for _, storedIdentifier := range value {
 			tempKind := storedIdentifier.GetKind()
 
@@ -40,8 +44,8 @@ func (l *Language) BuildCompletionList(text string, line protocol.UInteger, char
 	return items
 }
 
-func (l *Language) registerIndexable(doc *Document, indexable indexables.Indexable) {
-	l.indexablesByDocument[doc.URI] = append(l.indexablesByDocument[doc.URI], indexable)
+func (l *Language) registerIndexable(doc *document.Document, indexable indexables.Indexable) {
+	l.symbolsByModule[doc.URI] = append(l.symbolsByModule[doc.URI], indexable)
 }
 
 const (
@@ -58,7 +62,7 @@ func (l *Language) FindSymbolDeclarationInWorkspace(docId protocol.DocumentUri, 
 	return symbol, nil
 }
 
-func (l *Language) FindHoverInformation(doc *Document, params *protocol.HoverParams) (protocol.Hover, error) {
+func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) (protocol.Hover, error) {
 	word, err := doc.WordInPosition(params.Position)
 	if err != nil {
 		return protocol.Hover{}, err
@@ -132,7 +136,7 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 	}
 
 	for _, child := range function.ChildrenFunctions {
-		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, mode); result != nil {
+		if result, resultDepth := findDeepFirst(identifier, position, &child, depth+1, mode); result != nil {
 			return result, resultDepth
 		}
 	}

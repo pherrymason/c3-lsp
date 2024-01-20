@@ -23,6 +23,7 @@ func NewVariable(name string, variableType string, module string, uri string, id
 			Kind:            protocol.CompletionItemKindVariable,
 		},
 	}
+
 }
 
 func (v Variable) GetType() string {
