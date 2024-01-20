@@ -57,8 +57,8 @@ type FindMode int
 
 func (l *Language) FindSymbolDeclarationInWorkspace(docId protocol.DocumentUri, identifier string, position protocol.Position) (indexables.Indexable, error) {
 
-	search := NewSearch(identifier)
-	symbol := l.findClosestSymbolDeclaration(identifier, docId, position, search)
+	searchParams := NewSearchParams(identifier, docId)
+	symbol := l.findClosestSymbolDeclaration(searchParams, position)
 
 	return symbol, nil
 }
@@ -69,9 +69,9 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 		return protocol.Hover{}, err
 	}
 
-	search := NewSearch(symbolInPosition)
+	search := NewSearchParams(symbolInPosition, doc.URI)
 
-	// Check if symbol has '.' in front
+	// Check if selectedSymbol has '.' in front
 	if doc.HasPointInFrontSymbol(params.Position) {
 		parentSymbol, err := doc.ParentSymbolInPosition(params.Position)
 		if err == nil {
@@ -80,7 +80,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 		}
 	}
 
-	foundSymbol := l.findClosestSymbolDeclaration(symbolInPosition, params.TextDocument.URI, params.Position, search)
+	foundSymbol := l.findClosestSymbolDeclaration(search, params.Position)
 	if foundSymbol == nil {
 		return protocol.Hover{}, nil
 	}
@@ -99,12 +99,12 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 	return hover, nil
 }
 
-// Finds the closest symbol based on current scope.
+// Finds the closest selectedSymbol based on current scope.
 // If not present in current Scope:
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
-func (l *Language) findClosestSymbolDeclaration(word string, docId protocol.DocumentUri, position protocol.Position, searchParams SearchParams) indexables.Indexable {
-	identifier, _ := l.findSymbolDeclarationInDocPositionScope(word, docId, position)
+func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, position protocol.Position) indexables.Indexable {
+	identifier, _ := l.findSymbolDeclarationInDocPositionScope(searchParams.selectedSymbol, searchParams.docId, position)
 	if identifier != nil {
 		return identifier
 	}
@@ -112,10 +112,10 @@ func (l *Language) findClosestSymbolDeclaration(word string, docId protocol.Docu
 	// TODO search in imported files in docId
 	// -----------
 
-	// Not found yet, let's try search the symbol defined as global in other files
+	// Not found yet, let's try search the selectedSymbol defined as global in other files
 	// Note: Iterating a map is not guaranteed to be done always in the same order.
 	for _, scope := range l.functionTreeByDocument {
-		found, foundDepth := findDeepFirst(word, position, &scope, 0, AnyPosition)
+		found, foundDepth := findDeepFirst(searchParams.selectedSymbol, position, &scope, 0, AnyPosition)
 
 		if found != nil && (foundDepth <= 1) {
 			return found
@@ -126,7 +126,7 @@ func (l *Language) findClosestSymbolDeclaration(word string, docId protocol.Docu
 	return nil
 }
 
-// SearchParams for symbol in docId
+// SearchParams for selectedSymbol in docId
 func (l *Language) findSymbolDeclarationInDocPositionScope(identifier string, docId protocol.DocumentUri, position protocol.Position) (indexables.Indexable, error) {
 	scopedTree, found := l.functionTreeByDocument[docId]
 	if !found {

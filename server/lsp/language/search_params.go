@@ -1,13 +1,15 @@
 package language
 
 type SearchParams struct {
-	symbol       string
-	parentSymbol string
+	selectedSymbol string
+	parentSymbol   string
+	docId          string
 }
 
-func NewSearch(symbol string) SearchParams {
+func NewSearchParams(selectedSymbol string, docId string) SearchParams {
 	return SearchParams{
-		symbol: symbol,
+		selectedSymbol: selectedSymbol,
+		docId:          docId,
 	}
 }
 

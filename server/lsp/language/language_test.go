@@ -16,7 +16,7 @@ func createParser() p.Parser {
 	return p.NewParser(logger)
 }
 
-// Asking the symbol information in the very same declaration, should resolve to the correct symbol
+// Asking the selectedSymbol information in the very same declaration, should resolve to the correct selectedSymbol
 func TestLanguage_findSymbolDeclarationInDocPositionScope_cursor_on_declaration_resolves_to_same_declaration(t *testing.T) {
 	language := NewLanguage()
 
@@ -43,8 +43,8 @@ func TestLanguage_findSymbolDeclarationInDocPositionScope_cursor_on_declaration_
 	)
 }
 
-// Asking the symbol information in the very same declaration, should resolve to the correct symbol
-// Even if there is another symbol with same name in a different file.
+// Asking the selectedSymbol information in the very same declaration, should resolve to the correct selectedSymbol
+// Even if there is another selectedSymbol with same name in a different file.
 func TestLanguage_findClosestSymbolDeclaration_cursor_on_declaration_resolves_to_same_declaration(t *testing.T) {
 	language := NewLanguage()
 
@@ -73,7 +73,7 @@ func TestLanguage_findClosestSymbolDeclaration_cursor_on_declaration_resolves_to
 	language.functionTreeByDocument["3"] = idx.NewFunctionBuilder("aaa", "void", "aaa", "aaa").Build()
 	language.functionTreeByDocument["4"] = idx.NewFunctionBuilder("bbb", "void", "bbb", "bbb").Build()
 
-	resolvedSymbol := language.findClosestSymbolDeclaration("out", docA, protocol.Position{0, 5}, NewSearch("out"))
+	resolvedSymbol := language.findClosestSymbolDeclaration(NewSearchParams("out", docA), protocol.Position{0, 5})
 
 	assert.Equal(t,
 		idx.NewVariableBuilder("out", "Out", moduleA, docA).
@@ -120,7 +120,7 @@ func TestLanguage_findClosestSymbolDeclaration_should_find_right_symbol_when_ask
 	)
 	language.functionTreeByDocument[docA] = fileB
 
-	resolvedSymbol := language.findClosestSymbolDeclaration("search", docA, protocol.Position{0, 5}, NewSearch("search"))
+	resolvedSymbol := language.findClosestSymbolDeclaration(NewSearchParams("search", docA), protocol.Position{0, 5})
 
 	expectedSymbol := idx.NewFunctionBuilder("search", "void", moduleB, docB).
 		WithTypeIdentifier("MyStruct").
