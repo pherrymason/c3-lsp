@@ -14,6 +14,7 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 			returnType:        returnType,
 			argumentIds:       nil,
 			Variables:         make(map[string]Variable),
+			Defs:              make(map[string]Def),
 			Enums:             make(map[string]Enum),
 			Structs:           make(map[string]Struct),
 			ChildrenFunctions: make(map[string]Function),
@@ -24,6 +25,11 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 			},
 		},
 	}
+}
+
+func (fb *FunctionBuilder) WithTypeIdentifier(typeIdentifier string) *FunctionBuilder {
+	fb.function.typeIdentifier = typeIdentifier
+	return fb
 }
 
 func (fb *FunctionBuilder) WithArgument(variable Variable) *FunctionBuilder {

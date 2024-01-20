@@ -8,8 +8,18 @@ import (
 )
 
 func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Function {
-
+	typeIdentifier := ""
 	nameNode := node.ChildByFieldName("name")
+
+	// Check if it has an optional type identifier, meaning this function belongs
+	// to a struct.
+	for i := uint32(0); i < node.ChildCount(); i++ {
+		child := node.Child(int(i))
+		switch child.Type() {
+		case "type_identifier":
+			typeIdentifier = child.Content(sourceCode)
+		}
+	}
 
 	// Extract function arguments
 	arguments := []idx.Variable{}
@@ -27,12 +37,15 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
 		argumentIds = append(argumentIds, arg.GetName())
 	}
 
-	symbol := idx.NewFunction(nameNode.Content(sourceCode), node.ChildByFieldName("return_type").Content(sourceCode), argumentIds, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
+	var symbol idx.Function
+	if typeIdentifier != "" {
+		symbol = idx.NewTypeFunction(typeIdentifier, nameNode.Content(sourceCode), node.ChildByFieldName("return_type").Content(sourceCode), argumentIds, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
+	} else {
+		symbol = idx.NewFunction(nameNode.Content(sourceCode), node.ChildByFieldName("return_type").Content(sourceCode), argumentIds, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
+	}
 
 	variables := p.FindVariableDeclarations(doc, node)
 	variables = append(arguments, variables...)
-
-	// TODO Previous node has the info about which function is belongs to.
 
 	symbol.AddVariables(variables)
 

@@ -12,80 +12,6 @@ import (
 	"testing"
 )
 
-/*
-func TestFindIdentifiers_finds_used_identifiers(t *testing.T) {
-	source := "int var0 = 3; int var1 = 4;"
-	doc := NewDocumentFromString("x", source)
-
-	identifiers := FindIdentifiers(&doc)
-
-	var1 := idx.NewVariable(
-		"var0",
-		"int",
-		"x",
-		NewRange(0, 4, 0, 7),
-		NewRange(0, 4, 0, 7), protocol.CompletionItemKindVariable)
-
-	assert.Equal(t, []idx.Indexable{
-		var1,
-		idx.NewVariable("var1", "int", "x", NewRange(0, 18, 0, 22),
-			NewRange(0, 18, 0, 22), protocol.CompletionItemKindVariable),
-	}, identifiers)
-}
-
-func TestFindIdentifiers_finds_unique_used_identifiers(t *testing.T) {
-	source := "int var0 = 3; int var1 = 4; var1 = 2+3;"
-	doc := NewDocumentFromString("x", source)
-
-	identifiers := FindIdentifiers(&doc)
-
-	assert.Equal(t, []idx.Indexable{
-		idx.NewVariable("var0", "int", "x", NewRange(0, 18, 0, 22), NewRange(0, 18, 0, 22), protocol.CompletionItemKindVariable),
-		idx.NewVariable("var1", "int", "x", NewRange(0, 18, 0, 22), NewRange(0, 18, 0, 22), protocol.CompletionItemKindVariable),
-	}, identifiers)
-}
-
-func TestFindIdentifiers_should_find_different_types(t *testing.T) {
-	source := `
-	int var0 = 2;
-	fn void test() {
-		return 1;
-	}
-	`
-	doc := NewDocumentFromString("x", source)
-
-	identifiers := FindIdentifiers(&doc)
-
-	assert.Equal(t, []idx.Indexable{
-		idx.NewVariable("var0", "int", "x", NewRange(0, 18, 0, 22), NewRange(0, 18, 0, 22), protocol.CompletionItemKindVariable),
-		idx.NewFunction("test", "x", NewRange(0, 18, 0, 22),
-			NewRange(2, 9, 4, 40),
-			protocol.CompletionItemKindFunction),
-	}, identifiers)
-}
-
-func TestFindIdentifiers_should_assign_different_scopes_to_same_name_identifiers(t *testing.T) {
-	source := `
-	int var0 = 2;
-	fn void test() {
-		int var0 = 3;
-		return 1;
-	}
-	`
-	doc := NewDocumentFromString("x", source)
-
-	identifiers := FindIdentifiers(&doc)
-
-	assert.Equal(t, []idx.Indexable{
-		idx.NewVariable("var0", "int", "x", NewRange(0, 18, 0, 22), NewRange(0, 18, 0, 22), protocol.CompletionItemKindVariable),
-		idx.NewVariable("var0", "int", "x", NewRange(0, 18, 0, 22), NewRange(0, 18, 0, 22), protocol.CompletionItemKindVariable),
-		idx.NewFunction("test", "x",
-			NewRange(0, 18, 0, 22),
-			NewRange(2, 9, 4, 30),
-			protocol.CompletionItemKindFunction),
-	}, identifiers)
-}*/
-
 func createParser() Parser {
 	logger := &commonlog.MockLogger{}
 	return NewParser(logger)
@@ -154,6 +80,44 @@ func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *te
 	}, "x", "x", idx.NewRange(0, 7, 0, 18))
 
 	assert.Equal(t, expectedStruct, symbols.Structs["MyStructure"])
+}
+
+func TestExtractSymbols_extracts_struct_declaration_with_member_functions(t *testing.T) {
+	source := `struct MyStruct{
+	int data;
+}
+
+fn void MyStruct.init(&self)
+{
+	*self = {
+		.data = 4,
+	};
+}`
+
+	module := "x"
+	docId := "x"
+	doc := document.NewDocument(docId, module, source)
+	parser := createParser()
+
+	symbols := parser.ExtractSymbols(&doc)
+
+	expectedStruct := idx.NewStruct("MyStruct", []idx.StructMember{
+		idx.NewStructMember("data", "int", idx.NewRange(1, 1, 1, 10)),
+	}, module, docId, idx.NewRange(0, 7, 0, 15))
+
+	expectedMethod := idx.NewFunctionBuilder("init", "void", module, docId).
+		WithTypeIdentifier("MyStruct").
+		WithArgument(
+			idx.NewVariable("self", "", module, docId, idx.NewRange(4, 23, 4, 27),
+				idx.NewRange(4, 23, 4, 27),
+			),
+		).
+		WithDocumentRange(4, 0, 9, 1).
+		WithIdentifierRange(4, 17, 4, 21).
+		Build()
+
+	assert.Equal(t, expectedStruct, symbols.Structs["MyStruct"])
+	assert.Equal(t, expectedMethod, symbols.ChildrenFunctions["MyStruct.init"])
 }
 
 func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
