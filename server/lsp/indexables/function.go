@@ -113,7 +113,12 @@ func (f *Function) AddEnum(enum Enum) {
 }
 
 func (f Function) AddFunction(f2 Function) {
-	f.ChildrenFunctions[f2.typeIdentifier+"."+f2.name] = f2
+	id := f2.name
+	if f2.typeIdentifier != "" {
+		id = f2.typeIdentifier + "." + f2.name
+	}
+
+	f.ChildrenFunctions[id] = f2
 }
 
 func (f Function) AddStruct(s Struct) {
