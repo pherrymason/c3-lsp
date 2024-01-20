@@ -68,12 +68,72 @@ func (d *Document) updateParsedTree() {
 	//		})
 }
 
-func (d *Document) WordInPosition(position protocol.Position) (string, error) {
+func (d *Document) SymbolInPosition(position protocol.Position) (string, error) {
 	index := position.IndexIn(d.Content)
-	return d.WordInIndex(index)
+	return d.symbolInIndex(index)
 }
 
-func (d *Document) WordInIndex(index int) (string, error) {
+func (d *Document) ParentSymbolInPosition(position protocol.Position) (string, error) {
+	if !d.HasPointInFrontSymbol(position) {
+		return "", errors.New("No previous '.' found.")
+	}
+
+	index := position.IndexIn(d.Content)
+	start, _, errRange := d.getSymbolAtIndexRanges(index)
+	if errRange != nil {
+		return "", errRange
+	}
+
+	index = start - 2
+	foundPreviousChar := false
+	for {
+		if index == 0 {
+			break
+		}
+		r := rune(d.Content[index])
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
+			foundPreviousChar = true
+			break
+		}
+		index -= 1
+	}
+
+	if foundPreviousChar {
+		parentSymbol, errSymbol := d.symbolInIndex(index)
+
+		return parentSymbol, errSymbol
+	}
+
+	return "", errors.New("No previous symbol found")
+}
+
+func (d *Document) symbolInIndex(index int) (string, error) {
+
+	start, end, err := d.getSymbolAtIndexRanges(index)
+
+	if err != nil {
+		return "", err
+	}
+
+	return d.Content[start : end+1], nil
+}
+
+func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
+	index := position.IndexIn(d.Content)
+	start, _, _ := d.getSymbolAtIndexRanges(index)
+
+	if start == 0 {
+		return false
+	}
+
+	if rune(d.Content[start-1]) == '.' {
+		return true
+	}
+
+	return false
+}
+
+func (d *Document) getSymbolAtIndexRanges(index int) (int, int, error) {
 	text := d.Content
 
 	wordStart := 0
@@ -93,13 +153,12 @@ func (d *Document) WordInIndex(index int) (string, error) {
 	}
 
 	if wordStart > len(text) {
-		return "", errors.New("wordStart out of bounds")
+		return 0, 0, errors.New("wordStart out of bounds")
 	} else if wordEnd > len(text) {
-		return "", errors.New("wordEnd out of bounds")
+		return 0, 0, errors.New("wordEnd out of bounds")
 	} else if wordStart > wordEnd {
-		return "", errors.New("wordStart > wordEnd!")
+		return 0, 0, errors.New("wordStart > wordEnd!")
 	}
 
-	word := text[wordStart : wordEnd+1]
-	return word, nil
+	return wordStart, wordEnd, nil
 }
