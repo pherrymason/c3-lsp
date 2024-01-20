@@ -101,6 +101,7 @@ func (l *Language) findClosestSymbolDeclaration(word string, docId protocol.Docu
 	// -----------
 
 	// Not found yet, let's try search the symbol defined as global in other files
+	// Note: Iterating a map is not guaranteed to be done always in the same order.
 	for _, scope := range l.functionTreeByDocument {
 		found, foundDepth := findDeepFirst(word, position, &scope, 0, AnyPosition)
 
@@ -115,8 +116,8 @@ func (l *Language) findClosestSymbolDeclaration(word string, docId protocol.Docu
 
 // Search for symbol in docId
 func (l *Language) findSymbolDeclarationInDocPositionScope(identifier string, docId protocol.DocumentUri, position protocol.Position) (indexables.Indexable, error) {
-	scopedTree, ok := l.functionTreeByDocument[docId]
-	if !ok {
+	scopedTree, found := l.functionTreeByDocument[docId]
+	if !found {
 		return nil, errors.New("Document is not indexed")
 	}
 
@@ -127,7 +128,7 @@ func (l *Language) findSymbolDeclarationInDocPositionScope(identifier string, do
 
 func findDeepFirst(identifier string, position protocol.Position, function *indexables.Function, depth uint, mode FindMode) (indexables.Indexable, uint) {
 	if mode == InPosition &&
-		!function.GetDeclarationRange().HasPosition(position) {
+		!function.GetDocumentRange().HasPosition(position) {
 		return nil, depth
 	}
 

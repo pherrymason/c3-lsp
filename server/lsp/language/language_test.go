@@ -16,6 +16,70 @@ func createParser() p.Parser {
 	return p.NewParser(logger)
 }
 
+func TestLanguage_findSymbolDeclarationInDocPositionScope_cursor_on_declaration_resolves_to_same_declaration(t *testing.T) {
+	language := NewLanguage()
+
+	// Doc A
+	docA := "a"
+	moduleA := "modA"
+	fileA := idx.NewFunctionBuilder("main", "void", moduleA, docA).
+		WithDocumentRange(0, 0, 0, 20).
+		Build()
+	fileA.AddVariable(idx.NewVariableBuilder("out", "Out", moduleA, docA).
+		WithIdentifierRange(0, 0, 0, 10).
+		Build(),
+	)
+	language.functionTreeByDocument[docA] = fileA
+
+	resolvedSymbol, err := language.findSymbolDeclarationInDocPositionScope("out", docA, protocol.Position{0, 5})
+
+	assert.Equal(t, nil, err)
+	assert.Equal(t,
+		idx.NewVariableBuilder("out", "Out", moduleA, docA).
+			WithIdentifierRange(0, 0, 0, 10).
+			Build(),
+		resolvedSymbol,
+	)
+}
+
+func TestLanguage_findClosestSymbolDeclaration_cursor_on_declaration_resolves_to_same_declaration(t *testing.T) {
+	language := NewLanguage()
+
+	// Doc A
+	docA := "a"
+	moduleA := "modA"
+	fileA := idx.NewFunctionBuilder("main", "void", moduleA, docA).
+		Build()
+	fileA.AddVariable(idx.NewVariableBuilder("out", "Out", moduleA, docA).
+		WithIdentifierRange(0, 0, 0, 10).
+		Build(),
+	)
+	language.functionTreeByDocument[docA] = fileA
+
+	// Doc B
+	docB := "b"
+	moduleB := "modB"
+	fileB := idx.NewFunctionBuilder("main", "void", moduleB, docB).
+		Build()
+	fileB.AddVariable(idx.NewVariableBuilder("out", "int", moduleB, docB).
+		WithIdentifierRange(0, 0, 0, 10).
+		Build(),
+	)
+	language.functionTreeByDocument[docB] = fileB
+	// Add more docs to the map to increase possibility of iterating in random ways
+	language.functionTreeByDocument["3"] = idx.NewFunctionBuilder("aaa", "void", "aaa", "aaa").Build()
+	language.functionTreeByDocument["4"] = idx.NewFunctionBuilder("bbb", "void", "bbb", "bbb").Build()
+
+	resolvedSymbol := language.findClosestSymbolDeclaration("out", docA, protocol.Position{0, 5})
+
+	assert.Equal(t,
+		idx.NewVariableBuilder("out", "Out", moduleA, docA).
+			WithIdentifierRange(0, 0, 0, 10).
+			Build(),
+		resolvedSymbol,
+	)
+}
+
 func TestLanguage_FindHoverInformation(t *testing.T) {
 	language := NewLanguage()
 	parser := createParser()
@@ -94,6 +158,7 @@ func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UI
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
 }
+
 func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.T) {
 	module := "mod"
 	cases := []struct {
