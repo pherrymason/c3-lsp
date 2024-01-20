@@ -58,9 +58,9 @@ func (r Range) HasPosition(position protocol.Position) bool {
 	line := uint(position.Line)
 	ch := uint(position.Character)
 
-	if line >= r.Start.Line && ch <= r.End.Line {
+	if line >= r.Start.Line && line <= r.End.Line {
 		// Exactly same line
-		if line == r.Start.Line && ch == r.End.Line {
+		if line == r.Start.Line && line == r.End.Line {
 			// Must be inside character ranges
 			if ch >= r.Start.Character && ch <= r.End.Character {
 				return true
