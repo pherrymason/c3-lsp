@@ -108,12 +108,13 @@ fn void MyStruct.init(&self)
 	expectedMethod := idx.NewFunctionBuilder("init", "void", module, docId).
 		WithTypeIdentifier("MyStruct").
 		WithArgument(
-			idx.NewVariable("self", "", module, docId, idx.NewRange(4, 23, 4, 27),
-				idx.NewRange(4, 23, 4, 27),
-			),
+			idx.NewVariableBuilder("self", "", module, docId).
+				WithIdentifierRange(4, 23, 4, 27).
+				WithDocumentRange(4, 23, 4, 27).
+				Build(),
 		).
-		WithDocumentRange(4, 0, 9, 1).
 		WithIdentifierRange(4, 17, 4, 21).
+		WithDocumentRange(4, 0, 9, 1).
 		Build()
 
 	assert.Equal(t, expectedStruct, symbols.Structs["MyStruct"])
