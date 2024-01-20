@@ -126,7 +126,11 @@ func (f Function) AddStruct(s Struct) {
 }
 
 func (f Function) GetHoverInfo() string {
-	return fmt.Sprintf("%s %s()", f.GetReturnType(), f.GetName())
+	if f.typeIdentifier == "" {
+		return fmt.Sprintf("%s %s()", f.GetReturnType(), f.GetName())
+	}
+
+	return fmt.Sprintf("%s %s.%s()", f.GetReturnType(), f.typeIdentifier, f.GetName())
 }
 
 func (f Function) AddDef(def Def) {

@@ -16,6 +16,7 @@ func createParser() p.Parser {
 	return p.NewParser(logger)
 }
 
+// Asking the symbol information in the very same declaration, should resolve to the correct symbol
 func TestLanguage_findSymbolDeclarationInDocPositionScope_cursor_on_declaration_resolves_to_same_declaration(t *testing.T) {
 	language := NewLanguage()
 
@@ -42,6 +43,8 @@ func TestLanguage_findSymbolDeclarationInDocPositionScope_cursor_on_declaration_
 	)
 }
 
+// Asking the symbol information in the very same declaration, should resolve to the correct symbol
+// Even if there is another symbol with same name in a different file.
 func TestLanguage_findClosestSymbolDeclaration_cursor_on_declaration_resolves_to_same_declaration(t *testing.T) {
 	language := NewLanguage()
 
@@ -70,12 +73,60 @@ func TestLanguage_findClosestSymbolDeclaration_cursor_on_declaration_resolves_to
 	language.functionTreeByDocument["3"] = idx.NewFunctionBuilder("aaa", "void", "aaa", "aaa").Build()
 	language.functionTreeByDocument["4"] = idx.NewFunctionBuilder("bbb", "void", "bbb", "bbb").Build()
 
-	resolvedSymbol := language.findClosestSymbolDeclaration("out", docA, protocol.Position{0, 5})
+	resolvedSymbol := language.findClosestSymbolDeclaration("out", docA, protocol.Position{0, 5}, NewSearch("out"))
 
 	assert.Equal(t,
 		idx.NewVariableBuilder("out", "Out", moduleA, docA).
 			WithIdentifierRange(0, 0, 0, 10).
 			Build(),
+		resolvedSymbol,
+	)
+}
+
+func TestLanguage_findClosestSymbolDeclaration_should_find_right_symbol_when_asking_for_type_function(t *testing.T) {
+	language := NewLanguage()
+
+	// Doc A
+	/*	docAContent := `
+		MyStruct object;
+		object.search();
+		`
+	*/
+	docA := "a"
+	moduleA := "modA"
+	fileA := idx.NewFunctionBuilderARoot().Build()
+	fileA.AddVariable(idx.NewVariableBuilder("object", "MyStruct", moduleA, docA).
+		WithIdentifierRange(0, 0, 0, 10).
+		Build(),
+	)
+	language.functionTreeByDocument[docA] = fileA
+
+	// Doc B has struct definition + struct function `search` + function named `search`
+	docB := "b"
+	moduleB := "modB"
+	fileB := idx.NewFunctionBuilderARoot().Build()
+	fileB.AddStruct(idx.NewStructBuilder("MyStruct", moduleB, docB).
+		WithIdentifierRange(0, 0, 0, 10).
+		Build(),
+	)
+	fileB.AddFunction(
+		idx.NewFunctionBuilder("search", "void", moduleB, docB).
+			WithTypeIdentifier("MyStruct").
+			Build(),
+	)
+	fileB.AddFunction(
+		idx.NewFunctionBuilder("search", "int", moduleB, docB).
+			Build(),
+	)
+	language.functionTreeByDocument[docA] = fileB
+
+	resolvedSymbol := language.findClosestSymbolDeclaration("search", docA, protocol.Position{0, 5}, NewSearch("search"))
+
+	expectedSymbol := idx.NewFunctionBuilder("search", "void", moduleB, docB).
+		WithTypeIdentifier("MyStruct").
+		Build()
+	assert.Equal(t,
+		&expectedSymbol,
 		resolvedSymbol,
 	)
 }

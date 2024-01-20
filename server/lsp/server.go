@@ -134,7 +134,7 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 
-		word, err := doc.WordInPosition(params.Position)
+		word, err := doc.SymbolInPosition(params.Position)
 		if err != nil {
 			server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
 

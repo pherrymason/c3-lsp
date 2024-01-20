@@ -6,6 +6,19 @@ type FunctionBuilder struct {
 	function Function
 }
 
+func NewFunctionBuilderARoot() *FunctionBuilder {
+	return &FunctionBuilder{
+		function: Function{
+			fType:             Anonymous,
+			Variables:         make(map[string]Variable),
+			Defs:              make(map[string]Def),
+			Enums:             make(map[string]Enum),
+			Structs:           make(map[string]Struct),
+			ChildrenFunctions: make(map[string]Function),
+		},
+	}
+}
+
 func NewFunctionBuilder(name string, returnType string, module string, docId string) *FunctionBuilder {
 	return &FunctionBuilder{
 		function: Function{
