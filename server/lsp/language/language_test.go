@@ -375,12 +375,14 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 	params := protocol.DeclarationParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
 			protocol.TextDocumentIdentifier{URI: "x"},
-			protocol.Position{3, 4},
+			protocol.Position{2, 4},
 		},
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
 
-	symbol, _ := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
+	symbol, err := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
+
+	assert.Nil(t, err)
 
 	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "x").
 		WithIdentifierRange(1, 6, 1, 11).
