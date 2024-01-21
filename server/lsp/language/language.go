@@ -75,9 +75,12 @@ func buildSearchParams(doc *document.Document, position protocol.Position) (Sear
 	return search, nil
 }
 
-func (l *Language) FindSymbolDeclarationInWorkspace(docId protocol.DocumentUri, identifier string, position protocol.Position) (indexables.Indexable, error) {
+func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position protocol.Position) (indexables.Indexable, error) {
+	searchParams, err := buildSearchParams(doc, position)
+	if err != nil {
+		return indexables.Variable{}, err
+	}
 
-	searchParams := NewSearchParams(identifier, docId)
 	symbol := l.findClosestSymbolDeclaration(searchParams, position)
 
 	return symbol, nil

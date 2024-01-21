@@ -134,14 +134,7 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 
-		word, err := doc.SymbolInPosition(params.Position)
-		if err != nil {
-			server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
-
-			return nil, nil
-		}
-
-		identifier, err := server.language.FindSymbolDeclarationInWorkspace(doc.URI, word, params.Position)
+		identifier, err := server.language.FindSymbolDeclarationInWorkspace(doc, params.Position)
 
 		if err == nil {
 			return protocol.Location{
