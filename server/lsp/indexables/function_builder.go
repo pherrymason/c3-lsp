@@ -6,7 +6,7 @@ type FunctionBuilder struct {
 	function Function
 }
 
-func NewFunctionBuilderARoot() *FunctionBuilder {
+func NewFunctionBuilderARoot(module string, docId string) *FunctionBuilder {
 	return &FunctionBuilder{
 		function: Function{
 			fType:             Anonymous,
@@ -14,7 +14,11 @@ func NewFunctionBuilderARoot() *FunctionBuilder {
 			Defs:              make(map[string]Def),
 			Enums:             make(map[string]Enum),
 			Structs:           make(map[string]Struct),
-			ChildrenFunctions: make(map[string]Function),
+			ChildrenFunctions: make([]Function, 0),
+			BaseIndexable: BaseIndexable{
+				module:      module,
+				documentURI: docId,
+			},
 		},
 	}
 }
@@ -30,7 +34,7 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 			Defs:              make(map[string]Def),
 			Enums:             make(map[string]Enum),
 			Structs:           make(map[string]Struct),
-			ChildrenFunctions: make(map[string]Function),
+			ChildrenFunctions: make([]Function, 0),
 			BaseIndexable: BaseIndexable{
 				module:      module,
 				documentURI: docId,

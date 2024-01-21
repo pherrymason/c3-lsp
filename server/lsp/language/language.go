@@ -3,6 +3,7 @@ package language
 import "C"
 import (
 	"errors"
+	"fmt"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
@@ -55,6 +56,25 @@ const (
 
 type FindMode int
 
+func buildSearchParams(doc *document.Document, position protocol.Position) (SearchParams, error) {
+	symbolInPosition, err := doc.SymbolInPosition(position)
+	if err != nil {
+		return SearchParams{}, err
+	}
+	search := NewSearchParams(symbolInPosition, doc.URI)
+
+	// Check if selectedSymbol has '.' in front
+	if doc.HasPointInFrontSymbol(position) {
+		parentSymbol, err := doc.ParentSymbolInPosition(position)
+		if err == nil {
+			// We have some context information
+			search.parentSymbol = parentSymbol
+		}
+	}
+
+	return search, nil
+}
+
 func (l *Language) FindSymbolDeclarationInWorkspace(docId protocol.DocumentUri, identifier string, position protocol.Position) (indexables.Indexable, error) {
 
 	searchParams := NewSearchParams(identifier, docId)
@@ -64,20 +84,9 @@ func (l *Language) FindSymbolDeclarationInWorkspace(docId protocol.DocumentUri, 
 }
 
 func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) (protocol.Hover, error) {
-	symbolInPosition, err := doc.SymbolInPosition(params.Position)
+	search, err := buildSearchParams(doc, params.Position)
 	if err != nil {
 		return protocol.Hover{}, err
-	}
-
-	search := NewSearchParams(symbolInPosition, doc.URI)
-
-	// Check if selectedSymbol has '.' in front
-	if doc.HasPointInFrontSymbol(params.Position) {
-		parentSymbol, err := doc.ParentSymbolInPosition(params.Position)
-		if err == nil {
-			// We have some context information
-			search.parentSymbol = parentSymbol
-		}
 	}
 
 	foundSymbol := l.findClosestSymbolDeclaration(search, params.Position)
@@ -104,7 +113,32 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
 func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, position protocol.Position) indexables.Indexable {
-	identifier, _ := l.findSymbolDeclarationInDocPositionScope(searchParams.selectedSymbol, searchParams.docId, position)
+
+	var parentIdentifier indexables.Indexable
+	// Check if there's parent contextual information in searchParams
+	if searchParams.HasParentSymbol() {
+		subSearchParams := NewSearchParams(searchParams.parentSymbol, searchParams.docId)
+		parentIdentifier = l.findClosestSymbolDeclaration(subSearchParams, position)
+	}
+
+	if parentIdentifier != nil {
+		//fmt.Printf("Parent found")
+		// If parent is Variable -> Look for variable.Type
+		switch parentIdentifier.(type) {
+		case indexables.Variable:
+			variable, ok := parentIdentifier.(indexables.Variable)
+			if !ok {
+				panic("Error")
+			}
+			sp := NewSearchParams(variable.Type, variable.GetDocumentURI())
+			variableTypeSymbol := l.findClosestSymbolDeclaration(sp, position)
+			//	fmt.Sprint(variableTypeSymbol.GetName())
+			searchParams.selectedSymbol = variableTypeSymbol.GetName() + "." + searchParams.selectedSymbol
+		}
+	}
+
+	identifier, _ := l.findSymbolDeclarationInDocPositionScope(searchParams, position)
+
 	if identifier != nil {
 		return identifier
 	}
@@ -127,14 +161,14 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, posit
 }
 
 // SearchParams for selectedSymbol in docId
-func (l *Language) findSymbolDeclarationInDocPositionScope(identifier string, docId protocol.DocumentUri, position protocol.Position) (indexables.Indexable, error) {
-	scopedTree, found := l.functionTreeByDocument[docId]
+func (l *Language) findSymbolDeclarationInDocPositionScope(searchParams SearchParams, position protocol.Position) (indexables.Indexable, error) {
+	scopedTree, found := l.functionTreeByDocument[searchParams.docId]
 	if !found {
-		return nil, errors.New("Document is not indexed")
+		return nil, errors.New(fmt.Sprint("Skipping as no symbols for ", searchParams.docId, " were indexed."))
 	}
 
 	// Go through every element defined in scopedTree
-	symbol, _ := findDeepFirst(identifier, position, &scopedTree, 0, InPosition)
+	symbol, _ := findDeepFirst(searchParams.selectedSymbol, position, &scopedTree, 0, InPosition)
 	return symbol, nil
 }
 
@@ -144,7 +178,7 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		return nil, depth
 	}
 
-	if identifier == function.GetName() {
+	if identifier == function.GetFullName() {
 		return function, depth
 	}
 

@@ -2,7 +2,7 @@ package language
 
 type SearchParams struct {
 	selectedSymbol string
-	parentSymbol   string
+	parentSymbol   string // Limit search to symbols that has are child from parentSymbol
 	docId          string
 }
 

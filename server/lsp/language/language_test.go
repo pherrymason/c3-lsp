@@ -32,7 +32,7 @@ func TestLanguage_findSymbolDeclarationInDocPositionScope_cursor_on_declaration_
 	)
 	language.functionTreeByDocument[docA] = fileA
 
-	resolvedSymbol, err := language.findSymbolDeclarationInDocPositionScope("out", docA, protocol.Position{0, 5})
+	resolvedSymbol, err := language.findSymbolDeclarationInDocPositionScope(NewSearchParams("out", docA), protocol.Position{0, 5})
 
 	assert.Equal(t, nil, err)
 	assert.Equal(t,
@@ -83,20 +83,75 @@ func TestLanguage_findClosestSymbolDeclaration_cursor_on_declaration_resolves_to
 	)
 }
 
+// struct MyStruct{}
+// fn void MyStruct.search(&self) {}
+// fn void search() {}
+//
+// MyStruct object;
+// object.search();
 func TestLanguage_findClosestSymbolDeclaration_should_find_right_symbol_when_asking_for_type_function(t *testing.T) {
 	language := NewLanguage()
 
-	// Doc A
-	/*	docAContent := `
-		MyStruct object;
-		object.search();
-		`
-	*/
+	docId := "a"
+	moduleId := "modA"
+	fileA := idx.NewFunctionBuilderARoot(moduleId, docId).
+		WithDocumentRange(0, 0, 0, 100).
+		Build()
+	fileA.AddVariable(idx.NewVariableBuilder("object", "MyStruct", moduleId, docId).
+		WithIdentifierRange(0, 0, 0, 10).
+		Build(),
+	)
+	fileA.AddStruct(idx.NewStructBuilder("MyStruct", moduleId, docId).
+		WithIdentifierRange(0, 0, 0, 10).
+		Build(),
+	)
+	fileA.AddFunction(
+		idx.NewFunctionBuilder("search", "void", moduleId, docId).
+			WithTypeIdentifier("MyStruct").
+			WithDocumentRange(0, 0, 0, 100).
+			Build(),
+	)
+	fileA.AddFunction(
+		idx.NewFunctionBuilder("search", "int", moduleId, docId).
+			WithDocumentRange(0, 0, 0, 100).
+			Build(),
+	)
+	language.functionTreeByDocument[docId] = fileA
+
+	params := NewSearchParams("search", docId)
+	params.parentSymbol = "object"
+	resolvedSymbol := language.findClosestSymbolDeclaration(params, protocol.Position{0, 5})
+
+	expectedSymbol := idx.NewFunctionBuilder("search", "void", moduleId, docId).
+		WithTypeIdentifier("MyStruct").
+		WithDocumentRange(0, 0, 0, 100).
+		Build()
+
+	assert.Equal(t,
+		&expectedSymbol,
+		resolvedSymbol,
+	)
+}
+
+// Doc A
+// -------
+// struct MyStruct{}
+// fn void MyStruct.search(&self) {}
+// fn void search() {}
+//
+// Doc B
+// ------
+// MyStruct object;
+// object.search();
+func TestLanguage_findClosestSymbolDeclaration_should_find_right_symbol_when_asking_for_type_function_parent_symbol_defined_in_different_file(t *testing.T) {
+	language := NewLanguage()
+
 	docA := "a"
 	moduleA := "modA"
-	fileA := idx.NewFunctionBuilderARoot().Build()
+	fileA := idx.NewFunctionBuilderARoot(moduleA, docA).Build()
 	fileA.AddVariable(idx.NewVariableBuilder("object", "MyStruct", moduleA, docA).
 		WithIdentifierRange(0, 0, 0, 10).
+		WithDocumentRange(0, 0, 0, 10).
 		Build(),
 	)
 	language.functionTreeByDocument[docA] = fileA
@@ -104,26 +159,32 @@ func TestLanguage_findClosestSymbolDeclaration_should_find_right_symbol_when_ask
 	// Doc B has struct definition + struct function `search` + function named `search`
 	docB := "b"
 	moduleB := "modB"
-	fileB := idx.NewFunctionBuilderARoot().Build()
+	fileB := idx.NewFunctionBuilderARoot(moduleB, docB).Build()
 	fileB.AddStruct(idx.NewStructBuilder("MyStruct", moduleB, docB).
 		WithIdentifierRange(0, 0, 0, 10).
+		WithDocumentRange(0, 0, 0, 10).
 		Build(),
 	)
 	fileB.AddFunction(
 		idx.NewFunctionBuilder("search", "void", moduleB, docB).
 			WithTypeIdentifier("MyStruct").
+			WithDocumentRange(0, 0, 0, 100).
 			Build(),
 	)
 	fileB.AddFunction(
 		idx.NewFunctionBuilder("search", "int", moduleB, docB).
+			WithDocumentRange(0, 0, 0, 100).
 			Build(),
 	)
-	language.functionTreeByDocument[docA] = fileB
+	language.functionTreeByDocument[docB] = fileB
 
-	resolvedSymbol := language.findClosestSymbolDeclaration(NewSearchParams("search", docA), protocol.Position{0, 5})
+	params := NewSearchParams("search", docA)
+	params.parentSymbol = "object"
+	resolvedSymbol := language.findClosestSymbolDeclaration(params, protocol.Position{0, 5})
 
 	expectedSymbol := idx.NewFunctionBuilder("search", "void", moduleB, docB).
 		WithTypeIdentifier("MyStruct").
+		WithDocumentRange(0, 0, 0, 100).
 		Build()
 	assert.Equal(t,
 		&expectedSymbol,

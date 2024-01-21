@@ -118,7 +118,7 @@ fn void MyStruct.init(&self)
 		Build()
 
 	assert.Equal(t, expectedStruct, symbols.Structs["MyStruct"])
-	assert.Equal(t, expectedMethod, symbols.ChildrenFunctions["MyStruct.init"])
+	assert.Equal(t, expectedMethod, symbols.GetChildrenFunctionByName("MyStruct.init"))
 }
 
 func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
@@ -179,9 +179,9 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	root.AddFunction(function1)
 	root.AddFunction(function2)
 
-	assertSameFunction(t, function1, tree.ChildrenFunctions["test"])
-	assertSameFunction(t, function2, tree.ChildrenFunctions["test2"])
-	assertSameFunction(t, functionMethod, tree.ChildrenFunctions["UserStruct.method"])
+	assertSameFunction(t, function1, tree.GetChildrenFunctionByName("test"))
+	assertSameFunction(t, function2, tree.GetChildrenFunctionByName("test2"))
+	assertSameFunction(t, functionMethod, tree.GetChildrenFunctionByName("UserStruct.method"))
 }
 
 func TestExtractSymbols_finds_definition(t *testing.T) {

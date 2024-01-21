@@ -23,7 +23,7 @@ type Function struct {
 	Enums             map[string]Enum
 	Structs           map[string]Struct
 	Defs              map[string]Def
-	ChildrenFunctions map[string]Function
+	ChildrenFunctions []Function
 
 	BaseIndexable
 }
@@ -58,7 +58,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 		Enums:             make(map[string]Enum),
 		Structs:           make(map[string]Struct),
 		Defs:              make(map[string]Def),
-		ChildrenFunctions: make(map[string]Function),
+		ChildrenFunctions: []Function{},
 	}
 }
 
@@ -68,6 +68,14 @@ func (f Function) FunctionType() FunctionType {
 
 func (f Function) GetName() string {
 	return f.name
+}
+
+func (f Function) GetFullName() string {
+	if f.typeIdentifier == "" {
+		return f.GetName()
+	}
+
+	return f.typeIdentifier + "." + f.name
 }
 
 func (f Function) GetReturnType() string {
@@ -112,13 +120,23 @@ func (f *Function) AddEnum(enum Enum) {
 	f.Enums[enum.name] = enum
 }
 
-func (f Function) AddFunction(f2 Function) {
-	id := f2.name
+func (f *Function) AddFunction(f2 Function) {
+	/*id := f2.name
 	if f2.typeIdentifier != "" {
 		id = f2.typeIdentifier + "." + f2.name
+	}*/
+
+	f.ChildrenFunctions = append(f.ChildrenFunctions, f2)
+}
+
+func (f Function) GetChildrenFunctionByName(name string) Function {
+	for _, fun := range f.ChildrenFunctions {
+		if fun.GetFullName() == name {
+			return fun
+		}
 	}
 
-	f.ChildrenFunctions[id] = f2
+	panic("Function not found")
 }
 
 func (f Function) AddStruct(s Struct) {

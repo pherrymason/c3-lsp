@@ -35,7 +35,7 @@ func assertSameFunction(t *testing.T, expected *idx.Function, actual *idx.Functi
 	assert.Equal(t, expected.Enums, actual.Enums, expected.GetName())
 	assert.Equal(t, expected.Structs, actual.Structs, expected.GetName())
 
-	assert.Equal(t, Keys(expected.ChildrenFunctions), Keys(actual.ChildrenFunctions))
+	assert.Equal(t, len(expected.ChildrenFunctions), len(actual.ChildrenFunctions))
 	for key, value := range expected.ChildrenFunctions {
 		function := actual.ChildrenFunctions[key]
 		assertSameFunction(t, &value, &function)
