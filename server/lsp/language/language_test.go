@@ -51,7 +51,7 @@ func TestLanguage_findClosestSymbolDeclaration_cursor_on_declaration_resolves_to
 	// Doc A
 	docA := "a"
 	moduleA := "modA"
-	fileA := idx.NewFunctionBuilder("main", "void", moduleA, docA).
+	fileA := idx.NewFunctionBuilderARoot(moduleA, docA).
 		Build()
 	fileA.AddVariable(idx.NewVariableBuilder("out", "Out", moduleA, docA).
 		WithIdentifierRange(0, 0, 0, 10).
@@ -62,7 +62,7 @@ func TestLanguage_findClosestSymbolDeclaration_cursor_on_declaration_resolves_to
 	// Doc B
 	docB := "b"
 	moduleB := "modB"
-	fileB := idx.NewFunctionBuilder("main", "void", moduleB, docB).
+	fileB := idx.NewFunctionBuilderARoot(moduleB, docB).
 		Build()
 	fileB.AddVariable(idx.NewVariableBuilder("out", "int", moduleB, docB).
 		WithIdentifierRange(0, 0, 0, 10).
@@ -95,7 +95,6 @@ func TestLanguage_findClosestSymbolDeclaration_should_find_right_symbol_when_ask
 	docId := "a"
 	moduleId := "modA"
 	fileA := idx.NewFunctionBuilderARoot(moduleId, docId).
-		WithDocumentRange(0, 0, 0, 100).
 		Build()
 	fileA.AddVariable(idx.NewVariableBuilder("object", "MyStruct", moduleId, docId).
 		WithIdentifierRange(0, 0, 0, 10).

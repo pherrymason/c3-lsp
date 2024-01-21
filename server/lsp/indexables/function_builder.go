@@ -7,7 +7,7 @@ type FunctionBuilder struct {
 }
 
 func NewFunctionBuilderARoot(module string, docId string) *FunctionBuilder {
-	return &FunctionBuilder{
+	f := &FunctionBuilder{
 		function: Function{
 			fType:             Anonymous,
 			Variables:         make(map[string]Variable),
@@ -21,6 +21,10 @@ func NewFunctionBuilderARoot(module string, docId string) *FunctionBuilder {
 			},
 		},
 	}
+
+	f.WithDocumentRange(0, 0, 0, 1000)
+
+	return f
 }
 
 func NewFunctionBuilder(name string, returnType string, module string, docId string) *FunctionBuilder {
