@@ -356,7 +356,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 
 			params := newDeclarationParams("x", tt.cursorPositionLine, tt.cursorPositionChar)
 
-			symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, params.Position)
+			symbol, _ := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
 
 			assert.Equal(t, tt.expected, symbol)
 		})
@@ -380,7 +380,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testin
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
 
-	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, params.Position)
+	symbol, _ := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
 
 	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "x").
 		WithIdentifierRange(1, 6, 1, 11).
@@ -409,7 +409,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_func
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
 
-	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, params.Position)
+	symbol, _ := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
 
 	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "x").
 		WithIdentifierRange(1, 6, 1, 11).
@@ -439,7 +439,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}
 
-	symbol, _ := language.FindSymbolDeclarationInWorkspace(doc.URI, params.Position)
+	symbol, _ := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
 
 	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "y").
 		WithIdentifierRange(0, 4, 0, 9).
