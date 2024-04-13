@@ -1,17 +1,21 @@
 package parser
 
 import (
+	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/pherrymason/c3-lsp/lsp/cst"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"path/filepath"
-	"regexp"
-	"strings"
 )
 
 const ModuleQuery = `(source_file (module_declaration) @module)`
+
+// (source_file (global_declaration type: (type (base_type (base_type_name))) (ident) right: (integer_literal)))
 const VarDeclarationQuery = `(var_declaration
 		name: (identifier) @variable_name
 	)`
@@ -32,6 +36,7 @@ func NewParser(logger interface{}) Parser {
 
 func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	parsedSymbols := NewParsedSymbols()
+	fmt.Println(doc.ContextSyntaxTree.RootNode())
 
 	query := `[
 	(source_file ` + VarDeclarationQuery + `)

@@ -2,14 +2,15 @@ package parser
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"strings"
-	"testing"
 )
 
 func createParser() Parser {
@@ -29,6 +30,31 @@ func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t 
 	})
 
 	assert.Equal(t, expectedRoot, symbols)
+}
+
+func TestExtractSymbols_variables_declared_in_function(t *testing.T) {
+	source := `fn void test() { int value = 1; }`
+	module := "x"
+	doc := document.NewDocument("file_3", module, source)
+	parser := createParser()
+	symbols := parser.ExtractSymbols(&doc)
+
+	expectedRoot := idx.NewAnonymousScopeFunction("main", module, "file_3", idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
+
+	functionBuilder := idx.NewFunctionBuilder("test", "void", module, "file_3")
+	function := functionBuilder.Build()
+
+	variableBuilder := idx.NewVariableBuilder("value", "int", module, "file_3")
+	variableBuilder.WithDocumentRange(0, 17, 0, 31)
+	variableBuilder.WithIdentifierRange(0, 21, 0, 26)
+
+	function.AddVariables([]idx.Variable{variableBuilder.Build()})
+	expectedRoot.AddFunction(function)
+
+	assert.Equal(t, 1, len(symbols.ChildrenFunctions))
+	funcMethod, found := symbols.GetChildrenFunctionByName("test")
+	assert.True(t, found)
+	assert.Equal(t, variableBuilder.Build(), funcMethod.Variables["value"])
 }
 
 func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *testing.T) {
@@ -118,7 +144,8 @@ fn void MyStruct.init(&self)
 		Build()
 
 	assert.Equal(t, expectedStruct, symbols.Structs["MyStruct"])
-	assert.Equal(t, expectedMethod, symbols.GetChildrenFunctionByName("MyStruct.init"))
+	funcMethod, _ := symbols.GetChildrenFunctionByName("MyStruct.init")
+	assert.Equal(t, expectedMethod, funcMethod)
 }
 
 func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
@@ -179,9 +206,14 @@ func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
 	root.AddFunction(function1)
 	root.AddFunction(function2)
 
-	assertSameFunction(t, function1, tree.GetChildrenFunctionByName("test"))
-	assertSameFunction(t, function2, tree.GetChildrenFunctionByName("test2"))
-	assertSameFunction(t, functionMethod, tree.GetChildrenFunctionByName("UserStruct.method"))
+	found, _ := tree.GetChildrenFunctionByName("test")
+	assertSameFunction(t, function1, found)
+
+	found, _ = tree.GetChildrenFunctionByName("test2")
+	assertSameFunction(t, function2, found)
+
+	found, _ = tree.GetChildrenFunctionByName("UserStruct.method")
+	assertSameFunction(t, functionMethod, found)
 }
 
 func TestExtractSymbols_finds_definition(t *testing.T) {

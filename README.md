@@ -9,17 +9,10 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [x] Indexes workspace variables and function definitions
 - [x] Naïve auto completion items of variables and function names defined in the workspace.
 - [x] Go to declaration.
-  - Variable
-  - Enum
-  - Struct
-  - Function
-- [x] Hover:
-  - Variable usages.
-  - Function calls.
+- [x] Hover
 
 **TODO list**
-- [x] Index scopes and its hierarchy to improve hover and Auto Completion.
-- [ ] Index Symbols
+- [~] Index Symbols
   - [x] Variables & type
   - [x] Functions
     - [x] Function arguments
@@ -28,16 +21,14 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
     - [ ] base type 
   - [x] Structs
     - [x] Struct members
-    - [ ] Struct methods
+    - [x] Struct methods
+  - [ ] Unions
   - [ ] imports
   - [~] defines
   - [ ] macros: **Needs to update grammar.js**
-- [ ] Hover information
-  - [x] Variable declarations
-  - [x] Function calls
-  - [ ] enumerators
-  - [ ] struct properties
-  - [ ] struct methods
+- [x] Index scopes and its hierarchy to improve hover and Auto Completion.
+- [ ] Complete Hover
+- [ ] Complete Go to declaration
 - [ ] Offer information about stdlib?
 - [ ] Go to definition
 - [ ] Go to type definition

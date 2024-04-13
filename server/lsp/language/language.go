@@ -1,6 +1,5 @@
 package language
 
-import "C"
 import (
 	"errors"
 	"fmt"
@@ -13,14 +12,12 @@ import (
 // Language will be the center of knowledge of everything parsed.
 type Language struct {
 	index                  IndexStore
-	symbolsByModule        map[protocol.DocumentUri]indexables.IndexableCollection
 	functionTreeByDocument map[protocol.DocumentUri]indexables.Function
 }
 
 func NewLanguage() Language {
 	return Language{
 		index:                  NewIndexStore(),
-		symbolsByModule:        make(map[protocol.DocumentUri]indexables.IndexableCollection),
 		functionTreeByDocument: make(map[protocol.DocumentUri]indexables.Function),
 	}
 }
@@ -29,24 +26,51 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 	l.functionTreeByDocument[doc.URI] = parser.ExtractSymbols(doc)
 }
 
-func (l *Language) BuildCompletionList(text string, line protocol.UInteger, character protocol.UInteger) []protocol.CompletionItem {
-	var items []protocol.CompletionItem
-	for _, value := range l.symbolsByModule {
-		for _, storedIdentifier := range value {
-			tempKind := storedIdentifier.GetKind()
+func (l *Language) BuildCompletionList(doc *document.Document, position protocol.Position) []protocol.CompletionItem {
+	// 1 - TODO find scoped symbols starting with same letters
+	// 2 - TODO if previous character is '.', find previous symbol and if a struct, complete only with struct methods
+	// 3 - TODO if writing function call arguments, complete with argument names. ¿Feasible?
 
-			items = append(items, protocol.CompletionItem{
-				Label: storedIdentifier.GetName(),
-				Kind:  &tempKind,
-			})
-		}
+	// Find symbols in document
+	function := l.functionTreeByDocument[doc.URI]
+	scopeSymbols := l.findAllScopeSymbols(&function, position)
+
+	var items []protocol.CompletionItem
+	for _, storedIdentifier := range scopeSymbols {
+		tempKind := storedIdentifier.GetKind()
+
+		items = append(items, protocol.CompletionItem{
+			Label: storedIdentifier.GetName(),
+			Kind:  &tempKind,
+		})
 	}
 
 	return items
 }
 
-func (l *Language) registerIndexable(doc *document.Document, indexable indexables.Indexable) {
-	l.symbolsByModule[doc.URI] = append(l.symbolsByModule[doc.URI], indexable)
+func (l *Language) findAllScopeSymbols(scopeFunction *indexables.Function, position protocol.Position) []indexables.Indexable {
+	var symbols []indexables.Indexable
+
+	for _, variable := range scopeFunction.Variables {
+		symbols = append(symbols, variable)
+	}
+	for _, enum := range scopeFunction.Enums {
+		symbols = append(symbols, enum)
+	}
+	for _, strukt := range scopeFunction.Structs {
+		symbols = append(symbols, strukt)
+	}
+	for _, def := range scopeFunction.Defs {
+		symbols = append(symbols, def)
+	}
+
+	for _, function := range scopeFunction.ChildrenFunctions {
+		if function.GetDocumentRange().HasPosition(position) {
+			symbols = append(symbols, function)
+		}
+	}
+
+	return symbols
 }
 
 const (

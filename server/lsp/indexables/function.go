@@ -2,6 +2,7 @@ package indexables
 
 import (
 	"fmt"
+
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -129,14 +130,15 @@ func (f *Function) AddFunction(f2 Function) {
 	f.ChildrenFunctions = append(f.ChildrenFunctions, f2)
 }
 
-func (f Function) GetChildrenFunctionByName(name string) Function {
+func (f Function) GetChildrenFunctionByName(name string) (fn Function, found bool) {
 	for _, fun := range f.ChildrenFunctions {
 		if fun.GetFullName() == name {
-			return fun
+			return fun, true
 		}
 	}
 
-	panic("Function not found")
+	//panic("Function not found")
+	return Function{}, false
 }
 
 func (f Function) AddStruct(s Struct) {

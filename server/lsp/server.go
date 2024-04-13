@@ -153,7 +153,7 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 
-		suggestions := server.language.BuildCompletionList(doc.Content, params.Position.Line+1, params.Position.Character-1)
+		suggestions := server.language.BuildCompletionList(doc, params.Position)
 
 		return suggestions, nil
 	}
