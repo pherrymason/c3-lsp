@@ -19,7 +19,11 @@ const ModuleQuery = `(source_file (module_declaration) @module)`
 const VarDeclarationQuery = `(var_declaration
 		name: (identifier) @variable_name
 	)`
-const FunctionDeclarationQuery = `(function_declaration) @function_dec`
+const GlobalVarDeclaration = `(global_declaration) @global_decl`
+const LocalVarDeclaration = `(func_definition
+	body: (macro_func_body (compound_stmt (declaration_stmt) @local) )
+ )`
+const FunctionDeclarationQuery = `(func_definition) @function_dec`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
 const StructDeclaration = `(struct_declaration) @struct_dec`
 const DefineDeclaration = `(define_declaration) @def_dec`
@@ -37,13 +41,20 @@ func NewParser(logger interface{}) Parser {
 func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	parsedSymbols := NewParsedSymbols()
 	fmt.Println(doc.ContextSyntaxTree.RootNode())
-
+	/*
+		query := `[
+		(source_file ` + GlobalVarDeclaration + `)
+		(source_file ` + VarDeclarationQuery + `)
+		(source_file ` + EnumDeclaration + `)
+		(source_file ` + StructDeclaration + `)
+		(source_file ` + DefineDeclaration + `)
+		` + FunctionDeclarationQuery + `]`*/
 	query := `[
-	(source_file ` + VarDeclarationQuery + `)
-	(source_file ` + EnumDeclaration + `)	
-	(source_file ` + StructDeclaration + `)
-	(source_file ` + DefineDeclaration + `)
-	` + FunctionDeclarationQuery + `]`
+ (source_file ` + GlobalVarDeclaration + `)
+ (source_file ` + LocalVarDeclaration + `)
+ (source_file ` + FunctionDeclarationQuery + `)
+]`
+
 	/*
 		q, err := sitter.NewQuery([]byte(query), cst.GetLanguage())
 		if err != nil {
@@ -65,13 +76,20 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 		for _, c := range m.Captures {
 			content := c.Node.Content(sourceCode)
 			nodeType := c.Node.Type()
-			if nodeType == "identifier" {
+			if nodeType == "global_declaration" {
+				variable := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+				scopeTree.AddVariable(variable)
+				/* else if nodeType == "declaration_stmt" {
+					variable := p.localVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+					scopeTree.AddVariable(variable)
+				}*/
+			} else if nodeType == "identifier" {
 				switch c.Node.Parent().Type() {
 				case "var_declaration":
 					variable := p.nodeToVariable(doc, c.Node.Parent(), c.Node, sourceCode, content)
 					scopeTree.AddVariable(variable)
 				}
-			} else if nodeType == "function_declaration" {
+			} else if nodeType == "func_definition" {
 				function := p.nodeToFunction(doc, c.Node, sourceCode)
 				scopeTree.AddFunction(function)
 			} else if nodeType == "enum_declaration" {
@@ -93,16 +111,7 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 }
 
 func (p *Parser) FindVariableDeclarations(doc *document.Document, node *sitter.Node) []idx.Variable {
-	query := VarDeclarationQuery
-	/*
-		q, err := sitter.NewQuery([]byte(query), cst.GetLanguage())
-		if err != nil {
-			panic(err)
-		}
-
-		qc := sitter.NewQueryCursor()
-		qc.Exec(q, node)
-	*/
+	query := LocalVarDeclaration
 	qc := cst.RunQuery(query, node)
 
 	var variables []idx.Variable
@@ -120,8 +129,8 @@ func (p *Parser) FindVariableDeclarations(doc *document.Document, node *sitter.N
 
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				variable := p.nodeToVariable(doc, c.Node.Parent(), c.Node, sourceCode, content)
-				variables = append(variables, variable)
+				funcVariables := p.localVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+				variables = append(variables, funcVariables...)
 			}
 		}
 	}

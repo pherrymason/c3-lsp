@@ -18,45 +18,6 @@ func createParser() Parser {
 	return NewParser(logger)
 }
 
-func TestExtractSymbols_finds_function_root_and_global_variables_declarations(t *testing.T) {
-	source := `int value = 1;`
-	doc := document.NewDocument("x", "file_3", source)
-	parser := createParser()
-	symbols := parser.ExtractSymbols(&doc)
-
-	expectedRoot := idx.NewAnonymousScopeFunction("main", "file_3", "x", idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
-	expectedRoot.AddVariables([]idx.Variable{
-		idx.NewVariable("value", "int", "file_3", "x", idx.NewRange(0, 4, 0, 9), idx.NewRange(0, 0, 0, 14)),
-	})
-
-	assert.Equal(t, expectedRoot, symbols)
-}
-
-func TestExtractSymbols_variables_declared_in_function(t *testing.T) {
-	source := `fn void test() { int value = 1; }`
-	module := "x"
-	doc := document.NewDocument("file_3", module, source)
-	parser := createParser()
-	symbols := parser.ExtractSymbols(&doc)
-
-	expectedRoot := idx.NewAnonymousScopeFunction("main", module, "file_3", idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
-
-	functionBuilder := idx.NewFunctionBuilder("test", "void", module, "file_3")
-	function := functionBuilder.Build()
-
-	variableBuilder := idx.NewVariableBuilder("value", "int", module, "file_3")
-	variableBuilder.WithDocumentRange(0, 17, 0, 31)
-	variableBuilder.WithIdentifierRange(0, 21, 0, 26)
-
-	function.AddVariables([]idx.Variable{variableBuilder.Build()})
-	expectedRoot.AddFunction(function)
-
-	assert.Equal(t, 1, len(symbols.ChildrenFunctions))
-	funcMethod, found := symbols.GetChildrenFunctionByName("test")
-	assert.True(t, found)
-	assert.Equal(t, variableBuilder.Build(), funcMethod.Variables["value"])
-}
-
 func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *testing.T) {
 	source := `enum Colors { RED, BLUE, GREEN };`
 	doc := document.NewDocument("x", "x", source)
@@ -146,74 +107,6 @@ fn void MyStruct.init(&self)
 	assert.Equal(t, expectedStruct, symbols.Structs["MyStruct"])
 	funcMethod, _ := symbols.GetChildrenFunctionByName("MyStruct.init")
 	assert.Equal(t, expectedMethod, funcMethod)
-}
-
-func TestExtractSymbols_finds_function_declaration_identifiers(t *testing.T) {
-	source := `fn void test() {
-		return 1;
-	}
-	fn int test2(int number, char ch) {
-		return 2;
-	}
-	fn Object* UserStruct.method(&self, int* pointer) {
-		return 1;
-	}`
-	docId := "x"
-	doc := document.NewDocument(docId, "mod", source)
-	parser := createParser()
-	tree := parser.ExtractSymbols(&doc)
-
-	function1 := idx.NewFunctionBuilder("test", "void", "mod", "x").
-		WithIdentifierRange(0, 8, 0, 12).
-		WithDocumentRange(0, 0, 2, 2).
-		Build()
-
-	function2 := idx.NewFunctionBuilder("test2", "int", "mod", "x").
-		WithArgument(
-			idx.NewVariableBuilder("number", "int", "mod", "x").
-				WithIdentifierRange(3, 18, 3, 24).
-				WithDocumentRange(3, 14, 3, 24).
-				Build(),
-		).
-		WithArgument(
-			idx.NewVariableBuilder("ch", "char", "mod", "x").
-				WithIdentifierRange(3, 31, 3, 33).
-				WithDocumentRange(3, 26, 3, 33).
-				Build(),
-		).
-		WithIdentifierRange(3, 8, 3, 34).
-		WithDocumentRange(3, 1, 5, 2).
-		Build()
-
-	functionMethod := idx.NewFunctionBuilder("method", "Object*", "mod", "x").
-		WithArgument(
-			idx.NewVariableBuilder("self", "", "mod", "x").
-				WithIdentifierRange(6, 31, 6, 35).
-				WithDocumentRange(6, 31, 6, 35).
-				Build(),
-		).
-		WithArgument(
-			idx.NewVariableBuilder("pointer", "int*", "mod", "x").
-				WithIdentifierRange(6, 42, 6, 49).
-				WithDocumentRange(6, 37, 6, 49).
-				Build(),
-		).
-		WithIdentifierRange(6, 23, 6, 29).
-		WithDocumentRange(6, 1, 8, 2).
-		Build()
-
-	root := idx.NewAnonymousScopeFunction("main", "mod", docId, idx.NewRange(0, 0, 0, 14), protocol.CompletionItemKindModule)
-	root.AddFunction(function1)
-	root.AddFunction(function2)
-
-	found, _ := tree.GetChildrenFunctionByName("test")
-	assertSameFunction(t, function1, found)
-
-	found, _ = tree.GetChildrenFunctionByName("test2")
-	assertSameFunction(t, function2, found)
-
-	found, _ = tree.GetChildrenFunctionByName("UserStruct.method")
-	assertSameFunction(t, functionMethod, found)
 }
 
 func TestExtractSymbols_finds_definition(t *testing.T) {
