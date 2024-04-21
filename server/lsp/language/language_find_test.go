@@ -282,7 +282,7 @@ func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.
 		expected           idx.Indexable
 	}{
 		{"variable",
-			`int value=1,value=3;`,
+			`int value=1;`,
 			"value",
 			0, 13,
 			idx.NewVariableBuilder("value", "int", module, "x").

@@ -46,8 +46,8 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 	return variable
 }
 
-func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, declarationNode *sitter.Node, sourceCode []byte) []idx.Variable {
-	var variables []idx.Variable
+func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, declarationNode *sitter.Node, sourceCode []byte) idx.Variable {
+	var variable idx.Variable
 	var typeNodeContent string
 
 	//fmt.Println(declarationNode.ChildCount())
@@ -64,7 +64,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 		case "local_decl_after_type":
 			identifier := n.ChildByFieldName("name")
 
-			variable := idx.NewVariable(
+			variable = idx.NewVariable(
 				identifier.Content(sourceCode),
 				typeNodeContent,
 				doc.ModuleName,
@@ -77,9 +77,8 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 					n.StartPoint(),
 					n.EndPoint()),
 			)
-			variables = append(variables, variable)
 		}
 	}
 
-	return variables
+	return variable
 }

@@ -125,8 +125,8 @@ func (p *Parser) FindVariableDeclarations(doc *document.Document, node *sitter.N
 
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				funcVariables := p.localVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
-				variables = append(variables, funcVariables...)
+				funcVariable := p.localVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+				variables = append(variables, funcVariable)
 			}
 		}
 	}
