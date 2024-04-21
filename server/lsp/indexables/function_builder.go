@@ -64,12 +64,12 @@ func (fb *FunctionBuilder) WithArgument(variable Variable) *FunctionBuilder {
 }
 
 func (fb *FunctionBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FunctionBuilder {
-	fb.function.BaseIndexable.identifierRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	fb.function.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return fb
 }
 
 func (fb *FunctionBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FunctionBuilder {
-	fb.function.BaseIndexable.documentRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	fb.function.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return fb
 }
 

@@ -7,9 +7,21 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+/*
+		func_header: $ => seq(
+	      field('return_type', $._type_or_optional_type),
+	      optional(seq(field('method_type', $.type), '.')),
+	      field('name', $._func_macro_name),
+	    ),
+*/
 func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Function {
+	var typeIdentifier string
 	funcHeader := node.Child(1)
 	nameNode := funcHeader.ChildByFieldName("name")
+
+	if funcHeader.ChildByFieldName("method_type") != nil {
+		typeIdentifier = funcHeader.ChildByFieldName("method_type").Content(sourceCode)
+	}
 
 	var argumentIds []string
 	arguments := []idx.Variable{}
@@ -29,45 +41,34 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
 			argumentIds = append(argumentIds, argument.GetName())
 		}
 	}
-	/*
-			for i := uint32(0); i < parameters.ChildCount(); i++ {
-				argNode := parameters.Child(int(i))
-				switch argNode.Type() {
-				case "parameter":
-					arguments = append(arguments, p.nodeToArgument(doc, argNode, sourceCode))
-				}
-			}
-
-
-		for _, arg := range arguments {
-			argumentIds = append(argumentIds, arg.GetName())
-		}*/
-	/*
-		var symbol idx.Function
-		if typeIdentifier != "" {
-			symbol = idx.NewTypeFunction(typeIdentifier, nameNode.Content(sourceCode), node.ChildByFieldName("return_type").Content(sourceCode), argumentIds, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
-		} else {
-			symbol = idx.NewFunction(nameNode.Content(sourceCode), node.ChildByFieldName("return_type").Content(sourceCode), argumentIds, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()), idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()), protocol.CompletionItemKindFunction)
-		}
-
-		variables := p.FindVariableDeclarations(doc, node)
-		variables = append(arguments, variables...)
-
-		symbol.AddVariables(variables)
-	*/
 
 	var symbol idx.Function
-	symbol = idx.NewFunction(
-		nameNode.Content(sourceCode),
-		funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
-		doc.ModuleName,
-		doc.URI,
-		idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
-			nameNode.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(),
-			node.EndPoint()),
-		protocol.CompletionItemKindFunction,
-	)
+	if typeIdentifier != "" {
+		symbol = idx.NewTypeFunction(
+			typeIdentifier,
+			nameNode.Content(sourceCode),
+			funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
+			doc.ModuleName,
+			doc.URI,
+			idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
+				nameNode.EndPoint()),
+			idx.NewRangeFromSitterPositions(node.StartPoint(),
+				node.EndPoint()),
+			protocol.CompletionItemKindFunction,
+		)
+	} else {
+		symbol = idx.NewFunction(
+			nameNode.Content(sourceCode),
+			funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
+			doc.ModuleName,
+			doc.URI,
+			idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
+				nameNode.EndPoint()),
+			idx.NewRangeFromSitterPositions(node.StartPoint(),
+				node.EndPoint()),
+			protocol.CompletionItemKindFunction,
+		)
+	}
 
 	variables := p.FindVariableDeclarations(doc, node)
 	variables = append(arguments, variables...)
@@ -111,6 +112,7 @@ func (p *Parser) nodeToArgument(doc *document.Document, argNode *sitter.Node, so
 			break
 		case "ident":
 			identifier = n.Content(sourceCode)
+			idRange = idx.NewRangeFromSitterPositions(n.StartPoint(), n.EndPoint())
 			break
 		}
 	}
@@ -136,7 +138,15 @@ func (p *Parser) nodeToArgument(doc *document.Document, argNode *sitter.Node, so
 			idRange = idx.NewRangeFromSitterPositions(idNode.StartPoint(), idNode.EndPoint())
 		}*/
 
-	variable := idx.NewVariable(identifier, argType, doc.ModuleName, doc.URI, idRange, idx.NewRangeFromSitterPositions(argNode.StartPoint(), argNode.EndPoint()))
+	variable := idx.NewVariable(
+		identifier,
+		argType,
+		doc.ModuleName,
+		doc.URI,
+		idRange,
+		idx.NewRangeFromSitterPositions(argNode.StartPoint(),
+			argNode.EndPoint()),
+	)
 
 	return variable
 }

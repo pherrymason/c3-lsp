@@ -2,7 +2,8 @@ package indexables
 
 import (
 	"fmt"
-	"github.com/tliron/glsp/protocol_3_16"
+
+	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 type Enumerator struct {
@@ -16,10 +17,10 @@ func NewEnumerator(name string, value string, module string, identifierPosition 
 		name:  name,
 		value: value,
 		BaseIndexable: BaseIndexable{
-			module:          module,
-			documentURI:     docId,
-			identifierRange: identifierPosition,
-			Kind:            protocol.CompletionItemKindEnumMember,
+			module:      module,
+			documentURI: docId,
+			idRange:     identifierPosition,
+			Kind:        protocol.CompletionItemKindEnumMember,
 		},
 	}
 }
@@ -40,12 +41,12 @@ func (e Enumerator) GetDocumentURI() string {
 	return e.documentURI
 }
 
-func (e Enumerator) GetDeclarationRange() Range {
-	return e.identifierRange
+func (e Enumerator) GetIdRange() Range {
+	return e.idRange
 }
 
 func (e Enumerator) GetDocumentRange() Range {
-	return e.documentRange
+	return e.docRange
 }
 
 func (e Enumerator) GetHoverInfo() string {

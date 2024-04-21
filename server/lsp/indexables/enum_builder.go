@@ -21,12 +21,12 @@ func NewEnumBuilder(name string, baseType string, module string, docId string) *
 }
 
 func (eb *EnumBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumBuilder {
-	eb.enum.BaseIndexable.identifierRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.enum.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
 func (eb *EnumBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumBuilder {
-	eb.enum.BaseIndexable.documentRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.enum.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
@@ -59,7 +59,7 @@ func NewEnumeratorBuilder(name string, docId string) *EnumeratorBuilder {
 }
 
 func (eb *EnumeratorBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumeratorBuilder {
-	eb.enumerator.BaseIndexable.identifierRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.enumerator.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 

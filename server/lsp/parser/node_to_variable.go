@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -21,7 +19,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 	typeNodeContent := typeNode.Content(sourceCode)
 
 	identifierNode := declarationNode.Child(1)
-	fmt.Println(identifierNode.Content(sourceCode))
+	//fmt.Println(identifierNode.Content(sourceCode))
 
 	variable := idx.NewVariable(
 		identifierNode.Content(sourceCode),
@@ -45,9 +43,9 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 	var variables []idx.Variable
 	var typeNodeContent string
 
-	fmt.Println(declarationNode.ChildCount())
-	fmt.Println(declarationNode)
-	fmt.Println(declarationNode.Content(sourceCode))
+	//fmt.Println(declarationNode.ChildCount())
+	//fmt.Println(declarationNode)
+	//fmt.Println(declarationNode.Content(sourceCode))
 
 	for i := uint32(0); i < declarationNode.ChildCount(); i++ {
 		n := declarationNode.Child(int(i))
@@ -74,10 +72,11 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 			)
 			variables = append(variables, variable)
 		}
-
-		fmt.Println(
-			declarationNode.Child(int(i)).Type(),
-			declarationNode.Child(int(i)).Content(sourceCode))
+		/*
+			fmt.Println(
+				declarationNode.Child(int(i)).Type(),
+				declarationNode.Child(int(i)).Content(sourceCode))
+		*/
 	}
 
 	return variables

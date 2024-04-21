@@ -2,13 +2,14 @@ package language
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"testing"
 )
 
 func createParser() p.Parser {

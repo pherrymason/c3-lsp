@@ -22,12 +22,12 @@ func NewVariableBuilder(name string, variableType string, module string, docId s
 }
 
 func (vb *VariableBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *VariableBuilder {
-	vb.variable.BaseIndexable.identifierRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	vb.variable.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return vb
 }
 
 func (vb *VariableBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *VariableBuilder {
-	vb.variable.BaseIndexable.documentRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	vb.variable.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return vb
 }
 

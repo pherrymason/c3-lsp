@@ -2,14 +2,14 @@ package indexables
 
 import (
 	sitter "github.com/smacker/go-tree-sitter"
-	"github.com/tliron/glsp/protocol_3_16"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 type Indexable interface {
 	GetName() string
 	GetKind() protocol.CompletionItemKind
 	GetDocumentURI() string
-	GetDeclarationRange() Range
+	GetIdRange() Range
 	GetDocumentRange() Range
 	GetModule() string
 
@@ -19,19 +19,19 @@ type Indexable interface {
 type IndexableCollection []Indexable
 
 type BaseIndexable struct {
-	module          string
-	documentURI     string
-	identifierRange Range
-	documentRange   Range
-	Kind            protocol.CompletionItemKind
+	module      string
+	documentURI string
+	idRange     Range
+	docRange    Range
+	Kind        protocol.CompletionItemKind
 }
 
 func NewBaseIndexable(docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
 	return BaseIndexable{
-		documentURI:     docId,
-		identifierRange: idRange,
-		documentRange:   docRange,
-		Kind:            kind,
+		documentURI: docId,
+		idRange:     idRange,
+		docRange:    docRange,
+		Kind:        kind,
 	}
 }
 

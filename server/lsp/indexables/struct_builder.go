@@ -6,7 +6,7 @@ type StructBuilder struct {
 
 func NewStructBuilder(name string, module string, docId string) *StructBuilder {
 	return &StructBuilder{
-		strukt: NewStruct(name, []StructMember{}, module, docId, Range{}),
+		strukt: NewStruct(name, []StructMember{}, module, docId, Range{}, Range{}),
 	}
 }
 
@@ -16,12 +16,12 @@ func (b *StructBuilder) WithStructMember(name string, baseType string, posRange 
 }
 
 func (b *StructBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *StructBuilder {
-	b.strukt.BaseIndexable.identifierRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	b.strukt.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return b
 }
 
 func (b *StructBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *StructBuilder {
-	b.strukt.BaseIndexable.documentRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	b.strukt.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return b
 }
 

@@ -23,7 +23,7 @@ func assertSameFunction(t *testing.T, expected idx.Function, actual idx.Function
 	assert.Equal(t, expected.ArgumentIds(), actual.ArgumentIds(), expected.GetName(), "Function arguments does not match")
 	assert.Equal(t, expected.GetDocumentURI(), actual.GetDocumentURI(), expected.GetName(), "Function doc id does not match")
 
-	assertSameRange(t, expected.GetDeclarationRange(), actual.GetDeclarationRange(), fmt.Sprint("Function declaration range:", expected.GetName()))
+	assertSameRange(t, expected.GetIdRange(), actual.GetIdRange(), fmt.Sprint("Function declaration range:", expected.GetName()))
 	assertSameRange(t, expected.GetDocumentRange(), actual.GetDocumentRange(), fmt.Sprint("Function document range:", expected.GetName()))
 
 	assert.Equal(t, expected.GetKind(), actual.GetKind(), expected.GetName())
@@ -51,5 +51,5 @@ func assertSameVariable(t *testing.T, expected idx.Variable, actual idx.Variable
 	assert.Equal(t, expected.GetName(), actual.GetName(), "Variable name does not match")
 	assert.Equal(t, expected.GetType(), actual.GetType(), "Variable type does not match")
 	//	assert.Equal(t, expected.GetDocumentRange(), actual.GetDocumentRange(), "Variable document range does not match")
-	assert.Equal(t, expected.GetDeclarationRange(), actual.GetDeclarationRange(), "Variable declaration range does not match")
+	assert.Equal(t, expected.GetIdRange(), actual.GetIdRange(), "Variable declaration range does not match")
 }

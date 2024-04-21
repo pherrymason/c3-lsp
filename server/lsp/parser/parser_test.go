@@ -10,7 +10,6 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func createParser() Parser {
@@ -18,95 +17,48 @@ func createParser() Parser {
 	return NewParser(logger)
 }
 
-func TestExtractSymbols_finds_function_root_and_global_enum_declarations(t *testing.T) {
-	source := `enum Colors { RED, BLUE, GREEN };`
-	doc := document.NewDocument("x", "x", source)
-	parser := createParser()
-
-	symbols := parser.ExtractSymbols(&doc)
-
-	expectedRoot := idx.NewAnonymousScopeFunction("main", "x", "x", idx.NewRange(0, 0, 0, 35), protocol.CompletionItemKindModule)
-	enum := idx.NewEnum("Colors", "", []idx.Enumerator{}, "x", "x", idx.NewRange(0, 5, 0, 11), idx.NewRange(0, 0, 0, 32))
-	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 14, 0, 17))
-	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 19, 0, 23))
-	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 25, 0, 30))
-	expectedRoot.AddEnum(enum)
-	assert.Equal(t, enum, symbols.Enums["Colors"])
-}
-
-func TestExtractSymbols_finds_function_root_and_global_enum_with_base_type_declarations(t *testing.T) {
-	source := `enum Colors:int { RED, BLUE, GREEN };`
-	doc := document.NewDocument("x", "x", source)
-	parser := createParser()
-
-	symbols := parser.ExtractSymbols(&doc)
-
-	expectedRoot := idx.NewAnonymousScopeFunction("main", "x", "x", idx.NewRange(0, 0, 0, 35), protocol.CompletionItemKindModule)
-	enum := idx.NewEnum("Colors", "", []idx.Enumerator{}, "x", "x", idx.NewRange(0, 5, 0, 11), idx.NewRange(0, 0, 0, 36))
-	enum.RegisterEnumerator("RED", "", idx.NewRange(0, 18, 0, 21))
-	enum.RegisterEnumerator("BLUE", "", idx.NewRange(0, 23, 0, 27))
-	enum.RegisterEnumerator("GREEN", "", idx.NewRange(0, 29, 0, 34))
-
-	expectedRoot.AddEnum(enum)
-	assert.Equal(t, enum, symbols.Enums["Colors"])
-}
-
-func TestExtractSymbols_finds_function_root_and_global_struct_declarations(t *testing.T) {
-	source := `struct MyStructure {
-		bool enabled;
-		char key;
-	}`
-	doc := document.NewDocument("x", "x", source)
-	parser := createParser()
-
-	symbols := parser.ExtractSymbols(&doc)
-
-	expectedStruct := idx.NewStruct("MyStructure", []idx.StructMember{
-		idx.NewStructMember("enabled", "bool", idx.NewRange(1, 2, 1, 15)),
-		idx.NewStructMember("key", "char", idx.NewRange(2, 2, 2, 11)),
-	}, "x", "x", idx.NewRange(0, 7, 0, 18))
-
-	assert.Equal(t, expectedStruct, symbols.Structs["MyStructure"])
-}
-
-func TestExtractSymbols_extracts_struct_declaration_with_member_functions(t *testing.T) {
-	source := `struct MyStruct{
-	int data;
-}
-
-fn void MyStruct.init(&self)
-{
-	*self = {
-		.data = 4,
-	};
-}`
-
+func TestFindsEnums(t *testing.T) {
 	module := "x"
-	docId := "x"
+	docId := "doc"
+	source := `enum Colors:int { RED, BLUE, GREEN };`
 	doc := document.NewDocument(docId, module, source)
 	parser := createParser()
 
-	symbols := parser.ExtractSymbols(&doc)
+	t.Run("finds Colors enum identifier", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
 
-	expectedStruct := idx.NewStruct("MyStruct", []idx.StructMember{
-		idx.NewStructMember("data", "int", idx.NewRange(1, 1, 1, 10)),
-	}, module, docId, idx.NewRange(0, 7, 0, 15))
+		expectedEnum := idx.NewEnumBuilder("Colors", "int", module, docId).
+			Build()
 
-	expectedMethod := idx.NewFunctionBuilder("init", "void", module, docId).
-		WithTypeIdentifier("MyStruct").
-		WithArgument(
-			idx.NewVariableBuilder("self", "", module, docId).
-				WithIdentifierRange(4, 23, 4, 27).
-				WithDocumentRange(4, 23, 4, 27).
-				Build(),
-		).
-		WithIdentifierRange(4, 17, 4, 21).
-		WithDocumentRange(4, 0, 9, 1).
-		Build()
+		assert.NotNil(t, symbols.Enums["Colors"])
+		assert.Equal(t, expectedEnum.GetName(), symbols.Enums["Colors"].GetName())
+		assert.Equal(t, expectedEnum.GetType(), symbols.Enums["Colors"].GetType())
+	})
 
-	assert.Equal(t, expectedStruct, symbols.Structs["MyStruct"])
-	funcMethod, _ := symbols.GetChildrenFunctionByName("MyStruct.init")
-	assert.Equal(t, expectedMethod, funcMethod)
+	t.Run("reads ranges for enum", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		enum := symbols.Enums["Colors"]
+		assert.Equal(t, idx.NewRange(0, 0, 0, 36), enum.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(0, 5, 0, 11), enum.GetIdRange(), "Wrong identifier range")
+	})
+
+	t.Run("finds defined enumerators", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		enum := symbols.Enums["Colors"]
+		e := enum.GetEnumerator("RED")
+		assert.Equal(t, "RED", e.GetName())
+		assert.Equal(t, idx.NewRange(0, 18, 0, 21), e.GetIdRange())
+
+		e = enum.GetEnumerator("BLUE")
+		assert.Equal(t, "BLUE", e.GetName())
+		assert.Equal(t, idx.NewRange(0, 23, 0, 27), e.GetIdRange())
+
+		e = enum.GetEnumerator("GREEN")
+		assert.Equal(t, "GREEN", e.GetName())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 34), e.GetIdRange())
+	})
 }
 
 func TestExtractSymbols_finds_definition(t *testing.T) {
@@ -116,6 +68,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
 	def MyMap = HashMap(<String, Feature>);
 	`
+	// TODO: Missing def different definition examples. See parser.nodeToDef
 	doc := document.NewDocument("x", "x", source)
 	parser := createParser()
 

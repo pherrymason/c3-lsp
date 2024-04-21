@@ -2,6 +2,7 @@ package indexables
 
 import (
 	"fmt"
+
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -12,23 +13,27 @@ type Enum struct {
 	BaseIndexable
 }
 
-func NewEnum(name string, baseType string, enumerators []Enumerator, module string, docId string, identifierRangePosition Range, documentRangePosition Range) Enum {
+func NewEnum(name string, baseType string, enumerators []Enumerator, module string, docId string, idRange Range, docRange Range) Enum {
 	return Enum{
 		name:        name,
 		baseType:    baseType,
 		enumerators: enumerators,
 		BaseIndexable: BaseIndexable{
-			module:          module,
-			documentURI:     docId,
-			identifierRange: identifierRangePosition,
-			documentRange:   documentRangePosition,
-			Kind:            protocol.CompletionItemKindEnum,
+			module:      module,
+			documentURI: docId,
+			idRange:     idRange,
+			docRange:    docRange,
+			Kind:        protocol.CompletionItemKindEnum,
 		},
 	}
 }
 
 func (e Enum) GetName() string {
 	return e.name
+}
+
+func (e Enum) GetType() string {
+	return e.baseType
 }
 
 func (e Enum) GetModule() string {
@@ -43,12 +48,12 @@ func (e Enum) GetDocumentURI() string {
 	return e.documentURI
 }
 
-func (e Enum) GetDeclarationRange() Range {
-	return e.documentRange
+func (e Enum) GetIdRange() Range {
+	return e.idRange
 }
 
 func (e Enum) GetDocumentRange() Range {
-	return e.identifierRange
+	return e.docRange
 }
 
 func (e *Enum) RegisterEnumerator(name string, value string, posRange Range) {

@@ -2,11 +2,12 @@ package lsp
 
 import (
 	"fmt"
+	"testing"
+
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
-	"testing"
 )
 
 func assertSameRange(t *testing.T, expected idx.Range, actual idx.Range, msg string) {
@@ -21,7 +22,7 @@ func assertSameFunction(t *testing.T, expected *idx.Function, actual *idx.Functi
 	assert.Equal(t, expected.ArgumentIds(), actual.ArgumentIds(), expected.GetName())
 	assert.Equal(t, expected.GetDocumentURI(), actual.GetDocumentURI(), expected.GetName())
 
-	assertSameRange(t, expected.GetDeclarationRange(), actual.GetDeclarationRange(), fmt.Sprint("Function declaration range:", expected.GetName()))
+	assertSameRange(t, expected.GetIdRange(), actual.GetIdRange(), fmt.Sprint("Function declaration range:", expected.GetName()))
 	assertSameRange(t, expected.GetDocumentRange(), actual.GetDocumentRange(), fmt.Sprint("Function document range:", expected.GetName()))
 
 	assert.Equal(t, expected.GetKind(), actual.GetKind(), expected.GetName())
@@ -46,7 +47,7 @@ func assertSameVariable(t *testing.T, expected idx.Variable, actual idx.Variable
 	assert.Equal(t, expected.GetName(), actual.GetName())
 	assert.Equal(t, expected.GetType(), actual.GetType(), expected.GetName())
 	assert.Equal(t, expected.GetDocumentURI(), actual.GetDocumentURI(), expected.GetName())
-	assertSameRange(t, expected.GetDeclarationRange(), actual.GetDeclarationRange(), fmt.Sprint("Variable  declaration range:", expected.GetName()))
+	assertSameRange(t, expected.GetIdRange(), actual.GetIdRange(), fmt.Sprint("Variable  declaration range:", expected.GetName()))
 	assertSameRange(t, expected.GetDocumentRange(), actual.GetDocumentRange(), fmt.Sprint("Variable document range:", expected.GetName()))
 	assert.Equal(t, expected.GetKind(), actual.GetKind(), expected.GetName())
 }

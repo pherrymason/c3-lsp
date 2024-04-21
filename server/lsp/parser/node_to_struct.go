@@ -6,28 +6,98 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
+/*
+struct_declaration: $ => seq(
+
+	$._struct_or_union,
+	field('name', $.type_ident),
+	optional($.interface_impl),
+	optional($.attributes),
+	field('body', $.struct_body),
+
+),
+_struct_or_union: _ => choice('struct', 'union'),
+struct_body: $ => seq(
+
+	  '{',
+	  // NOTE Allowing empty struct to not be too strict.
+	  repeat($.struct_member_declaration),
+	  '}',
+	),
+
+struct_member_declaration: $ => choice(
+
+	  seq(field('type', $.type), $.identifier_list, optional($.attributes), ';'),
+	  seq($._struct_or_union, optional($.ident), optional($.attributes), field('body', $.struct_body)),
+	  seq('bitstruct', optional($.ident), ':', $.type, optional($.attributes), field('body', $.bitstruct_body)),
+	  seq('inline', field('type', $.type), optional($.ident), optional($.attributes), ';'),
+	),
+*/
 func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Struct {
-	nameNode := node.Child(1)
+	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
-	// TODO parse attributes
-	bodyNode := node.Child(2)
 
-	fields := make([]idx.StructMember, 0)
+	for i := uint32(0); i < node.ChildCount(); i++ {
+		child := node.Child(int(i))
 
-	for i := uint32(0); i < bodyNode.ChildCount(); i++ {
-		child := bodyNode.Child(int(i))
 		switch child.Type() {
-		case "field_declaration":
-			fieldName := child.ChildByFieldName("name").Content(sourceCode)
-			fieldType := child.ChildByFieldName("type").Content(sourceCode)
-			fields = append(fields, idx.NewStructMember(fieldName, fieldType, idx.NewRangeFromSitterPositions(child.StartPoint(), child.EndPoint())))
-
-		case "field_struct_declaration":
-		case "field_union_declaration":
+		case "interface_impl":
+			// TODO
+		case "attributes":
+			// TODO attributes
 		}
 	}
 
-	_struct := idx.NewStruct(name, fields, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()))
+	// TODO parse attributes
+	bodyNode := node.ChildByFieldName("body")
+	structFields := make([]idx.StructMember, 0)
+
+	for i := uint32(0); i < bodyNode.ChildCount(); i++ {
+		memberNode := bodyNode.Child(int(i))
+		//fmt.Println("body child:", memberNode.Type())
+		if memberNode.Type() != "struct_member_declaration" {
+			continue
+		}
+		var fieldType string
+		var identifiers []string
+		var identifiersRange []idx.Range
+
+		for x := uint32(0); x < memberNode.ChildCount(); x++ {
+			n := memberNode.Child(int(x))
+			switch n.Type() {
+			case "type":
+				fieldType = n.Content(sourceCode)
+			case "identifier_list":
+				for j := uint32(0); j < n.ChildCount(); j++ {
+					identifiers = append(identifiers, n.Child(int(j)).Content(sourceCode))
+					identifiersRange = append(identifiersRange,
+						idx.NewRangeFromSitterPositions(n.StartPoint(), n.EndPoint()),
+					)
+				}
+			case "attributes":
+				// TODO
+			}
+		}
+
+		for y := 0; y < len(identifiers); y++ {
+			structFields = append(
+				structFields,
+				idx.NewStructMember(
+					identifiers[y],
+					fieldType,
+					identifiersRange[y]),
+			)
+		}
+	}
+
+	_struct := idx.NewStruct(
+		name,
+		structFields,
+		doc.ModuleName,
+		doc.URI,
+		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+	)
 
 	return _struct
 }

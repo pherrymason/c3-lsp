@@ -2,6 +2,7 @@ package indexables
 
 import (
 	"fmt"
+
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -16,11 +17,11 @@ func NewDef(name string, resolvesTo string, module string, docId string, idRange
 		name:       name,
 		resolvesTo: resolvesTo,
 		BaseIndexable: BaseIndexable{
-			module:          module,
-			documentURI:     docId,
-			identifierRange: idRange,
-			documentRange:   docRange,
-			Kind:            protocol.CompletionItemKindTypeParameter,
+			module:      module,
+			documentURI: docId,
+			idRange:     idRange,
+			docRange:    docRange,
+			Kind:        protocol.CompletionItemKindTypeParameter,
 		},
 	}
 }
@@ -41,12 +42,12 @@ func (d Def) GetDocumentURI() string {
 	return d.documentURI
 }
 
-func (d Def) GetDeclarationRange() Range {
-	return d.identifierRange
+func (d Def) GetIdRange() Range {
+	return d.idRange
 }
 
 func (d Def) GetDocumentRange() Range {
-	return d.documentRange
+	return d.docRange
 }
 
 func (d Def) GetHoverInfo() string {

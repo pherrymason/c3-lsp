@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -40,7 +39,7 @@ func NewParser(logger interface{}) Parser {
 
 func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	parsedSymbols := NewParsedSymbols()
-	fmt.Println(doc.ContextSyntaxTree.RootNode())
+	//fmt.Println(doc.ContextSyntaxTree.RootNode())
 	/*
 		query := `[
 		(source_file ` + GlobalVarDeclaration + `)
@@ -53,6 +52,9 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
  (source_file ` + GlobalVarDeclaration + `)
  (source_file ` + LocalVarDeclaration + `)
  (source_file ` + FunctionDeclarationQuery + `)
+ (source_file ` + DefineDeclaration + `)
+ (source_file ` + StructDeclaration + `)
+ (source_file ` + EnumDeclaration + `)
 ]`
 
 	/*

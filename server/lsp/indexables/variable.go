@@ -2,6 +2,7 @@ package indexables
 
 import (
 	"fmt"
+
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -11,16 +12,16 @@ type Variable struct {
 	BaseIndexable
 }
 
-func NewVariable(name string, variableType string, module string, uri string, identifierRangePosition Range, documentRangePosition Range) Variable {
+func NewVariable(name string, variableType string, module string, uri string, idRange Range, docRange Range) Variable {
 	return Variable{
 		name: name,
 		Type: variableType,
 		BaseIndexable: BaseIndexable{
-			module:          module,
-			documentURI:     uri,
-			identifierRange: identifierRangePosition,
-			documentRange:   documentRangePosition,
-			Kind:            protocol.CompletionItemKindVariable,
+			module:      module,
+			documentURI: uri,
+			idRange:     idRange,
+			docRange:    docRange,
+			Kind:        protocol.CompletionItemKindVariable,
 		},
 	}
 
@@ -44,11 +45,11 @@ func (v Variable) GetDocumentURI() string {
 	return v.documentURI
 }
 
-func (v Variable) GetDeclarationRange() Range {
-	return v.identifierRange
+func (v Variable) GetIdRange() Range {
+	return v.idRange
 }
 func (v Variable) GetDocumentRange() Range {
-	return v.documentRange
+	return v.docRange
 }
 
 func (v Variable) GetHoverInfo() string {

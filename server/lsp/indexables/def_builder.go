@@ -24,12 +24,12 @@ func (d *DefBuilder) WithResolvesTo(resolvesTo string) *DefBuilder {
 }
 
 func (d *DefBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *DefBuilder {
-	d.def.BaseIndexable.identifierRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	d.def.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return d
 }
 
 func (d *DefBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *DefBuilder {
-	d.def.BaseIndexable.documentRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	d.def.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return d
 }
 

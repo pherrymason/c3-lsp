@@ -2,6 +2,8 @@ package lsp
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/pherrymason/c3-lsp/fs"
 	l "github.com/pherrymason/c3-lsp/lsp/language"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
@@ -11,7 +13,6 @@ import (
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	glspserv "github.com/tliron/glsp/server"
-	"os"
 )
 
 type Server struct {
@@ -139,7 +140,7 @@ func NewServer(opts ServerOpts) *Server {
 		if err == nil {
 			return protocol.Location{
 				URI:   identifier.GetDocumentURI(),
-				Range: lsp_NewRangeFromRange(identifier.GetDeclarationRange()),
+				Range: lsp_NewRangeFromRange(identifier.GetIdRange()),
 			}, nil
 		}
 

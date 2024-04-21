@@ -49,11 +49,11 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 		argumentIds:    argumentIds,
 		typeIdentifier: typeIdentifier,
 		BaseIndexable: BaseIndexable{
-			module:          module,
-			documentURI:     docId,
-			identifierRange: identifierRangePosition,
-			documentRange:   docRange,
-			Kind:            kind,
+			module:      module,
+			documentURI: docId,
+			idRange:     identifierRangePosition,
+			docRange:    docRange,
+			Kind:        kind,
 		},
 		Variables:         make(map[string]Variable),
 		Enums:             make(map[string]Enum),
@@ -99,12 +99,12 @@ func (f Function) GetDocumentURI() string {
 	return f.documentURI
 }
 
-func (f Function) GetDeclarationRange() Range {
-	return f.identifierRange
+func (f Function) GetIdRange() Range {
+	return f.idRange
 }
 
 func (f Function) GetDocumentRange() Range {
-	return f.documentRange
+	return f.docRange
 }
 
 func (f *Function) AddVariables(variables []Variable) {
