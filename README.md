@@ -27,7 +27,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
   - [x] Unions
     - [x] Union members
   - [~] defines
-  - [ ] Interfaces
+  - [x] Interfaces
   - [ ] macros
   - [ ] imports
   - [ ] [Generics](https://c3-lang.org/references/docs/generics/)
