@@ -12,20 +12,27 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [x] Hover
 
 **TODO list**
-- [~] Index Symbols
+- Parser:
   - [x] Variables & type
+  - [ ] [Global constants]()
   - [x] Functions
-    - [x] Function arguments
+    - [x] Function parameters
     - [x] Function return type
   - [x] Enums + Enumerators
-    - [ ] base type 
+    - [x] base type 
+  - [ ] [Faults](https://c3-lang.org/references/docs/types/#faults)
   - [x] Structs
     - [x] Struct members
     - [x] Struct methods
   - [ ] Unions
-  - [ ] imports
+    - [ ] Union members
   - [~] defines
-  - [ ] macros: **Needs to update grammar.js**
+  - [ ] Interfaces
+  - [ ] macros
+  - [ ] imports
+  - [ ] [Generics](https://c3-lang.org/references/docs/generics/)
+  - [ ] [Language Builtins](https://c3-lang.org/references/docs/builtins/)
+
 - [x] Index scopes and its hierarchy to improve hover and Auto Completion.
 - [ ] Complete Hover
 - [ ] Complete Go to declaration
