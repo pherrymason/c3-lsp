@@ -271,96 +271,111 @@ func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UI
 	}
 }
 
-func TestLanguage_FindSymbolDeclarationInWorkspace_symbol_same_scope(t *testing.T) {
+func initLanguage(docId string, module string, source string) (Language, *document.Document) {
+	doc := document.NewDocument(docId, module, source)
+	language := NewLanguage()
+	parser := createParser()
+	language.RefreshDocumentIdentifiers(&doc, &parser)
+
+	return language, &doc
+}
+
+func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
 	module := "mod"
-	cases := []struct {
-		name               string
-		sourceCode         string
-		highlightedWord    string
-		cursorPositionLine protocol.UInteger
-		cursorPositionChar protocol.UInteger
-		expected           idx.Indexable
-	}{
-		{"variable",
-			`int value=1;`,
-			"value",
-			0, 13,
-			idx.NewVariableBuilder("value", "int", module, "x").
-				WithIdentifierRange(0, 4, 0, 9).
-				WithDocumentRange(0, 0, 0, 12).
-				Build()},
-		{
-			"enum declaration",
-			`enum Colors = { RED, BLUE, GREEN };Colors foo = RED;`,
-			"Colors",
-			0, 36,
-			idx.NewEnumBuilder("Colors", "", module, "x").
-				WithIdentifierRange(0, 5, 0, 11).
-				WithDocumentRange(0, 0, 0, 34).
-				WithEnumerator(
-					idx.NewEnumeratorBuilder("RED", "x").
-						WithIdentifierRange(0, 16, 0, 19).
-						Build(),
-				).
-				WithEnumerator(
-					idx.NewEnumeratorBuilder("BLUE", "x").
-						WithIdentifierRange(0, 21, 0, 25).
-						Build(),
-				).
-				WithEnumerator(
-					idx.NewEnumeratorBuilder("GREEN", "x").
-						WithIdentifierRange(0, 27, 0, 32).
-						Build(),
-				).
-				Build(),
-		},
-		{
-			"enum enumerator",
-			`enum Colors = { RED, BLUE, GREEN };Colors foo = RED;`,
-			"RED",
-			0, 49,
-			idx.NewEnumeratorBuilder("RED", "x").
-				WithIdentifierRange(0, 16, 0, 19).
-				Build(),
-		},
-		{
-			"struct",
-			`struct MyStructure {bool enabled; char key;} MyStructure value;`,
-			"MyStructure",
-			0, 47,
-			idx.NewStructBuilder("MyStructure", module, "x").
-				WithStructMember("enabled", "bool", idx.NewRange(0, 20, 0, 33)).
-				WithStructMember("key", "char", idx.NewRange(0, 34, 0, 43)).
-				WithIdentifierRange(0, 7, 0, 18).
-				Build(),
-		},
-		{
-			"def",
-			"def Kilo = int;Kilo value = 3;",
-			"Kilo",
-			0, 17,
-			idx.NewDefBuilder("Kilo", "x").
-				WithResolvesTo("int").
-				WithIdentifierRange(0, 4, 0, 8).
-				WithDocumentRange(0, 0, 0, 15).
-				Build(),
-		},
-	}
+	docId := "docId"
 
-	for _, tt := range cases {
-		t.Run(tt.name, func(t *testing.T) {
-			doc := document.NewDocument("x", module, tt.sourceCode)
-			language := NewLanguage()
-			parser := createParser()
-			language.RefreshDocumentIdentifiers(&doc, &parser)
+	t.Run("should find variable in same scope of cursor", func(t *testing.T) {
+		source := `fn void test() {int value=1; value = 3;}`
+		language, doc := initLanguage(docId, module, source)
 
-			params := newDeclarationParams("x", tt.cursorPositionLine, tt.cursorPositionChar)
+		params := newDeclarationParams(docId, 0, 32)
 
-			symbol, _ := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
+		symbol, _ := language.FindSymbolDeclarationInWorkspace(doc, params.Position)
 
-			assert.Equal(t, tt.expected, symbol)
-		})
-	}
+		expected := idx.NewVariableBuilder("value", "int", module, docId).
+			WithIdentifierRange(0, 20, 0, 25).
+			WithDocumentRange(0, 20, 0, 27).
+			Build()
+		assert.Equal(t, expected, symbol)
+	})
+
+	t.Run("should find enum declaration in same scope of cursor", func(t *testing.T) {
+		source := `enum Colors { RED, BLUE, GREEN };Colors foo = RED;`
+		language, doc := initLanguage(docId, module, source)
+
+		params := newDeclarationParams(docId, 0, 36)
+
+		symbol, _ := language.FindSymbolDeclarationInWorkspace(doc, params.Position)
+
+		expected := idx.NewEnumBuilder("Colors", "", module, docId).
+			WithIdentifierRange(0, 5, 0, 11).
+			WithDocumentRange(0, 0, 0, 32).
+			WithEnumerator(
+				idx.NewEnumeratorBuilder("RED", docId).
+					WithIdentifierRange(0, 14, 0, 17).
+					Build(),
+			).
+			WithEnumerator(
+				idx.NewEnumeratorBuilder("BLUE", docId).
+					WithIdentifierRange(0, 19, 0, 23).
+					Build(),
+			).
+			WithEnumerator(
+				idx.NewEnumeratorBuilder("GREEN", docId).
+					WithIdentifierRange(0, 25, 0, 30).
+					Build(),
+			).
+			Build()
+		assert.Equal(t, expected, symbol)
+	})
+
+	t.Run("should find enumerator declaration in same scope of cursor", func(t *testing.T) {
+		source := `enum Colors { RED, BLUE, GREEN };Colors foo = RED;`
+		language, doc := initLanguage(docId, module, source)
+
+		params := newDeclarationParams(docId, 0, 48)
+
+		symbol, _ := language.FindSymbolDeclarationInWorkspace(doc, params.Position)
+
+		expected := idx.NewEnumeratorBuilder("RED", docId).
+			WithIdentifierRange(0, 14, 0, 17).
+			Build()
+		assert.Equal(t, expected, symbol)
+	})
+
+	t.Run("should find struct declaration in same scope of cursor", func(t *testing.T) {
+		source := `struct MyStructure {bool enabled; char key;} MyStructure value;`
+		language, doc := initLanguage(docId, module, source)
+
+		params := newDeclarationParams(docId, 0, 47)
+
+		symbol, _ := language.FindSymbolDeclarationInWorkspace(doc, params.Position)
+
+		expected := idx.NewStructBuilder("MyStructure", module, docId).
+			WithStructMember("enabled", "bool", idx.NewRange(0, 25, 0, 32)).
+			WithStructMember("key", "char", idx.NewRange(0, 39, 0, 42)).
+			WithIdentifierRange(0, 7, 0, 18).
+			WithDocumentRange(0, 0, 0, 44).
+			Build()
+		assert.Equal(t, expected, symbol)
+	})
+
+	t.Run("should find definition declaration in same scope of cursor", func(t *testing.T) {
+		source := `def Kilo = int;Kilo value = 3;`
+		language, doc := initLanguage(docId, module, source)
+
+		params := newDeclarationParams(docId, 0, 17)
+
+		symbol, _ := language.FindSymbolDeclarationInWorkspace(doc, params.Position)
+
+		expected := idx.NewDefBuilder("Kilo", docId).
+			WithResolvesTo("int").
+			WithIdentifierRange(0, 4, 0, 8).
+			WithDocumentRange(0, 0, 0, 15).
+			Build()
+		assert.Equal(t, expected, symbol)
+	})
+
 }
 
 func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testing.T) {

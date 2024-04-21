@@ -2,10 +2,11 @@ package document
 
 import (
 	"errors"
+	"unicode"
+
 	"github.com/pherrymason/c3-lsp/lsp/cst"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"unicode"
 )
 
 type Document struct {

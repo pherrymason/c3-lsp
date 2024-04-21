@@ -59,7 +59,7 @@ func (p *Parser) nodeToEnum(doc *document.Document, node *sitter.Node, sourceCod
 							"",
 							"",
 							idx.NewRangeFromSitterPositions(name.StartPoint(), name.EndPoint()),
-							"",
+							doc.URI,
 						),
 					)
 				}

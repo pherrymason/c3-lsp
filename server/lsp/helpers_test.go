@@ -59,5 +59,5 @@ func createParser() parser.Parser {
 }
 
 func createStruct(docId string, module string, name string, members []idx.StructMember, idRange idx.Range) idx.Indexable {
-	return idx.NewStruct(name, members, module, docId, idRange)
+	return idx.NewStruct(name, members, module, docId, idRange, idx.NewRange(0, 0, 0, 0))
 }

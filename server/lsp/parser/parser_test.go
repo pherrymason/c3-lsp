@@ -17,7 +17,7 @@ func createParser() Parser {
 	return NewParser(logger)
 }
 
-func TestFindsEnums(t *testing.T) {
+func TestFindsTypedEnums(t *testing.T) {
 	module := "x"
 	docId := "doc"
 	source := `enum Colors:int { RED, BLUE, GREEN };`
@@ -58,6 +58,50 @@ func TestFindsEnums(t *testing.T) {
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
 		assert.Equal(t, idx.NewRange(0, 29, 0, 34), e.GetIdRange())
+	})
+}
+
+func TestFindsUnTypedEnums(t *testing.T) {
+	module := "x"
+	docId := "doc"
+	source := `enum Colors { RED, BLUE, GREEN };`
+	doc := document.NewDocument(docId, module, source)
+	parser := createParser()
+
+	t.Run("finds Colors enum identifier", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		expectedEnum := idx.NewEnumBuilder("Colors", "", module, docId).
+			Build()
+
+		assert.NotNil(t, symbols.Enums["Colors"])
+		assert.Equal(t, expectedEnum.GetName(), symbols.Enums["Colors"].GetName())
+		assert.Equal(t, expectedEnum.GetType(), symbols.Enums["Colors"].GetType())
+	})
+
+	t.Run("reads ranges for enum", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		enum := symbols.Enums["Colors"]
+		assert.Equal(t, idx.NewRange(0, 0, 0, 32), enum.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(0, 5, 0, 11), enum.GetIdRange(), "Wrong identifier range")
+	})
+
+	t.Run("finds defined enumerators", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		enum := symbols.Enums["Colors"]
+		e := enum.GetEnumerator("RED")
+		assert.Equal(t, "RED", e.GetName())
+		assert.Equal(t, idx.NewRange(0, 14, 0, 17), e.GetIdRange())
+
+		e = enum.GetEnumerator("BLUE")
+		assert.Equal(t, "BLUE", e.GetName())
+		assert.Equal(t, idx.NewRange(0, 19, 0, 23), e.GetIdRange())
+
+		e = enum.GetEnumerator("GREEN")
+		assert.Equal(t, "GREEN", e.GetName())
+		assert.Equal(t, idx.NewRange(0, 25, 0, 30), e.GetIdRange())
 	})
 }
 
