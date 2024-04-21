@@ -40,14 +40,7 @@ func NewParser(logger interface{}) Parser {
 func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	parsedSymbols := NewParsedSymbols()
 	//fmt.Println(doc.ContextSyntaxTree.RootNode())
-	/*
-		query := `[
-		(source_file ` + GlobalVarDeclaration + `)
-		(source_file ` + VarDeclarationQuery + `)
-		(source_file ` + EnumDeclaration + `)
-		(source_file ` + StructDeclaration + `)
-		(source_file ` + DefineDeclaration + `)
-		` + FunctionDeclarationQuery + `]`*/
+
 	query := `[
  (source_file ` + GlobalVarDeclaration + `)
  (source_file ` + LocalVarDeclaration + `)
@@ -141,14 +134,7 @@ func (p *Parser) FindVariableDeclarations(doc *document.Document, node *sitter.N
 }
 
 func (p *Parser) FindFunctionDeclarations(doc *document.Document) []idx.Indexable {
-	query := FunctionDeclarationQuery //`(function_declaration name: (identifier) @function_name)`
-	/*q, err := sitter.NewQuery([]byte(query), cst.GetLanguage())
-	if err != nil {
-		panic(err)
-	}
-
-	qc := sitter.NewQueryCursor()
-	qc.Exec(q, doc.ContextSyntaxTree.RootNode())*/
+	query := FunctionDeclarationQuery
 	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
 
 	var identifiers []idx.Indexable
