@@ -31,6 +31,7 @@ fn void MyStruct.init(&self)
 
 		found := symbols.Structs["MyStruct"]
 		assert.Equal(t, "MyStruct", found.GetName())
+		assert.False(t, found.IsUnion())
 		assert.Equal(t, idx.NewRange(0, 0, 3, 1), found.GetDocumentRange())
 		assert.Equal(t, idx.NewRange(0, 7, 0, 15), found.GetIdRange())
 	})
@@ -48,5 +49,26 @@ fn void MyStruct.init(&self)
 		assert.Equal(t, "key", member.GetName())
 		assert.Equal(t, "char", member.GetType())
 		assert.Equal(t, idx.NewRange(2, 6, 2, 9), member.GetIdRange())
+	})
+}
+
+func TestParse_Unions(t *testing.T) {
+	source := `union MyUnion{
+		short as_short;
+		int as_int;
+	}`
+	module := "x"
+	docId := "docId"
+	doc := document.NewDocument(docId, module, source)
+	parser := createParser()
+
+	t.Run("parses union", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		found := symbols.Structs["MyUnion"]
+		assert.Equal(t, "MyUnion", found.GetName())
+		assert.True(t, found.IsUnion())
+		assert.Equal(t, idx.NewRange(0, 0, 3, 2), found.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(0, 6, 0, 13), found.GetIdRange())
 	})
 }

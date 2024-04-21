@@ -9,6 +9,7 @@ import (
 type Struct struct {
 	name    string
 	members []StructMember
+	isUnion bool
 	BaseIndexable
 }
 
@@ -16,11 +17,28 @@ func NewStruct(name string, members []StructMember, module string, docId string,
 	return Struct{
 		name:    name,
 		members: members,
+		isUnion: false,
 		BaseIndexable: BaseIndexable{
 			module:      module,
 			documentURI: docId,
 			idRange:     idRange,
 			docRange:    docRange,
+			Kind:        protocol.CompletionItemKindStruct,
+		},
+	}
+}
+
+func NewUnion(name string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
+	return Struct{
+		name:    name,
+		members: members,
+		isUnion: true,
+		BaseIndexable: BaseIndexable{
+			module:      module,
+			documentURI: docId,
+			idRange:     idRange,
+			docRange:    docRange,
+			Kind:        protocol.CompletionItemKindStruct,
 		},
 	}
 }
@@ -39,6 +57,10 @@ func (s Struct) GetModule() string {
 
 func (s Struct) GetKind() protocol.CompletionItemKind {
 	return s.Kind
+}
+
+func (s Struct) IsUnion() bool {
+	return s.isUnion
 }
 
 func (s Struct) GetDocumentURI() string {

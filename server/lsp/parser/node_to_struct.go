@@ -36,11 +36,14 @@ struct_member_declaration: $ => choice(
 func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Struct {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
+	isUnion := false
 
 	for i := uint32(0); i < node.ChildCount(); i++ {
 		child := node.Child(int(i))
 
 		switch child.Type() {
+		case "union":
+			isUnion = true
 		case "interface_impl":
 			// TODO
 		case "attributes":
@@ -58,6 +61,7 @@ func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceC
 		if memberNode.Type() != "struct_member_declaration" {
 			continue
 		}
+
 		var fieldType string
 		var identifiers []string
 		var identifiersRange []idx.Range
@@ -90,14 +94,26 @@ func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceC
 		}
 	}
 
-	_struct := idx.NewStruct(
-		name,
-		structFields,
-		doc.ModuleName,
-		doc.URI,
-		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
-	)
+	var _struct idx.Struct
+	if isUnion {
+		_struct = idx.NewUnion(
+			name,
+			structFields,
+			doc.ModuleName,
+			doc.URI,
+			idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+			idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+		)
+	} else {
+		_struct = idx.NewStruct(
+			name,
+			structFields,
+			doc.ModuleName,
+			doc.URI,
+			idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+			idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+		)
+	}
 
 	return _struct
 }

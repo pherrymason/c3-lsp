@@ -24,8 +24,8 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
   - [x] Structs
     - [x] Struct members
     - [x] Struct methods
-  - [ ] Unions
-    - [ ] Union members
+  - [x] Unions
+    - [x] Union members
   - [~] defines
   - [ ] Interfaces
   - [ ] macros
