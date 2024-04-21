@@ -20,7 +20,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
     - [x] Function return type
   - [x] Enums + Enumerators
     - [x] base type 
-  - [ ] [Faults](https://c3-lang.org/references/docs/types/#faults)
+  - [x] [Faults](https://c3-lang.org/references/docs/types/#faults)
   - [x] Structs
     - [x] Struct members
     - [x] Struct methods
