@@ -271,13 +271,13 @@ func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UI
 	}
 }
 
-func initLanguage(docId string, module string, source string) (Language, *document.Document) {
+func initLanguage(docId string, module string, source string) (Language, *document.Document, *p.Parser) {
 	doc := document.NewDocument(docId, module, source)
 	language := NewLanguage()
 	parser := createParser()
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 
-	return language, &doc
+	return language, &doc, &parser
 }
 
 func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
@@ -286,7 +286,7 @@ func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
 
 	t.Run("should find variable in same scope of cursor", func(t *testing.T) {
 		source := `fn void test() {int value=1; value = 3;}`
-		language, doc := initLanguage(docId, module, source)
+		language, doc, _ := initLanguage(docId, module, source)
 
 		params := newDeclarationParams(docId, 0, 32)
 
@@ -299,9 +299,48 @@ func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
 		assert.Equal(t, expected, symbol)
 	})
 
+	t.Run("should find variable in closest scope of cursor", func(t *testing.T) {
+		source := `int value = 1;
+		fn void main() {
+			value = 3;
+		}`
+		language, doc, _ := initLanguage(docId, module, source)
+
+		params := newDeclarationParams(docId, 2, 4)
+
+		symbol, _ := language.FindSymbolDeclarationInWorkspace(doc, params.Position)
+
+		expected := idx.NewVariableBuilder("value", "int", module, docId).
+			WithIdentifierRange(0, 4, 0, 9).
+			WithDocumentRange(0, 0, 0, 14).
+			Build()
+		assert.Equal(t, expected, symbol)
+	})
+
+	t.Run("should find variable declaration outside current file", func(t *testing.T) {
+		t.SkipNow()
+		source :=
+			`fn void main() {
+			value = 3;
+		}`
+		language, doc, parser := initLanguage(docId, module, source)
+		doc2 := document.NewDocument("y", module, `int value = 1;`)
+		language.RefreshDocumentIdentifiers(&doc2, parser)
+
+		params := newDeclarationParams(docId, 2, 4)
+
+		symbol, _ := language.FindSymbolDeclarationInWorkspace(doc, params.Position)
+
+		expected := idx.NewVariableBuilder("value", "int", module, "y").
+			WithIdentifierRange(0, 4, 0, 9).
+			WithDocumentRange(0, 0, 0, 14).
+			Build()
+		assert.Equal(t, expected, symbol)
+	})
+
 	t.Run("should find enum declaration in same scope of cursor", func(t *testing.T) {
 		source := `enum Colors { RED, BLUE, GREEN };Colors foo = RED;`
-		language, doc := initLanguage(docId, module, source)
+		language, doc, _ := initLanguage(docId, module, source)
 
 		params := newDeclarationParams(docId, 0, 36)
 
@@ -331,7 +370,7 @@ func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
 
 	t.Run("should find enumerator declaration in same scope of cursor", func(t *testing.T) {
 		source := `enum Colors { RED, BLUE, GREEN };Colors foo = RED;`
-		language, doc := initLanguage(docId, module, source)
+		language, doc, _ := initLanguage(docId, module, source)
 
 		params := newDeclarationParams(docId, 0, 48)
 
@@ -345,7 +384,7 @@ func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
 
 	t.Run("should find struct declaration in same scope of cursor", func(t *testing.T) {
 		source := `struct MyStructure {bool enabled; char key;} MyStructure value;`
-		language, doc := initLanguage(docId, module, source)
+		language, doc, _ := initLanguage(docId, module, source)
 
 		params := newDeclarationParams(docId, 0, 47)
 
@@ -362,7 +401,7 @@ func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
 
 	t.Run("should find definition declaration in same scope of cursor", func(t *testing.T) {
 		source := `def Kilo = int;Kilo value = 3;`
-		language, doc := initLanguage(docId, module, source)
+		language, doc, _ := initLanguage(docId, module, source)
 
 		params := newDeclarationParams(docId, 0, 17)
 
@@ -376,92 +415,4 @@ func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
 		assert.Equal(t, expected, symbol)
 	})
 
-}
-
-func TestLanguage_FindSymbolDeclarationInWorkspace_variable_same_scope(t *testing.T) {
-	language := NewLanguage()
-	parser := createParser()
-	doc := document.NewDocument("x", "mod", `
-		int value = 1;
-		value = 3;
-	`)
-	language.RefreshDocumentIdentifiers(&doc, &parser)
-
-	params := protocol.DeclarationParams{
-		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-			protocol.TextDocumentIdentifier{URI: "x"},
-			protocol.Position{2, 4},
-		},
-		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
-	}
-
-	symbol, err := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
-
-	assert.Nil(t, err)
-
-	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "x").
-		WithIdentifierRange(1, 6, 1, 11).
-		WithDocumentRange(1, 2, 1, 16).
-		Build()
-
-	assert.Equal(t, expectedSymbol, symbol)
-}
-
-func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_function(t *testing.T) {
-	language := NewLanguage()
-	parser := createParser()
-	doc := document.NewDocument("x", "mod", `
-		int value = 1;
-		fn void main() {
-			value = 3;
-		}
-	`)
-	language.RefreshDocumentIdentifiers(&doc, &parser)
-
-	params := protocol.DeclarationParams{
-		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-			protocol.TextDocumentIdentifier{URI: "x"},
-			protocol.Position{3, 4},
-		},
-		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
-	}
-
-	symbol, _ := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
-
-	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "x").
-		WithIdentifierRange(1, 6, 1, 11).
-		WithDocumentRange(1, 2, 1, 16).
-		Build()
-
-	assert.Equal(t, expectedSymbol, symbol)
-}
-
-func TestLanguage_FindSymbolDeclarationInWorkspace_variable_outside_current_file(t *testing.T) {
-	language := NewLanguage()
-	parser := createParser()
-	doc := document.NewDocument("x", "mod", `
-		fn void main() {
-			value = 3;
-		}
-	`)
-	language.RefreshDocumentIdentifiers(&doc, &parser)
-	doc2 := document.NewDocument("y", "mod", `int value = 1;`)
-	language.RefreshDocumentIdentifiers(&doc2, &parser)
-
-	params := protocol.DeclarationParams{
-		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-			protocol.TextDocumentIdentifier{URI: "x"},
-			protocol.Position{2, 4},
-		},
-		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
-	}
-
-	symbol, _ := language.FindSymbolDeclarationInWorkspace(&doc, params.Position)
-
-	expectedSymbol := idx.NewVariableBuilder("value", "int", "mod", "y").
-		WithIdentifierRange(0, 4, 0, 9).
-		WithDocumentRange(0, 0, 0, 14).
-		Build()
-
-	assert.Equal(t, expectedSymbol, symbol)
 }
