@@ -30,6 +30,7 @@ const FaultDeclaration = `(fault_declaration) @fault_doc`
 const StructDeclaration = `(struct_declaration) @struct_dec`
 const DefineDeclaration = `(define_declaration) @def_dec`
 const InterfaceDeclaration = `(interface_declaration) @interface_dec`
+const MacroDeclaration = `(macro_declaration) @macro_dec`
 
 type Parser struct {
 	Logger interface{}
@@ -55,6 +56,7 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
  (source_file ` + EnumDeclaration + `)
  (source_file ` + FaultDeclaration + `)
  (source_file ` + InterfaceDeclaration + `)
+ (source_file ` + MacroDeclaration + `)
 ]`
 
 	/*
@@ -107,10 +109,12 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 			case "fault_declaration":
 				fault := p.nodeToFault(doc, c.Node, sourceCode)
 				scopeTree.AddFault(fault)
-
 			case "interface_declaration":
 				interf := p.nodeToInterface(doc, c.Node, sourceCode)
 				scopeTree.AddInterface(interf)
+			case "macro_declaration":
+				macro := p.nodeToMacro(doc, c.Node, sourceCode)
+				scopeTree.AddFunction(macro)
 			}
 		}
 	}
@@ -167,7 +171,7 @@ func (p *Parser) FindFunctionDeclarations(doc *document.Document) []idx.Indexabl
 			c.Node.Parent().Type()
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				identifier := idx.NewFunction(content, "", []string{}, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), protocol.CompletionItemKindFunction)
+				identifier := idx.NewFunction(content, "", []string{}, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()))
 
 				identifiers = append(identifiers, identifier)
 			}

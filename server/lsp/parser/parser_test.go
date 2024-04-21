@@ -235,23 +235,28 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 }
 
 func TestExtractSymbols_find_macro(t *testing.T) {
-	if true {
-		t.Skip("Incomplete until defining macros in grammar.js")
-	}
-
-	sourceCode := `
-	macro void log(LogLevel $level, String format, args...) {
-		if (log_level != OFF && $level <= log_level) {
-			io::fprintf(&log_file, "[%s] ", $level)!!;
-			io::fprintfn(&log_file, format, ...args)!!;
-		}
+	/*
+		sourceCode := `
+		macro void log(LogLevel $level, String format, args...) {
+			if (log_level != OFF && $level <= log_level) {
+				io::fprintf(&log_file, "[%s] ", $level)!!;
+				io::fprintfn(&log_file, format, ...args)!!;
+			}
+		}`*/
+	source := `
+	macro m(x) {
+    	return x + 2;
 	}`
 
-	_ = document.NewDocument("x", "x", sourceCode)
-	//	parser := createParser()
-	//	tree := parser.ExtractSymbols(&doc)
+	doc := document.NewDocument("docId", "module", source)
+	parser := createParser()
+	symbols := parser.ExtractSymbols(&doc)
 
-	assert.Equal(t, true, true)
+	fn, found := symbols.GetChildrenFunctionByName("m")
+	assert.True(t, found)
+	assert.Equal(t, "m", fn.GetName())
+	assert.Equal(t, "x", fn.Variables["x"].GetName())
+	assert.Equal(t, "", fn.Variables["x"].GetType())
 }
 
 func dfs(n *sitter.Node, level int) {

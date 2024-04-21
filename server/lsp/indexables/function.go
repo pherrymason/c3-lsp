@@ -35,12 +35,16 @@ func NewAnonymousScopeFunction(name string, module string, docId string, docRang
 	return newFunctionType(Anonymous, "", name, module, nil, module, docId, Range{}, docRange, kind)
 }
 
-func NewFunction(name string, returnType string, argumentIds []string, module string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(UserDefined, "", name, returnType, argumentIds, module, docId, idRange, docRange, kind)
+func NewFunction(name string, returnType string, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
+	return newFunctionType(UserDefined, "", name, returnType, argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
 }
 
 func NewTypeFunction(typeIdentifier string, name string, returnType string, argumentIds []string, module string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return newFunctionType(UserDefined, typeIdentifier, name, returnType, argumentIds, module, docId, idRange, docRange, kind)
+}
+
+func NewMacro(name string, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
+	return newFunctionType(UserDefined, "", name, "", argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
 }
 
 func newFunctionType(fType FunctionType, typeIdentifier string, name string, returnType string, argumentIds []string, module string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
