@@ -150,6 +150,46 @@ func TestParse_fault(t *testing.T) {
 	})
 }
 
+func TestParse_interface(t *testing.T) {
+	module := "x"
+	docId := "doc"
+	source := `interface MyName
+	{
+		fn String method();
+	};`
+
+	doc := document.NewDocument(docId, module, source)
+	parser := createParser()
+
+	t.Run("finds interface", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		expected := idx.NewFaultBuilder("MyName", "", module, docId).
+			Build()
+
+		assert.NotNil(t, symbols.Interfaces["MyName"])
+		assert.Equal(t, expected.GetName(), symbols.Interfaces["MyName"].GetName())
+	})
+
+	t.Run("reads ranges for interface", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		found := symbols.Interfaces["MyName"]
+		assert.Equal(t, idx.NewRange(0, 0, 3, 2), found.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(0, 10, 0, 16), found.GetIdRange(), "Wrong identifier range")
+	})
+
+	t.Run("finds defined methods", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		_interface := symbols.Interfaces["MyName"]
+		m := _interface.GetMethod("method")
+		assert.Equal(t, "method", m.GetName())
+		assert.Equal(t, "String", m.GetReturnType())
+		assert.Equal(t, idx.NewRange(2, 12, 2, 18), m.GetIdRange())
+	})
+}
+
 func TestExtractSymbols_finds_definition(t *testing.T) {
 	source := `
 	def Kilo = int;

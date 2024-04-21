@@ -29,6 +29,7 @@ const EnumDeclaration = `(enum_declaration) @enum_dec`
 const FaultDeclaration = `(fault_declaration) @fault_doc`
 const StructDeclaration = `(struct_declaration) @struct_dec`
 const DefineDeclaration = `(define_declaration) @def_dec`
+const InterfaceDeclaration = `(interface_declaration) @interface_dec`
 
 type Parser struct {
 	Logger interface{}
@@ -53,6 +54,7 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
  (source_file ` + StructDeclaration + `)
  (source_file ` + EnumDeclaration + `)
  (source_file ` + FaultDeclaration + `)
+ (source_file ` + InterfaceDeclaration + `)
 ]`
 
 	/*
@@ -76,33 +78,39 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 		for _, c := range m.Captures {
 			content := c.Node.Content(sourceCode)
 			nodeType := c.Node.Type()
-			if nodeType == "global_declaration" {
+
+			switch nodeType {
+			case "global_declaration":
 				variable := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
 				scopeTree.AddVariable(variable)
-			} else if nodeType == "identifier" {
+			case "identifier":
 				switch c.Node.Parent().Type() {
 				case "var_declaration":
 					variable := p.nodeToVariable(doc, c.Node.Parent(), c.Node, sourceCode, content)
 					scopeTree.AddVariable(variable)
 				}
-			} else if nodeType == "func_definition" {
+			case "func_definition":
 				function := p.nodeToFunction(doc, c.Node, sourceCode)
 				scopeTree.AddFunction(function)
-			} else if nodeType == "enum_declaration" {
+			case "enum_declaration":
 				enum := p.nodeToEnum(doc, c.Node, sourceCode)
 				scopeTree.AddEnum(enum)
-			} else if nodeType == "struct_declaration" {
+			case "struct_declaration":
 				_struct := p.nodeToStruct(doc, c.Node, sourceCode)
 				scopeTree.AddStruct(_struct)
-			} else if nodeType == "define_declaration" {
+			case "define_declaration":
 				def := p.nodeToDef(doc, c.Node, sourceCode)
 				scopeTree.AddDef(def)
-			} else if nodeType == "const_declaration" {
+			case "const_declaration":
 				_const := p.nodeToConstant(doc, c.Node, sourceCode)
 				scopeTree.AddVariable(_const)
-			} else if nodeType == "fault_declaration" {
+			case "fault_declaration":
 				fault := p.nodeToFault(doc, c.Node, sourceCode)
 				scopeTree.AddFault(fault)
+
+			case "interface_declaration":
+				interf := p.nodeToInterface(doc, c.Node, sourceCode)
+				scopeTree.AddInterface(interf)
 			}
 		}
 	}

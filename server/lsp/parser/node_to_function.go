@@ -70,10 +70,11 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
 		)
 	}
 
-	variables := p.FindVariableDeclarations(doc, node)
-	variables = append(arguments, variables...)
-
-	symbol.AddVariables(variables)
+	if node.ChildByFieldName("body") != nil {
+		variables := p.FindVariableDeclarations(doc, node)
+		variables = append(arguments, variables...)
+		symbol.AddVariables(variables)
+	}
 
 	return symbol
 }

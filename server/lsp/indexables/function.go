@@ -26,6 +26,7 @@ type Function struct {
 	Structs           map[string]Struct
 	Defs              map[string]Def
 	ChildrenFunctions []Function
+	Interfaces        map[string]Interface
 
 	BaseIndexable
 }
@@ -62,6 +63,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 		Structs:           make(map[string]Struct),
 		Defs:              make(map[string]Def),
 		ChildrenFunctions: []Function{},
+		Interfaces:        make(map[string]Interface),
 	}
 }
 
@@ -128,12 +130,11 @@ func (f *Function) AddFault(fault Fault) {
 }
 
 func (f *Function) AddFunction(f2 Function) {
-	/*id := f2.name
-	if f2.typeIdentifier != "" {
-		id = f2.typeIdentifier + "." + f2.name
-	}*/
-
 	f.ChildrenFunctions = append(f.ChildrenFunctions, f2)
+}
+
+func (f *Function) AddInterface(_interface Interface) {
+	f.Interfaces[_interface.name] = _interface
 }
 
 func (f Function) GetChildrenFunctionByName(name string) (fn Function, found bool) {
