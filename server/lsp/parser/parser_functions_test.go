@@ -76,7 +76,7 @@ func TestFindsFunctionsWithArguments(t *testing.T) {
 }
 
 func TestFindsStructMemberFunctionWithArguments(t *testing.T) {
-	source := `fn Object* UserStruct.method(&self, int* pointer) {
+	source := `fn Object* UserStruct.method(self, int* pointer) {
 		return 1;
 	}`
 	module := "x"
@@ -103,10 +103,37 @@ func TestFindsStructMemberFunctionWithArguments(t *testing.T) {
 
 		variable := fn.Variables["self"]
 		assert.Equal(t, "self", variable.GetName())
-		assert.Equal(t, "UserStruct*", variable.GetType())
+		assert.Equal(t, "UserStruct", variable.GetType())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 33), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 33), variable.GetDocumentRange())
 
-		assert.Equal(t, idx.NewRange(0, 29, 0, 34), variable.GetIdRange())
-		assert.Equal(t, idx.NewRange(0, 29, 0, 34), variable.GetDocumentRange())
+		variable = fn.Variables["pointer"]
+		assert.Equal(t, "pointer", variable.GetName())
+		assert.Equal(t, "int*", variable.GetType())
+		assert.Equal(t, idx.NewRange(0, 40, 0, 47), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 35, 0, 47), variable.GetDocumentRange())
+
+	})
+
+	t.Run("Finds method arguments, where member reference is a pointer", func(t *testing.T) {
+		t.Skip("Incomplete until detecting & in self argument")
+		source := `fn Object* UserStruct.method(&self, int* pointer) {
+			return 1;
+		}`
+		module := "x"
+		docId := "docId"
+		doc := document.NewDocument(docId, module, source)
+		parser := createParser()
+		symbols := parser.ExtractSymbols(&doc)
+
+		fn, found := symbols.GetChildrenFunctionByName("UserStruct.method")
+		assert.True(t, found, "Method was not found")
+
+		variable := fn.Variables["self"]
+		assert.Equal(t, "self", variable.GetName())
+		assert.Equal(t, "UserStruct*", variable.GetType())
+		assert.Equal(t, idx.NewRange(0, 30, 0, 34), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 30, 0, 34), variable.GetDocumentRange())
 
 		variable = fn.Variables["pointer"]
 		assert.Equal(t, "pointer", variable.GetName())

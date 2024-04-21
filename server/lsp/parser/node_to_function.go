@@ -33,7 +33,7 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
 				continue
 			}
 
-			argument := p.nodeToArgument(doc, argNode, sourceCode)
+			argument := p.nodeToArgument(doc, argNode, typeIdentifier, sourceCode)
 			arguments = append(
 				arguments,
 				argument,
@@ -98,7 +98,7 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
       seq($.ct_ident, '...'),								// 2
     ),
 */
-func (p *Parser) nodeToArgument(doc *document.Document, argNode *sitter.Node, sourceCode []byte) idx.Variable {
+func (p *Parser) nodeToArgument(doc *document.Document, argNode *sitter.Node, methodIdentifier string, sourceCode []byte) idx.Variable {
 	var identifier string = ""
 	var idRange idx.Range
 	var argType string = ""
@@ -109,11 +109,12 @@ func (p *Parser) nodeToArgument(doc *document.Document, argNode *sitter.Node, so
 		switch n.Type() {
 		case "type":
 			argType = n.Content(sourceCode)
-			break
 		case "ident":
 			identifier = n.Content(sourceCode)
 			idRange = idx.NewRangeFromSitterPositions(n.StartPoint(), n.EndPoint())
-			break
+			if identifier == "self" && methodIdentifier != "" {
+				argType = methodIdentifier
+			}
 		}
 	}
 
