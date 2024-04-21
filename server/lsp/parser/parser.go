@@ -26,6 +26,7 @@ const LocalVarDeclaration = `(func_definition
  )`
 const FunctionDeclarationQuery = `(func_definition) @function_dec`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
+const FaultDeclaration = `(fault_declaration) @fault_doc`
 const StructDeclaration = `(struct_declaration) @struct_dec`
 const DefineDeclaration = `(define_declaration) @def_dec`
 
@@ -51,6 +52,7 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
  (source_file ` + DefineDeclaration + `)
  (source_file ` + StructDeclaration + `)
  (source_file ` + EnumDeclaration + `)
+ (source_file ` + FaultDeclaration + `)
 ]`
 
 	/*
@@ -98,6 +100,9 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 			} else if nodeType == "const_declaration" {
 				_const := p.nodeToConstant(doc, c.Node, sourceCode)
 				scopeTree.AddVariable(_const)
+			} else if nodeType == "fault_declaration" {
+				fault := p.nodeToFault(doc, c.Node, sourceCode)
+				scopeTree.AddFault(fault)
 			}
 		}
 	}

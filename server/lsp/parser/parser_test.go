@@ -105,6 +105,51 @@ func TestFindsUnTypedEnums(t *testing.T) {
 	})
 }
 
+func TestParse_fault(t *testing.T) {
+	module := "x"
+	docId := "doc"
+	source := `fault IOResult
+	{
+	  IO_ERROR,
+	  PARSE_ERROR
+	};`
+
+	doc := document.NewDocument(docId, module, source)
+	parser := createParser()
+
+	t.Run("finds Fault identifier", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		expected := idx.NewFaultBuilder("IOResult", "", module, docId).
+			Build()
+
+		assert.NotNil(t, symbols.Faults["IOResult"])
+		assert.Equal(t, expected.GetName(), symbols.Faults["IOResult"].GetName())
+		assert.Equal(t, expected.GetType(), symbols.Faults["IOResult"].GetType())
+	})
+
+	t.Run("reads ranges for fault", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		found := symbols.Faults["IOResult"]
+		assert.Equal(t, idx.NewRange(0, 0, 4, 2), found.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(0, 6, 0, 14), found.GetIdRange(), "Wrong identifier range")
+	})
+
+	t.Run("finds defined enumerators", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		fault := symbols.Faults["IOResult"]
+		e := fault.GetConstant("IO_ERROR")
+		assert.Equal(t, "IO_ERROR", e.GetName())
+		assert.Equal(t, idx.NewRange(2, 3, 2, 11), e.GetIdRange())
+
+		e = fault.GetConstant("PARSE_ERROR")
+		assert.Equal(t, "PARSE_ERROR", e.GetName())
+		assert.Equal(t, idx.NewRange(3, 3, 3, 14), e.GetIdRange())
+	})
+}
+
 func TestExtractSymbols_finds_definition(t *testing.T) {
 	source := `
 	def Kilo = int;

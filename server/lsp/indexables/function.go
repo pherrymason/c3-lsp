@@ -22,6 +22,7 @@ type Function struct {
 
 	Variables         map[string]Variable
 	Enums             map[string]Enum
+	Faults            map[string]Fault
 	Structs           map[string]Struct
 	Defs              map[string]Def
 	ChildrenFunctions []Function
@@ -55,6 +56,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 			docRange:    docRange,
 			Kind:        kind,
 		},
+		Faults:            make(map[string]Fault),
 		Variables:         make(map[string]Variable),
 		Enums:             make(map[string]Enum),
 		Structs:           make(map[string]Struct),
@@ -119,6 +121,10 @@ func (f *Function) AddVariable(variable Variable) {
 
 func (f *Function) AddEnum(enum Enum) {
 	f.Enums[enum.name] = enum
+}
+
+func (f *Function) AddFault(fault Fault) {
+	f.Faults[fault.name] = fault
 }
 
 func (f *Function) AddFunction(f2 Function) {
