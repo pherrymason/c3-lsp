@@ -14,7 +14,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 **TODO list**
 - Parser:
   - [x] Variables & type
-  - [ ] [Global constants]()
+  - [x] [Global constants]()
   - [x] Functions
     - [x] Function parameters
     - [x] Function return type

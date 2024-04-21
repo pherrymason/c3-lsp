@@ -11,7 +11,14 @@ import (
 func (p *Parser) nodeToVariable(doc *document.Document, variableNode *sitter.Node, identifierNode *sitter.Node, sourceCode []byte, content string) idx.Variable {
 	typeNode := identifierNode.PrevSibling()
 	typeNodeContent := typeNode.Content(sourceCode)
-	variable := idx.NewVariable(content, typeNodeContent, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()), idx.NewRangeFromSitterPositions(variableNode.StartPoint(), variableNode.EndPoint()))
+	variable := idx.NewVariable(
+		content,
+		typeNodeContent,
+		doc.ModuleName,
+		doc.URI,
+		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()),
+		idx.NewRangeFromSitterPositions(variableNode.StartPoint(), variableNode.EndPoint()),
+	)
 
 	return variable
 }
@@ -81,4 +88,51 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 	}
 
 	return variable
+}
+
+/*
+		const_declaration: $ => seq(
+	      'const',
+	      field('type', optional($.type)),
+	      $.const_ident,
+	      optional($.attributes),
+	      optional($._assign_right_expr),
+	      ';'
+	    )
+*/
+func (p *Parser) nodeToConstant(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Variable {
+	var constant idx.Variable
+	var typeNodeContent string
+	var idNode *sitter.Node
+
+	fmt.Println(node.ChildCount())
+	fmt.Println(node)
+	fmt.Println(node.Content(sourceCode))
+
+	for i := uint32(0); i < node.ChildCount(); i++ {
+		n := node.Child(int(i))
+		switch n.Type() {
+		case "type":
+			typeNodeContent = n.Content(sourceCode)
+
+		case "const_ident":
+			idNode = n
+		}
+	}
+
+	constant = idx.NewConstant(
+		idNode.Content(sourceCode),
+		typeNodeContent,
+		doc.ModuleName,
+		doc.URI,
+		idx.NewRangeFromSitterPositions(
+			idNode.StartPoint(),
+			idNode.EndPoint(),
+		),
+		idx.NewRangeFromSitterPositions(
+			node.StartPoint(),
+			node.EndPoint()),
+	)
+
+	return constant
 }

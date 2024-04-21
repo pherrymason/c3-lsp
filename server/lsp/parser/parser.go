@@ -20,6 +20,7 @@ const VarDeclarationQuery = `(var_declaration
 		name: (identifier) @variable_name
 	)`
 const GlobalVarDeclaration = `(global_declaration) @global_decl`
+const ConstantDeclaration = `(const_declaration) @const_decl`
 const LocalVarDeclaration = `(func_definition
 	body: (macro_func_body (compound_stmt (declaration_stmt) @local) )
  )`
@@ -45,6 +46,7 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	query := `[
  (source_file ` + GlobalVarDeclaration + `)
  (source_file ` + LocalVarDeclaration + `)
+ (source_file ` + ConstantDeclaration + `)
  (source_file ` + FunctionDeclarationQuery + `)
  (source_file ` + DefineDeclaration + `)
  (source_file ` + StructDeclaration + `)
@@ -75,10 +77,6 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 			if nodeType == "global_declaration" {
 				variable := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
 				scopeTree.AddVariable(variable)
-				/* else if nodeType == "declaration_stmt" {
-					variable := p.localVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
-					scopeTree.AddVariable(variable)
-				}*/
 			} else if nodeType == "identifier" {
 				switch c.Node.Parent().Type() {
 				case "var_declaration":
@@ -97,6 +95,9 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 			} else if nodeType == "define_declaration" {
 				def := p.nodeToDef(doc, c.Node, sourceCode)
 				scopeTree.AddDef(def)
+			} else if nodeType == "const_declaration" {
+				_const := p.nodeToConstant(doc, c.Node, sourceCode)
+				scopeTree.AddVariable(_const)
 			}
 		}
 	}

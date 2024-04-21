@@ -48,3 +48,20 @@ func TestExtractSymbols_variables_declared_in_function(t *testing.T) {
 	assertVariableFound(t, "value", function)
 	assertSameVariable(t, expectedVariableBldr.Build(), function.Variables["value"], "value variable")
 }
+
+func TestExtractSymbols_find_constants(t *testing.T) {
+
+	source := `const int A_VALUE = 12;`
+
+	doc := document.NewDocument("docId", "mod", source)
+	parser := createParser()
+
+	symbols := parser.ExtractSymbols(&doc)
+
+	found := symbols.Variables["A_VALUE"]
+	assert.Equal(t, "A_VALUE", found.GetName(), "Variable name")
+	assert.Equal(t, "int", found.GetType(), "Variable type")
+	assert.True(t, found.IsConstant())
+	assert.Equal(t, idx.NewRange(0, 0, 0, 23), found.GetDocumentRange())
+	assert.Equal(t, idx.NewRange(0, 10, 0, 17), found.GetIdRange())
+}

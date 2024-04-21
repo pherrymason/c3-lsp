@@ -24,7 +24,20 @@ func NewVariable(name string, variableType string, module string, uri string, id
 			Kind:        protocol.CompletionItemKindVariable,
 		},
 	}
+}
 
+func NewConstant(name string, variableType string, module string, uri string, idRange Range, docRange Range) Variable {
+	return Variable{
+		name: name,
+		Type: variableType,
+		BaseIndexable: BaseIndexable{
+			module:      module,
+			documentURI: uri,
+			idRange:     idRange,
+			docRange:    docRange,
+			Kind:        protocol.CompletionItemKindConstant,
+		},
+	}
 }
 
 func (v Variable) GetType() string {
@@ -39,6 +52,10 @@ func (v Variable) GetModule() string { return v.module }
 
 func (v Variable) GetKind() protocol.CompletionItemKind {
 	return v.Kind
+}
+
+func (v Variable) IsConstant() bool {
+	return v.Kind == protocol.CompletionItemKindConstant
 }
 
 func (v Variable) GetDocumentURI() string {
