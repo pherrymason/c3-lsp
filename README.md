@@ -45,14 +45,6 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [ ] Rename
 
 
-## YACC to TreeSitter 
-**Experiment** based on https://github.com/miks1965/yacc-to-tree-sitter to convert C3 yacc grammar file to treesitter grammar.js
-
-It is not complete, as it ignores lexical rules.
-
-
-
-
 ## Useful links:
 - LSP specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
 - treesitter
