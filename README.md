@@ -40,7 +40,8 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [ ] Complete Hover
 - [ ] Complete Go to declaration
   - [x] Find symbol in same scope
-  - [ ] Find symbol in parent scope
+  - [x] Find symbol in parent scope
+  - [x] Find symbol present in same module, but different file
   - [ ] Find symbol in imported module
   - [ ] Find symbol in stdlib
 - [ ] Go to definition
