@@ -3,6 +3,7 @@ package language
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
@@ -30,19 +31,34 @@ func readC3File(filePath string) string {
 }
 
 func installDocuments(language *Language, parser *p.Parser) map[string]document.Document {
-	documents := make(map[string]document.Document, 0)
 	var fileContent string
 
-	fileContent = readC3File("./test_files/emu.c3")
-	documents["emu.c3"] = document.NewDocument("emu.c3", "?", fileContent)
+	filenames := []string{"app.c3", "app_helper.c3", "emu.c3", "definitions.c3"}
+	baseDir := "./test_files/"
+	documents := make(map[string]document.Document, 0)
 
-	fileContent = readC3File("./test_files/definitions.c3")
-	documents["definitions.c3"] = document.NewDocument("definitions.c3", "?", fileContent)
-
-	for _, value := range documents {
-		language.RefreshDocumentIdentifiers(&value, parser)
+	for _, filename := range filenames {
+		// Construir la ruta completa al archivo
+		fullPath := filepath.Join(baseDir, filename)
+		fileContent = readC3File(fullPath)
+		documents[filename] = document.NewDocument(filename, "?", fileContent)
+		doc := documents[filename]
+		language.RefreshDocumentIdentifiers(&doc, parser)
 	}
+	/*
+		fileContent = readC3File("./test_files/app.c3")
+		documents["app.c3"] = document.NewDocument("app.c3", "?", fileContent)
 
+		fileContent = readC3File("./test_files/emu.c3")
+		documents["emu.c3"] = document.NewDocument("emu.c3", "?", fileContent)
+
+		fileContent = readC3File("./test_files/definitions.c3")
+		documents["definitions.c3"] = document.NewDocument("definitions.c3", "?", fileContent)
+
+		for _, value := range documents {
+			language.RefreshDocumentIdentifiers(&value, parser)
+		}
+	*/
 	return documents
 }
 
@@ -55,12 +71,16 @@ func initTestEnv() (*Language, map[string]document.Document) {
 	return &language, documents
 }
 
-func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
+func buildPosition(line protocol.UInteger, character protocol.UInteger) protocol.Position {
+	return protocol.Position{Line: line - 1, Character: character}
+}
+
+func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 	language, documents := initTestEnv()
 
 	t.Run("Find local variable definition, with cursor in same declaration", func(t *testing.T) {
 		searchParams := NewSearchParams("emulator", "emu.c3")
-		position := protocol.Position{8, 9}
+		position := buildPosition(10, 9)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -73,7 +93,7 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 
 	t.Run("Find local variable definition from usage", func(t *testing.T) {
 		searchParams := NewSearchParams("emulator", "emu.c3")
-		position := protocol.Position{11, 10}
+		position := buildPosition(12, 10)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -84,9 +104,9 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 		assert.Equal(t, "Emu", variable.GetType())
 	})
 
-	t.Run("should find definition declaration in same scope of cursor", func(t *testing.T) {
+	t.Run("should find struct declaration in variable declaration", func(t *testing.T) {
 		searchParams := NewSearchParams("Emu", "emu.c3")
-		position := protocol.Position{8, 2}
+		position := buildPosition(10, 2)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -96,9 +116,9 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 		assert.Equal(t, "Emu", _struct.GetName())
 	})
 
-	t.Run("should find struct declaration in same scope of cursor", func(t *testing.T) {
+	t.Run("should find struct declaration in function return type", func(t *testing.T) {
 		searchParams := NewSearchParams("Emu", "emu.c3")
-		position := protocol.Position{8, 2}
+		position := buildPosition(9, 4)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -109,8 +129,10 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 	})
 
 	t.Run("Find local struct member variable definition", func(t *testing.T) {
-		position := protocol.Position{9, 13}
+
+		position := buildPosition(11, 11)
 		doc := documents["emu.c3"]
+		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
 		searchParams, _ := buildSearchParams(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
@@ -123,8 +145,8 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 	})
 
 	t.Run("Find local enum variable definition", func(t *testing.T) {
-		searchParams := NewSearchParams("status", "emu.c3")
-		position := protocol.Position{15, 5}
+		searchParams := NewSearchParams("status", "app.c3")
+		position := buildPosition(8, 5)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -135,8 +157,8 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 		assert.Equal(t, "WindowStatus", variable.GetType())
 	})
 	t.Run("Find local enumerator definition", func(t *testing.T) {
-		searchParams := NewSearchParams("BACKGROUND", "emu.c3")
-		position := protocol.Position{16, 12}
+		searchParams := NewSearchParams("BACKGROUND", "app.c3")
+		position := buildPosition(8, 17)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -147,7 +169,7 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 
 	t.Run("Find local definition definition", func(t *testing.T) {
 		searchParams := NewSearchParams("Kilo", "definitions.c3")
-		position := protocol.Position{1, 2}
+		position := buildPosition(2, 2)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -156,8 +178,8 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 	})
 
 	t.Run("Find local variable definition in function arguments", func(t *testing.T) {
-		searchParams := NewSearchParams("tick", "emu.c3")
-		position := protocol.Position{14, 4}
+		searchParams := NewSearchParams("tick", "app.c3")
+		position := buildPosition(6, 4)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -169,8 +191,8 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 	})
 
 	t.Run("Find local function definition", func(t *testing.T) {
-		searchParams := NewSearchParams("run", "emu.c3")
-		position := protocol.Position{10, 2}
+		searchParams := NewSearchParams("run", "app.c3")
+		position := buildPosition(13, 5)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -218,6 +240,23 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 		//
 		// MyStruct object;
 		// object.search();
+	})
+}
+
+func TestLanguage_findClosestSymbolDeclaration_in_same_module(t *testing.T) {
+	language, _ := initTestEnv()
+
+	t.Run("Find variable definition in same module", func(t *testing.T) {
+		searchParams := NewSearchParams("Cpu", "emu.c3")
+		position := protocol.Position{2, 2}
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		variable := resolvedSymbol.(idx.Variable)
+		assert.Equal(t, "emulator", resolvedSymbol.GetName())
+		assert.Equal(t, "Emu", variable.GetType())
 	})
 }
 
