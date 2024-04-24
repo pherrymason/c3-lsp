@@ -31,6 +31,8 @@ const StructDeclaration = `(struct_declaration) @struct_dec`
 const DefineDeclaration = `(define_declaration) @def_dec`
 const InterfaceDeclaration = `(interface_declaration) @interface_dec`
 const MacroDeclaration = `(macro_declaration) @macro_dec`
+const ModuleDeclaration = `(module) @module_dec`
+const ImportDeclaration = `(import_declaration) @import_dec`
 
 type Parser struct {
 	Logger interface{}
@@ -47,6 +49,8 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	fmt.Println(doc.ContextSyntaxTree.RootNode())
 
 	query := `[
+ (source_file ` + ModuleDeclaration + `)
+ (source_file ` + ImportDeclaration + `)
  (source_file ` + GlobalVarDeclaration + `)
  (source_file ` + LocalVarDeclaration + `)
  (source_file ` + ConstantDeclaration + `)
@@ -78,19 +82,26 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 		}
 
 		for _, c := range m.Captures {
-			content := c.Node.Content(sourceCode)
+			//content := c.Node.Content(sourceCode)
 			nodeType := c.Node.Type()
 
 			switch nodeType {
+			case "module":
+				doc.ModuleName = p.nodeToModule(doc, c.Node, sourceCode)
+				scopeTree.ChangeModule(doc.ModuleName)
+
+			case "import_declaration":
+				doc.AddImport(p.nodeToImport(doc, c.Node, sourceCode))
+
 			case "global_declaration":
-				variable := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+				variables := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+				scopeTree.AddVariables(variables)
+			/*case "identifier":
+			switch c.Node.Parent().Type() {
+			case "var_declaration":
+				variable := p.nodeToVariable(doc, c.Node.Parent(), c.Node, sourceCode, content)
 				scopeTree.AddVariable(variable)
-			case "identifier":
-				switch c.Node.Parent().Type() {
-				case "var_declaration":
-					variable := p.nodeToVariable(doc, c.Node.Parent(), c.Node, sourceCode, content)
-					scopeTree.AddVariable(variable)
-				}
+			}*/
 			case "func_definition":
 				function := p.nodeToFunction(doc, c.Node, sourceCode)
 				scopeTree.AddFunction(function)
@@ -143,8 +154,9 @@ func (p *Parser) FindVariableDeclarations(doc *document.Document, node *sitter.N
 
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				funcVariable := p.localVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
-				variables = append(variables, funcVariable)
+				funcVariables := p.localVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+
+				variables = append(variables, funcVariables...)
 			}
 		}
 	}

@@ -16,6 +16,7 @@ type Document struct {
 	NeedsRefreshDiagnostics bool
 	Content                 string
 	lines                   []string
+	imports                 []string
 }
 
 func NewDocument(docId protocol.DocumentUri, moduleName string, documentContent string) Document {
@@ -162,4 +163,12 @@ func (d *Document) getSymbolAtIndexRanges(index int) (int, int, error) {
 	}
 
 	return wordStart, wordEnd, nil
+}
+
+func (d *Document) AddImport(module string) {
+	d.imports = append(d.imports, module)
+}
+
+func (d Document) GetImports() []string {
+	return d.imports
 }

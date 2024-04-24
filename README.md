@@ -20,6 +20,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
     - [x] Function return type
   - [x] Enums + Enumerators
     - [x] base type 
+    - [ ] enum methods
   - [x] [Faults](https://c3-lang.org/references/docs/types/#faults)
   - [x] Structs
     - [x] Struct members
@@ -28,7 +29,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
     - [x] Union members
   - [~] defines
   - [x] Interfaces
-  - [ ] macros
+  - [~] [Macros](https://c3-lang.org/references/docs/macros/)
   - [ ] imports
   - [ ] [Generics](https://c3-lang.org/references/docs/generics/)
   - [ ] [Language Builtins](https://c3-lang.org/references/docs/builtins/)
@@ -36,14 +37,15 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
 - [x] Index scopes and its hierarchy to improve hover and Auto Completion.
 - [ ] Complete Hover
 - [ ] Complete Go to declaration
-- [ ] Offer information about stdlib?
+  - [x] Find symbol in same scope
+  - [ ] Find symbol in parent scope
+  - [ ] Find symbol in imported module
+  - [ ] Find symbol in stdlib
 - [ ] Go to definition
 - [ ] Go to type definition
 - [ ] Go to implementation
 - [ ] Find references
-- [ ] Improve Completion feature by having context into account
 - [ ] Rename
-
 
 ## Useful links:
 - LSP specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/

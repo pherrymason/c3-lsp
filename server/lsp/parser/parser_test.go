@@ -259,6 +259,34 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 	assert.Equal(t, "", fn.Variables["x"].GetType())
 }
 
+func TestExtractSymbols_find_module(t *testing.T) {
+	source := `
+	module foo;
+	int value = 1;
+	`
+
+	doc := document.NewDocument("docId", "??", source)
+	parser := createParser()
+	fn := parser.ExtractSymbols(&doc)
+
+	assert.Equal(t, "foo", fn.GetModule(), "Function module is wrong")
+	assert.Equal(t, "foo", doc.ModuleName, "Document module is wrong")
+}
+
+func TestExtractSymbols_find_imports(t *testing.T) {
+	source := `
+	module foo;
+	import some;
+	int value = 1;
+	`
+
+	doc := document.NewDocument("docId", "??", source)
+	parser := createParser()
+	parser.ExtractSymbols(&doc)
+
+	assert.Equal(t, []string{"some"}, doc.GetImports())
+}
+
 func dfs(n *sitter.Node, level int) {
 	if n == nil {
 		return

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFindsFunctions(t *testing.T) {
+func TestExtractSymbols_Functions(t *testing.T) {
 	source := `fn void test() {
 		return 1;
 	}`
@@ -29,7 +29,7 @@ func TestFindsFunctions(t *testing.T) {
 	})
 }
 
-func TestFindsFunctionsWithArguments(t *testing.T) {
+func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 	source := `fn void test(int number, char ch, int* pointer) {
 		return 1;
 	}`
@@ -75,7 +75,7 @@ func TestFindsFunctionsWithArguments(t *testing.T) {
 	})
 }
 
-func TestFindsStructMemberFunctionWithArguments(t *testing.T) {
+func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 	source := `fn Object* UserStruct.method(self, int* pointer) {
 		return 1;
 	}`

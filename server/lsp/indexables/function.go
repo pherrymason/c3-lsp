@@ -141,6 +141,10 @@ func (f *Function) AddInterface(_interface Interface) {
 	f.Interfaces[_interface.name] = _interface
 }
 
+func (f *Function) ChangeModule(module string) {
+	f.module = module
+}
+
 func (f Function) GetChildrenFunctionByName(name string) (fn Function, found bool) {
 	for _, fun := range f.ChildrenFunctions {
 		if fun.GetFullName() == name {

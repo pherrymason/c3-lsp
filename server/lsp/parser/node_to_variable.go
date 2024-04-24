@@ -23,38 +23,82 @@ func (p *Parser) nodeToVariable(doc *document.Document, variableNode *sitter.Nod
 	return variable
 }
 
-func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document, declarationNode *sitter.Node, sourceCode []byte) idx.Variable {
+func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document, declarationNode *sitter.Node, sourceCode []byte) []idx.Variable {
+	var variables []idx.Variable
+	var typeNodeContent string
 
-	//var variables []idx.Variable
-	typeNode := declarationNode.ChildByFieldName("type")
-	typeNodeContent := typeNode.Content(sourceCode)
+	//typeNode := declarationNode.ChildByFieldName("type")
+	//typeNodeContent := typeNode.Content(sourceCode)
 
 	fmt.Println(declarationNode.ChildCount())
 	fmt.Println(declarationNode)
 	fmt.Println(declarationNode.Content(sourceCode))
+	fmt.Println("----")
 
-	identifierNode := declarationNode.Child(1)
-	//fmt.Println(identifierNode.Content(sourceCode))
+	for i := uint32(0); i < declarationNode.ChildCount(); i++ {
+		n := declarationNode.Child(int(i))
+		fmt.Println(i, ":", n.Type(), ":: ", n.Content(sourceCode))
+		switch n.Type() {
+		case "type":
+			typeNodeContent = n.Content(sourceCode)
+		case "ident":
+			//identifier := n.ChildByFieldName("name")
+			variable := idx.NewVariable(
+				n.Content(sourceCode),
+				typeNodeContent,
+				doc.ModuleName,
+				doc.URI,
+				idx.NewRangeFromSitterPositions(
+					n.StartPoint(),
+					n.EndPoint(),
+				),
+				idx.NewRangeFromSitterPositions(
+					declarationNode.StartPoint(),
+					declarationNode.EndPoint()),
+			)
+			variables = append(variables, variable)
+		case "multi_declaration":
+			sub := n.Child(1)
+			variable := idx.NewVariable(
+				sub.Content(sourceCode),
+				typeNodeContent,
+				doc.ModuleName,
+				doc.URI,
+				idx.NewRangeFromSitterPositions(
+					sub.StartPoint(),
+					sub.EndPoint(),
+				),
+				idx.NewRangeFromSitterPositions(
+					declarationNode.StartPoint(),
+					declarationNode.EndPoint()),
+			)
+			variables = append(variables, variable)
+		}
 
-	variable := idx.NewVariable(
-		identifierNode.Content(sourceCode),
-		typeNodeContent,
-		doc.ModuleName,
-		doc.URI,
-		idx.NewRangeFromSitterPositions(
-			identifierNode.StartPoint(),
-			identifierNode.EndPoint(),
-		),
-		idx.NewRangeFromSitterPositions(
-			declarationNode.StartPoint(),
-			declarationNode.EndPoint()),
-	)
+	}
+	/*
+		identifierNode := declarationNode.Child(1)
+		//fmt.Println(identifierNode.Content(sourceCode))
 
-	return variable
+		variable := idx.NewVariable(
+			identifierNode.Content(sourceCode),
+			typeNodeContent,
+			doc.ModuleName,
+			doc.URI,
+			idx.NewRangeFromSitterPositions(
+				identifierNode.StartPoint(),
+				identifierNode.EndPoint(),
+			),
+			idx.NewRangeFromSitterPositions(
+				declarationNode.StartPoint(),
+				declarationNode.EndPoint()),
+		)
+	*/
+	return variables
 }
 
-func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, declarationNode *sitter.Node, sourceCode []byte) idx.Variable {
-	var variable idx.Variable
+func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, declarationNode *sitter.Node, sourceCode []byte) []idx.Variable {
+	var variables []idx.Variable
 	var typeNodeContent string
 
 	//fmt.Println(declarationNode.ChildCount())
@@ -71,7 +115,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 		case "local_decl_after_type":
 			identifier := n.ChildByFieldName("name")
 
-			variable = idx.NewVariable(
+			variable := idx.NewVariable(
 				identifier.Content(sourceCode),
 				typeNodeContent,
 				doc.ModuleName,
@@ -81,13 +125,14 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 					identifier.EndPoint(),
 				),
 				idx.NewRangeFromSitterPositions(
-					n.StartPoint(),
-					n.EndPoint()),
+					declarationNode.StartPoint(),
+					declarationNode.EndPoint()),
 			)
+			variables = append(variables, variable)
 		}
 	}
 
-	return variable
+	return variables
 }
 
 /*

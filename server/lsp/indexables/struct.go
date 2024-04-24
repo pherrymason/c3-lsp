@@ -74,10 +74,14 @@ func (s Struct) GetDocumentRange() Range {
 	return s.docRange
 }
 
+func (s Struct) GetHoverInfo() string {
+	return fmt.Sprintf("%s", s.name)
+}
+
 type StructMember struct {
 	name     string
 	baseType string
-	posRange Range
+	BaseIndexable
 }
 
 func (m StructMember) GetName() string {
@@ -89,17 +93,33 @@ func (m StructMember) GetType() string {
 }
 
 func (m StructMember) GetIdRange() Range {
-	return m.posRange
+	return m.idRange
+}
+
+func (m StructMember) GetDocumentRange() Range {
+	return m.docRange
+}
+
+func (m StructMember) GetDocumentURI() string {
+	return m.documentURI
+}
+
+func (s StructMember) GetHoverInfo() string {
+	return fmt.Sprintf("%s", s.name)
+}
+func (s StructMember) GetKind() protocol.CompletionItemKind {
+	return s.Kind
+}
+func (s StructMember) GetModule() string {
+	return s.module
 }
 
 func NewStructMember(name string, baseType string, posRange Range) StructMember {
 	return StructMember{
 		name:     name,
 		baseType: baseType,
-		posRange: posRange,
+		BaseIndexable: BaseIndexable{
+			idRange: posRange,
+		},
 	}
-}
-
-func (s Struct) GetHoverInfo() string {
-	return fmt.Sprintf("%s", s.name)
 }
