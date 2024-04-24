@@ -33,12 +33,20 @@ func (l *Language) findAllScopeSymbols(scopeFunction *indexables.Function, posit
 	return symbols
 }
 
+type FindOptions struct {
+	continueOnModule bool
+}
+
 // Finds the closest selectedSymbol based on current scope.
 // If not present in current Scope:
 // - Search in files of same module
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
 func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, position protocol.Position) indexables.Indexable {
+	return l._findClosestSymbolDeclaration(searchParams, position, FindOptions{continueOnModule: true})
+}
+
+func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, position protocol.Position, options FindOptions) indexables.Indexable {
 
 	var parentIdentifier indexables.Indexable
 	// Check if there's parent contextual information in searchParams
@@ -65,7 +73,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, posit
 			}
 			sp := NewSearchParams(variable.Type, variable.GetDocumentURI())
 			parentTypeSymbol := l.findClosestSymbolDeclaration(sp, position)
-			fmt.Sprint(parentTypeSymbol.GetName() + "." + searchParams.selectedSymbol)
+			//fmt.Sprint(parentTypeSymbol.GetName() + "." + searchParams.selectedSymbol)
 			switch parentTypeSymbol.(type) {
 			case indexables.Struct:
 				// Search searchParams.selectedSymbol in members
@@ -104,6 +112,28 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, posit
 			}
 		}*/
 
+	// Try to find in same module, different files
+	if options.continueOnModule {
+		currentModule := l.functionTreeByDocument[searchParams.docId].GetModule()
+		for _, scope := range l.functionTreeByDocument {
+			if scope.GetDocumentURI() == searchParams.docId || scope.GetModule() != currentModule {
+				continue
+			}
+
+			found := l._findClosestSymbolDeclaration(
+				SearchParams{
+					selectedSymbol: searchParams.selectedSymbol,
+					docId:          scope.GetDocumentURI(),
+				},
+				position,
+				FindOptions{continueOnModule: false},
+			)
+			if found != nil {
+				return found
+			}
+		}
+	}
+
 	// Not found...
 	return nil
 }
@@ -125,6 +155,7 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		return function, depth
 	}
 
+	// Document this condition
 	if mode == InPosition &&
 		!function.GetDocumentRange().HasPosition(position) {
 		return nil, depth

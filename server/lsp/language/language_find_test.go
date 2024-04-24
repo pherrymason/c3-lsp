@@ -45,20 +45,7 @@ func installDocuments(language *Language, parser *p.Parser) map[string]document.
 		doc := documents[filename]
 		language.RefreshDocumentIdentifiers(&doc, parser)
 	}
-	/*
-		fileContent = readC3File("./test_files/app.c3")
-		documents["app.c3"] = document.NewDocument("app.c3", "?", fileContent)
 
-		fileContent = readC3File("./test_files/emu.c3")
-		documents["emu.c3"] = document.NewDocument("emu.c3", "?", fileContent)
-
-		fileContent = readC3File("./test_files/definitions.c3")
-		documents["definitions.c3"] = document.NewDocument("definitions.c3", "?", fileContent)
-
-		for _, value := range documents {
-			language.RefreshDocumentIdentifiers(&value, parser)
-		}
-	*/
 	return documents
 }
 
@@ -192,7 +179,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 
 	t.Run("Find local function definition", func(t *testing.T) {
 		searchParams := NewSearchParams("run", "app.c3")
-		position := buildPosition(13, 5)
+		position := buildPosition(14, 5)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -246,17 +233,17 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 func TestLanguage_findClosestSymbolDeclaration_in_same_module(t *testing.T) {
 	language, _ := initTestEnv()
 
-	t.Run("Find variable definition in same module", func(t *testing.T) {
-		searchParams := NewSearchParams("Cpu", "emu.c3")
-		position := protocol.Position{2, 2}
+	t.Run("Find variable definition in same module, but different file", func(t *testing.T) {
+		searchParams := NewSearchParams("helpDisplayedTimes", "app.c3")
+		position := buildPosition(2, 2)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
 		variable := resolvedSymbol.(idx.Variable)
-		assert.Equal(t, "emulator", resolvedSymbol.GetName())
-		assert.Equal(t, "Emu", variable.GetType())
+		assert.Equal(t, "helpDisplayedTimes", resolvedSymbol.GetName())
+		assert.Equal(t, "int", variable.GetType())
 	})
 }
 

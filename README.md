@@ -31,6 +31,8 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
   - [x] Interfaces
   - [~] [Macros](https://c3-lang.org/references/docs/macros/)
   - [ ] imports
+  - [x] modules
+    - [ ] multiple modules per file
   - [ ] [Generics](https://c3-lang.org/references/docs/generics/)
   - [ ] [Language Builtins](https://c3-lang.org/references/docs/builtins/)
 

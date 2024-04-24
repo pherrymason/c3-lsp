@@ -10,5 +10,6 @@ fn void run(int tick) {
 
 fn void main() {
     showHelp();
+    helpDisplayedTimes = 1;
     run(3);
 }
