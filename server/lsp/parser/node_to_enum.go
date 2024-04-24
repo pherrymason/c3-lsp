@@ -37,7 +37,6 @@ import (
 */
 func (p *Parser) nodeToEnum(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Enum {
 	// TODO parse attributes
-	fmt.Println(node.Content(sourceCode), node.StartPoint())
 
 	baseType := ""
 	var enumerators []idx.Enumerator

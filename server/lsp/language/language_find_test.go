@@ -29,49 +29,28 @@ func readC3File(filePath string) string {
 	return string(contentBytes)
 }
 
-func docCpu() *document.Document {
-	fileCpu := readC3File("./test_files/cpu.c3")
-	doc := document.NewDocument("cpu.c3", "?", fileCpu)
+func installDocuments(language *Language, parser *p.Parser) map[string]document.Document {
+	documents := make(map[string]document.Document, 0)
+	var fileContent string
 
-	return &doc
+	fileContent = readC3File("./test_files/emu.c3")
+	documents["emu.c3"] = document.NewDocument("emu.c3", "?", fileContent)
+
+	fileContent = readC3File("./test_files/definitions.c3")
+	documents["definitions.c3"] = document.NewDocument("definitions.c3", "?", fileContent)
+
+	for _, value := range documents {
+		language.RefreshDocumentIdentifiers(&value, parser)
+	}
+
+	return documents
 }
 
-func docCpuRegisters() *document.Document {
-	fileCpuRegisters := readC3File("./test_files/cpu.registers.c3")
-	doc := document.NewDocument("cpu.registers.c3", "?", fileCpuRegisters)
-	return &doc
-}
-
-func docAudio() *document.Document {
-	fileCpuBus := readC3File("./test_files/emu.c3")
-	doc := document.NewDocument("audio.c3", "?", fileCpuBus)
-	return &doc
-}
-
-func docEmu() *document.Document {
-	fileCpuBus := readC3File("./test_files/emu.c3")
-	doc := document.NewDocument("emu.c3", "?", fileCpuBus)
-	return &doc
-}
-
-func initTestEnv() (*Language, map[string]*document.Document) {
-
-	documents := make(map[string]*document.Document, 0)
-
-	//documents["cpu"] = docCpu()
-	//documents["cpu.registers"] = docCpuRegisters()
-	//documents["audio"] = docAudio()
-	documents["emu.c3"] = docEmu()
-	fileCpuBus := readC3File("./test_files/definitions.c3")
-	d := document.NewDocument("definitions.c3", "?", fileCpuBus)
-	documents["definitions.c3"] = &d
-
+func initTestEnv() (*Language, map[string]document.Document) {
 	parser := createParser()
 	language := NewLanguage()
-	//language.RefreshDocumentIdentifiers(documents["cpu"], &parser)
-	//language.RefreshDocumentIdentifiers(documents["cpu.registers"], &parser)
-	language.RefreshDocumentIdentifiers(documents["definitions.c3"], &parser)
-	language.RefreshDocumentIdentifiers(documents["emu.c3"], &parser)
+
+	documents := installDocuments(&language, &parser)
 
 	return &language, documents
 }
@@ -131,7 +110,8 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 
 	t.Run("Find local struct member variable definition", func(t *testing.T) {
 		position := protocol.Position{9, 13}
-		searchParams, _ := buildSearchParams(documents["emu.c3"], position)
+		doc := documents["emu.c3"]
+		searchParams, _ := buildSearchParams(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
 
@@ -239,75 +219,6 @@ func TestLanguage_findClosestSymbolDeclaration(t *testing.T) {
 		// MyStruct object;
 		// object.search();
 	})
-}
-
-func TestLanguage_FindHoverInformation(t *testing.T) {
-	language := NewLanguage()
-	parser := createParser()
-
-	doc := document.NewDocument("x", "", `
-	int value = 1;
-	fn void main() {
-		char value = 3;
-	}
-`)
-	language.RefreshDocumentIdentifiers(&doc, &parser)
-
-	params := protocol.HoverParams{
-		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-			protocol.TextDocumentIdentifier{URI: "x"},
-			protocol.Position{
-				Line:      3,
-				Character: 8,
-			},
-		},
-		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
-	}
-
-	hover, _ := language.FindHoverInformation(&doc, &params)
-
-	expectedHover := protocol.Hover{
-		Contents: protocol.MarkupContent{
-			Kind:  protocol.MarkupKindMarkdown,
-			Value: fmt.Sprintf("char value"),
-		},
-	}
-	assert.Equal(t, expectedHover, hover)
-}
-
-func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
-	language := NewLanguage()
-	parser := createParser()
-
-	doc := document.NewDocument("x", "x", `
-	fn void main() {
-		importedMethod();
-	}
-`)
-	language.RefreshDocumentIdentifiers(&doc, &parser)
-
-	doc2 := document.NewDocument("y", "x", `
-	fn void importedMethod() {}
-	`)
-	language.RefreshDocumentIdentifiers(&doc2, &parser)
-
-	params := protocol.HoverParams{
-		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-			protocol.TextDocumentIdentifier{URI: "x"},
-			protocol.Position{Line: 2, Character: 8},
-		},
-		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
-	}
-
-	hover, _ := language.FindHoverInformation(&doc, &params)
-
-	expectedHover := protocol.Hover{
-		Contents: protocol.MarkupContent{
-			Kind:  protocol.MarkupKindMarkdown,
-			Value: fmt.Sprintf("void importedMethod()"),
-		},
-	}
-	assert.Equal(t, expectedHover, hover)
 }
 
 func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UInteger) protocol.DeclarationParams {

@@ -96,12 +96,6 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 			case "global_declaration":
 				variables := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
 				scopeTree.AddVariables(variables)
-			/*case "identifier":
-			switch c.Node.Parent().Type() {
-			case "var_declaration":
-				variable := p.nodeToVariable(doc, c.Node.Parent(), c.Node, sourceCode, content)
-				scopeTree.AddVariable(variable)
-			}*/
 			case "func_definition":
 				function := p.nodeToFunction(doc, c.Node, sourceCode)
 				scopeTree.AddFunction(function)

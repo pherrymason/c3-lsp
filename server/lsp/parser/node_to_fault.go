@@ -29,7 +29,6 @@ fault_body: $ => seq(
 */
 func (p *Parser) nodeToFault(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Fault {
 	// TODO parse attributes
-	fmt.Println(node.Content(sourceCode), node.StartPoint())
 
 	baseType := ""
 	var constants []idx.FaultConstant

@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -27,22 +25,18 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 	var variables []idx.Variable
 	var typeNodeContent string
 
-	//typeNode := declarationNode.ChildByFieldName("type")
-	//typeNodeContent := typeNode.Content(sourceCode)
-
-	fmt.Println(declarationNode.ChildCount())
-	fmt.Println(declarationNode)
-	fmt.Println(declarationNode.Content(sourceCode))
-	fmt.Println("----")
+	//fmt.Println(declarationNode.ChildCount())
+	//fmt.Println(declarationNode)
+	//fmt.Println(declarationNode.Content(sourceCode))
+	//fmt.Println("----")
 
 	for i := uint32(0); i < declarationNode.ChildCount(); i++ {
 		n := declarationNode.Child(int(i))
-		fmt.Println(i, ":", n.Type(), ":: ", n.Content(sourceCode))
+		//fmt.Println(i, ":", n.Type(), ":: ", n.Content(sourceCode))
 		switch n.Type() {
 		case "type":
 			typeNodeContent = n.Content(sourceCode)
 		case "ident":
-			//identifier := n.ChildByFieldName("name")
 			variable := idx.NewVariable(
 				n.Content(sourceCode),
 				typeNodeContent,
@@ -76,24 +70,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 		}
 
 	}
-	/*
-		identifierNode := declarationNode.Child(1)
-		//fmt.Println(identifierNode.Content(sourceCode))
 
-		variable := idx.NewVariable(
-			identifierNode.Content(sourceCode),
-			typeNodeContent,
-			doc.ModuleName,
-			doc.URI,
-			idx.NewRangeFromSitterPositions(
-				identifierNode.StartPoint(),
-				identifierNode.EndPoint(),
-			),
-			idx.NewRangeFromSitterPositions(
-				declarationNode.StartPoint(),
-				declarationNode.EndPoint()),
-		)
-	*/
 	return variables
 }
 
@@ -150,9 +127,9 @@ func (p *Parser) nodeToConstant(doc *document.Document, node *sitter.Node, sourc
 	var typeNodeContent string
 	var idNode *sitter.Node
 
-	fmt.Println(node.ChildCount())
-	fmt.Println(node)
-	fmt.Println(node.Content(sourceCode))
+	//fmt.Println(node.ChildCount())
+	//fmt.Println(node)
+	//fmt.Println(node.Content(sourceCode))
 
 	for i := uint32(0); i < node.ChildCount(); i++ {
 		n := node.Child(int(i))
