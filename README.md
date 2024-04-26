@@ -25,6 +25,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
   - [x] Structs
     - [x] Struct members
     - [x] Struct methods
+    - [x] Struct implementing interface
   - [x] Unions
     - [x] Union members
   - [~] defines

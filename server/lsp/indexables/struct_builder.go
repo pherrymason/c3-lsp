@@ -6,7 +6,7 @@ type StructBuilder struct {
 
 func NewStructBuilder(name string, module string, docId string) *StructBuilder {
 	return &StructBuilder{
-		strukt: NewStruct(name, []StructMember{}, module, docId, Range{}, Range{}),
+		strukt: NewStruct(name, []string{}, []StructMember{}, module, docId, Range{}, Range{}),
 	}
 }
 
@@ -22,6 +22,11 @@ func (b *StructBuilder) WithIdentifierRange(lineStart uint, CharStart uint, line
 
 func (b *StructBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *StructBuilder {
 	b.strukt.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	return b
+}
+
+func (b *StructBuilder) ImplementsInterface(interfaceName string) *StructBuilder {
+	b.strukt.implements = append(b.strukt.implements, interfaceName)
 	return b
 }
 

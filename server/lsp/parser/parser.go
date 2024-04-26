@@ -46,7 +46,7 @@ func NewParser(logger interface{}) Parser {
 
 func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	parsedSymbols := NewParsedSymbols()
-	fmt.Println(doc.ContextSyntaxTree.RootNode())
+	fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
 	query := `[
  (source_file ` + ModuleDeclaration + `)

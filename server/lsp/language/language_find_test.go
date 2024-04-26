@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
@@ -13,6 +14,25 @@ import (
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
+
+func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UInteger) protocol.DeclarationParams {
+	return protocol.DeclarationParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			protocol.TextDocumentIdentifier{URI: docId},
+			protocol.Position{line, char},
+		},
+		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
+	}
+}
+
+func initLanguage(docId string, module string, source string) (Language, *document.Document, *p.Parser) {
+	doc := document.NewDocument(docId, module, source)
+	language := NewLanguage()
+	parser := createParser()
+	language.RefreshDocumentIdentifiers(&doc, &parser)
+
+	return language, &doc, &parser
+}
 
 func createParser() p.Parser {
 	logger := &commonlog.MockLogger{}
@@ -63,132 +83,7 @@ func buildPosition(line protocol.UInteger, character protocol.UInteger) protocol
 }
 
 func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
-	language, documents := initTestEnv()
-
-	t.Run("Find local variable definition, with cursor in same declaration", func(t *testing.T) {
-		searchParams := NewSearchParams("emulator", "emu.c3")
-		position := buildPosition(10, 9)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Element not found")
-
-		variable := resolvedSymbol.(idx.Variable)
-		assert.Equal(t, "emulator", resolvedSymbol.GetName())
-		assert.Equal(t, "Emu", variable.GetType())
-	})
-
-	t.Run("Find local variable definition from usage", func(t *testing.T) {
-		searchParams := NewSearchParams("emulator", "emu.c3")
-		position := buildPosition(12, 10)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Element not found")
-
-		variable := resolvedSymbol.(idx.Variable)
-		assert.Equal(t, "emulator", resolvedSymbol.GetName())
-		assert.Equal(t, "Emu", variable.GetType())
-	})
-
-	t.Run("should find struct declaration in variable declaration", func(t *testing.T) {
-		searchParams := NewSearchParams("Emu", "emu.c3")
-		position := buildPosition(10, 2)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Element not found")
-
-		_struct := resolvedSymbol.(idx.Struct)
-		assert.Equal(t, "Emu", _struct.GetName())
-	})
-
-	t.Run("should find struct declaration in function return type", func(t *testing.T) {
-		searchParams := NewSearchParams("Emu", "emu.c3")
-		position := buildPosition(9, 4)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Element not found")
-
-		_struct := resolvedSymbol.(idx.Struct)
-		assert.Equal(t, "Emu", _struct.GetName())
-	})
-
-	t.Run("Find local struct member variable definition", func(t *testing.T) {
-
-		position := buildPosition(11, 11)
-		doc := documents["emu.c3"]
-		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
-		searchParams, _ := buildSearchParams(&doc, position)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Struct member not found")
-
-		variable := resolvedSymbol.(idx.StructMember)
-		assert.Equal(t, "on", resolvedSymbol.GetName())
-		assert.Equal(t, "bool", variable.GetType())
-	})
-
-	t.Run("Find local enum variable definition", func(t *testing.T) {
-		searchParams := NewSearchParams("status", "app.c3")
-		position := buildPosition(8, 5)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Element not found")
-
-		variable := resolvedSymbol.(idx.Variable)
-		assert.Equal(t, "status", resolvedSymbol.GetName())
-		assert.Equal(t, "WindowStatus", variable.GetType())
-	})
-	t.Run("Find local enumerator definition", func(t *testing.T) {
-		searchParams := NewSearchParams("BACKGROUND", "app.c3")
-		position := buildPosition(8, 17)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Element not found")
-
-		assert.Equal(t, "BACKGROUND", resolvedSymbol.GetName())
-	})
-
-	t.Run("Find local definition definition", func(t *testing.T) {
-		searchParams := NewSearchParams("Kilo", "definitions.c3")
-		position := buildPosition(2, 2)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Def not found")
-		assert.Equal(t, "Kilo", resolvedSymbol.GetName())
-	})
-
-	t.Run("Find local variable definition in function arguments", func(t *testing.T) {
-		searchParams := NewSearchParams("tick", "app.c3")
-		position := buildPosition(6, 4)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Element not found")
-
-		variable := resolvedSymbol.(idx.Variable)
-		assert.Equal(t, "tick", resolvedSymbol.GetName())
-		assert.Equal(t, "int", variable.GetType())
-	})
-
-	t.Run("Find local function definition", func(t *testing.T) {
-		searchParams := NewSearchParams("run", "app.c3")
-		position := buildPosition(14, 5)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
-
-		assert.NotNil(t, resolvedSymbol, "Local function not found")
-
-		fun := resolvedSymbol.(*idx.Function)
-		assert.Equal(t, "run", fun.GetName())
-		assert.Equal(t, "void", fun.GetReturnType())
-	})
+	initTestEnv()
 
 	t.Run("Asking the selectedSymbol information in the very same declaration, should resolve to the correct selectedSymbol. Even if there is another selectedSymbol with same name in a different file.", func(t *testing.T) {
 		t.Skip()
@@ -230,14 +125,53 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 	})
 }
 
-func TestLanguage_findClosestSymbolDeclaration_in_same_module(t *testing.T) {
+func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 	language, _ := initTestEnv()
 
-	t.Run("Find variable definition in same module, but different file", func(t *testing.T) {
-		searchParams := NewSearchParams("helpDisplayedTimes", "app.c3")
-		position := buildPosition(2, 2)
+	t.Run("Find local variable definition, with cursor in same declaration", func(t *testing.T) {
+		position := buildPosition(15, 9)
+		searchParams := NewSearchParams("emulator", position, "emu.c3")
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams, position)
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		variable := resolvedSymbol.(idx.Variable)
+		assert.Equal(t, "emulator", resolvedSymbol.GetName())
+		assert.Equal(t, "Emu", variable.GetType())
+	})
+
+	t.Run("Find local variable definition from usage", func(t *testing.T) {
+		position := buildPosition(17, 10)
+		searchParams := NewSearchParams("emulator", position, "emu.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		variable := resolvedSymbol.(idx.Variable)
+		assert.Equal(t, "emulator", resolvedSymbol.GetName())
+		assert.Equal(t, "Emu", variable.GetType())
+	})
+
+	t.Run("Should find the right element when there is a different element with the same name up in the scope", func(t *testing.T) {
+		position := buildPosition(16, 9)
+		searchParams := NewSearchParams("ambiguousVariable", position, "app.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		variable := resolvedSymbol.(idx.Variable)
+		assert.Equal(t, "ambiguousVariable", resolvedSymbol.GetName())
+		assert.Equal(t, "int", variable.GetType())
+	})
+
+	t.Run("Find variable definition in same module, but different file", func(t *testing.T) {
+		position := buildPosition(2, 2)
+		searchParams := NewSearchParams("helpDisplayedTimes", position, "app.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -247,43 +181,198 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_module(t *testing.T) {
 	})
 }
 
-func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UInteger) protocol.DeclarationParams {
-	return protocol.DeclarationParams{
-		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-			protocol.TextDocumentIdentifier{URI: docId},
-			protocol.Position{line, char},
-		},
-		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
-	}
-}
+func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
+	language, documents := initTestEnv()
 
-func initLanguage(docId string, module string, source string) (Language, *document.Document, *p.Parser) {
-	doc := document.NewDocument(docId, module, source)
-	language := NewLanguage()
-	parser := createParser()
-	language.RefreshDocumentIdentifiers(&doc, &parser)
+	t.Run("Should find struct declaration in variable declaration", func(t *testing.T) {
+		position := buildPosition(10, 2)
+		searchParams := NewSearchParams("Emu", position, "emu.c3")
 
-	return language, &doc, &parser
-}
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
-func TestLanguage_ShouldFindVariablesInSameScope(t *testing.T) {
-	module := "mod"
-	docId := "docId"
+		assert.NotNil(t, resolvedSymbol, "Element not found")
 
-	t.Run("should find definition declaration in same scope of cursor", func(t *testing.T) {
-		source := `def Kilo = int;Kilo value = 3;`
-		language, doc, _ := initLanguage(docId, module, source)
-
-		params := newDeclarationParams(docId, 0, 17)
-
-		symbol, _ := language.FindSymbolDeclarationInWorkspace(doc, params.Position)
-
-		expected := idx.NewDefBuilder("Kilo", docId).
-			WithResolvesTo("int").
-			WithIdentifierRange(0, 4, 0, 8).
-			WithDocumentRange(0, 0, 0, 15).
-			Build()
-		assert.Equal(t, expected, symbol)
+		_struct := resolvedSymbol.(idx.Struct)
+		assert.Equal(t, "Emu", _struct.GetName())
 	})
 
+	t.Run("Should find struct declaration in function return type", func(t *testing.T) {
+		position := buildPosition(9, 4)
+		searchParams := NewSearchParams("Emu", position, "emu.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		_struct := resolvedSymbol.(idx.Struct)
+		assert.Equal(t, "Emu", _struct.GetName())
+	})
+
+	t.Run("Should find local struct member variable definition", func(t *testing.T) {
+
+		position := buildPosition(16, 11)
+		doc := documents["emu.c3"]
+		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
+		searchParams, _ := buildSearchParams(&doc, position)
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Struct member not found")
+
+		variable := resolvedSymbol.(idx.StructMember)
+		assert.Equal(t, "on", resolvedSymbol.GetName())
+		assert.Equal(t, "bool", variable.GetType())
+	})
+
+	t.Run("Should find interface struct is implementing", func(t *testing.T) {
+		position := buildPosition(8, 14)
+		searchParams := NewSearchParams("EmulatorConsole", position, "emu.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		_interface, ok := resolvedSymbol.(idx.Interface)
+
+		assert.True(t, ok, "Element found should be an Interface")
+		assert.Equal(t, "EmulatorConsole", _interface.GetName())
+	})
+}
+
+func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
+	language, documents := initTestEnv()
+
+	t.Run("Find local enum variable definition", func(t *testing.T) {
+		position := buildPosition(11, 18)
+		searchParams := NewSearchParams("status", position, "app.c3")
+		//doc := documents["app.c3"]
+		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
+		//searchParams, _ := buildSearchParams(&doc, position)
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		variable := resolvedSymbol.(idx.Variable)
+		assert.Equal(t, "status", resolvedSymbol.GetName())
+		assert.Equal(t, "WindowStatus", variable.GetType())
+	})
+
+	t.Run("Should find enum definition", func(t *testing.T) {
+		position := buildPosition(11, 5)
+		searchParams := NewSearchParams("WindowStatus", position, "app.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		enum := resolvedSymbol.(idx.Enum)
+		assert.Equal(t, "WindowStatus", enum.GetName())
+	})
+
+	t.Run("Should find local enumerator definition", func(t *testing.T) {
+		//searchParams := NewSearchParams("BACKGROUND", "app.c3")
+		position := buildPosition(12, 27)
+		doc := documents["app.c3"]
+		searchParams, _ := buildSearchParams(&doc, position)
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		_, ok := resolvedSymbol.(idx.Enumerator)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(resolvedSymbol)))
+		assert.Equal(t, "BACKGROUND", resolvedSymbol.GetName())
+	})
+
+	t.Run("Should find enum method definition", func(t *testing.T) {
+		t.Skip()
+	})
+}
+
+func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
+	language, docs := initTestEnv()
+
+	t.Run("Find local fault variable definition", func(t *testing.T) {
+		position := buildPosition(15, 5)
+		searchParams := NewSearchParams("WindowError", position, "app.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Local function not found")
+
+		fault := resolvedSymbol.(idx.Fault)
+		assert.Equal(t, "WindowError", fault.GetName())
+	})
+
+	t.Run("Should find fault constant definition", func(t *testing.T) {
+		position := buildPosition(17, 37)
+		doc := docs["app.c3"]
+		searchParams, _ := buildSearchParams(&doc, position)
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+		_, ok := resolvedSymbol.(idx.FaultConstant)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an fault constant, %s was found", reflect.TypeOf(resolvedSymbol)))
+		assert.Equal(t, "SOMETHING_HAPPENED", resolvedSymbol.GetName())
+	})
+}
+
+func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
+	language, _ := initTestEnv()
+
+	t.Run("Find local definition definition", func(t *testing.T) {
+		position := buildPosition(2, 2)
+		searchParams := NewSearchParams("Kilo", position, "definitions.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Def not found")
+		assert.Equal(t, "Kilo", resolvedSymbol.GetName())
+	})
+
+	t.Run("Find local variable definition in function arguments", func(t *testing.T) {
+		position := buildPosition(10, 4)
+		searchParams := NewSearchParams("tick", position, "app.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Element not found")
+
+		variable := resolvedSymbol.(idx.Variable)
+		assert.Equal(t, "tick", resolvedSymbol.GetName())
+		assert.Equal(t, "int", variable.GetType())
+	})
+}
+
+func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
+	language, _ := initTestEnv()
+
+	t.Run("Find local function definition", func(t *testing.T) {
+		position := buildPosition(19, 5)
+		searchParams := NewSearchParams("run", position, "app.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Local function not found")
+
+		fun := resolvedSymbol.(*idx.Function)
+		assert.Equal(t, "run", fun.GetName())
+		assert.Equal(t, "void", fun.GetReturnType())
+	})
+
+	t.Run("Should not confuse function with virtual root scope function", func(t *testing.T) {
+
+		position := buildPosition(24, 5)
+		searchParams := NewSearchParams("main", position, "app.c3")
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Local function not found")
+
+		fun := resolvedSymbol.(*idx.Function)
+		assert.Equal(t, "main", fun.GetName())
+		assert.Equal(t, idx.FunctionType(idx.UserDefined), fun.FunctionType())
+	})
 }

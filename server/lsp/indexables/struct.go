@@ -7,17 +7,19 @@ import (
 )
 
 type Struct struct {
-	name    string
-	members []StructMember
-	isUnion bool
+	name       string
+	members    []StructMember
+	isUnion    bool
+	implements []string
 	BaseIndexable
 }
 
-func NewStruct(name string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
+func NewStruct(name string, interfaces []string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
 	return Struct{
-		name:    name,
-		members: members,
-		isUnion: false,
+		name:       name,
+		members:    members,
+		isUnion:    false,
+		implements: interfaces,
 		BaseIndexable: BaseIndexable{
 			module:      module,
 			documentURI: docId,
@@ -49,6 +51,10 @@ func (s Struct) GetName() string {
 
 func (s Struct) GetMembers() []StructMember {
 	return s.members
+}
+
+func (s Struct) GetInterfaces() []string {
+	return s.implements
 }
 
 func (s Struct) GetModule() string {

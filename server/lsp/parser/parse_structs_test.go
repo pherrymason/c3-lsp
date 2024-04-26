@@ -9,7 +9,7 @@ import (
 )
 
 func TestFindsGlobalStructs(t *testing.T) {
-	source := `struct MyStruct{
+	source := `struct MyStruct (MyInterface, MySecondInterface) {
 	int data;
 	char key;
 }
@@ -19,7 +19,8 @@ fn void MyStruct.init(&self)
 	*self = {
 		.data = 4,
 	};
-}`
+}
+`
 
 	module := "x"
 	docId := "docId"
@@ -49,6 +50,14 @@ fn void MyStruct.init(&self)
 		assert.Equal(t, "key", member.GetName())
 		assert.Equal(t, "char", member.GetType())
 		assert.Equal(t, idx.NewRange(2, 6, 2, 9), member.GetIdRange())
+	})
+
+	t.Run("finds struct implementing interface", func(t *testing.T) {
+		symbols := parser.ExtractSymbols(&doc)
+
+		found := symbols.Structs["MyStruct"]
+		assert.Equal(t, "MyStruct", found.GetName())
+		assert.Equal(t, []string{"MyInterface", "MySecondInterface"}, found.GetInterfaces())
 	})
 }
 

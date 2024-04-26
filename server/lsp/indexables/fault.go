@@ -92,6 +92,10 @@ func (e Fault) GetConstant(identifier string) FaultConstant {
 	panic(fmt.Sprint(identifier, " enumerator not found"))
 }
 
+func (e Fault) GetConstants() []FaultConstant {
+	return e.constants
+}
+
 func (e Fault) GetHoverInfo() string {
 	return e.name
 }
@@ -107,6 +111,22 @@ func (f FaultConstant) GetName() string {
 
 func (f FaultConstant) GetIdRange() Range {
 	return f.idRange
+}
+
+func (f FaultConstant) GetDocumentRange() Range {
+	return f.docRange
+}
+func (f FaultConstant) GetDocumentURI() string {
+	return f.documentURI
+}
+func (e FaultConstant) GetHoverInfo() string {
+	return e.name
+}
+func (e FaultConstant) GetKind() protocol.CompletionItemKind {
+	return e.Kind
+}
+func (e FaultConstant) GetModule() string {
+	return e.module
 }
 
 func NewFaultConstant(name string, idRange Range) FaultConstant {

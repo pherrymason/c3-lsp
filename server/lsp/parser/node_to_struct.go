@@ -36,16 +36,22 @@ struct_member_declaration: $ => choice(
 func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Struct {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
+	var interfaces []string
 	isUnion := false
 
 	for i := uint32(0); i < node.ChildCount(); i++ {
 		child := node.Child(int(i))
-
 		switch child.Type() {
 		case "union":
 			isUnion = true
 		case "interface_impl":
 			// TODO
+			for x := 0; x < int(child.ChildCount()); x++ {
+				n := child.Child(x)
+				if n.Type() == "interface" {
+					interfaces = append(interfaces, n.Content(sourceCode))
+				}
+			}
 		case "attributes":
 			// TODO attributes
 		}
@@ -107,6 +113,7 @@ func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceC
 	} else {
 		_struct = idx.NewStruct(
 			name,
+			interfaces,
 			structFields,
 			doc.ModuleName,
 			doc.URI,

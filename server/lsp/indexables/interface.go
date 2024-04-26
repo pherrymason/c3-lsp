@@ -1,6 +1,10 @@
 package indexables
 
-import protocol "github.com/tliron/glsp/protocol_3_16"
+import (
+	"fmt"
+
+	protocol "github.com/tliron/glsp/protocol_3_16"
+)
 
 type Interface struct {
 	name    string
@@ -42,6 +46,10 @@ func (i Interface) GetModule() string {
 
 func (i Interface) GetKind() protocol.CompletionItemKind {
 	return i.Kind
+}
+
+func (i Interface) GetHoverInfo() string {
+	return fmt.Sprintf("%s", i.name)
 }
 
 func (i Interface) GetDocumentURI() string {

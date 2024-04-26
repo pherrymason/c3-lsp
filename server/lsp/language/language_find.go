@@ -1,7 +1,6 @@
 package language
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
@@ -42,17 +41,18 @@ type FindOptions struct {
 // - Search in files of same module
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
-func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, position protocol.Position) indexables.Indexable {
-	return l._findClosestSymbolDeclaration(searchParams, position, FindOptions{continueOnModule: true})
+func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams) indexables.Indexable {
+	return l._findClosestSymbolDeclaration(searchParams, FindOptions{continueOnModule: true})
 }
 
-func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, position protocol.Position, options FindOptions) indexables.Indexable {
+func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, options FindOptions) indexables.Indexable {
 
 	var parentIdentifier indexables.Indexable
+	position := searchParams.position
 	// Check if there's parent contextual information in searchParams
 	if searchParams.HasParentSymbol() {
-		subSearchParams := NewSearchParams(searchParams.parentSymbol, searchParams.docId)
-		parentIdentifier = l.findClosestSymbolDeclaration(subSearchParams, position)
+		subSearchParams := NewSearchParams(searchParams.parentSymbol, position, searchParams.docId)
+		parentIdentifier = l.findClosestSymbolDeclaration(subSearchParams)
 	}
 
 	if parentIdentifier != nil {
@@ -71,8 +71,8 @@ func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, posi
 			if !ok {
 				panic("Error")
 			}
-			sp := NewSearchParams(variable.Type, variable.GetDocumentURI())
-			parentTypeSymbol := l.findClosestSymbolDeclaration(sp, position)
+			sp := NewSearchParams(variable.Type, position, variable.GetDocumentURI())
+			parentTypeSymbol := l.findClosestSymbolDeclaration(sp)
 			//fmt.Sprint(parentTypeSymbol.GetName() + "." + searchParams.selectedSymbol)
 			switch parentTypeSymbol.(type) {
 			case indexables.Struct:
@@ -86,46 +86,61 @@ func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, posi
 					}
 				}
 			}
-
 			//searchParams.selectedSymbol = variableTypeSymbol.GetName() + "." + searchParams.selectedSymbol
+
+		case indexables.Enum:
+			// Search searchParams.selectedSymbol in enumerators
+			_enum := parentIdentifier.(indexables.Enum)
+			enumerators := _enum.GetEnumerators()
+			for i := 0; i < len(enumerators); i++ {
+				if enumerators[i].GetName() == searchParams.selectedSymbol {
+					//searchParams.selectedSymbol = enumerators[i].GetName()
+					return enumerators[i]
+				}
+			}
+
+		case indexables.Fault:
+			// Search searchParams.selectedSymbol in enumerators
+			_fault := parentIdentifier.(indexables.Fault)
+			enumerators := _fault.GetConstants()
+			for i := 0; i < len(enumerators); i++ {
+				if enumerators[i].GetName() == searchParams.selectedSymbol {
+					//searchParams.selectedSymbol = enumerators[i].GetName()
+					return enumerators[i]
+				}
+			}
+		default:
+			fmt.Println("Parent Type desconocido!")
 		}
 	}
 
-	identifier, _ := l.findSymbolDeclarationInDocPositionScope(searchParams, position)
+	scopedTree, found := l.functionTreeByDocument[searchParams.docId]
+	if !found {
+		return nil
+	}
+
+	// Go through every element defined in scopedTree
+	identifier, _ := findDeepFirst(searchParams.selectedSymbol, position, &scopedTree, 0, searchParams.findMode)
 
 	if identifier != nil {
 		return identifier
 	}
 
-	// TODO search in imported files in docId
-	// -----------
-
-	// Not found yet, let's try search the selectedSymbol defined as global in other files
-	// Note: Iterating a map is not guaranteed to be done always in the same order.
-	// TODO -> recheck if this is correct
-	/*
-		for _, scope := range l.functionTreeByDocument {
-			found, foundDepth := findDeepFirst(searchParams.selectedSymbol, position, &scope, 0, AnyPosition)
-
-			if found != nil && (foundDepth <= 1) {
-				return found
-			}
-		}*/
-
-	// Try to find in same module, different files
 	if options.continueOnModule {
+		// Try to find in same module, different files
 		currentModule := l.functionTreeByDocument[searchParams.docId].GetModule()
 		for _, scope := range l.functionTreeByDocument {
 			if scope.GetDocumentURI() == searchParams.docId || scope.GetModule() != currentModule {
 				continue
 			}
 
+			// Can we just call findDeepFirst() directly instead?
 			found := l._findClosestSymbolDeclaration(
 				SearchParams{
 					selectedSymbol: searchParams.selectedSymbol,
 					docId:          scope.GetDocumentURI(),
+					findMode:       AnyPosition,
 				},
-				position,
 				FindOptions{continueOnModule: false},
 			)
 			if found != nil {
@@ -134,28 +149,24 @@ func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, posi
 		}
 	}
 
+	// TODO search in imported files in docId
+	// -----------
+
+	// Not found yet, let's try search the selectedSymbol defined as global in other files
+	// Note: Iterating a map is not guaranteed to be done always in the same order.
+
 	// Not found...
 	return nil
 }
 
-// SearchParams for selectedSymbol in docId
-func (l *Language) findSymbolDeclarationInDocPositionScope(searchParams SearchParams, position protocol.Position) (indexables.Indexable, error) {
-	scopedTree, found := l.functionTreeByDocument[searchParams.docId]
-	if !found {
-		return nil, errors.New(fmt.Sprint("Skipping as no symbols for ", searchParams.docId, " were indexed."))
-	}
-
-	// Go through every element defined in scopedTree
-	symbol, _ := findDeepFirst(searchParams.selectedSymbol, position, &scopedTree, 0, InPosition)
-	return symbol, nil
-}
-
 func findDeepFirst(identifier string, position protocol.Position, function *indexables.Function, depth uint, mode FindMode) (indexables.Indexable, uint) {
-	if identifier == function.GetFullName() {
+	if function.FunctionType() == indexables.UserDefined && identifier == function.GetFullName() {
 		return function, depth
 	}
 
-	// Document this condition
+	// When mode is InPosition, we are specifying it is important for us that
+	// the function being searched contains the position specified.
+	// We use mode = AnyPosition when search for a symbol definition outside the document where the user has its cursor. For example, we are looking in imported files or files of the same module.
 	if mode == InPosition &&
 		!function.GetDocumentRange().HasPosition(position) {
 		return nil, depth
@@ -199,8 +210,26 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		return def, depth
 	}
 
-	// TODO search in Faults
-	// TODO Search in ¿Interfaces?
+	fault, foundFaultInScope := function.Faults[identifier]
+	if foundFaultInScope {
+		return fault, depth
+	}
+	foundEnumeratorInThisScope = false
+	var faultConstant indexables.FaultConstant
+	for _, scopedEnum := range function.Faults {
+		if scopedEnum.HasConstant(identifier) {
+			faultConstant = scopedEnum.GetConstant(identifier)
+			foundEnumeratorInThisScope = true
+		}
+	}
+	if foundEnumeratorInThisScope {
+		return faultConstant, depth
+	}
+
+	_interface, foundInInterface := function.Interfaces[identifier]
+	if foundInInterface {
+		return _interface, depth
+	}
 
 	return nil, depth
 }

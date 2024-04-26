@@ -58,7 +58,7 @@ func buildSearchParams(doc *document.Document, position protocol.Position) (Sear
 	if err != nil {
 		return SearchParams{}, err
 	}
-	search := NewSearchParams(symbolInPosition, doc.URI)
+	search := NewSearchParams(symbolInPosition, position, doc.URI)
 
 	// Check if selectedSymbol has '.' in front
 	if doc.HasPointInFrontSymbol(position) {
@@ -73,23 +73,23 @@ func buildSearchParams(doc *document.Document, position protocol.Position) (Sear
 }
 
 func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position protocol.Position) (indexables.Indexable, error) {
-	searchParams, err := buildSearchParams(doc, position)
+	searchParams, err := NewSearchParamsFromPosition(doc, position)
 	if err != nil {
 		return indexables.Variable{}, err
 	}
 
-	symbol := l.findClosestSymbolDeclaration(searchParams, position)
+	symbol := l.findClosestSymbolDeclaration(searchParams)
 
 	return symbol, nil
 }
 
 func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) (protocol.Hover, error) {
-	search, err := buildSearchParams(doc, params.Position)
+	search, err := NewSearchParamsFromPosition(doc, params.Position)
 	if err != nil {
 		return protocol.Hover{}, err
 	}
 
-	foundSymbol := l.findClosestSymbolDeclaration(search, params.Position)
+	foundSymbol := l.findClosestSymbolDeclaration(search)
 	if foundSymbol == nil {
 		return protocol.Hover{}, nil
 	}
