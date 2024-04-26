@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -13,9 +12,6 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-const ModuleQuery = `(source_file (module_declaration) @module)`
-
-// (source_file (global_declaration type: (type (base_type (base_type_name))) (ident) right: (integer_literal)))
 const VarDeclarationQuery = `(var_declaration
 		name: (identifier) @variable_name
 	)`
@@ -34,6 +30,8 @@ const MacroDeclaration = `(macro_declaration) @macro_dec`
 const ModuleDeclaration = `(module) @module_dec`
 const ImportDeclaration = `(import_declaration) @import_dec`
 
+const ModuleQuery = `(source_file ` + ModuleDeclaration + `)`
+
 type Parser struct {
 	Logger interface{}
 }
@@ -46,7 +44,7 @@ func NewParser(logger interface{}) Parser {
 
 func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	parsedSymbols := NewParsedSymbols()
-	fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
+	//fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
 	query := `[
  (source_file ` + ModuleDeclaration + `)
@@ -196,7 +194,7 @@ func (p *Parser) ExtractModuleName(doc *document.Document) string {
 		qc := sitter.NewQueryCursor()
 		qc.Exec(q, doc.ContextSyntaxTree.RootNode())
 	*/
-	qc := cst.RunQuery(ModuleQuery, doc.ContextSyntaxTree.RootNode())
+	qc := cst.RunQuery(ModuleDeclaration, doc.ContextSyntaxTree.RootNode())
 
 	sourceCode := []byte(doc.Content)
 

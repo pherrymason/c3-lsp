@@ -1,8 +1,6 @@
 package language
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -110,7 +108,7 @@ func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, opti
 				}
 			}
 		default:
-			fmt.Println("Parent Type desconocido!")
+			//fmt.Println("Parent Type desconocido!")
 		}
 	}
 
