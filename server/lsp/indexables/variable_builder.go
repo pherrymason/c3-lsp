@@ -11,7 +11,7 @@ func NewVariableBuilder(name string, variableType string, module string, docId s
 	return &VariableBuilder{
 		variable: Variable{
 			name: name,
-			Type: variableType,
+			Type: NewTypeFromString(variableType),
 			BaseIndexable: BaseIndexable{
 				module:      module,
 				documentURI: docId,

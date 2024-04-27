@@ -85,25 +85,6 @@ func buildPosition(line protocol.UInteger, character protocol.UInteger) protocol
 func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 	initTestEnv()
 
-	t.Run("Asking the selectedSymbol information in the very same declaration, should resolve to the correct selectedSymbol. Even if there is another selectedSymbol with same name in a different file.", func(t *testing.T) {
-		t.Skip()
-		// Should only resolve in very same module, unless module B is imported.
-		// ---------------------
-		// module A has int out;
-		// module B has int out;
-		// asking info about B::out should resolve to B::out, and not A::out.
-
-		// Other cases:
-		// module A;
-		// struct MyStruct{}
-		// fn void MyStruct.search(&self) {}
-		// fn void search() {}
-		//
-		// module B;
-		// MyStruct object;
-		// object.search();
-	})
-
 	t.Run("resolve fn correctly", func(t *testing.T) {
 		t.Skip()
 		// struct MyStruct{}
@@ -138,7 +119,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		variable := resolvedSymbol.(idx.Variable)
 		assert.Equal(t, "emulator", resolvedSymbol.GetName())
-		assert.Equal(t, "Emu", variable.GetType())
+		assert.Equal(t, "Emu", variable.GetType().String())
 	})
 
 	t.Run("Find local variable definition from usage", func(t *testing.T) {
@@ -151,7 +132,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		variable := resolvedSymbol.(idx.Variable)
 		assert.Equal(t, "emulator", resolvedSymbol.GetName())
-		assert.Equal(t, "Emu", variable.GetType())
+		assert.Equal(t, "Emu", variable.GetType().String())
 	})
 
 	t.Run("Should find the right element when there is a different element with the same name up in the scope", func(t *testing.T) {
@@ -164,7 +145,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		variable := resolvedSymbol.(idx.Variable)
 		assert.Equal(t, "ambiguousVariable", resolvedSymbol.GetName())
-		assert.Equal(t, "int", variable.GetType())
+		assert.Equal(t, "int", variable.GetType().String())
 	})
 
 	t.Run("Find variable definition in same module, but different file", func(t *testing.T) {
@@ -177,7 +158,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		variable := resolvedSymbol.(idx.Variable)
 		assert.Equal(t, "helpDisplayedTimes", resolvedSymbol.GetName())
-		assert.Equal(t, "int", variable.GetType())
+		assert.Equal(t, "int", variable.GetType().String())
 	})
 }
 
@@ -210,7 +191,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 
 	t.Run("Should find local struct member variable definition", func(t *testing.T) {
 
-		position := buildPosition(16, 11)
+		position := buildPosition(17, 11)
 		doc := documents["emu.c3"]
 		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
 		searchParams, _ := buildSearchParams(&doc, position)
@@ -222,6 +203,41 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		variable := resolvedSymbol.(idx.StructMember)
 		assert.Equal(t, "on", resolvedSymbol.GetName())
 		assert.Equal(t, "bool", variable.GetType())
+	})
+
+	t.Run("Should find local struct member variable definition when struct is a pointer", func(t *testing.T) {
+
+		position := buildPosition(26, 9)
+		doc := documents["emu.c3"]
+		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
+		searchParams, _ := buildSearchParams(&doc, position)
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Struct member not found")
+
+		variable := resolvedSymbol.(idx.StructMember)
+		assert.Equal(t, "cpu", resolvedSymbol.GetName())
+		assert.Equal(t, "Cpu", variable.GetType())
+	})
+
+	t.Run("Asking the selectedSymbol information in the very same declaration, should resolve to the correct selectedSymbol. Even if there is another selectedSymbol with same name in a different file.", func(t *testing.T) {
+		t.Skip()
+		// Should only resolve in very same module, unless module B is imported.
+		// ---------------------
+		// module A has int out;
+		// module B has int out;
+		// asking info about B::out should resolve to B::out, and not A::out.
+
+		// Other cases:
+		// module A;
+		// struct MyStruct{}
+		// fn void MyStruct.search(&self) {}
+		// fn void search() {}
+		//
+		// module B;
+		// MyStruct object;
+		// object.search();
 	})
 
 	t.Run("Should find interface struct is implementing", func(t *testing.T) {
@@ -255,7 +271,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 
 		variable := resolvedSymbol.(idx.Variable)
 		assert.Equal(t, "status", resolvedSymbol.GetName())
-		assert.Equal(t, "WindowStatus", variable.GetType())
+		assert.Equal(t, "WindowStatus", variable.GetType().String())
 	})
 
 	t.Run("Should find enum definition", func(t *testing.T) {
@@ -342,7 +358,7 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 
 		variable := resolvedSymbol.(idx.Variable)
 		assert.Equal(t, "tick", resolvedSymbol.GetName())
-		assert.Equal(t, "int", variable.GetType())
+		assert.Equal(t, "int", variable.GetType().String())
 	})
 }
 

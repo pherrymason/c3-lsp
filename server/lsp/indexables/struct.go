@@ -111,7 +111,7 @@ func (m StructMember) GetDocumentURI() string {
 }
 
 func (s StructMember) GetHoverInfo() string {
-	return fmt.Sprintf("%s", s.name)
+	return fmt.Sprintf("%s %s", s.baseType, s.name)
 }
 func (s StructMember) GetKind() protocol.CompletionItemKind {
 	return s.Kind
