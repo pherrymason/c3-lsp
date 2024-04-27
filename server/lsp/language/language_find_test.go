@@ -110,7 +110,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 	language, _ := initTestEnv()
 
 	t.Run("Find local variable definition, with cursor in same declaration", func(t *testing.T) {
-		position := buildPosition(15, 9)
+		position := buildPosition(23, 9)
 		searchParams := NewSearchParams("emulator", position, "emu.c3")
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
@@ -123,7 +123,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 	})
 
 	t.Run("Find local variable definition from usage", func(t *testing.T) {
-		position := buildPosition(17, 10)
+		position := buildPosition(24, 10)
 		searchParams := NewSearchParams("emulator", position, "emu.c3")
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
@@ -191,7 +191,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 
 	t.Run("Should find local struct member variable definition", func(t *testing.T) {
 
-		position := buildPosition(17, 11)
+		position := buildPosition(26, 11)
 		doc := documents["emu.c3"]
 		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
 		searchParams, _ := buildSearchParams(&doc, position)
@@ -207,7 +207,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 
 	t.Run("Should find local struct member variable definition when struct is a pointer", func(t *testing.T) {
 
-		position := buildPosition(26, 9)
+		position := buildPosition(35, 9)
 		doc := documents["emu.c3"]
 		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
 		searchParams, _ := buildSearchParams(&doc, position)
