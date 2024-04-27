@@ -69,7 +69,7 @@ func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, opti
 			if !ok {
 				panic("Error")
 			}
-			sp := NewSearchParams(variable.Type, position, variable.GetDocumentURI())
+			sp := NewSearchParams(variable.GetType().GetName(), position, variable.GetDocumentURI())
 			parentTypeSymbol := l.findClosestSymbolDeclaration(sp)
 			//fmt.Sprint(parentTypeSymbol.GetName() + "." + searchParams.selectedSymbol)
 			switch parentTypeSymbol.(type) {

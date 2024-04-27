@@ -256,7 +256,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, "m", fn.GetName())
 	assert.Equal(t, "x", fn.Variables["x"].GetName())
-	assert.Equal(t, "", fn.Variables["x"].GetType())
+	assert.Equal(t, "", fn.Variables["x"].GetType().String())
 }
 
 func TestExtractSymbols_find_module(t *testing.T) {

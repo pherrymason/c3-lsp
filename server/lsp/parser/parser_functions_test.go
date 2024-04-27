@@ -57,19 +57,19 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 
 		variable := fn.Variables["number"]
 		assert.Equal(t, "number", variable.GetName())
-		assert.Equal(t, "int", variable.GetType())
+		assert.Equal(t, "int", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 17, 0, 23), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 13, 0, 23), variable.GetDocumentRange())
 
 		variable = fn.Variables["ch"]
 		assert.Equal(t, "ch", variable.GetName())
-		assert.Equal(t, "char", variable.GetType())
+		assert.Equal(t, "char", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 30, 0, 32), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 25, 0, 32), variable.GetDocumentRange())
 
 		variable = fn.Variables["pointer"]
 		assert.Equal(t, "pointer", variable.GetName())
-		assert.Equal(t, "int*", variable.GetType())
+		assert.Equal(t, "int*", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 39, 0, 46), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 34, 0, 46), variable.GetDocumentRange())
 	})
@@ -103,13 +103,13 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 
 		variable := fn.Variables["self"]
 		assert.Equal(t, "self", variable.GetName())
-		assert.Equal(t, "UserStruct", variable.GetType())
+		assert.Equal(t, "UserStruct", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 29, 0, 33), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 29, 0, 33), variable.GetDocumentRange())
 
 		variable = fn.Variables["pointer"]
 		assert.Equal(t, "pointer", variable.GetName())
-		assert.Equal(t, "int*", variable.GetType())
+		assert.Equal(t, "int*", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 40, 0, 47), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 35, 0, 47), variable.GetDocumentRange())
 

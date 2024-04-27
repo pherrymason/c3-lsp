@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
+	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -11,7 +12,7 @@ func (p *Parser) nodeToVariable(doc *document.Document, variableNode *sitter.Nod
 	typeNodeContent := typeNode.Content(sourceCode)
 	variable := idx.NewVariable(
 		content,
-		typeNodeContent,
+		indexables.NewTypeFromString(typeNodeContent),
 		doc.ModuleName,
 		doc.URI,
 		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()),
@@ -39,7 +40,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 		case "ident":
 			variable := idx.NewVariable(
 				n.Content(sourceCode),
-				typeNodeContent,
+				indexables.NewTypeFromString(typeNodeContent),
 				doc.ModuleName,
 				doc.URI,
 				idx.NewRangeFromSitterPositions(
@@ -55,7 +56,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 			sub := n.Child(1)
 			variable := idx.NewVariable(
 				sub.Content(sourceCode),
-				typeNodeContent,
+				indexables.NewTypeFromString(typeNodeContent),
 				doc.ModuleName,
 				doc.URI,
 				idx.NewRangeFromSitterPositions(
@@ -94,7 +95,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 
 			variable := idx.NewVariable(
 				identifier.Content(sourceCode),
-				typeNodeContent,
+				indexables.NewTypeFromString(typeNodeContent),
 				doc.ModuleName,
 				doc.URI,
 				idx.NewRangeFromSitterPositions(
@@ -144,7 +145,7 @@ func (p *Parser) nodeToConstant(doc *document.Document, node *sitter.Node, sourc
 
 	constant = idx.NewConstant(
 		idNode.Content(sourceCode),
-		typeNodeContent,
+		indexables.NewTypeFromString(typeNodeContent),
 		doc.ModuleName,
 		doc.URI,
 		idx.NewRangeFromSitterPositions(

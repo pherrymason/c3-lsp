@@ -8,11 +8,11 @@ import (
 
 type Variable struct {
 	name string
-	Type string
+	Type Type
 	BaseIndexable
 }
 
-func NewVariable(name string, variableType string, module string, uri string, idRange Range, docRange Range) Variable {
+func NewVariable(name string, variableType Type, module string, uri string, idRange Range, docRange Range) Variable {
 	return Variable{
 		name: name,
 		Type: variableType,
@@ -26,7 +26,7 @@ func NewVariable(name string, variableType string, module string, uri string, id
 	}
 }
 
-func NewConstant(name string, variableType string, module string, uri string, idRange Range, docRange Range) Variable {
+func NewConstant(name string, variableType Type, module string, uri string, idRange Range, docRange Range) Variable {
 	return Variable{
 		name: name,
 		Type: variableType,
@@ -40,7 +40,7 @@ func NewConstant(name string, variableType string, module string, uri string, id
 	}
 }
 
-func (v Variable) GetType() string {
+func (v Variable) GetType() Type {
 	return v.Type
 }
 
