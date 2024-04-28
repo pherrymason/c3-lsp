@@ -294,10 +294,8 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 
 	t.Run("Find local enum variable definition", func(t *testing.T) {
 		position := buildPosition(11, 18)
-		searchParams := NewSearchParams("status", position, "app.c3")
-		//doc := documents["app.c3"]
-		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
-		//searchParams, _ := buildSearchParams(&doc, position)
+		doc := documents["app.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -310,7 +308,8 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 
 	t.Run("Should find enum definition", func(t *testing.T) {
 		position := buildPosition(11, 5)
-		searchParams := NewSearchParams("WindowStatus", position, "app.c3")
+		doc := documents["app.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -321,10 +320,9 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 	})
 
 	t.Run("Should find local enumerator definition", func(t *testing.T) {
-		//searchParams := NewSearchParams("BACKGROUND", "app.c3")
 		position := buildPosition(12, 27)
 		doc := documents["app.c3"]
-		searchParams, _ := buildSearchParams(&doc, position)
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -345,7 +343,6 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 
 	t.Run("Find local fault variable definition", func(t *testing.T) {
 		position := buildPosition(17, 5)
-		//searchParams := NewSearchParams("WindowError", position, "app.c3")
 		doc := docs["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
@@ -372,11 +369,12 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
-	language, _ := initTestEnv()
+	language, documents := initTestEnv()
 
 	t.Run("Find local definition definition", func(t *testing.T) {
 		position := buildPosition(2, 2)
-		searchParams := NewSearchParams("Kilo", position, "definitions.c3")
+		doc := documents["definitions.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -386,7 +384,8 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 
 	t.Run("Find local variable definition in function arguments", func(t *testing.T) {
 		position := buildPosition(10, 4)
-		searchParams := NewSearchParams("tick", position, "app.c3")
+		doc := documents["app.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -399,11 +398,12 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
-	language, _ := initTestEnv()
+	language, documents := initTestEnv()
 
 	t.Run("Find local function definition", func(t *testing.T) {
-		position := buildPosition(19, 5)
-		searchParams := NewSearchParams("run", position, "app.c3")
+		position := buildPosition(21, 5)
+		doc := documents["app.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -416,8 +416,9 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 
 	t.Run("Should not confuse function with virtual root scope function", func(t *testing.T) {
 
-		position := buildPosition(24, 5)
-		searchParams := NewSearchParams("main", position, "app.c3")
+		position := buildPosition(25, 5)
+		doc := documents["app.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
