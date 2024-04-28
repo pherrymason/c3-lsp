@@ -1,6 +1,8 @@
 package language
 
 import (
+	"fmt"
+
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -45,70 +47,12 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams) index
 
 func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, options FindOptions) indexables.Indexable {
 
-	var parentIdentifier indexables.Indexable
-	position := searchParams.position
+	position := searchParams.selectedSymbol.position
 	// Check if there's parent contextual information in searchParams
 	if searchParams.HasParentSymbol() {
-		subSearchParams := NewSearchParams(searchParams.parentSymbol, position, searchParams.docId)
-		parentIdentifier = l.findClosestSymbolDeclaration(subSearchParams)
-	}
-
-	if parentIdentifier != nil {
-		//fmt.Printf("Parent found")
-		// Current symbol is child of something.
-		// Examples:
-		// - Property of a struct variable:
-		// 		cat.name = "kowalsky";
-		// - Method call:
-		//		point.add(10);
-
-		// If parent is Variable -> Look for variable.Type
-		switch parentIdentifier.(type) {
-		case indexables.Variable:
-			variable, ok := parentIdentifier.(indexables.Variable)
-			if !ok {
-				panic("Error")
-			}
-			sp := NewSearchParams(variable.GetType().GetName(), position, variable.GetDocumentURI())
-			parentTypeSymbol := l.findClosestSymbolDeclaration(sp)
-			//fmt.Sprint(parentTypeSymbol.GetName() + "." + searchParams.selectedSymbol)
-			switch parentTypeSymbol.(type) {
-			case indexables.Struct:
-				// Search searchParams.selectedSymbol in members
-				_struct := parentTypeSymbol.(indexables.Struct)
-				members := _struct.GetMembers()
-				for i := 0; i < len(members); i++ {
-					if members[i].GetName() == searchParams.selectedSymbol {
-						searchParams.selectedSymbol = members[i].GetType()
-						return members[i]
-					}
-				}
-			}
-			//searchParams.selectedSymbol = variableTypeSymbol.GetName() + "." + searchParams.selectedSymbol
-
-		case indexables.Enum:
-			// Search searchParams.selectedSymbol in enumerators
-			_enum := parentIdentifier.(indexables.Enum)
-			enumerators := _enum.GetEnumerators()
-			for i := 0; i < len(enumerators); i++ {
-				if enumerators[i].GetName() == searchParams.selectedSymbol {
-					//searchParams.selectedSymbol = enumerators[i].GetName()
-					return enumerators[i]
-				}
-			}
-
-		case indexables.Fault:
-			// Search searchParams.selectedSymbol in enumerators
-			_fault := parentIdentifier.(indexables.Fault)
-			enumerators := _fault.GetConstants()
-			for i := 0; i < len(enumerators); i++ {
-				if enumerators[i].GetName() == searchParams.selectedSymbol {
-					//searchParams.selectedSymbol = enumerators[i].GetName()
-					return enumerators[i]
-				}
-			}
-		default:
-			//fmt.Println("Parent Type desconocido!")
+		identifier := l.findSymbolInSymbolChain(searchParams)
+		if identifier != nil {
+			return identifier
 		}
 	}
 
@@ -118,7 +62,7 @@ func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, opti
 	}
 
 	// Go through every element defined in scopedTree
-	identifier, _ := findDeepFirst(searchParams.selectedSymbol, position, &scopedTree, 0, searchParams.findMode)
+	identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, &scopedTree, 0, searchParams.findMode)
 
 	if identifier != nil {
 		return identifier
@@ -155,6 +99,99 @@ func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, opti
 
 	// Not found...
 	return nil
+}
+
+func (l *Language) findSymbolInSymbolChain(searchParams SearchParams) indexables.Indexable {
+	var levelIdentifier indexables.Indexable
+
+	parentSymbolsCount := len(searchParams.parentSymbols)
+	rootSymbol := searchParams.parentSymbols[parentSymbolsCount-1]
+	levelSearchParams := SearchParams{
+		selectedSymbol: rootSymbol,
+		docId:          searchParams.docId,
+	}
+
+	currentToken := rootSymbol
+	p := parentSymbolsCount - 1
+	for {
+		levelIdentifier = l.findClosestSymbolDeclaration(levelSearchParams)
+		if levelIdentifier == nil {
+			panic(fmt.Sprintf("Could not find symbol at %d level", p))
+		}
+
+		switch levelIdentifier.(type) {
+		case indexables.Variable:
+			variable, ok := levelIdentifier.(indexables.Variable)
+			if !ok {
+				panic("Could not convert levelIdentifier to idx.Variable")
+			}
+			levelSearchParams = NewSearchParams(
+				variable.GetType().GetName(),
+				currentToken.position,
+				variable.GetDocumentURI(),
+			)
+			levelIdentifier = variable
+
+		case indexables.Struct:
+			_struct := levelIdentifier.(indexables.Struct)
+			levelIdentifier = _struct
+			members := _struct.GetMembers()
+			for i := 0; i < len(members); i++ {
+				if members[i].GetName() == currentToken.token {
+					levelIdentifier = members[i]
+					levelSearchParams = NewSearchParams(
+						members[i].GetType(),
+						currentToken.position,
+						levelIdentifier.GetDocumentURI(),
+					)
+					break
+				}
+			}
+		case indexables.Enum:
+			// Search searchParams.selectedSymbol in enumerators
+			_enum := levelIdentifier.(indexables.Enum)
+			levelIdentifier = _enum
+			enumerators := _enum.GetEnumerators()
+			for i := 0; i < len(enumerators); i++ {
+				if enumerators[i].GetName() == currentToken.token {
+					levelIdentifier = enumerators[i]
+					levelSearchParams = NewSearchParams(
+						enumerators[i].GetName(),
+						currentToken.position,
+						levelIdentifier.GetDocumentURI(),
+					)
+				}
+			}
+
+		case indexables.Fault:
+			_fault := levelIdentifier.(indexables.Fault)
+			enumerators := _fault.GetConstants()
+			levelIdentifier = _fault
+			for i := 0; i < len(enumerators); i++ {
+				if enumerators[i].GetName() == currentToken.token {
+					levelIdentifier = enumerators[i]
+					levelSearchParams = NewSearchParams(
+						enumerators[i].GetName(),
+						currentToken.position,
+						levelIdentifier.GetDocumentURI(),
+					)
+				}
+			}
+		}
+
+		if p == -1 {
+			break
+		}
+
+		p--
+		if p >= 0 {
+			currentToken = searchParams.parentSymbols[p]
+		} else {
+			currentToken = searchParams.selectedSymbol
+		}
+	}
+
+	return levelIdentifier
 }
 
 func findDeepFirst(identifier string, position protocol.Position, function *indexables.Function, depth uint, mode FindMode) (indexables.Indexable, uint) {

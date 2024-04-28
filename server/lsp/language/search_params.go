@@ -5,36 +5,57 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+type Token struct {
+	token    string
+	position protocol.Position
+}
+
 type SearchParams struct {
-	selectedSymbol string
-	parentSymbol   string // Limit search to symbols that has are child from parentSymbol
-	position       protocol.Position
-	docId          string
-	findMode       FindMode
+	selectedSymbol Token
+	parentSymbols  []Token // Limit search to symbols that has are child from parentSymbol
+	//position       protocol.Position
+	docId    string
+	findMode FindMode
 }
 
 func NewSearchParams(selectedSymbol string, position protocol.Position, docId string) SearchParams {
 	return SearchParams{
-		selectedSymbol: selectedSymbol,
-		position:       position,
+		selectedSymbol: Token{token: selectedSymbol, position: position},
 		docId:          docId,
 		findMode:       InPosition,
 	}
 }
 
-func NewSearchParamsFromPosition(doc *document.Document, position protocol.Position) (SearchParams, error) {
-	symbolInPosition, err := doc.SymbolInPosition(position)
+func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol.Position) (SearchParams, error) {
+	symbolInPosition, err := doc.SymbolInPosition(cursorPosition)
 	if err != nil {
 		return SearchParams{}, err
 	}
-	search := NewSearchParams(symbolInPosition, position, doc.URI)
+
+	search := NewSearchParams(symbolInPosition, cursorPosition, doc.URI)
 
 	// Check if selectedSymbol has '.' in front
-	if doc.HasPointInFrontSymbol(position) {
-		parentSymbol, err := doc.ParentSymbolInPosition(position)
-		if err == nil {
-			// We have some context information
-			search.parentSymbol = parentSymbol
+	if doc.HasPointInFrontSymbol(cursorPosition) {
+		positionStart, _ := doc.GetSymbolPositionAtPosition(cursorPosition)
+
+		// Iterate backwards from the cursor position to find all parent symbols
+		for i := positionStart.Character - 2; i >= 0; i-- {
+			positionStart = protocol.Position{Line: cursorPosition.Line, Character: i}
+			parentSymbol, err := doc.SymbolInPosition(positionStart)
+			if err == nil && parentSymbol != "." {
+				// If a non-dot symbol is found, add it to the parentSymbols list
+				positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart)
+				search.parentSymbols = append(search.parentSymbols, Token{token: parentSymbol, position: positionStart})
+
+				if doc.HasPointInFrontSymbol(positionStart) {
+					i = positionStart.Character - 2
+				} else {
+					break
+				}
+			} else {
+				// If a dot symbol or an error is encountered, stop iterating
+				break
+			}
 		}
 	}
 
@@ -42,5 +63,5 @@ func NewSearchParamsFromPosition(doc *document.Document, position protocol.Posit
 }
 
 func (s *SearchParams) HasParentSymbol() bool {
-	return s.parentSymbol != ""
+	return len(s.parentSymbols) > 0
 }

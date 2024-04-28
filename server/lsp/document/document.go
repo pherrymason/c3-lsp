@@ -3,6 +3,7 @@ package document
 import (
 	"errors"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/pherrymason/c3-lsp/lsp/cst"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -81,7 +82,7 @@ func (d *Document) ParentSymbolInPosition(position protocol.Position) (string, e
 	}
 
 	index := position.IndexIn(d.Content)
-	start, _, errRange := d.getSymbolAtIndexRanges(index)
+	start, _, errRange := d.getSymbolStartEndAtIndex(index)
 	if errRange != nil {
 		return "", errRange
 	}
@@ -111,7 +112,7 @@ func (d *Document) ParentSymbolInPosition(position protocol.Position) (string, e
 
 func (d *Document) symbolInIndex(index int) (string, error) {
 
-	start, end, err := d.getSymbolAtIndexRanges(index)
+	start, end, err := d.getSymbolStartEndAtIndex(index)
 
 	if err != nil {
 		return "", err
@@ -122,7 +123,7 @@ func (d *Document) symbolInIndex(index int) (string, error) {
 
 func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
 	index := position.IndexIn(d.Content)
-	start, _, _ := d.getSymbolAtIndexRanges(index)
+	start, _, _ := d.getSymbolStartEndAtIndex(index)
 
 	if start == 0 {
 		return false
@@ -135,7 +136,45 @@ func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
 	return false
 }
 
-func (d *Document) getSymbolAtIndexRanges(index int) (int, int, error) {
+func (d *Document) GetSymbolPositionAtPosition(position protocol.Position) (protocol.Position, error) {
+	index := position.IndexIn(d.Content)
+	startIndex, _, _error := d.getSymbolStartEndAtIndex(index)
+
+	symbolStartPosition := d.IndexToPosition(startIndex)
+
+	return symbolStartPosition, _error
+}
+
+func (d *Document) IndexToPosition(index int) protocol.Position {
+	character := 0
+	line := 0
+
+	for i := 0; i < len(d.Content); {
+		r, size := utf8.DecodeRuneInString(d.Content[i:])
+		if i == index {
+			// We've reached the wanted position skip and build position
+			break
+		}
+
+		if r == '\n' {
+			// We've found a new line
+			line++
+			character = 0
+		} else {
+			character++
+		}
+
+		// Advance the correct number of bytes
+		i += size
+	}
+
+	return protocol.Position{
+		Line:      protocol.UInteger(line),
+		Character: protocol.UInteger(character),
+	}
+}
+
+func (d *Document) getSymbolStartEndAtIndex(index int) (int, int, error) {
 	text := d.Content
 
 	wordStart := 0

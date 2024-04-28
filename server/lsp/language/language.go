@@ -65,7 +65,7 @@ func buildSearchParams(doc *document.Document, position protocol.Position) (Sear
 		parentSymbol, err := doc.ParentSymbolInPosition(position)
 		if err == nil {
 			// We have some context information
-			search.parentSymbol = parentSymbol
+			search.parentSymbols = append(search.parentSymbols, Token{token: parentSymbol})
 		}
 	}
 

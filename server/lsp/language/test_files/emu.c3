@@ -15,7 +15,7 @@ fn void Audio.init() {
 
 struct Emu (EmulatorConsole) {
   Cpu cpu;
-  Audio a;
+  Audio audio;
   bool on;
 }
 
@@ -27,11 +27,15 @@ fn Emu newEmulator(){
 	return emulator;
 }
 
-fn void Emu.run() {
-    
+fn void Emu.run(Emu* emu) {
+    emu.tick();
 }
 
 fn void Emu.blarg(Emu* emu) {
     emu.cpu.init();
     emu.audio.init();
+}
+
+fn void Emu.tick(Emu* emu) {
+    
 }

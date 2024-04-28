@@ -194,7 +194,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		position := buildPosition(26, 11)
 		doc := documents["emu.c3"]
 		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
-		searchParams, _ := buildSearchParams(&doc, position)
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -210,7 +210,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		position := buildPosition(35, 9)
 		doc := documents["emu.c3"]
 		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
-		searchParams, _ := buildSearchParams(&doc, position)
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -219,6 +219,40 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		variable := resolvedSymbol.(idx.StructMember)
 		assert.Equal(t, "cpu", resolvedSymbol.GetName())
 		assert.Equal(t, "Cpu", variable.GetType())
+	})
+
+	t.Run("Should find struct method when there are N nested structs", func(t *testing.T) {
+		t.Skip()
+		// No pointer scenario
+		position := buildPosition(25, 20)
+		doc := documents["emu.c3"]
+		// Note: Here we use NewSearchParamsFromPosition instead of NewSearchParams because NewSearchParamsFromPosition has some logic to identify that the searchTerm has a '.'.
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Struct method not found")
+
+		fun, ok := resolvedSymbol.(idx.Function)
+		assert.True(t, ok, "Struct method found")
+		assert.Equal(t, "init", fun.GetName())
+		//assert.Equal(t, "Cpu", fun.GetType())
+	})
+
+	t.Run("Should find local struct method definition", func(t *testing.T) {
+
+		position := buildPosition(26, 11)
+		doc := documents["emu.c3"]
+		// Note: Here we use buildSearchParams instead of NewSearchParams because buildSearchParams has some logic to identify that the searchTerm has a '.'.
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Struct member not found")
+
+		variable := resolvedSymbol.(idx.StructMember)
+		assert.Equal(t, "on", resolvedSymbol.GetName())
+		assert.Equal(t, "bool", variable.GetType())
 	})
 
 	t.Run("Asking the selectedSymbol information in the very same declaration, should resolve to the correct selectedSymbol. Even if there is another selectedSymbol with same name in a different file.", func(t *testing.T) {
@@ -310,12 +344,14 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 	language, docs := initTestEnv()
 
 	t.Run("Find local fault variable definition", func(t *testing.T) {
-		position := buildPosition(15, 5)
-		searchParams := NewSearchParams("WindowError", position, "app.c3")
+		position := buildPosition(17, 5)
+		//searchParams := NewSearchParams("WindowError", position, "app.c3")
+		doc := docs["app.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
-		assert.NotNil(t, resolvedSymbol, "Local function not found")
+		assert.NotNil(t, resolvedSymbol, "Fault not found")
 
 		fault := resolvedSymbol.(idx.Fault)
 		assert.Equal(t, "WindowError", fault.GetName())
@@ -324,7 +360,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 	t.Run("Should find fault constant definition", func(t *testing.T) {
 		position := buildPosition(17, 37)
 		doc := docs["app.c3"]
-		searchParams, _ := buildSearchParams(&doc, position)
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
