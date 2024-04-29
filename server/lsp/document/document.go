@@ -140,7 +140,7 @@ func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
 
 func (d *Document) HasModuleSeparatorInFrontSymbol(position protocol.Position) bool {
 	index := position.IndexIn(d.Content)
-	start, _, _ := d.GetSymbolRangeAtIndex(index)
+	start, _, _ := d.getSymbolRangeAtIndex(index)
 
 	if start == 0 {
 		return false
