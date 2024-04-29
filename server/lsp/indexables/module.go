@@ -29,6 +29,13 @@ func (mp ModulePath) Has() bool {
 
 func concatPaths(slice []string, delimiter string) string {
 	result := ""
+	n := len(slice)
+
+	// Reverse the slice
+	for i := 0; i < n/2; i++ {
+		slice[i], slice[n-1-i] = slice[n-1-i], slice[i]
+	}
+
 	for i, str := range slice {
 		if i > 0 {
 			result += delimiter

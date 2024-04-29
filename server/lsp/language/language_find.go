@@ -119,8 +119,9 @@ func (l *Language) _findClosestSymbolDeclarationInDoc(searchParams SearchParams,
 }
 
 func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams) indexables.Indexable {
+	expectedModule := searchParams.modulePath.GetName()
 	for docId, scope := range l.functionTreeByDocument {
-		if scope.GetModule() != searchParams.modulePath.GetName() { // TODO Ignore current doc we are comming from
+		if scope.GetModule() != expectedModule { // TODO Ignore current doc we are comming from
 			continue
 		}
 
