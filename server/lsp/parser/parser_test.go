@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
@@ -293,13 +291,13 @@ func dfs(n *sitter.Node, level int) {
 	}
 
 	// Procesa el nodo actual (puedes imprimir, almacenar en un slice, etc.)
-	tabs := strings.Repeat("\t", level)
-	fmt.Printf("%sNode", tabs)
+	//tabs := strings.Repeat("\t", level)
+	//fmt.Printf("%sNode", tabs)
 	//fmt.Printf("%sPos: %d - %d -> ", tabs, n.StartPoint().Row, n.StartPoint().Column)
 	//fmt.Printf("%d - %d\n", n.EndPoint().Row, n.EndPoint().Column)
-	fmt.Printf("%sType: %s", tabs, n.Type())
+	//fmt.Printf("%sType: %s", tabs, n.Type())
 	//fmt.Printf("\tContent: %s", n.C)
-	fmt.Printf("\n")
+	//fmt.Printf("\n")
 
 	// Llama recursivamente a DFS para los nodos hijos
 	//fmt.Printf("~inside~")

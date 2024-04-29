@@ -116,8 +116,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 	})
 
 	t.Run("resolve explicit variable from sub module", func(t *testing.T) {
-		t.Skip()
-		position := buildPosition(7, 28) // Cursor at foo::bar::DEFAULT_BAR_COLOR;
+		position := buildPosition(7, 28) // Cursor at foo::bar::D|EFAULT_BAR_COLOR;
 		doc := documents["module_foo2.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
