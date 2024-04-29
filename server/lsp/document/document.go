@@ -10,6 +10,9 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+const STRUCT_SEPARATOR = '.'
+const MODULE_SEPARATOR = ':'
+
 type Document struct {
 	ContextSyntaxTree       *sitter.Tree
 	ModuleName              string
@@ -17,7 +20,6 @@ type Document struct {
 	NeedsRefreshDiagnostics bool
 	Content                 string
 	lines                   []string
-	imports                 []string
 }
 
 func NewDocument(docId protocol.DocumentUri, moduleName string, documentContent string) Document {
@@ -82,7 +84,7 @@ func (d *Document) ParentSymbolInPosition(position protocol.Position) (string, e
 	}
 
 	index := position.IndexIn(d.Content)
-	start, _, errRange := d.getSymbolStartEndAtIndex(index)
+	start, _, errRange := d.getSymbolRangeAtIndex(index)
 	if errRange != nil {
 		return "", errRange
 	}
@@ -112,10 +114,10 @@ func (d *Document) ParentSymbolInPosition(position protocol.Position) (string, e
 
 func (d *Document) symbolInIndex(index int) (string, error) {
 
-	start, end, err := d.getSymbolStartEndAtIndex(index)
+	start, end, err := d.getSymbolRangeAtIndex(index)
 
 	if err != nil {
-		return "", err
+		return d.Content[index : index+1], err
 	}
 
 	return d.Content[start : end+1], nil
@@ -123,13 +125,28 @@ func (d *Document) symbolInIndex(index int) (string, error) {
 
 func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
 	index := position.IndexIn(d.Content)
-	start, _, _ := d.getSymbolStartEndAtIndex(index)
+	start, _, _ := d.getSymbolRangeAtIndex(index)
 
 	if start == 0 {
 		return false
 	}
 
-	if rune(d.Content[start-1]) == '.' {
+	if rune(d.Content[start-1]) == STRUCT_SEPARATOR {
+		return true
+	}
+
+	return false
+}
+
+func (d *Document) HasModuleSeparatorInFrontSymbol(position protocol.Position) bool {
+	index := position.IndexIn(d.Content)
+	start, _, _ := d.GetSymbolRangeAtIndex(index)
+
+	if start == 0 {
+		return false
+	}
+
+	if rune(d.Content[start-1]) == MODULE_SEPARATOR && rune(d.Content[start-2]) == MODULE_SEPARATOR {
 		return true
 	}
 
@@ -138,7 +155,7 @@ func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
 
 func (d *Document) GetSymbolPositionAtPosition(position protocol.Position) (protocol.Position, error) {
 	index := position.IndexIn(d.Content)
-	startIndex, _, _error := d.getSymbolStartEndAtIndex(index)
+	startIndex, _, _error := d.getSymbolRangeAtIndex(index)
 
 	symbolStartPosition := d.IndexToPosition(startIndex)
 
@@ -174,40 +191,44 @@ func (d *Document) IndexToPosition(index int) protocol.Position {
 	}
 }
 
-func (d *Document) getSymbolStartEndAtIndex(index int) (int, int, error) {
-	text := d.Content
+func isAZ09_(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
+}
 
-	wordStart := 0
+// Returns start and end index of symbol present in index.
+// If no symbol is found in index, error will be returned
+func (d *Document) getSymbolRangeAtIndex(index int) (int, int, error) {
+	if !isAZ09_(rune(d.Content[index])) {
+		return 0, 0, errors.New("No symbol at position")
+	}
+
+	symbolStart := 0
 	for i := index; i >= 0; i-- {
-		if !(unicode.IsLetter(rune(text[i])) || unicode.IsDigit(rune(text[i])) || text[i] == '_') {
-			wordStart = i + 1
+		r := rune(d.Content[i])
+		if !isAZ09_(r) {
+			// First invalid character found, that means previous iteration contained first character of symbol
+			symbolStart = i + 1
 			break
 		}
 	}
 
-	wordEnd := len(text) - 1
-	for i := index; i < len(text); i++ {
-		if !(unicode.IsLetter(rune(text[i])) || unicode.IsDigit(rune(text[i])) || text[i] == '_') {
-			wordEnd = i - 1
+	symbolEnd := len(d.Content) - 1
+	for i := index; i < len(d.Content); i++ {
+		r := rune(d.Content[i])
+		if !isAZ09_(r) {
+			// First invalid character found, that means previous iteration contained last character of symbol
+			symbolEnd = i - 1
 			break
 		}
 	}
 
-	if wordStart > len(text) {
+	if symbolStart > len(d.Content) {
 		return 0, 0, errors.New("wordStart out of bounds")
-	} else if wordEnd > len(text) {
+	} else if symbolEnd > len(d.Content) {
 		return 0, 0, errors.New("wordEnd out of bounds")
-	} else if wordStart > wordEnd {
+	} else if symbolStart > symbolEnd {
 		return 0, 0, errors.New("wordStart > wordEnd!")
 	}
 
-	return wordStart, wordEnd, nil
-}
-
-func (d *Document) AddImport(module string) {
-	d.imports = append(d.imports, module)
-}
-
-func (d Document) GetImports() []string {
-	return d.imports
+	return symbolStart, symbolEnd, nil
 }

@@ -1,11 +1,20 @@
 package document
 
 import (
+	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"testing"
 )
+
+func TestDocument_GetSymbolRangeAtIndex_does_not_find_symbol(t *testing.T) {
+	doc := NewDocument("x", "x", "a document")
+	_, _, error := doc.getSymbolRangeAtIndex(1)
+
+	assert.Equal(t, errors.New("No symbol at position"), error)
+}
 
 func TestWordInIndex(t *testing.T) {
 	cases := []struct {
