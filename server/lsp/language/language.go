@@ -53,25 +53,6 @@ const (
 
 type FindMode int
 
-func buildSearchParams(doc *document.Document, position protocol.Position) (SearchParams, error) {
-	symbolInPosition, err := doc.SymbolInPosition(position)
-	if err != nil {
-		return SearchParams{}, err
-	}
-	search := NewSearchParams(symbolInPosition, position, doc.URI)
-
-	// Check if selectedSymbol has '.' in front
-	if doc.HasPointInFrontSymbol(position) {
-		parentSymbol, err := doc.ParentSymbolInPosition(position)
-		if err == nil {
-			// We have some context information
-			search.parentSymbols = append(search.parentSymbols, Token{token: parentSymbol})
-		}
-	}
-
-	return search, nil
-}
-
 func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position protocol.Position) (indexables.Indexable, error) {
 	searchParams, err := NewSearchParamsFromPosition(doc, position)
 	if err != nil {

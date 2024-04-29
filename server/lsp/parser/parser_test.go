@@ -276,15 +276,15 @@ func TestExtractSymbols_find_module(t *testing.T) {
 func TestExtractSymbols_find_imports(t *testing.T) {
 	source := `
 	module foo;
-	import some;
+	import some, other, foo::bar::final;
 	int value = 1;
 	`
 
 	doc := document.NewDocument("docId", "??", source)
 	parser := createParser()
-	parser.ExtractSymbols(&doc)
+	symbols := parser.ExtractSymbols(&doc)
 
-	assert.Equal(t, []string{"some"}, doc.GetImports())
+	assert.Equal(t, []string{"some", "other", "foo::bar::final"}, symbols.Imports)
 }
 
 func dfs(n *sitter.Node, level int) {

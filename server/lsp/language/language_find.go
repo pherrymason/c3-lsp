@@ -1,8 +1,6 @@
 package language
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -42,57 +40,76 @@ type FindOptions struct {
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
 func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams) indexables.Indexable {
-	return l._findClosestSymbolDeclaration(searchParams, FindOptions{continueOnModule: true})
+	return l._findClosestSymbolDeclarationInDoc(searchParams, FindOptions{continueOnModule: true})
 }
 
-func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, options FindOptions) indexables.Indexable {
+func (l *Language) _findClosestSymbolDeclarationInDoc(searchParams SearchParams, options FindOptions) indexables.Indexable {
 
 	position := searchParams.selectedSymbol.position
 	// Check if there's parent contextual information in searchParams
 	if searchParams.HasParentSymbol() {
-		identifier := l.findSymbolInSymbolChain(searchParams)
+		identifier := l.findInParentSymbols(searchParams)
 		if identifier != nil {
 			return identifier
 		}
 	}
 
-	scopedTree, found := l.functionTreeByDocument[searchParams.docId]
-	if !found {
-		return nil
-	}
+	if searchParams.HasModuleSpecified() {
+		symbol := l._findSymbolDeclarationInModule(searchParams)
+		if symbol != nil {
+			return symbol
+		}
+	} else {
+		scopedTree, found := l.functionTreeByDocument[searchParams.docId]
+		if !found {
+			return nil
+		}
 
-	// Go through every element defined in scopedTree
-	identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, &scopedTree, 0, searchParams.findMode)
+		// Go through every element defined in scopedTree
+		identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, &scopedTree, 0, searchParams.findMode)
 
-	if identifier != nil {
-		return identifier
-	}
+		if identifier != nil {
+			return identifier
+		}
 
-	if options.continueOnModule {
-		// Try to find in same module, different files
-		currentModule := l.functionTreeByDocument[searchParams.docId].GetModule()
-		for _, scope := range l.functionTreeByDocument {
-			if scope.GetDocumentURI() == searchParams.docId || scope.GetModule() != currentModule {
-				continue
+		if options.continueOnModule {
+			// Try to find in same module, different files
+			currentModule := l.functionTreeByDocument[searchParams.docId].GetModule()
+			for _, scope := range l.functionTreeByDocument {
+				if scope.GetDocumentURI() == searchParams.docId || scope.GetModule() != currentModule {
+					continue
+				}
+
+				// Can we just call findDeepFirst() directly instead?
+				found := l._findClosestSymbolDeclarationInDoc(
+					SearchParams{
+						selectedSymbol: searchParams.selectedSymbol,
+						docId:          scope.GetDocumentURI(),
+						findMode:       AnyPosition,
+					},
+					FindOptions{continueOnModule: false},
+				)
+				if found != nil {
+					return found
+				}
 			}
+		}
 
-			// Can we just call findDeepFirst() directly instead?
-			found := l._findClosestSymbolDeclaration(
-				SearchParams{
-					selectedSymbol: searchParams.selectedSymbol,
-					docId:          scope.GetDocumentURI(),
-					findMode:       AnyPosition,
-				},
-				FindOptions{continueOnModule: false},
-			)
-			if found != nil {
-				return found
+		if len(scopedTree.Imports) > 0 {
+			for i := 0; i < len(scopedTree.Imports); i++ {
+				symbol := l._findSymbolDeclarationInModule(
+					SearchParams{
+						selectedSymbol: searchParams.selectedSymbol,
+						modulePath:     indexables.NewModulePath([]string{scopedTree.Imports[i]}),
+						findMode:       AnyPosition,
+					},
+				)
+				if symbol != nil {
+					return symbol
+				}
 			}
 		}
 	}
-
-	// TODO search in imported files in docId
-	// -----------
 
 	// Not found yet, let's try search the selectedSymbol defined as global in other files
 	// Note: Iterating a map is not guaranteed to be done always in the same order.
@@ -101,7 +118,27 @@ func (l *Language) _findClosestSymbolDeclaration(searchParams SearchParams, opti
 	return nil
 }
 
-func (l *Language) findSymbolInSymbolChain(searchParams SearchParams) indexables.Indexable {
+func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams) indexables.Indexable {
+	for docId, scope := range l.functionTreeByDocument {
+		if scope.GetModule() != searchParams.modulePath.GetName() { // TODO Ignore current doc we are comming from
+			continue
+		}
+
+		symbol := l._findClosestSymbolDeclarationInDoc(SearchParams{
+			selectedSymbol: searchParams.selectedSymbol,
+			docId:          docId,
+			findMode:       searchParams.findMode,
+		}, FindOptions{continueOnModule: true})
+
+		if symbol != nil {
+			return symbol
+		}
+	}
+
+	return nil
+}
+
+func (l *Language) findInParentSymbols(searchParams SearchParams) indexables.Indexable {
 	var levelIdentifier indexables.Indexable
 
 	parentSymbolsCount := len(searchParams.parentSymbols)
@@ -112,11 +149,15 @@ func (l *Language) findSymbolInSymbolChain(searchParams SearchParams) indexables
 	}
 
 	currentToken := rootSymbol
-	p := parentSymbolsCount - 1
+	parentDepth := parentSymbolsCount - 1
+	searchingFinalSymbol := false
+	finalSymbolFound := false
 	for {
+		finalSymbolFound = false
 		levelIdentifier = l.findClosestSymbolDeclaration(levelSearchParams)
 		if levelIdentifier == nil {
-			panic(fmt.Sprintf("Could not find symbol at %d level", p))
+			return nil
+			//panic(fmt.Sprintf("Could not find symbol at %d level", parentDepth))
 		}
 
 		switch levelIdentifier.(type) {
@@ -131,6 +172,7 @@ func (l *Language) findSymbolInSymbolChain(searchParams SearchParams) indexables
 				variable.GetDocumentURI(),
 			)
 			levelIdentifier = variable
+			finalSymbolFound = true
 
 		case indexables.Struct:
 			_struct := levelIdentifier.(indexables.Struct)
@@ -139,14 +181,25 @@ func (l *Language) findSymbolInSymbolChain(searchParams SearchParams) indexables
 			for i := 0; i < len(members); i++ {
 				if members[i].GetName() == currentToken.token {
 					levelIdentifier = members[i]
+					finalSymbolFound = true
 					levelSearchParams = NewSearchParams(
 						members[i].GetType(),
 						currentToken.position,
-						levelIdentifier.GetDocumentURI(),
+						_struct.GetDocumentURI(),
 					)
 					break
 				}
 			}
+
+			// Member not found, let's do an extra search in functions
+			if !finalSymbolFound {
+				levelSearchParams = NewSearchParams(
+					_struct.GetName()+"."+currentToken.token,
+					currentToken.position,
+					levelIdentifier.GetDocumentURI(),
+				)
+			}
+
 		case indexables.Enum:
 			// Search searchParams.selectedSymbol in enumerators
 			_enum := levelIdentifier.(indexables.Enum)
@@ -155,6 +208,7 @@ func (l *Language) findSymbolInSymbolChain(searchParams SearchParams) indexables
 			for i := 0; i < len(enumerators); i++ {
 				if enumerators[i].GetName() == currentToken.token {
 					levelIdentifier = enumerators[i]
+					finalSymbolFound = true
 					levelSearchParams = NewSearchParams(
 						enumerators[i].GetName(),
 						currentToken.position,
@@ -170,6 +224,7 @@ func (l *Language) findSymbolInSymbolChain(searchParams SearchParams) indexables
 			for i := 0; i < len(enumerators); i++ {
 				if enumerators[i].GetName() == currentToken.token {
 					levelIdentifier = enumerators[i]
+					finalSymbolFound = true
 					levelSearchParams = NewSearchParams(
 						enumerators[i].GetName(),
 						currentToken.position,
@@ -177,17 +232,23 @@ func (l *Language) findSymbolInSymbolChain(searchParams SearchParams) indexables
 					)
 				}
 			}
+
+		case *indexables.Function:
+			_fun := levelIdentifier.(*indexables.Function)
+			levelIdentifier = _fun
+			finalSymbolFound = true
 		}
 
-		if p == -1 {
+		if searchingFinalSymbol && finalSymbolFound {
 			break
 		}
 
-		p--
-		if p >= 0 {
-			currentToken = searchParams.parentSymbols[p]
+		parentDepth--
+		if parentDepth >= 0 {
+			currentToken = searchParams.parentSymbols[parentDepth]
 		} else {
 			currentToken = searchParams.selectedSymbol
+			searchingFinalSymbol = true
 		}
 	}
 

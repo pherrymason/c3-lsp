@@ -120,12 +120,14 @@ func (s StructMember) GetModule() string {
 	return s.module
 }
 
-func NewStructMember(name string, baseType string, posRange Range) StructMember {
+func NewStructMember(name string, baseType string, posRange Range, module string, docId string) StructMember {
 	return StructMember{
 		name:     name,
 		baseType: baseType,
 		BaseIndexable: BaseIndexable{
-			idRange: posRange,
+			idRange:     posRange,
+			documentURI: docId,
+			module:      module,
 		},
 	}
 }

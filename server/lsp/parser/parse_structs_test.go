@@ -45,11 +45,15 @@ fn void MyStruct.init(&self)
 		assert.Equal(t, "data", member.GetName())
 		assert.Equal(t, "int", member.GetType())
 		assert.Equal(t, idx.NewRange(1, 5, 1, 9), member.GetIdRange())
+		assert.Equal(t, "docId", member.GetDocumentURI())
+		assert.Equal(t, "x", member.GetModule())
 
 		member = found.GetMembers()[1]
 		assert.Equal(t, "key", member.GetName())
 		assert.Equal(t, "char", member.GetType())
 		assert.Equal(t, idx.NewRange(2, 6, 2, 9), member.GetIdRange())
+		assert.Equal(t, "docId", member.GetDocumentURI())
+		assert.Equal(t, "x", member.GetModule())
 	})
 
 	t.Run("finds struct implementing interface", func(t *testing.T) {

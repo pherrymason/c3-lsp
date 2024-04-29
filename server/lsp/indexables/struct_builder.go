@@ -10,8 +10,8 @@ func NewStructBuilder(name string, module string, docId string) *StructBuilder {
 	}
 }
 
-func (b *StructBuilder) WithStructMember(name string, baseType string, posRange Range) *StructBuilder {
-	b.strukt.members = append(b.strukt.members, NewStructMember(name, baseType, posRange))
+func (b *StructBuilder) WithStructMember(name string, baseType string, posRange Range, module string, docId string) *StructBuilder {
+	b.strukt.members = append(b.strukt.members, NewStructMember(name, baseType, posRange, module, docId))
 	return b
 }
 

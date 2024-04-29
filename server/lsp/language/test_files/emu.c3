@@ -1,4 +1,5 @@
 module emulator;
+import emulator::cpu;
 
 interface EmulatorConsole
 {
@@ -21,7 +22,7 @@ struct Emu (EmulatorConsole) {
 
 fn Emu newEmulator(){
 	Emu emulator;
-    emulator.cpu.init();
+    emulator.cpu.init(CPU_FREQUENCY);
     emulator.audio.init();
 	emulator.on = true;
 	return emulator;
@@ -34,6 +35,7 @@ fn void Emu.run(Emu* emu) {
 fn void Emu.blarg(Emu* emu) {
     emu.cpu.init();
     emu.audio.init();
+    emu.audio.unknown();
 }
 
 fn void Emu.tick(Emu* emu) {

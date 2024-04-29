@@ -70,6 +70,7 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 		qc.Exec(q, doc.ContextSyntaxTree.RootNode())*/
 	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
 	sourceCode := []byte(doc.Content)
+	//fmt.Println(doc.ContextSyntaxTree.RootNode())
 
 	scopeTree := idx.NewAnonymousScopeFunction("main", doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(doc.ContextSyntaxTree.RootNode().StartPoint(), doc.ContextSyntaxTree.RootNode().EndPoint()), protocol.CompletionItemKindModule)
 
@@ -89,7 +90,8 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 				scopeTree.ChangeModule(doc.ModuleName)
 
 			case "import_declaration":
-				doc.AddImport(p.nodeToImport(doc, c.Node, sourceCode))
+				imports := p.nodeToImport(doc, c.Node, sourceCode)
+				scopeTree.Imports = imports
 
 			case "global_declaration":
 				variables := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
@@ -186,14 +188,6 @@ func (p *Parser) FindFunctionDeclarations(doc *document.Document) []idx.Indexabl
 }
 
 func (p *Parser) ExtractModuleName(doc *document.Document) string {
-	/*
-		q, err := sitter.NewQuery([]byte(ModuleQuery), cst.GetLanguage())
-		if err != nil {
-			panic(err)
-		}
-		qc := sitter.NewQueryCursor()
-		qc.Exec(q, doc.ContextSyntaxTree.RootNode())
-	*/
 	qc := cst.RunQuery(ModuleDeclaration, doc.ContextSyntaxTree.RootNode())
 
 	sourceCode := []byte(doc.Content)

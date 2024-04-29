@@ -41,17 +41,24 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 	      ';'
 	    ),
 */
-func (p *Parser) nodeToImport(doc *document.Document, node *sitter.Node, sourceCode []byte) string {
+func (p *Parser) nodeToImport(doc *document.Document, node *sitter.Node, sourceCode []byte) []string {
+	imports := []string{}
 
-	name := node.ChildByFieldName("path").Content(sourceCode)
-	/*
-		for i := 0; i < int(node.ChildCount()); i++ {
-			n := node.Child(i)
-			switch n.Type() {
-			case "alias":
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
 
+		switch n.Type() {
+		case "path_ident":
+			temp_mod := ""
+			for m := 0; m < int(n.ChildCount()); m++ {
+				sn := n.Child(m)
+				if sn.Type() == "ident" || sn.Type() == "module_resolution" {
+					temp_mod += sn.Content(sourceCode)
+				}
 			}
-		}*/
+			imports = append(imports, temp_mod)
+		}
+	}
 
-	return name
+	return imports
 }

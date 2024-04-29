@@ -95,7 +95,10 @@ func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceC
 				idx.NewStructMember(
 					identifiers[y],
 					fieldType,
-					identifiersRange[y]),
+					identifiersRange[y],
+					doc.ModuleName,
+					doc.URI,
+				),
 			)
 		}
 	}

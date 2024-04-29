@@ -27,6 +27,7 @@ type Function struct {
 	Defs              map[string]Def
 	ChildrenFunctions []Function
 	Interfaces        map[string]Interface
+	Imports           []string // modules imported in this scope
 
 	BaseIndexable
 }
@@ -68,6 +69,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 		Defs:              make(map[string]Def),
 		ChildrenFunctions: []Function{},
 		Interfaces:        make(map[string]Interface),
+		Imports:           []string{},
 	}
 }
 
