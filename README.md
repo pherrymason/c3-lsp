@@ -31,7 +31,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
   - [~] defines
   - [x] Interfaces
   - [~] [Macros](https://c3-lang.org/references/docs/macros/)
-  - [ ] imports
+  - [x] imports
   - [x] modules
     - [ ] multiple modules per file
   - [ ] [Generics](https://c3-lang.org/references/docs/generics/)

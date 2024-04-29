@@ -1,11 +1,13 @@
 package language
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/stretchr/testify/assert"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_position(t *testing.T) {
@@ -50,21 +52,44 @@ system.cpu.init();`
 }
 
 func TestSearchParams_NewSearchParamsFromPosition_finds_full_module_path(t *testing.T) {
-	sourceCode := `// This blank line is intended.
-system::cpu::value;`
-	doc := document.NewDocument("filename", "module", sourceCode)
-
-	sp, err := NewSearchParamsFromPosition(&doc, buildPosition(2, 13))
-
-	assert.Nil(t, err)
-	assert.Equal(
-		t,
-		SearchParams{
-			selectedSymbol: Token{token: "value", position: buildPosition(2, 13)},
-			docId:          "filename",
-			modulePath:     indexables.NewModulePath([]string{"cpu", "system"}),
-			findMode:       InPosition,
+	cases := []struct {
+		source         string
+		position       protocol.Position
+		expectedModule indexables.ModulePath
+		expectedToken  string
+	}{
+		{
+			`// This blank line is intended.
+			system::cpu::value;`,
+			buildPosition(2, 17),
+			indexables.NewModulePath([]string{"cpu", "system"}),
+			"value",
 		},
-		sp,
-	)
+		{
+			`// This blank line is intended.
+mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
+			buildPosition(2, 25),
+			indexables.NewModulePath([]string{"bar", "foo"}),
+			"DEFAULT_BAR_COLOR",
+		},
+	}
+
+	for i, tt := range cases {
+		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
+			doc := document.NewDocument("filename", "module", tt.source)
+			sp, err := NewSearchParamsFromPosition(&doc, tt.position)
+
+			assert.Nil(t, err)
+			assert.Equal(
+				t,
+				SearchParams{
+					selectedSymbol: Token{token: tt.expectedToken, position: tt.position},
+					docId:          "filename",
+					modulePath:     tt.expectedModule,
+					findMode:       InPosition,
+				},
+				sp,
+			)
+		})
+	}
 }

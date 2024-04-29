@@ -54,6 +54,8 @@ func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol
 
 			} else if parentSymbol == ":" {
 				iterating_module_path = true
+			} else if parentSymbol == " " {
+				break
 			}
 			continue
 		}
