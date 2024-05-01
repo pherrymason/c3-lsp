@@ -97,16 +97,6 @@ func buildPosition(line protocol.UInteger, character protocol.UInteger) protocol
 func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 	language, documents := initTestEnv()
 
-	t.Run("resolve fn correctly", func(t *testing.T) {
-		t.Skip()
-		// struct MyStruct{}
-		// fn void MyStruct.search(&self) {}
-		// fn void search() {}
-		//
-		// MyStruct object;
-		// object.search();
-	})
-
 	t.Run("resolve implicit variable from different module in different file", func(t *testing.T) {
 		position := buildPosition(8, 21) // Cursor at BA|R_WEIGHT
 		doc := documents["module_foo2.c3"]
@@ -147,6 +137,10 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		assert.Equal(t, "foo::bar", symbol.GetModule())
 	})
 
+	t.Run("finds symbol in parent implicit module", func(t *testing.T) {
+		t.Skip("TODO")
+	})
+
 	t.Run("resolve properly when there are cyclic dependencies", func(t *testing.T) {
 		// This test ask specifically for a symbol located in an imported module defined after another module that has a cyclic dependency.
 		position := buildPosition(10, 6) // Cursor at `T|riangle`
@@ -160,6 +154,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		assert.Equal(t, "module_foo_triangle.c3", symbol.GetDocumentURI())
 		assert.Equal(t, "foo::triangle", symbol.GetModule())
 	})
+
 }
 
 func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
