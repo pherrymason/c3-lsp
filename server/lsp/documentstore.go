@@ -1,6 +1,8 @@
 package lsp
 
 import (
+	"fmt"
+
 	"github.com/pherrymason/c3-lsp/fs"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
@@ -41,11 +43,13 @@ func (s *documentStore) Open(params protocol.DidOpenTextDocumentParams, notify g
 
 	uri := params.TextDocument.URI
 	path, err := s.normalizePath(uri)
+	s.logger.Debug(fmt.Sprintf("Opening %s :: %s", uri, path))
 
 	if err != nil {
 		return nil, err
 	}
-	doc := NewDocumentFromString(uri, params.TextDocument.Text)
+	// TODO test that document is created with the normalized path and not params.TextDocument.URI
+	doc := NewDocumentFromString(path, params.TextDocument.Text)
 
 	moduleName := parser.ExtractModuleName(&doc)
 	doc.ModuleName = moduleName
