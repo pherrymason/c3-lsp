@@ -16,14 +16,19 @@ type SearchParams struct {
 	parentSymbols  []Token // Limit search to symbols that has are child from parentSymbol
 	docId          string
 	modulePath     indexables.ModulePath
-	findMode       FindMode
+
+	continueOnModules bool
+	scopeMode         FindMode // TODO Rename this to boolean
+
+	traversedModules []string // Here we register what modules have been already inspected in this search. Helps avoiding infinite loops
 }
 
 func NewSearchParams(selectedSymbol string, position protocol.Position, docId string) SearchParams {
 	return SearchParams{
-		selectedSymbol: Token{token: selectedSymbol, position: position},
-		docId:          docId,
-		findMode:       InPosition,
+		selectedSymbol:    Token{token: selectedSymbol, position: position},
+		docId:             docId,
+		scopeMode:         InScope,
+		continueOnModules: true,
 	}
 }
 
@@ -79,10 +84,14 @@ func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol
 	return search, nil
 }
 
-func (s *SearchParams) HasParentSymbol() bool {
+func (s SearchParams) HasParentSymbol() bool {
 	return len(s.parentSymbols) > 0
 }
 
 func (s SearchParams) HasModuleSpecified() bool {
 	return s.modulePath.Has()
+}
+
+func (s *SearchParams) RegisterTraversedModule(module string) {
+	//s.traversedModules = append(s.traversedModules, module)
 }

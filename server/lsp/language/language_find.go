@@ -32,21 +32,13 @@ func (l *Language) findAllScopeSymbols(scopeFunction *indexables.Function, posit
 	return symbols
 }
 
-type FindOptions struct {
-	continueOnModule bool
-}
-
 // Finds the closest selectedSymbol based on current scope.
 // If not present in current Scope:
 // - Search in files of same module
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
 func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams) indexables.Indexable {
-	return l._findClosestSymbolDeclarationInDoc(searchParams, FindOptions{continueOnModule: true})
-}
-
-func (l *Language) _findClosestSymbolDeclarationInDoc(searchParams SearchParams, options FindOptions) indexables.Indexable {
-
+	l.logger.Debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s", searchParams.docId))
 	position := searchParams.selectedSymbol.position
 	// Check if there's parent contextual information in searchParams
 	if searchParams.HasParentSymbol() {
@@ -68,28 +60,30 @@ func (l *Language) _findClosestSymbolDeclarationInDoc(searchParams SearchParams,
 		}
 
 		// Go through every element defined in scopedTree
-		identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, &scopedTree, 0, searchParams.findMode)
+		identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, &scopedTree, 0, searchParams.scopeMode)
 
 		if identifier != nil {
 			return identifier
 		}
 
-		if options.continueOnModule {
+		if searchParams.continueOnModules {
 			// Try to find in same module, different files
 			currentModule := l.functionTreeByDocument[searchParams.docId].GetModule()
 			for _, scope := range l.functionTreeByDocument {
-				if scope.GetDocumentURI() == searchParams.docId || scope.GetModule() != currentModule {
+				isSameDocument := scope.GetDocumentURI() == searchParams.docId
+				isSameModule := scope.GetModule() == currentModule
+				if isSameDocument || !isSameModule {
 					continue
 				}
 
 				// Can we just call findDeepFirst() directly instead?
-				found := l._findClosestSymbolDeclarationInDoc(
+				found := l.findClosestSymbolDeclaration(
 					SearchParams{
-						selectedSymbol: searchParams.selectedSymbol,
-						docId:          scope.GetDocumentURI(),
-						findMode:       AnyPosition,
+						selectedSymbol:    searchParams.selectedSymbol,
+						docId:             scope.GetDocumentURI(),
+						scopeMode:         AnyPosition,
+						continueOnModules: false,
 					},
-					FindOptions{continueOnModule: false},
 				)
 				if found != nil {
 					return found
@@ -97,15 +91,24 @@ func (l *Language) _findClosestSymbolDeclarationInDoc(searchParams SearchParams,
 			}
 		}
 
+		// Try to find element in one of the imported modules
 		if len(scopedTree.Imports) > 0 {
+			traversedModules := searchParams.traversedModules
 			for i := 0; i < len(scopedTree.Imports); i++ {
-				symbol := l._findSymbolDeclarationInModule(
-					SearchParams{
-						selectedSymbol: searchParams.selectedSymbol,
-						modulePath:     indexables.NewModulePath([]string{scopedTree.Imports[i]}),
-						findMode:       AnyPosition,
-					},
-				)
+				if inSlice(scopedTree.Imports[i], traversedModules) {
+					continue
+				}
+
+				// TODO: Some scenarios cause an infinite loop here
+				module := scopedTree.Imports[i]
+				sp := SearchParams{
+					selectedSymbol:   searchParams.selectedSymbol,
+					modulePath:       indexables.NewModulePath([]string{module}),
+					scopeMode:        AnyPosition,
+					traversedModules: traversedModules, //append(traversedModules, module),
+				}
+				l.logger.Debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module %s", module))
+				symbol := l._findSymbolDeclarationInModule(sp)
 				if symbol != nil {
 					return symbol
 				}
@@ -120,18 +123,27 @@ func (l *Language) _findClosestSymbolDeclarationInDoc(searchParams SearchParams,
 	return nil
 }
 
+// TODO Ignore modules that have been already checked in the same tree
+// ¿? Add a new argument with ignoreModules []string
 func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams) indexables.Indexable {
 	expectedModule := searchParams.modulePath.GetName()
 	for docId, scope := range l.functionTreeByDocument {
+
 		if scope.GetModule() != expectedModule { // TODO Ignore current doc we are comming from
 			continue
 		}
+		if inSlice(scope.GetModule(), searchParams.traversedModules) {
+			continue
+		}
 
-		symbol := l._findClosestSymbolDeclarationInDoc(SearchParams{
-			selectedSymbol: searchParams.selectedSymbol,
-			docId:          docId,
-			findMode:       searchParams.findMode,
-		}, FindOptions{continueOnModule: true})
+		l.logger.Debug(fmt.Sprintf("_findSymbolDeclarationInModule: search with fdcdd inside %s file %s", scope.GetModule(), docId))
+		symbol := l.findClosestSymbolDeclaration(SearchParams{
+			selectedSymbol:    searchParams.selectedSymbol,
+			docId:             docId,
+			scopeMode:         searchParams.scopeMode,
+			continueOnModules: true,
+			traversedModules:  append(searchParams.traversedModules, scope.GetModule()),
+		})
 
 		if symbol != nil {
 			return symbol
@@ -147,8 +159,10 @@ func (l *Language) findInParentSymbols(searchParams SearchParams) indexables.Ind
 	parentSymbolsCount := len(searchParams.parentSymbols)
 	rootSymbol := searchParams.parentSymbols[parentSymbolsCount-1]
 	levelSearchParams := SearchParams{
-		selectedSymbol: rootSymbol,
-		docId:          searchParams.docId,
+		selectedSymbol:    rootSymbol,
+		docId:             searchParams.docId,
+		scopeMode:         InScope,
+		continueOnModules: true,
 	}
 
 	currentToken := rootSymbol
@@ -266,9 +280,38 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 	// When mode is InPosition, we are specifying it is important for us that
 	// the function being searched contains the position specified.
 	// We use mode = AnyPosition when search for a symbol definition outside the document where the user has its cursor. For example, we are looking in imported files or files of the same module.
-	if mode == InPosition &&
+	if mode == InScope &&
 		!function.GetDocumentRange().HasPosition(position) {
 		return nil, depth
+	}
+
+	// Try this
+	// First, loop through symbols that can nest other definitions:
+	// - structs, unions [v]
+	// - enum, faults	 [v]
+	// - interface
+	// - functions       [v]
+	// For each of them, check if search.symbol.position is inside that element
+	// If true, priorize searching there first.
+	// If not found, search in the `function`
+	for _, structs := range function.Structs {
+		if structs.GetDocumentRange().HasPosition(position) {
+			// What we are looking is inside this, look for struct member
+			for _, member := range structs.GetMembers() {
+				if member.GetName() == identifier {
+					return member, depth
+				}
+			}
+		}
+	}
+
+	for _, scopedEnums := range function.Enums {
+		if scopedEnums.GetDocumentRange().HasPosition(position) {
+			if scopedEnums.HasEnumerator(identifier) {
+				enumerator := scopedEnums.GetEnumerator(identifier)
+				return enumerator, depth
+			}
+		}
 	}
 
 	for _, child := range function.ChildrenFunctions {
@@ -276,6 +319,8 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 			return result, resultDepth
 		}
 	}
+
+	// All elements found in nestable symbols checked, check rest of function
 
 	variable, foundVariableInThisScope := function.Variables[identifier]
 	if foundVariableInThisScope {
@@ -287,6 +332,7 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 		return enum, depth
 	}
 
+	// Apparently, removing this makes enumerator tests in language fail.
 	var enumerator indexables.Enumerator
 	foundEnumeratorInThisScope := false
 	for _, scopedEnums := range function.Enums {
@@ -331,4 +377,13 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 	}
 
 	return nil, depth
+}
+
+func inSlice(element string, slice []string) bool {
+	for _, value := range slice {
+		if value == element {
+			return true
+		}
+	}
+	return false
 }

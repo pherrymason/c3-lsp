@@ -20,9 +20,10 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_positio
 	assert.Equal(
 		t,
 		SearchParams{
-			selectedSymbol: Token{token: "emu", position: buildPosition(1, 5)},
-			docId:          "filename",
-			findMode:       InPosition,
+			selectedSymbol:    Token{token: "emu", position: buildPosition(1, 5)},
+			docId:             "filename",
+			scopeMode:         InScope,
+			continueOnModules: true,
 		},
 		sp,
 	)
@@ -44,8 +45,9 @@ system.cpu.init();`
 				{token: "cpu", position: buildPosition(2, 7)},
 				{token: "system", position: buildPosition(2, 0)},
 			},
-			docId:    "filename",
-			findMode: InPosition,
+			docId:             "filename",
+			scopeMode:         InScope,
+			continueOnModules: true,
 		},
 		sp,
 	)
@@ -83,10 +85,11 @@ mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
 			assert.Equal(
 				t,
 				SearchParams{
-					selectedSymbol: Token{token: tt.expectedToken, position: tt.position},
-					docId:          "filename",
-					modulePath:     tt.expectedModule,
-					findMode:       InPosition,
+					selectedSymbol:    Token{token: tt.expectedToken, position: tt.position},
+					docId:             "filename",
+					modulePath:        tt.expectedModule,
+					scopeMode:         InScope,
+					continueOnModules: true,
 				},
 				sp,
 			)

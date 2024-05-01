@@ -51,7 +51,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position protocol
 
 const (
 	AnyPosition FindMode = iota
-	InPosition
+	InScope
 )
 
 type FindMode int

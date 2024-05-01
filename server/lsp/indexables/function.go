@@ -173,3 +173,7 @@ func (f Function) GetHoverInfo() string {
 func (f Function) AddDef(def Def) {
 	f.Defs[def.GetName()] = def
 }
+
+func (f *Function) AddImports(imports []string) {
+	f.Imports = append(f.Imports, imports...)
+}

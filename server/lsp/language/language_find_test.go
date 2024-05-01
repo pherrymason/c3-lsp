@@ -55,12 +55,16 @@ func installDocuments(language *Language, parser *p.Parser) map[string]document.
 	var fileContent string
 
 	filenames := []string{"app.c3", "app_helper.c3", "emu.c3", "definitions.c3", "cpu.c3",
+		// Structs related
+		"structs.c3",
 
 		// Module related sources
 		"module_foo.c3",
 		"module_foo_bar.c3",
 		"module_foo_circle.c3",
 		"module_foo2.c3",
+		"module_cyclic.c3",
+		"module_foo_triangle.c3",
 	}
 	baseDir := "./test_files/"
 	documents := make(map[string]document.Document, 0)
@@ -103,8 +107,8 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		// object.search();
 	})
 
-	t.Run("resolve implicit variable from module", func(t *testing.T) {
-		position := buildPosition(6, 21) // Cursor at BAR_WEIGHT
+	t.Run("resolve implicit variable from different module in different file", func(t *testing.T) {
+		position := buildPosition(8, 21) // Cursor at BA|R_WEIGHT
 		doc := documents["module_foo2.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
@@ -117,7 +121,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 	})
 
 	t.Run("resolve explicit variable from sub module", func(t *testing.T) {
-		position := buildPosition(7, 28) // Cursor at foo::bar::D|EFAULT_BAR_COLOR;
+		position := buildPosition(9, 28) // Cursor at foo::bar::D|EFAULT_BAR_COLOR;
 		doc := documents["module_foo2.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
@@ -131,7 +135,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 
 	t.Run("resolve variable from sub module", func(t *testing.T) {
 		t.Skip()
-		position := buildPosition(7, 21) // Cursor at BAR_WEIGHT
+		position := buildPosition(8, 21) // Cursor at BAR_WEIGHT
 		doc := documents["module_foo.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
@@ -141,6 +145,20 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		assert.Equal(t, "BAR_WEIGHT", symbol.GetName())
 		assert.Equal(t, "module_foo_bar.c3", symbol.GetDocumentURI())
 		assert.Equal(t, "foo::bar", symbol.GetModule())
+	})
+
+	t.Run("resolve properly when there are cyclic dependencies", func(t *testing.T) {
+		// This test ask specifically for a symbol located in an imported module defined after another module that has a cyclic dependency.
+		position := buildPosition(10, 6) // Cursor at `T|riangle`
+		doc := documents["module_foo2.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
+
+		symbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, symbol, "Symbol not found")
+		assert.Equal(t, "Triangle", symbol.GetName())
+		assert.Equal(t, "module_foo_triangle.c3", symbol.GetDocumentURI())
+		assert.Equal(t, "foo::triangle", symbol.GetModule())
 	})
 }
 
@@ -200,12 +218,14 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 	})
 }
 
+// Tests related to structs:
 func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 	language, documents := initTestEnv()
 
 	t.Run("Should find struct declaration in variable declaration", func(t *testing.T) {
-		position := buildPosition(10, 2)
-		searchParams := NewSearchParams("Emu", position, "emu.c3")
+		position := buildPosition(18, 4) // Cursor at `Emu e|mulator`
+		doc := documents["structs.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -216,8 +236,9 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 	})
 
 	t.Run("Should find struct declaration in function return type", func(t *testing.T) {
-		position := buildPosition(9, 4)
-		searchParams := NewSearchParams("Emu", position, "emu.c3")
+		position := buildPosition(17, 4) // Cursor at `fn E|mu NewEmu() {`
+		doc := documents["structs.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
@@ -228,9 +249,8 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 	})
 
 	t.Run("Should find local struct member variable definition", func(t *testing.T) {
-
-		position := buildPosition(27, 11) // Cursor at emulator.o|n = true
-		doc := documents["emu.c3"]
+		position := buildPosition(19, 14) // Cursor at `emulator.o|n = true`
+		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
@@ -244,8 +264,22 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 
 	t.Run("Should find local struct member variable definition when struct is a pointer", func(t *testing.T) {
 
-		position := buildPosition(36, 9)
-		doc := documents["emu.c3"]
+		position := buildPosition(24, 14) // Cursor at emulator.o|n = true
+		doc := documents["structs.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
+
+		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, resolvedSymbol, "Struct member not found")
+
+		variable := resolvedSymbol.(idx.StructMember)
+		assert.Equal(t, "on", resolvedSymbol.GetName())
+		assert.Equal(t, "bool", variable.GetType())
+	})
+
+	t.Run("Should find same struct member declaration, when cursor is already in member declaration", func(t *testing.T) {
+		position := buildPosition(12, 8) // Cursor at `emulator.o|n = true`
+		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
@@ -258,19 +292,19 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 	})
 
 	t.Run("Should find struct method", func(t *testing.T) {
-		doc := documents["emu.c3"]
-		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(32, 10))
+		// Cursor at `emulator.i|nit();`
+		doc := documents["structs.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(37, 14))
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 		fun := resolvedSymbol.(*idx.Function)
-		assert.Equal(t, "tick", fun.GetName())
-		assert.Equal(t, "Emu.tick", fun.GetFullName())
+		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
 	t.Run("Should find local struct method when there are N nested structs", func(t *testing.T) {
-		// No pointer scenario
-		position := buildPosition(26, 20)
-		doc := documents["emu.c3"]
+		position := buildPosition(30, 14) // Cursor at `emu.audio.i|nit();``
+		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
@@ -283,24 +317,9 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		assert.Equal(t, "Audio.init", fun.GetFullName())
 	})
 
-	t.Run("Should find local struct method definition", func(t *testing.T) {
-		position := buildPosition(27, 11)
-		doc := documents["emu.c3"]
-		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
-
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
-
-		assert.NotNil(t, resolvedSymbol, "Struct member not found")
-
-		variable := resolvedSymbol.(idx.StructMember)
-		assert.Equal(t, "on", resolvedSymbol.GetName())
-		assert.Equal(t, "bool", variable.GetType())
-	})
-
 	t.Run("Should not find local struct method definition", func(t *testing.T) {
-		doc := documents["emu.c3"]
-		// Cursor is at emu.audio.u|nknown
-		position := buildPosition(38, 16)
+		doc := documents["structs.c3"]
+		position := buildPosition(38, 16) // Cursor is at emu.audio.u|nknown
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
@@ -328,8 +347,9 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 	})
 
 	t.Run("Should find interface struct is implementing", func(t *testing.T) {
-		position := buildPosition(8, 14)
-		searchParams := NewSearchParams("EmulatorConsole", position, "emu.c3")
+		position := buildPosition(11, 14) // Cursor is at struct Emu (E|mulatorConsole) {
+		doc := documents["structs.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
 
