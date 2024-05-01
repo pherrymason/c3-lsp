@@ -112,6 +112,8 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams) index
 				if symbol != nil {
 					return symbol
 				}
+				// TODO: This next line is an optimization to remember imported submodules in `module`
+				traversedModules = append(traversedModules, module)
 			}
 		}
 	}
@@ -128,7 +130,6 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams) index
 func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams) indexables.Indexable {
 	expectedModule := searchParams.modulePath.GetName()
 	for docId, scope := range l.functionTreeByDocument {
-
 		if scope.GetModule() != expectedModule { // TODO Ignore current doc we are comming from
 			continue
 		}
