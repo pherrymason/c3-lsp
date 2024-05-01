@@ -43,7 +43,7 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
   - [x] Find symbol in same scope
   - [x] Find symbol in parent scope
   - [x] Find symbol present in same module, but different file
-  - [ ] Find symbol in imported module
+  - [x] Find symbol in imported module
   - [ ] Find symbol in stdlib
 - [ ] Go to definition
 - [ ] Go to type definition
