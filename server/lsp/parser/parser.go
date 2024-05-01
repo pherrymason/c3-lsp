@@ -70,7 +70,7 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 		qc.Exec(q, doc.ContextSyntaxTree.RootNode())*/
 	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
 	sourceCode := []byte(doc.Content)
-	//fmt.Println(doc.ContextSyntaxTree.RootNode())
+	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
 
 	scopeTree := idx.NewAnonymousScopeFunction("main", doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(doc.ContextSyntaxTree.RootNode().StartPoint(), doc.ContextSyntaxTree.RootNode().EndPoint()), protocol.CompletionItemKindModule)
 
@@ -91,7 +91,7 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 
 			case "import_declaration":
 				imports := p.nodeToImport(doc, c.Node, sourceCode)
-				scopeTree.Imports = imports
+				scopeTree.AddImports(imports)
 
 			case "global_declaration":
 				variables := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)

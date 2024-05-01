@@ -275,6 +275,8 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 	source := `
 	module foo;
 	import some, other, foo::bar::final;
+	import another;
+	import another2;
 	int value = 1;
 	`
 
@@ -282,7 +284,7 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 	parser := createParser()
 	symbols := parser.ExtractSymbols(&doc)
 
-	assert.Equal(t, []string{"some", "other", "foo::bar::final"}, symbols.Imports)
+	assert.Equal(t, []string{"some", "other", "foo::bar::final", "another", "another2"}, symbols.Imports)
 }
 
 func dfs(n *sitter.Node, level int) {
