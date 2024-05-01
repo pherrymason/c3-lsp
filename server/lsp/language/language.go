@@ -4,6 +4,7 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
+	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -11,12 +12,14 @@ import (
 type Language struct {
 	index                  IndexStore
 	functionTreeByDocument map[protocol.DocumentUri]indexables.Function
+	logger                 commonlog.Logger
 }
 
-func NewLanguage() Language {
+func NewLanguage(logger commonlog.Logger) Language {
 	return Language{
 		index:                  NewIndexStore(),
 		functionTreeByDocument: make(map[protocol.DocumentUri]indexables.Function),
+		logger:                 logger,
 	}
 }
 

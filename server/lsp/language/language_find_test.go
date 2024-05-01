@@ -27,7 +27,8 @@ func newDeclarationParams(docId string, line protocol.UInteger, char protocol.UI
 
 func initLanguage(docId string, module string, source string) (Language, *document.Document, *p.Parser) {
 	doc := document.NewDocument(docId, module, source)
-	language := NewLanguage()
+	logger := commonlog.MockLogger{}
+	language := NewLanguage(logger)
 	parser := createParser()
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 
@@ -78,7 +79,7 @@ func installDocuments(language *Language, parser *p.Parser) map[string]document.
 
 func initTestEnv() (*Language, map[string]document.Document) {
 	parser := createParser()
-	language := NewLanguage()
+	language := NewLanguage(commonlog.MockLogger{})
 
 	documents := installDocuments(&language, &parser)
 

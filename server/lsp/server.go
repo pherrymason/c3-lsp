@@ -48,7 +48,7 @@ func NewServer(opts ServerOpts) *Server {
 	server := &Server{
 		server:    glspServer,
 		documents: newDocumentStore(opts.FS, &glspServer.Log),
-		language:  l.NewLanguage(),
+		language:  l.NewLanguage(logger),
 		parser:    p.NewParser(&logger),
 	}
 

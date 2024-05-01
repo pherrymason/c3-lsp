@@ -6,11 +6,12 @@ import (
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/stretchr/testify/assert"
+	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func TestLanguage_FindHoverInformation(t *testing.T) {
-	language := NewLanguage()
+	language := NewLanguage(commonlog.MockLogger{})
 	parser := createParser()
 
 	doc := document.NewDocument("x", "", `
@@ -44,7 +45,7 @@ func TestLanguage_FindHoverInformation(t *testing.T) {
 }
 
 func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
-	language := NewLanguage()
+	language := NewLanguage(commonlog.MockLogger{})
 	parser := createParser()
 
 	doc := document.NewDocument("x", "x", `

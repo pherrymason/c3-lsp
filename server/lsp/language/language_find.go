@@ -1,6 +1,8 @@
 package language
 
 import (
+	"fmt"
+
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
