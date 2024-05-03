@@ -15,7 +15,7 @@ const MODULE_SEPARATOR = ':'
 
 type Document struct {
 	ContextSyntaxTree       *sitter.Tree
-	ModuleName              string
+	ModuleName              string // to deprecate, as a file can have multiple modules defined.
 	URI                     protocol.DocumentUri
 	NeedsRefreshDiagnostics bool
 	Content                 string

@@ -54,7 +54,12 @@ func readC3File(filePath string) string {
 func installDocuments(language *Language, parser *p.Parser) map[string]document.Document {
 	var fileContent string
 
-	filenames := []string{"app.c3", "app_helper.c3", "emu.c3", "definitions.c3", "cpu.c3",
+	filenames := []string{
+		"app.c3",
+		"app_helper.c3",
+		"emu.c3",
+		"definitions.c3",
+		"cpu.c3",
 		// Structs related
 		"structs.c3",
 
@@ -67,11 +72,10 @@ func installDocuments(language *Language, parser *p.Parser) map[string]document.
 		"module_cyclic.c3",
 		"module_foo_triangle.c3",
 	}
-	baseDir := "./test_files/"
+	baseDir := "./../../test_files/"
 	documents := make(map[string]document.Document, 0)
 
 	for _, filename := range filenames {
-		// Construir la ruta completa al archivo
 		fullPath := filepath.Join(baseDir, filename)
 		fileContent = readC3File(fullPath)
 		documents[filename] = document.NewDocument(filename, "?", fileContent)
