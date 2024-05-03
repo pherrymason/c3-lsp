@@ -6,13 +6,15 @@ type DefBuilder struct {
 	def Def
 }
 
-func NewDefBuilder(name string, docId string) *DefBuilder {
+func NewDefBuilder(name string, module string, docId string) *DefBuilder {
 	return &DefBuilder{
 		def: Def{
 			name: name,
 			BaseIndexable: BaseIndexable{
-				documentURI: docId,
-				Kind:        protocol.CompletionItemKindTypeParameter,
+				module:       NewModulePathFromString(module),
+				moduleString: module,
+				documentURI:  docId,
+				Kind:         protocol.CompletionItemKindTypeParameter,
 			},
 		},
 	}

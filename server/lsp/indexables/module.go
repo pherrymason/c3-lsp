@@ -1,5 +1,10 @@
 package indexables
 
+import (
+	"strings"
+	"unicode"
+)
+
 type Module struct {
 	Name  string
 	Alias string
@@ -15,8 +20,18 @@ func NewModulePath(path []string) ModulePath {
 	}
 }
 
+func NewModulePathFromString(module string) ModulePath {
+	var modules []string
+	if len(module) > 0 {
+		modules = strings.Split(module, "::")
+	}
+
+	return NewModulePath(modules)
+}
+
 func (mp *ModulePath) AddPath(path string) {
-	mp.tokens = append(mp.tokens, path)
+	newSlice := []string{path}
+	mp.tokens = append(newSlice, mp.tokens...)
 }
 
 func (mp ModulePath) GetName() string {
@@ -27,14 +42,28 @@ func (mp ModulePath) Has() bool {
 	return len(mp.tokens) > 0
 }
 
+func (mp ModulePath) IsSubModuleOf(parentModule ModulePath) bool {
+	if len(mp.tokens) < len(parentModule.tokens) {
+		return false
+	}
+
+	isChild := true
+	for i, pm := range parentModule.tokens {
+		if i > len(mp.tokens) {
+			break
+		}
+
+		if mp.tokens[i] != pm {
+			isChild = false
+			break
+		}
+	}
+
+	return isChild
+}
+
 func concatPaths(slice []string, delimiter string) string {
 	result := ""
-	n := len(slice)
-
-	// Reverse the slice
-	for i := 0; i < n/2; i++ {
-		slice[i], slice[n-1-i] = slice[n-1-i], slice[i]
-	}
 
 	for i, str := range slice {
 		if i > 0 {
@@ -43,4 +72,36 @@ func concatPaths(slice []string, delimiter string) string {
 		result += str
 	}
 	return result
+}
+
+func NormalizeModuleName(input string) string {
+	const maxLength = 31
+	var modifiedName []rune
+
+	input = strings.TrimSuffix(input, ".c3")
+
+	// Iterar sobre cada caracter del string de entrada
+	for _, char := range input {
+		// Verificar si el caracter es alfanumérico y minúscula
+		if unicode.IsLetter(char) || unicode.IsNumber(char) {
+			if unicode.IsLower(char) {
+				// Si es alfanumérico y minúscula, añadirlo al nombre modificado
+				modifiedName = append(modifiedName, char)
+			} else {
+				// Si es alfanumérico pero no es minúscula, convertirlo a minúscula y añadirlo al nombre modificado
+				modifiedName = append(modifiedName, unicode.ToLower(char))
+			}
+		} else {
+			// Si no es alfanumérico, reemplazarlo por '_'
+			modifiedName = append(modifiedName, '_')
+		}
+
+		// Verificar si la longitud del nombre modificado excede el máximo permitido
+		if len(modifiedName) >= maxLength {
+			break
+		}
+	}
+
+	// Devolver el nombre modificado como un string
+	return string(modifiedName)
 }

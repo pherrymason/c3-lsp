@@ -28,9 +28,9 @@ fn void MyStruct.init(&self)
 	parser := createParser()
 
 	t.Run("finds struct", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		found := symbols.Structs["MyStruct"]
+		found := symbols.Get("docid").Structs["MyStruct"]
 		assert.Equal(t, "MyStruct", found.GetName())
 		assert.False(t, found.IsUnion())
 		assert.Equal(t, idx.NewRange(0, 0, 3, 1), found.GetDocumentRange())
@@ -38,28 +38,28 @@ fn void MyStruct.init(&self)
 	})
 
 	t.Run("finds struct members", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		found := symbols.Structs["MyStruct"]
+		found := symbols.Get("docid").Structs["MyStruct"]
 		member := found.GetMembers()[0]
 		assert.Equal(t, "data", member.GetName())
 		assert.Equal(t, "int", member.GetType())
 		assert.Equal(t, idx.NewRange(1, 5, 1, 9), member.GetIdRange())
 		assert.Equal(t, "docId", member.GetDocumentURI())
-		assert.Equal(t, "x", member.GetModule())
+		assert.Equal(t, "x", member.GetModuleString())
 
 		member = found.GetMembers()[1]
 		assert.Equal(t, "key", member.GetName())
 		assert.Equal(t, "char", member.GetType())
 		assert.Equal(t, idx.NewRange(2, 6, 2, 9), member.GetIdRange())
 		assert.Equal(t, "docId", member.GetDocumentURI())
-		assert.Equal(t, "x", member.GetModule())
+		assert.Equal(t, "x", member.GetModuleString())
 	})
 
 	t.Run("finds struct implementing interface", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		found := symbols.Structs["MyStruct"]
+		found := symbols.Get("docid").Structs["MyStruct"]
 		assert.Equal(t, "MyStruct", found.GetName())
 		assert.Equal(t, []string{"MyInterface", "MySecondInterface"}, found.GetInterfaces())
 	})
@@ -76,9 +76,9 @@ func TestParse_Unions(t *testing.T) {
 	parser := createParser()
 
 	t.Run("parses union", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		found := symbols.Structs["MyUnion"]
+		found := symbols.Get("docid").Structs["MyUnion"]
 		assert.Equal(t, "MyUnion", found.GetName())
 		assert.True(t, found.IsUnion())
 		assert.Equal(t, idx.NewRange(0, 0, 3, 2), found.GetDocumentRange())

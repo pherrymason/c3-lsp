@@ -12,9 +12,10 @@ func NewEnumBuilder(name string, baseType string, module string, docId string) *
 			name:     name,
 			baseType: baseType,
 			BaseIndexable: BaseIndexable{
-				module:      module,
-				documentURI: docId,
-				Kind:        protocol.CompletionItemKindEnum,
+				moduleString: module,
+				module:       NewModulePathFromString(module),
+				documentURI:  docId,
+				Kind:         protocol.CompletionItemKindEnum,
 			},
 		},
 	}

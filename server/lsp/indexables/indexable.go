@@ -11,7 +11,9 @@ type Indexable interface {
 	GetDocumentURI() string
 	GetIdRange() Range
 	GetDocumentRange() Range
-	GetModule() string
+	GetModuleString() string
+	GetModule() ModulePath
+	IsSubModuleOf(parentModule ModulePath) bool
 
 	GetHoverInfo() string
 }
@@ -19,11 +21,12 @@ type Indexable interface {
 type IndexableCollection []Indexable
 
 type BaseIndexable struct {
-	module      string
-	documentURI string
-	idRange     Range
-	docRange    Range
-	Kind        protocol.CompletionItemKind
+	moduleString string
+	module       ModulePath
+	documentURI  string
+	idRange      Range
+	docRange     Range
+	Kind         protocol.CompletionItemKind
 }
 
 func NewBaseIndexable(docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {

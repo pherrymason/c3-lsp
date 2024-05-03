@@ -11,20 +11,22 @@ import (
 // Language will be the center of knowledge of everything parsed.
 type Language struct {
 	index                  IndexStore
-	functionTreeByDocument map[protocol.DocumentUri]indexables.Function
+	functionTreeByDocument map[protocol.DocumentUri]parser.ParsedModules
 	logger                 commonlog.Logger
 }
 
 func NewLanguage(logger commonlog.Logger) Language {
 	return Language{
 		index:                  NewIndexStore(),
-		functionTreeByDocument: make(map[protocol.DocumentUri]indexables.Function),
+		functionTreeByDocument: make(map[protocol.DocumentUri]parser.ParsedModules),
 		logger:                 logger,
 	}
 }
 
 func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
-	l.functionTreeByDocument[doc.URI] = parser.ExtractSymbols(doc)
+	parsedSymbols := parser.ParseSymbols(doc)
+
+	l.functionTreeByDocument[parsedSymbols.DocId()] = parsedSymbols
 }
 
 func (l *Language) BuildCompletionList(doc *document.Document, position protocol.Position) []protocol.CompletionItem {
@@ -33,8 +35,8 @@ func (l *Language) BuildCompletionList(doc *document.Document, position protocol
 	// 3 - TODO if writing function call arguments, complete with argument names. ¿Feasible?
 
 	// Find symbols in document
-	function := l.functionTreeByDocument[doc.URI]
-	scopeSymbols := l.findAllScopeSymbols(&function, position)
+	moduleSymbols := l.functionTreeByDocument[doc.URI]
+	scopeSymbols := l.findAllScopeSymbols(&moduleSymbols, position)
 
 	var items []protocol.CompletionItem
 	for _, storedIdentifier := range scopeSymbols {

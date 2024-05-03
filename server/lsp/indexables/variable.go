@@ -17,11 +17,12 @@ func NewVariable(name string, variableType Type, module string, uri string, idRa
 		name: name,
 		Type: variableType,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: uri,
-			idRange:     idRange,
-			docRange:    docRange,
-			Kind:        protocol.CompletionItemKindVariable,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  uri,
+			idRange:      idRange,
+			docRange:     docRange,
+			Kind:         protocol.CompletionItemKindVariable,
 		},
 	}
 }
@@ -31,11 +32,12 @@ func NewConstant(name string, variableType Type, module string, uri string, idRa
 		name: name,
 		Type: variableType,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: uri,
-			idRange:     idRange,
-			docRange:    docRange,
-			Kind:        protocol.CompletionItemKindConstant,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  uri,
+			idRange:      idRange,
+			docRange:     docRange,
+			Kind:         protocol.CompletionItemKindConstant,
 		},
 	}
 }
@@ -48,7 +50,15 @@ func (v Variable) GetName() string {
 	return v.name
 }
 
-func (v Variable) GetModule() string { return v.module }
+func (v Variable) GetModuleString() string { return v.moduleString }
+
+func (v Variable) GetModule() ModulePath {
+	return v.module
+}
+
+func (v Variable) IsSubModuleOf(module ModulePath) bool {
+	return v.module.IsSubModuleOf(module)
+}
 
 func (v Variable) GetKind() protocol.CompletionItemKind {
 	return v.Kind

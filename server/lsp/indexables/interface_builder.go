@@ -10,8 +10,9 @@ func NewInterfaceBuilder(name string, module string, docId string) *InterfaceBui
 			name:    name,
 			methods: make(map[string]Function, 0),
 			BaseIndexable: BaseIndexable{
-				module:      module,
-				documentURI: docId,
+				moduleString: module,
+				module:       NewModulePathFromString(module),
+				documentURI:  docId,
 			},
 		},
 	}

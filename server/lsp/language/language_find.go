@@ -4,28 +4,31 @@ import (
 	"fmt"
 
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
+	"github.com/pherrymason/c3-lsp/lsp/parser"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (l *Language) findAllScopeSymbols(scopeFunction *indexables.Function, position protocol.Position) []indexables.Indexable {
+func (l *Language) findAllScopeSymbols(docSymbols *parser.ParsedModules, position protocol.Position) []indexables.Indexable {
 	var symbols []indexables.Indexable
+	for _, scopeFunction := range docSymbols.SymbolsByModule() {
 
-	for _, variable := range scopeFunction.Variables {
-		symbols = append(symbols, variable)
-	}
-	for _, enum := range scopeFunction.Enums {
-		symbols = append(symbols, enum)
-	}
-	for _, strukt := range scopeFunction.Structs {
-		symbols = append(symbols, strukt)
-	}
-	for _, def := range scopeFunction.Defs {
-		symbols = append(symbols, def)
-	}
+		for _, variable := range scopeFunction.Variables {
+			symbols = append(symbols, variable)
+		}
+		for _, enum := range scopeFunction.Enums {
+			symbols = append(symbols, enum)
+		}
+		for _, strukt := range scopeFunction.Structs {
+			symbols = append(symbols, strukt)
+		}
+		for _, def := range scopeFunction.Defs {
+			symbols = append(symbols, def)
+		}
 
-	for _, function := range scopeFunction.ChildrenFunctions {
-		if function.GetDocumentRange().HasPosition(position) {
-			symbols = append(symbols, function)
+		for _, function := range scopeFunction.ChildrenFunctions {
+			if function.GetDocumentRange().HasPosition(position) {
+				symbols = append(symbols, function)
+			}
 		}
 	}
 
@@ -54,66 +57,80 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams) index
 			return symbol
 		}
 	} else {
-		scopedTree, found := l.functionTreeByDocument[searchParams.docId]
+		documentModules, found := l.functionTreeByDocument[searchParams.docId]
 		if !found {
 			return nil
 		}
 
-		// Go through every element defined in scopedTree
-		identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, &scopedTree, 0, searchParams.scopeMode)
+		for module, scopedTree := range documentModules.SymbolsByModule() {
+			l.logger.Debug(fmt.Sprintf("Checking module %s\n", module))
+			// Go through every element defined in scopedTree
+			identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, scopedTree, 0, searchParams.scopeMode)
 
-		if identifier != nil {
-			return identifier
-		}
+			if identifier != nil {
+				return identifier
+			}
 
-		if searchParams.continueOnModules {
-			// Try to find in same module, different files
-			currentModule := l.functionTreeByDocument[searchParams.docId].GetModule()
-			for _, scope := range l.functionTreeByDocument {
-				isSameDocument := scope.GetDocumentURI() == searchParams.docId
-				isSameModule := scope.GetModule() == currentModule
-				if isSameDocument || !isSameModule {
-					continue
-				}
-
-				// Can we just call findDeepFirst() directly instead?
-				found := l.findClosestSymbolDeclaration(
-					SearchParams{
-						selectedSymbol:    searchParams.selectedSymbol,
-						docId:             scope.GetDocumentURI(),
-						scopeMode:         AnyPosition,
-						continueOnModules: false,
-					},
-				)
+			if searchParams.continueOnModules {
+				found := l.findModuleSymbolsInOtherFiles(scopedTree.GetModule(), searchParams)
 				if found != nil {
 					return found
 				}
+				/*
+					// Try to find in same module, different files
+					currentModuleName := module             //l.functionTreeByDocument[searchParams.docId].GetModuleString()
+					currentModule := scopedTree.GetModule() //l.functionTreeByDocument[searchParams.docId].GetModule()
+					//for _, scope := range l.functionTreeByDocument {
+					for docId, modulesByDoc := range l.functionTreeByDocument {
+						isSameDocument := scope.GetDocumentURI() == searchParams.docId
+						moduleName := scope.GetModuleString()
+						isSameModule := moduleName == currentModuleName
+						isSubModule := scope.IsSubModuleOf(currentModule)
+						isParentModule := currentModule.IsSubModuleOf(scope.GetModule())
+						if isSameDocument || (!isSameModule && !isSubModule && !isParentModule) {
+							continue
+						}
+
+						// Can we just call findDeepFirst() directly instead?
+						found := l.findClosestSymbolDeclaration(
+							SearchParams{
+								selectedSymbol:    searchParams.selectedSymbol,
+								docId:             scope.GetDocumentURI(),
+								scopeMode:         AnyPosition,
+								continueOnModules: false,
+							},
+						)
+						if found != nil {
+							return found
+						}
+					}
+				*/
 			}
-		}
 
-		// Try to find element in one of the imported modules
-		if len(scopedTree.Imports) > 0 {
-			traversedModules := searchParams.traversedModules
-			for i := 0; i < len(scopedTree.Imports); i++ {
-				if inSlice(scopedTree.Imports[i], traversedModules) {
-					continue
-				}
+			// Try to find element in one of the imported modules
+			if len(scopedTree.Imports) > 0 {
+				traversedModules := searchParams.traversedModules
+				for i := 0; i < len(scopedTree.Imports); i++ {
+					if inSlice(scopedTree.Imports[i], traversedModules) {
+						continue
+					}
 
-				// TODO: Some scenarios cause an infinite loop here
-				module := scopedTree.Imports[i]
-				sp := SearchParams{
-					selectedSymbol:   searchParams.selectedSymbol,
-					modulePath:       indexables.NewModulePath([]string{module}),
-					scopeMode:        AnyPosition,
-					traversedModules: traversedModules, //append(traversedModules, module),
+					// TODO: Some scenarios cause an infinite loop here
+					module := scopedTree.Imports[i]
+					sp := SearchParams{
+						selectedSymbol:   searchParams.selectedSymbol,
+						modulePath:       indexables.NewModulePath([]string{module}),
+						scopeMode:        AnyPosition,
+						traversedModules: traversedModules, //append(traversedModules, module),
+					}
+					l.logger.Debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module %s", module))
+					symbol := l._findSymbolDeclarationInModule(sp)
+					if symbol != nil {
+						return symbol
+					}
+					// TODO: This next line is an optimization to remember imported submodules in `module`
+					traversedModules = append(traversedModules, module)
 				}
-				l.logger.Debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module %s", module))
-				symbol := l._findSymbolDeclarationInModule(sp)
-				if symbol != nil {
-					return symbol
-				}
-				// TODO: This next line is an optimization to remember imported submodules in `module`
-				traversedModules = append(traversedModules, module)
 			}
 		}
 	}
@@ -125,31 +142,93 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams) index
 	return nil
 }
 
+func (l *Language) findModuleSymbolsInOtherFiles(module indexables.ModulePath, searchParams SearchParams) indexables.Indexable {
+
+	for docId, modulesByDoc := range l.functionTreeByDocument {
+		if docId == searchParams.docId {
+			continue
+		}
+
+		for _, scope := range modulesByDoc.SymbolsByModule() {
+			//isSameDocument := scope.GetDocumentURI() == currentDocId
+			//moduleName := scope.GetModuleString()
+			isSameModule := scope.GetModuleString() == module.GetName()
+			isSubModule := scope.IsSubModuleOf(module)
+			isParentModule := module.IsSubModuleOf(scope.GetModule())
+			if !isSameModule && !isSubModule && !isParentModule {
+				continue
+			}
+
+			// Can we just call findDeepFirst() directly instead?
+			found := l.findClosestSymbolDeclaration(
+				SearchParams{
+					selectedSymbol:    searchParams.selectedSymbol,
+					docId:             scope.GetDocumentURI(),
+					scopeMode:         AnyPosition,
+					continueOnModules: false,
+				},
+			)
+			if found != nil {
+				return found
+			}
+		}
+	}
+
+	return nil
+}
+
 // TODO Ignore modules that have been already checked in the same tree
 // ¿? Add a new argument with ignoreModules []string
 func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams) indexables.Indexable {
 	expectedModule := searchParams.modulePath.GetName()
-	for docId, scope := range l.functionTreeByDocument {
-		if scope.GetModule() != expectedModule { // TODO Ignore current doc we are comming from
-			continue
-		}
-		if inSlice(scope.GetModule(), searchParams.traversedModules) {
-			continue
-		}
 
-		l.logger.Debug(fmt.Sprintf("_findSymbolDeclarationInModule: search with fdcdd inside %s file %s", scope.GetModule(), docId))
-		symbol := l.findClosestSymbolDeclaration(SearchParams{
-			selectedSymbol:    searchParams.selectedSymbol,
-			docId:             docId,
-			scopeMode:         searchParams.scopeMode,
-			continueOnModules: true,
-			traversedModules:  append(searchParams.traversedModules, scope.GetModule()),
-		})
+	for docId, modulesByDoc := range l.functionTreeByDocument {
+		for _, scope := range modulesByDoc.SymbolsByModule() {
+			if scope.GetModuleString() != expectedModule { // TODO Ignore current doc we are comming from
+				continue
+			}
+			if inSlice(scope.GetModuleString(), searchParams.traversedModules) {
+				continue
+			}
 
-		if symbol != nil {
-			return symbol
+			l.logger.Debug(fmt.Sprintf("_findSymbolDeclarationInModule: search with fdcdd inside %s file %s", scope.GetModuleString(), docId))
+			symbol := l.findClosestSymbolDeclaration(SearchParams{
+				selectedSymbol:    searchParams.selectedSymbol,
+				docId:             docId,
+				scopeMode:         searchParams.scopeMode,
+				continueOnModules: true,
+				traversedModules:  append(searchParams.traversedModules, scope.GetModuleString()),
+			})
+
+			if symbol != nil {
+				return symbol
+			}
 		}
 	}
+
+	// -----------
+	/*
+		for docId, scope := range l.functionTreeByDocument {
+			if scope.GetModuleString() != expectedModule { // TODO Ignore current doc we are comming from
+				continue
+			}
+			if inSlice(scope.GetModuleString(), searchParams.traversedModules) {
+				continue
+			}
+
+			l.logger.Debug(fmt.Sprintf("_findSymbolDeclarationInModule: search with fdcdd inside %s file %s", scope.GetModuleString(), docId))
+			symbol := l.findClosestSymbolDeclaration(SearchParams{
+				selectedSymbol:    searchParams.selectedSymbol,
+				docId:             docId,
+				scopeMode:         searchParams.scopeMode,
+				continueOnModules: true,
+				traversedModules:  append(searchParams.traversedModules, scope.GetModuleString()),
+			})
+
+			if symbol != nil {
+				return symbol
+			}
+		}*/
 
 	return nil
 }

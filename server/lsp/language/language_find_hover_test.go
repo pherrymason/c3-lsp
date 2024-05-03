@@ -47,23 +47,26 @@ func TestLanguage_FindHoverInformation(t *testing.T) {
 func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	language := NewLanguage(commonlog.MockLogger{})
 	parser := createParser()
-
-	doc := document.NewDocument("x", "x", `
+	docId := "x"
+	doc := document.NewDocument(docId, "a", `
+	module a;
 	fn void main() {
 		importedMethod();
 	}
 `)
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 
-	doc2 := document.NewDocument("y", "x", `
+	doc2Id := "y"
+	doc2 := document.NewDocument(doc2Id, "a", `
+	module a;
 	fn void importedMethod() {}
 	`)
 	language.RefreshDocumentIdentifiers(&doc2, &parser)
 
 	params := protocol.HoverParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-			protocol.TextDocumentIdentifier{URI: "x"},
-			protocol.Position{Line: 2, Character: 8},
+			protocol.TextDocumentIdentifier{URI: docId},
+			protocol.Position{Line: 3, Character: 8},
 		},
 		WorkDoneProgressParams: protocol.WorkDoneProgressParams{},
 	}

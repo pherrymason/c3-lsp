@@ -42,8 +42,8 @@ func NewParser(logger interface{}) Parser {
 	}
 }
 
-func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
-	parsedSymbols := NewParsedSymbols()
+func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
+	parsedSymbols := NewParsedModules(doc.URI)
 	//fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
 	query := `[
@@ -72,7 +72,11 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 	sourceCode := []byte(doc.Content)
 	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
 
-	scopeTree := idx.NewAnonymousScopeFunction("main", doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(doc.ContextSyntaxTree.RootNode().StartPoint(), doc.ContextSyntaxTree.RootNode().EndPoint()), protocol.CompletionItemKindModule)
+	//scopeTree := idx.NewAnonymousScopeFunction("main", doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(doc.ContextSyntaxTree.RootNode().StartPoint(), doc.ContextSyntaxTree.RootNode().EndPoint()), protocol.CompletionItemKindModule)
+	var scopeTree *idx.Function
+	moduleFunctions := make(map[string]*idx.Function)
+	anonymousModuleName := true
+	lastModuleName := ""
 
 	for {
 		m, ok := qc.NextMatch()
@@ -81,13 +85,33 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 		}
 
 		for _, c := range m.Captures {
-			//content := c.Node.Content(sourceCode)
 			nodeType := c.Node.Type()
+			if nodeType != "module" {
+				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, anonymousModuleName)
+				parsedSymbols.RegisterModule(scopeTree)
+			}
 
 			switch nodeType {
 			case "module":
-				doc.ModuleName = p.nodeToModule(doc, c.Node, sourceCode)
+				anonymousModuleName = false
+				lastModuleName = p.nodeToModule(doc, c.Node, sourceCode)
+				doc.ModuleName = lastModuleName
+				// New module found, create new module context
+				/*
+					fn := idx.NewModuleScopeFunction(
+						doc.ModuleName,
+						doc.URI,
+						idx.NewRangeFromSitterPositions(
+							doc.ContextSyntaxTree.RootNode().StartPoint(),
+							doc.ContextSyntaxTree.RootNode().EndPoint(),
+						),
+						protocol.CompletionItemKindModule,
+					)
+					moduleFunctions[doc.ModuleName] = &fn
+					scopeTree = &fn*/
+				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, false)
 				scopeTree.ChangeModule(doc.ModuleName)
+				parsedSymbols.RegisterModule(scopeTree)
 
 			case "import_declaration":
 				imports := p.nodeToImport(doc, c.Node, sourceCode)
@@ -124,9 +148,33 @@ func (p *Parser) ExtractSymbols(doc *document.Document) idx.Function {
 		}
 	}
 
-	parsedSymbols.scopedFunction = scopeTree
+	//parsedSymbols.scopedFunction = *scopeTree
 
-	return scopeTree
+	return parsedSymbols
+}
+
+func getModuleScopedFunction(moduleName string, moduleScopes map[string]*idx.Function, doc *document.Document, anonymousModuleName bool) *idx.Function {
+	if anonymousModuleName {
+		// Build module name from filename
+		moduleName = idx.NormalizeModuleName(doc.URI)
+	}
+
+	fn, exists := moduleScopes[moduleName]
+	if !exists {
+		fnV := idx.NewModuleScopeFunction(
+			moduleName,
+			doc.URI,
+			idx.NewRangeFromSitterPositions(
+				doc.ContextSyntaxTree.RootNode().StartPoint(),
+				doc.ContextSyntaxTree.RootNode().EndPoint(),
+			),
+			protocol.CompletionItemKindModule,
+		)
+		fn = &fnV
+		moduleScopes[moduleName] = &fnV
+	}
+
+	return fn
 }
 
 func (p *Parser) FindVariableDeclarations(doc *document.Document, node *sitter.Node) []idx.Variable {

@@ -45,7 +45,7 @@ func (p *Parser) nodeToDef(doc *document.Document, node *sitter.Node, sourceCode
 	return idx.NewDef(
 		identifierNode.Content(sourceCode),
 		definition,
-		"",
+		doc.ModuleName,
 		doc.URI,
 		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()),
 		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),

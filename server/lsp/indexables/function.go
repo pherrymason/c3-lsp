@@ -9,7 +9,7 @@ import (
 type FunctionType int
 
 const (
-	Anonymous = iota
+	ModuleScope = iota
 	UserDefined
 )
 
@@ -32,8 +32,8 @@ type Function struct {
 	BaseIndexable
 }
 
-func NewAnonymousScopeFunction(name string, module string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(Anonymous, "", name, module, nil, module, docId, Range{}, docRange, kind)
+func NewModuleScopeFunction(module string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
+	return newFunctionType(ModuleScope, "", "main", module, nil, module, docId, Range{}, docRange, kind)
 }
 
 func NewFunction(name string, returnType string, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
@@ -56,11 +56,12 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 		argumentIds:    argumentIds,
 		typeIdentifier: typeIdentifier,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: docId,
-			idRange:     identifierRangePosition,
-			docRange:    docRange,
-			Kind:        kind,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  docId,
+			idRange:      identifierRangePosition,
+			docRange:     docRange,
+			Kind:         kind,
 		},
 		Faults:            make(map[string]Fault),
 		Variables:         make(map[string]Variable),
@@ -71,6 +72,10 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 		Interfaces:        make(map[string]Interface),
 		Imports:           []string{},
 	}
+}
+
+func (f Function) Id() string {
+	return f.documentURI + f.module.GetName()
 }
 
 func (f Function) FunctionType() FunctionType {
@@ -101,8 +106,16 @@ func (f Function) GetKind() protocol.CompletionItemKind {
 	return f.Kind
 }
 
-func (f Function) GetModule() string {
+func (f Function) GetModuleString() string {
+	return f.moduleString
+}
+
+func (f Function) GetModule() ModulePath {
 	return f.module
+}
+
+func (f Function) IsSubModuleOf(module ModulePath) bool {
+	return f.module.IsSubModuleOf(module)
 }
 
 func (f Function) GetDocumentURI() string {
@@ -144,7 +157,8 @@ func (f *Function) AddInterface(_interface Interface) {
 }
 
 func (f *Function) ChangeModule(module string) {
-	f.module = module
+	f.moduleString = module
+	f.module = NewModulePathFromString(module)
 }
 
 func (f Function) GetChildrenFunctionByName(name string) (fn Function, found bool) {

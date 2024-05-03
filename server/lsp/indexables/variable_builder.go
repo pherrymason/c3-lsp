@@ -13,9 +13,10 @@ func NewVariableBuilder(name string, variableType string, module string, docId s
 			name: name,
 			Type: NewTypeFromString(variableType),
 			BaseIndexable: BaseIndexable{
-				module:      module,
-				documentURI: docId,
-				Kind:        protocol.CompletionItemKindVariable,
+				moduleString: module,
+				module:       NewModulePathFromString(module),
+				documentURI:  docId,
+				Kind:         protocol.CompletionItemKindVariable,
 			},
 		},
 	}

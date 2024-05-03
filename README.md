@@ -33,7 +33,8 @@ Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
   - [~] [Macros](https://c3-lang.org/references/docs/macros/)
   - [x] imports
   - [x] modules
-    - [ ] multiple modules per file
+    - [x] multiple modules per file
+    - [x] implicit module name is assumed to be the file name, converted to lower case, with any invalid characters replaced by underscore (_).
   - [ ] [Generics](https://c3-lang.org/references/docs/generics/)
   - [ ] [Language Builtins](https://c3-lang.org/references/docs/builtins/)
 

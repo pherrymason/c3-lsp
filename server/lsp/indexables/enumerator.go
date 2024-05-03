@@ -17,10 +17,11 @@ func NewEnumerator(name string, value string, module string, identifierPosition 
 		name:  name,
 		value: value,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: docId,
-			idRange:     identifierPosition,
-			Kind:        protocol.CompletionItemKindEnumMember,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  docId,
+			idRange:      identifierPosition,
+			Kind:         protocol.CompletionItemKindEnumMember,
 		},
 	}
 }
@@ -33,8 +34,16 @@ func (e Enumerator) GetKind() protocol.CompletionItemKind {
 	return e.Kind
 }
 
-func (e Enumerator) GetModule() string {
+func (e Enumerator) GetModuleString() string {
+	return e.moduleString
+}
+
+func (e Enumerator) GetModule() ModulePath {
 	return e.module
+}
+
+func (e Enumerator) IsSubModuleOf(module ModulePath) bool {
+	return e.module.IsSubModuleOf(module)
 }
 
 func (e Enumerator) GetDocumentURI() string {

@@ -17,11 +17,12 @@ func NewInterface(name string, module string, docId string, idRange Range, docRa
 		name:    name,
 		methods: make(map[string]Function, 0),
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: docId,
-			idRange:     idRange,
-			docRange:    docRange,
-			Kind:        protocol.CompletionItemKindInterface,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  docId,
+			idRange:      idRange,
+			docRange:     docRange,
+			Kind:         protocol.CompletionItemKindInterface,
 		},
 	}
 }
@@ -40,8 +41,16 @@ func (i *Interface) AddMethods(methods []Function) {
 	}
 }
 
-func (i Interface) GetModule() string {
+func (i Interface) GetModuleString() string {
+	return i.moduleString
+}
+
+func (i Interface) GetModule() ModulePath {
 	return i.module
+}
+
+func (s Interface) IsSubModuleOf(module ModulePath) bool {
+	return s.module.IsSubModuleOf(module)
 }
 
 func (i Interface) GetKind() protocol.CompletionItemKind {

@@ -17,11 +17,12 @@ func NewDef(name string, resolvesTo string, module string, docId string, idRange
 		name:       name,
 		resolvesTo: resolvesTo,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: docId,
-			idRange:     idRange,
-			docRange:    docRange,
-			Kind:        protocol.CompletionItemKindTypeParameter,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  docId,
+			idRange:      idRange,
+			docRange:     docRange,
+			Kind:         protocol.CompletionItemKindTypeParameter,
 		},
 	}
 }
@@ -30,10 +31,16 @@ func (d Def) GetName() string {
 	return d.name
 }
 
-func (d Def) GetModule() string {
+func (d Def) GetModuleString() string {
+	return d.moduleString
+}
+func (d Def) GetModule() ModulePath {
 	return d.module
 }
 
+func (d Def) IsSubModuleOf(module ModulePath) bool {
+	return d.module.IsSubModuleOf(module)
+}
 func (d Def) GetKind() protocol.CompletionItemKind {
 	return d.Kind
 }

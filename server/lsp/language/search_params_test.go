@@ -64,14 +64,14 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_full_module_path(t *test
 			`// This blank line is intended.
 			system::cpu::value;`,
 			buildPosition(2, 17),
-			indexables.NewModulePath([]string{"cpu", "system"}),
+			indexables.NewModulePath([]string{"system", "cpu"}),
 			"value",
 		},
 		{
 			`// This blank line is intended.
 mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
 			buildPosition(2, 25),
-			indexables.NewModulePath([]string{"bar", "foo"}),
+			indexables.NewModulePath([]string{"foo", "bar"}),
 			"DEFAULT_BAR_COLOR",
 		},
 	}

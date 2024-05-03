@@ -19,11 +19,12 @@ func NewEnum(name string, baseType string, enumerators []Enumerator, module stri
 		baseType:    baseType,
 		enumerators: enumerators,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: docId,
-			idRange:     idRange,
-			docRange:    docRange,
-			Kind:        protocol.CompletionItemKindEnum,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  docId,
+			idRange:      idRange,
+			docRange:     docRange,
+			Kind:         protocol.CompletionItemKindEnum,
 		},
 	}
 }
@@ -36,8 +37,15 @@ func (e Enum) GetType() string {
 	return e.baseType
 }
 
-func (e Enum) GetModule() string {
+func (e Enum) GetModuleString() string {
+	return e.moduleString
+}
+func (e Enum) GetModule() ModulePath {
 	return e.module
+}
+
+func (e Enum) IsSubModuleOf(module ModulePath) bool {
+	return e.module.IsSubModuleOf(module)
 }
 
 func (e Enum) GetKind() protocol.CompletionItemKind {

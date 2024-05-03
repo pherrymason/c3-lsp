@@ -18,9 +18,9 @@ func TestExtractSymbols_Functions(t *testing.T) {
 	parser := createParser()
 
 	t.Run("Finds function", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		fn, found := symbols.GetChildrenFunctionByName("test")
+		fn, found := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, found, "Function was not found")
 		assert.Equal(t, "test", fn.GetName(), "Function name")
 		assert.Equal(t, "void", fn.GetReturnType(), "Return type")
@@ -39,9 +39,9 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 	parser := createParser()
 
 	t.Run("Finds function", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		fn, found := symbols.GetChildrenFunctionByName("test")
+		fn, found := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, found, "Function was not found")
 		assert.Equal(t, "test", fn.GetName(), "Function name")
 		assert.Equal(t, "void", fn.GetReturnType(), "Return type")
@@ -50,9 +50,9 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 	})
 
 	t.Run("Finds function arguments", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		fn, found := symbols.GetChildrenFunctionByName("test")
+		fn, found := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, found, "Function was not found")
 
 		variable := fn.Variables["number"]
@@ -85,9 +85,9 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 	parser := createParser()
 
 	t.Run("Finds method", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		fn, found := symbols.GetChildrenFunctionByName("UserStruct.method")
+		fn, found := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.method")
 		assert.True(t, found, "Method was not found")
 		assert.Equal(t, "Object*", fn.GetReturnType(), "Return type")
 		assert.Equal(t, "method", fn.GetName())
@@ -96,9 +96,9 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 	})
 
 	t.Run("Finds method arguments", func(t *testing.T) {
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		fn, found := symbols.GetChildrenFunctionByName("UserStruct.method")
+		fn, found := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.method")
 		assert.True(t, found, "Method was not found")
 
 		variable := fn.Variables["self"]
@@ -124,9 +124,9 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 		docId := "docId"
 		doc := document.NewDocument(docId, module, source)
 		parser := createParser()
-		symbols := parser.ExtractSymbols(&doc)
+		symbols := parser.ParseSymbols(&doc)
 
-		fn, found := symbols.GetChildrenFunctionByName("UserStruct.method")
+		fn, found := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.method")
 		assert.True(t, found, "Method was not found")
 
 		variable := fn.Variables["self"]

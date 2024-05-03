@@ -19,11 +19,12 @@ func NewFault(name string, baseType string, constants []FaultConstant, module st
 		baseType:  baseType,
 		constants: constants,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: docId,
-			idRange:     idRange,
-			docRange:    docRange,
-			Kind:        protocol.CompletionItemKindEnum,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  docId,
+			idRange:      idRange,
+			docRange:     docRange,
+			Kind:         protocol.CompletionItemKindEnum,
 		},
 	}
 }
@@ -36,8 +37,16 @@ func (e Fault) GetType() string {
 	return e.baseType
 }
 
-func (e Fault) GetModule() string {
-	return e.module
+func (e Fault) GetModuleString() string {
+	return e.moduleString
+}
+
+func (f Fault) GetModule() ModulePath {
+	return f.module
+}
+
+func (f Fault) IsSubModuleOf(module ModulePath) bool {
+	return f.module.IsSubModuleOf(module)
 }
 
 func (e Fault) GetKind() protocol.CompletionItemKind {
@@ -61,9 +70,9 @@ func (e *Fault) RegisterConstant(name string, value string, posRange Range) {
 		FaultConstant{
 			name: name,
 			BaseIndexable: BaseIndexable{
-				module:      e.module,
-				documentURI: e.documentURI,
-				idRange:     posRange,
+				moduleString: e.moduleString,
+				documentURI:  e.documentURI,
+				idRange:      posRange,
 			},
 		})
 }
@@ -125,8 +134,16 @@ func (e FaultConstant) GetHoverInfo() string {
 func (e FaultConstant) GetKind() protocol.CompletionItemKind {
 	return e.Kind
 }
-func (e FaultConstant) GetModule() string {
-	return e.module
+func (e FaultConstant) GetModuleString() string {
+	return e.moduleString
+}
+
+func (f FaultConstant) GetModule() ModulePath {
+	return f.module
+}
+
+func (f FaultConstant) IsSubModuleOf(module ModulePath) bool {
+	return f.module.IsSubModuleOf(module)
 }
 
 func NewFaultConstant(name string, idRange Range) FaultConstant {

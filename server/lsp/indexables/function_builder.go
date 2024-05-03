@@ -9,15 +9,16 @@ type FunctionBuilder struct {
 func NewFunctionBuilderARoot(module string, docId string) *FunctionBuilder {
 	f := &FunctionBuilder{
 		function: Function{
-			fType:             Anonymous,
+			fType:             ModuleScope,
 			Variables:         make(map[string]Variable),
 			Defs:              make(map[string]Def),
 			Enums:             make(map[string]Enum),
 			Structs:           make(map[string]Struct),
 			ChildrenFunctions: make([]Function, 0),
 			BaseIndexable: BaseIndexable{
-				module:      module,
-				documentURI: docId,
+				moduleString: module,
+				module:       NewModulePathFromString(module),
+				documentURI:  docId,
 			},
 		},
 	}
@@ -40,9 +41,9 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 			Structs:           make(map[string]Struct),
 			ChildrenFunctions: make([]Function, 0),
 			BaseIndexable: BaseIndexable{
-				module:      module,
-				documentURI: docId,
-				Kind:        protocol.CompletionItemKindFunction,
+				moduleString: module,
+				documentURI:  docId,
+				Kind:         protocol.CompletionItemKindFunction,
 			},
 		},
 	}

@@ -21,11 +21,12 @@ func NewStruct(name string, interfaces []string, members []StructMember, module 
 		isUnion:    false,
 		implements: interfaces,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: docId,
-			idRange:     idRange,
-			docRange:    docRange,
-			Kind:        protocol.CompletionItemKindStruct,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  docId,
+			idRange:      idRange,
+			docRange:     docRange,
+			Kind:         protocol.CompletionItemKindStruct,
 		},
 	}
 }
@@ -36,11 +37,12 @@ func NewUnion(name string, members []StructMember, module string, docId string, 
 		members: members,
 		isUnion: true,
 		BaseIndexable: BaseIndexable{
-			module:      module,
-			documentURI: docId,
-			idRange:     idRange,
-			docRange:    docRange,
-			Kind:        protocol.CompletionItemKindStruct,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
+			documentURI:  docId,
+			idRange:      idRange,
+			docRange:     docRange,
+			Kind:         protocol.CompletionItemKindStruct,
 		},
 	}
 }
@@ -57,8 +59,16 @@ func (s Struct) GetInterfaces() []string {
 	return s.implements
 }
 
-func (s Struct) GetModule() string {
+func (s Struct) GetModuleString() string {
+	return s.moduleString
+}
+
+func (s Struct) GetModule() ModulePath {
 	return s.module
+}
+
+func (s Struct) IsSubModuleOf(module ModulePath) bool {
+	return s.module.IsSubModuleOf(module)
 }
 
 func (s Struct) GetKind() protocol.CompletionItemKind {
@@ -116,8 +126,16 @@ func (s StructMember) GetHoverInfo() string {
 func (s StructMember) GetKind() protocol.CompletionItemKind {
 	return s.Kind
 }
-func (s StructMember) GetModule() string {
+func (s StructMember) GetModuleString() string {
+	return s.moduleString
+}
+
+func (s StructMember) GetModule() ModulePath {
 	return s.module
+}
+
+func (s StructMember) IsSubModuleOf(module ModulePath) bool {
+	return s.module.IsSubModuleOf(module)
 }
 
 func NewStructMember(name string, baseType string, posRange Range, module string, docId string) StructMember {
@@ -125,9 +143,10 @@ func NewStructMember(name string, baseType string, posRange Range, module string
 		name:     name,
 		baseType: baseType,
 		BaseIndexable: BaseIndexable{
-			idRange:     posRange,
-			documentURI: docId,
-			module:      module,
+			idRange:      posRange,
+			documentURI:  docId,
+			moduleString: module,
+			module:       NewModulePathFromString(module),
 		},
 	}
 }

@@ -61,6 +61,7 @@ func installDocuments(language *Language, parser *p.Parser) map[string]document.
 		// Module related sources
 		"module_foo.c3",
 		"module_foo_bar.c3",
+		"module_foo_bar_dashed.c3",
 		"module_foo_circle.c3",
 		"module_foo2.c3",
 		"module_cyclic.c3",
@@ -107,10 +108,10 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "BAR_WEIGHT", symbol.GetName())
 		assert.Equal(t, "module_foo_bar.c3", symbol.GetDocumentURI())
-		assert.Equal(t, "foo::bar", symbol.GetModule())
+		assert.Equal(t, "foo::bar", symbol.GetModuleString())
 	})
 
-	t.Run("resolve explicit variable from sub module", func(t *testing.T) {
+	t.Run("resolve explicit variable from explicit sub module", func(t *testing.T) {
 		position := buildPosition(9, 28) // Cursor at foo::bar::D|EFAULT_BAR_COLOR;
 		doc := documents["module_foo2.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
@@ -120,12 +121,11 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "DEFAULT_BAR_COLOR", symbol.GetName())
 		assert.Equal(t, "module_foo_bar.c3", symbol.GetDocumentURI())
-		assert.Equal(t, "foo::bar", symbol.GetModule())
+		assert.Equal(t, "foo::bar", symbol.GetModuleString())
 	})
 
-	t.Run("resolve variable from sub module", func(t *testing.T) {
-		t.Skip()
-		position := buildPosition(8, 21) // Cursor at BAR_WEIGHT
+	t.Run("resolve variable from implicit sub module", func(t *testing.T) {
+		position := buildPosition(7, 21) // Cursor at BA|R_WEIGHT
 		doc := documents["module_foo.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
@@ -134,11 +134,31 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "BAR_WEIGHT", symbol.GetName())
 		assert.Equal(t, "module_foo_bar.c3", symbol.GetDocumentURI())
-		assert.Equal(t, "foo::bar", symbol.GetModule())
+		assert.Equal(t, "foo::bar", symbol.GetModuleString())
 	})
 
 	t.Run("finds symbol in parent implicit module", func(t *testing.T) {
-		t.Skip("TODO")
+		position := buildPosition(6, 5) // Cursor at `B|ar`
+		doc := documents["module_foo_bar_dashed.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
+
+		symbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, symbol, "Symbol not found")
+		assert.Equal(t, "Bar", symbol.GetName())
+		assert.Equal(t, "module_foo_bar.c3", symbol.GetDocumentURI())
+		assert.Equal(t, "foo::bar", symbol.GetModuleString())
+	})
+
+	t.Run("should not finds symbol in sibling implicit module", func(t *testing.T) {
+		position := buildPosition(6, 5) // Cursor at `B|ar`
+		doc := documents["module_foo_bar_dashed.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
+		searchParams.selectedSymbol.token = "Circle"
+
+		symbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.Nil(t, symbol, "Symbol should not be found")
 	})
 
 	t.Run("resolve properly when there are cyclic dependencies", func(t *testing.T) {
@@ -152,7 +172,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "Triangle", symbol.GetName())
 		assert.Equal(t, "module_foo_triangle.c3", symbol.GetDocumentURI())
-		assert.Equal(t, "foo::triangle", symbol.GetModule())
+		assert.Equal(t, "foo::triangle", symbol.GetModuleString())
 	})
 
 }
