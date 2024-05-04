@@ -76,7 +76,7 @@ func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, posi
 		return indexables.Variable{}, err
 	}
 
-	symbol := l.findClosestSymbolDeclaration(searchParams)
+	symbol := l.findClosestSymbolDeclaration(searchParams, DebugFind{depth: 0})
 
 	return symbol, nil
 }
@@ -87,7 +87,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 		return protocol.Hover{}, err
 	}
 
-	foundSymbol := l.findClosestSymbolDeclaration(search)
+	foundSymbol := l.findClosestSymbolDeclaration(search, DebugFind{depth: 0})
 	if foundSymbol == nil {
 		return protocol.Hover{}, nil
 	}

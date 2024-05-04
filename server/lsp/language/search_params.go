@@ -71,7 +71,7 @@ func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol
 			i = int(positionStart.Character)
 		} else {
 			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart)
-			search.parentSymbols = append(search.parentSymbols, Token{token: parentSymbol, position: positionStart})
+			search.parentSymbols = append([]Token{{token: parentSymbol, position: positionStart}}, search.parentSymbols...)
 
 			if doc.HasPointInFrontSymbol(positionStart) {
 				i = int(positionStart.Character) - 1

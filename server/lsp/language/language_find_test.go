@@ -100,6 +100,10 @@ func buildPosition(line protocol.UInteger, character protocol.UInteger) protocol
 	return protocol.Position{Line: line - 1, Character: character}
 }
 
+func find(language *Language, searchParams SearchParams) idx.Indexable {
+	return language.findClosestSymbolDeclaration(searchParams, DebugFind{})
+}
+
 func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 	language, documents := initTestEnv()
 
@@ -108,7 +112,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		doc := documents["module_foo2.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		symbol := language.findClosestSymbolDeclaration(searchParams)
+		symbol := find(language, searchParams)
 
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "BAR_WEIGHT", symbol.GetName())
@@ -121,7 +125,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		doc := documents["module_foo2.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		symbol := language.findClosestSymbolDeclaration(searchParams)
+		symbol := find(language, searchParams)
 
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "DEFAULT_BAR_COLOR", symbol.GetName())
@@ -134,7 +138,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		doc := documents["module_foo.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		symbol := language.findClosestSymbolDeclaration(searchParams)
+		symbol := find(language, searchParams)
 
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "BAR_WEIGHT", symbol.GetName())
@@ -147,7 +151,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		doc := documents["module_foo_bar_dashed.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		symbol := language.findClosestSymbolDeclaration(searchParams)
+		symbol := find(language, searchParams)
 
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "Bar", symbol.GetName())
@@ -161,7 +165,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 		searchParams.selectedSymbol.token = "Circle"
 
-		symbol := language.findClosestSymbolDeclaration(searchParams)
+		symbol := find(language, searchParams)
 
 		assert.Nil(t, symbol, "Symbol should not be found")
 	})
@@ -172,12 +176,16 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		doc := documents["module_foo2.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		symbol := language.findClosestSymbolDeclaration(searchParams)
+		symbol := find(language, searchParams)
 
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "Triangle", symbol.GetName())
 		assert.Equal(t, "module_foo_triangle.c3", symbol.GetDocumentURI())
 		assert.Equal(t, "foo::triangle", symbol.GetModuleString())
+	})
+
+	t.Run("resolve properly when there are cyclic dependencies in parent modules", func(t *testing.T) {
+		t.Skip()
 	})
 
 	t.Run("resolve properly when file_contains_multiple_modules", func(t *testing.T) {
@@ -186,7 +194,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		doc := documents["module_multiple_same_file.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		symbol := language.findClosestSymbolDeclaration(searchParams)
+		symbol := find(language, searchParams)
 
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "value", symbol.GetName())
@@ -196,7 +204,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		// Second search
 		position = buildPosition(12, 12) // Cursor at `something(v|alue);`
 		searchParams, _ = NewSearchParamsFromPosition(&doc, position)
-		symbol = language.findClosestSymbolDeclaration(searchParams)
+		symbol = find(language, searchParams)
 
 		assert.NotNil(t, symbol, "Symbol not found")
 		assert.Equal(t, "value", symbol.GetName())
@@ -214,7 +222,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		position := buildPosition(23, 9)
 		searchParams := NewSearchParams("emulator", position, "emu.c3")
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Symbol not found")
 
@@ -227,7 +235,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		position := buildPosition(24, 10)
 		searchParams := NewSearchParams("emulator", position, "emu.c3")
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -240,7 +248,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		position := buildPosition(16, 9)
 		searchParams := NewSearchParams("ambiguousVariable", position, "app.c3")
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -253,7 +261,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		position := buildPosition(2, 2)
 		searchParams := NewSearchParams("helpDisplayedTimes", position, "app.c3")
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -272,7 +280,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -285,7 +293,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -298,7 +306,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Struct member not found")
 
@@ -313,7 +321,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Struct member not found")
 
@@ -327,7 +335,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Struct member not found")
 
@@ -341,7 +349,18 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(37, 14))
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
+		fun := resolvedSymbol.(*idx.Function)
+		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Emu.init", fun.GetFullName())
+	})
+
+	t.Run("Should find struct method when cursor is already in method declaration", func(t *testing.T) {
+		// Cursor at `emulator.i|nit();`
+		doc := documents["structs.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(28, 13))
+
+		resolvedSymbol := find(language, searchParams)
 		fun := resolvedSymbol.(*idx.Function)
 		assert.Equal(t, "init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
@@ -352,7 +371,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Struct method not found")
 
@@ -367,7 +386,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		position := buildPosition(38, 16) // Cursor is at emu.audio.u|nknown
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.Nil(t, resolvedSymbol, "Struct method not found")
 	})
@@ -396,7 +415,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -415,7 +434,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		doc := documents["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -429,7 +448,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		doc := documents["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -442,7 +461,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		doc := documents["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -464,7 +483,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		doc := docs["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Fault not found")
 
@@ -477,7 +496,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		doc := docs["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 		_, ok := resolvedSymbol.(idx.FaultConstant)
@@ -494,7 +513,7 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 		doc := documents["definitions.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Def not found")
 		assert.Equal(t, "Kilo", resolvedSymbol.GetName())
@@ -505,7 +524,7 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 		doc := documents["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Element not found")
 
@@ -523,7 +542,7 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 		doc := documents["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Local function not found")
 
@@ -538,7 +557,7 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 		doc := documents["app.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
-		resolvedSymbol := language.findClosestSymbolDeclaration(searchParams)
+		resolvedSymbol := find(language, searchParams)
 
 		assert.NotNil(t, resolvedSymbol, "Local function not found")
 

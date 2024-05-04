@@ -42,8 +42,8 @@ system.cpu.init();`
 		SearchParams{
 			selectedSymbol: Token{token: "init", position: buildPosition(2, 12)},
 			parentSymbols: []Token{
-				{token: "cpu", position: buildPosition(2, 7)},
 				{token: "system", position: buildPosition(2, 0)},
+				{token: "cpu", position: buildPosition(2, 7)},
 			},
 			docId:             "filename",
 			scopeMode:         InScope,
