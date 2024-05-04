@@ -66,6 +66,9 @@ func NewServer(opts ServerOpts) *Server {
 			Save:      boolPtr(true),
 		}
 		capabilities.DeclarationProvider = true
+		capabilities.CompletionProvider = &protocol.CompletionOptions{
+			TriggerCharacters: []string{"."},
+		}
 		server.documents.rootURI = *params.RootURI
 		server.indexWorkspace()
 
@@ -153,7 +156,7 @@ func NewServer(opts ServerOpts) *Server {
 			glspServer.Log.Debug(fmt.Sprintf("Could not find document: %s", params.TextDocumentPositionParams.TextDocument.URI))
 			return nil, nil
 		}
-
+		glspServer.Log.Debug("building completion list")
 		suggestions := server.language.BuildCompletionList(doc, params.Position)
 
 		return suggestions, nil
