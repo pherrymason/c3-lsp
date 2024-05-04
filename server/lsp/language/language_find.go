@@ -37,6 +37,17 @@ func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, posi
 		for _, function := range scopeFunction.ChildrenFunctions {
 			if function.GetDocumentRange().HasPosition(position) {
 				symbols = append(symbols, function)
+
+				for _, variable := range function.Variables {
+					l.logger.Debug(fmt.Sprintf("Checking %s variable:", variable.GetName()))
+					declarationPosition := variable.GetIdRange().End
+					if declarationPosition.Line > uint(position.Line) ||
+						(declarationPosition.Line == uint(position.Line) && declarationPosition.Character > uint(position.Character)) {
+						continue
+					}
+
+					symbols = append(symbols, variable)
+				}
 			}
 		}
 	}

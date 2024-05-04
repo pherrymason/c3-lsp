@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -48,18 +47,18 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 	//fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
 	query := `[
- (source_file ` + ModuleDeclaration + `)
- (source_file ` + ImportDeclaration + `)
- (source_file ` + GlobalVarDeclaration + `)
- (source_file ` + LocalVarDeclaration + `)
- (source_file ` + ConstantDeclaration + `)
- (source_file ` + FunctionDeclarationQuery + `)
- (source_file ` + DefineDeclaration + `)
- (source_file ` + StructDeclaration + `)
- (source_file ` + EnumDeclaration + `)
- (source_file ` + FaultDeclaration + `)
- (source_file ` + InterfaceDeclaration + `)
- (source_file ` + MacroDeclaration + `)
+(source_file ` + ModuleDeclaration + `)
+(source_file ` + ImportDeclaration + `)
+(source_file ` + GlobalVarDeclaration + `)
+(source_file ` + LocalVarDeclaration + `)
+(source_file ` + ConstantDeclaration + `)
+(source_file ` + FunctionDeclarationQuery + `)
+(source_file ` + DefineDeclaration + `)
+(source_file ` + StructDeclaration + `)
+(source_file ` + EnumDeclaration + `)
+(source_file ` + FaultDeclaration + `)
+(source_file ` + InterfaceDeclaration + `)
+(source_file ` + MacroDeclaration + `)
 ]`
 
 	/*
@@ -71,8 +70,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 		qc.Exec(q, doc.ContextSyntaxTree.RootNode())*/
 	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
 	sourceCode := []byte(doc.Content)
-	fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
-	fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
+	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
+	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
 
 	var scopeTree *idx.Function
 	moduleFunctions := make(map[string]*idx.Function)
@@ -145,6 +144,15 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 			case "macro_declaration":
 				macro := p.nodeToMacro(doc, c.Node, sourceCode)
 				scopeTree.AddFunction(macro)
+			default:
+				// TODO test that module ends up with wrong endPosition
+				// when this source code:
+				// int variable = 3;
+				// fn void main() {
+				// int value = 4;
+				// v
+				// }
+				continue
 			}
 
 			scopeTree.SetEndPosition(nodeEndPoint)

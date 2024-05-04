@@ -44,4 +44,40 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Should suggest variable names defined in module and inside current function", func(t *testing.T) {
+		source := `
+		int variable = 3;
+		fn void main() {
+			int value = 4;`
+		expectedKind := protocol.CompletionItemKindVariable
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"v", []protocol.CompletionItem{
+				{Label: "variable", Kind: &expectedKind},
+				{Label: "value", Kind: &expectedKind},
+			}},
+			{"val", []protocol.CompletionItem{
+				{Label: "value", Kind: &expectedKind},
+			}},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+
+				doc := document.NewDocument("test.c3", "?", source+`
+`+tt.input+`
+				}`)
+				language.RefreshDocumentIdentifiers(&doc, &parser)
+				position := buildPosition(5, uint32(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := language.BuildCompletionList(&doc, position)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
 }
