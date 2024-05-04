@@ -161,6 +161,18 @@ func (f *Function) ChangeModule(module string) {
 	f.module = NewModulePathFromString(module)
 }
 
+func (f *Function) SetDocRange(docRange Range) {
+	f.docRange = docRange
+}
+
+func (f *Function) SetStartPosition(position Position) {
+	f.docRange.Start = position
+}
+
+func (f *Function) SetEndPosition(position Position) {
+	f.docRange.End = position
+}
+
 func (f Function) GetChildrenFunctionByName(name string) (fn Function, found bool) {
 	for _, fun := range f.ChildrenFunctions {
 		if fun.GetFullName() == name {

@@ -71,8 +71,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
 	sourceCode := []byte(doc.Content)
 	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
+	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
 
-	//scopeTree := idx.NewAnonymousScopeFunction("main", doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(doc.ContextSyntaxTree.RootNode().StartPoint(), doc.ContextSyntaxTree.RootNode().EndPoint()), protocol.CompletionItemKindModule)
 	var scopeTree *idx.Function
 	moduleFunctions := make(map[string]*idx.Function)
 	anonymousModuleName := true
@@ -86,6 +86,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 
 		for _, c := range m.Captures {
 			nodeType := c.Node.Type()
+			nodeEndPoint := idx.NewPositionFromSitterPoint(c.Node.EndPoint())
+
 			if nodeType != "module" {
 				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, anonymousModuleName)
 				parsedSymbols.RegisterModule(scopeTree)
@@ -96,20 +98,10 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				anonymousModuleName = false
 				lastModuleName = p.nodeToModule(doc, c.Node, sourceCode)
 				doc.ModuleName = lastModuleName
-				// New module found, create new module context
-				/*
-					fn := idx.NewModuleScopeFunction(
-						doc.ModuleName,
-						doc.URI,
-						idx.NewRangeFromSitterPositions(
-							doc.ContextSyntaxTree.RootNode().StartPoint(),
-							doc.ContextSyntaxTree.RootNode().EndPoint(),
-						),
-						protocol.CompletionItemKindModule,
-					)
-					moduleFunctions[doc.ModuleName] = &fn
-					scopeTree = &fn*/
+
 				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, false)
+				start := c.Node.StartPoint()
+				scopeTree.SetStartPosition(idx.NewPositionFromSitterPoint(start))
 				scopeTree.ChangeModule(doc.ModuleName)
 				parsedSymbols.RegisterModule(scopeTree)
 
@@ -120,35 +112,43 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 			case "global_declaration":
 				variables := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
 				scopeTree.AddVariables(variables)
+
 			case "func_definition":
 				function := p.nodeToFunction(doc, c.Node, sourceCode)
 				scopeTree.AddFunction(function)
+
 			case "enum_declaration":
 				enum := p.nodeToEnum(doc, c.Node, sourceCode)
 				scopeTree.AddEnum(enum)
+
 			case "struct_declaration":
 				_struct := p.nodeToStruct(doc, c.Node, sourceCode)
 				scopeTree.AddStruct(_struct)
+
 			case "define_declaration":
 				def := p.nodeToDef(doc, c.Node, sourceCode)
 				scopeTree.AddDef(def)
+
 			case "const_declaration":
 				_const := p.nodeToConstant(doc, c.Node, sourceCode)
 				scopeTree.AddVariable(_const)
+
 			case "fault_declaration":
 				fault := p.nodeToFault(doc, c.Node, sourceCode)
 				scopeTree.AddFault(fault)
+
 			case "interface_declaration":
 				interf := p.nodeToInterface(doc, c.Node, sourceCode)
 				scopeTree.AddInterface(interf)
+
 			case "macro_declaration":
 				macro := p.nodeToMacro(doc, c.Node, sourceCode)
 				scopeTree.AddFunction(macro)
 			}
+
+			scopeTree.SetEndPosition(nodeEndPoint)
 		}
 	}
-
-	//parsedSymbols.scopedFunction = *scopeTree
 
 	return parsedSymbols
 }

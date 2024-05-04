@@ -300,8 +300,11 @@ func TestExtractSymbols_find_module(t *testing.T) {
 
 		fn := symbols.Get("foo")
 		assert.Equal(t, "foo", fn.GetModuleString(), "Function module is wrong")
+		assert.Equal(t, idx.NewRange(1, 1, 2, 15), fn.GetDocumentRange(), "Wrong range for foo module")
 
-		assert.Equal(t, "foo2", symbols.Get("foo2").GetModuleString(), "Function module is wrong")
+		fn = symbols.Get("foo2")
+		assert.Equal(t, "foo2", fn.GetModuleString(), "Function module is wrong")
+		assert.Equal(t, idx.NewRange(4, 1, 5, 15), fn.GetDocumentRange(), "Wrong range for foo2 module")
 	})
 }
 

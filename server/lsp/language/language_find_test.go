@@ -71,6 +71,7 @@ func installDocuments(language *Language, parser *p.Parser) map[string]document.
 		"module_foo2.c3",
 		"module_cyclic.c3",
 		"module_foo_triangle.c3",
+		"module_multiple_same_file.c3",
 	}
 	baseDir := "./../../test_files/"
 	documents := make(map[string]document.Document, 0)
@@ -177,6 +178,31 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		assert.Equal(t, "Triangle", symbol.GetName())
 		assert.Equal(t, "module_foo_triangle.c3", symbol.GetDocumentURI())
 		assert.Equal(t, "foo::triangle", symbol.GetModuleString())
+	})
+
+	t.Run("resolve properly when file_contains_multiple_modules", func(t *testing.T) {
+		// This test ask specifically for a symbol located in an imported module defined after another module that has a cyclic dependency.
+		position := buildPosition(6, 16) // Cursor at `something(v|alue);`
+		doc := documents["module_multiple_same_file.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
+
+		symbol := language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, symbol, "Symbol not found")
+		assert.Equal(t, "value", symbol.GetName())
+		assert.Equal(t, "module_multiple_same_file.c3", symbol.GetDocumentURI())
+		assert.Equal(t, "mario", symbol.GetModuleString())
+
+		// Second search
+		position = buildPosition(12, 12) // Cursor at `something(v|alue);`
+		searchParams, _ = NewSearchParamsFromPosition(&doc, position)
+		symbol = language.findClosestSymbolDeclaration(searchParams)
+
+		assert.NotNil(t, symbol, "Symbol not found")
+		assert.Equal(t, "value", symbol.GetName())
+		assert.Equal(t, "module_multiple_same_file.c3", symbol.GetDocumentURI())
+		assert.Equal(t, "luigi", symbol.GetModuleString())
+
 	})
 
 }
