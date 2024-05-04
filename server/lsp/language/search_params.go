@@ -11,6 +11,12 @@ type Token struct {
 	position protocol.Position
 }
 
+const (
+	Nullo int = iota
+	Ready
+	Lock
+)
+
 type SearchParams struct {
 	selectedSymbol Token
 	parentSymbols  []Token // Limit search to symbols that has are child from parentSymbol
@@ -20,7 +26,7 @@ type SearchParams struct {
 	continueOnModules bool
 	scopeMode         FindMode // TODO Rename this to boolean
 
-	traversedModules []string // Here we register what modules have been already inspected in this search. Helps avoiding infinite loops
+	trackedModules map[string]int // Here we register what modules have been already inspected in this search. Helps avoiding infinite loops
 }
 
 func NewSearchParams(selectedSymbol string, position protocol.Position, docId string) SearchParams {
@@ -29,6 +35,7 @@ func NewSearchParams(selectedSymbol string, position protocol.Position, docId st
 		docId:             docId,
 		scopeMode:         InScope,
 		continueOnModules: true,
+		trackedModules:    make(map[string]int),
 	}
 }
 

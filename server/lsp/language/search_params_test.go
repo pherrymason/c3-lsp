@@ -24,6 +24,7 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_positio
 			docId:             "filename",
 			scopeMode:         InScope,
 			continueOnModules: true,
+			trackedModules:    make(map[string]int),
 		},
 		sp,
 	)
@@ -48,6 +49,7 @@ system.cpu.init();`
 			docId:             "filename",
 			scopeMode:         InScope,
 			continueOnModules: true,
+			trackedModules:    make(map[string]int),
 		},
 		sp,
 	)
@@ -90,6 +92,7 @@ mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
 					modulePath:        tt.expectedModule,
 					scopeMode:         InScope,
 					continueOnModules: true,
+					trackedModules:    make(map[string]int),
 				},
 				sp,
 			)

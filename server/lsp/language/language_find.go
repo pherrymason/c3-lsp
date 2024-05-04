@@ -9,6 +9,22 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+func (l *Language) findModuleInPosition(docId string, position protocol.Position) string {
+	for id, modulesByDoc := range l.functionTreeByDocument {
+		if id == docId {
+			continue
+		}
+
+		for _, scope := range modulesByDoc.SymbolsByModule() {
+			if scope.GetDocumentRange().HasPosition(position) {
+				return scope.GetModule().GetName()
+			}
+		}
+	}
+
+	panic("Module not found in position")
+}
+
 func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, position protocol.Position) []indexables.Indexable {
 	var symbols []indexables.Indexable
 	for _, scopeFunction := range parsedModules.SymbolsByModule() {
@@ -71,11 +87,12 @@ func min(num1, num2 int) int {
 	return num2
 }
 func (l *Language) debug(message string, debugger DebugFind) {
-	maxo := min(debugger.depth, 8)
-	prep := "|" + strings.Repeat("_", maxo)
-	if len(prep) > 10 {
-		return
+	maxo := min(debugger.depth, 20)
+	prep := "|" + strings.Repeat(".", maxo)
+	if debugger.depth > 8 {
+		prep = fmt.Sprintf("%s (%d)", prep, debugger.depth)
 	}
+
 	l.logger.Debug(fmt.Sprintf("%s %s", prep, message))
 }
 
@@ -85,7 +102,7 @@ func (l *Language) debug(message string, debugger DebugFind) {
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
 func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, debugger DebugFind) indexables.Indexable {
-	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s", searchParams.docId), debugger)
+	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s", searchParams.docId, searchParams.selectedSymbol.token), debugger)
 
 	position := searchParams.selectedSymbol.position
 	// Check if there's parent contextual information in searchParams
@@ -101,65 +118,70 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, debug
 		if symbol != nil {
 			return symbol
 		}
-	} else {
-		documentModules, found := l.functionTreeByDocument[searchParams.docId]
-		if !found {
-			return nil
+
+		return nil
+	}
+
+	documentModules, found := l.functionTreeByDocument[searchParams.docId]
+	if !found {
+		return nil
+	}
+
+	traversedModules := searchParams.trackedModules
+	for module, scopedTree := range documentModules.SymbolsByModule() {
+		l.debug(fmt.Sprintf("Checking module \"%s\"", module), debugger)
+		// Go through every element defined in scopedTree
+		identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, scopedTree, 0, searchParams.scopeMode)
+
+		if identifier != nil {
+			return identifier
 		}
 
-		for module, scopedTree := range documentModules.SymbolsByModule() {
-			l.debug(fmt.Sprintf("Checking module \"%s\"", module), debugger)
-			// Go through every element defined in scopedTree
-			identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, scopedTree, 0, searchParams.scopeMode)
-
-			if identifier != nil {
-				return identifier
+		if searchParams.continueOnModules {
+			found := l.findSymbolsInModuleOtherFiles(scopedTree.GetModule(), searchParams, debugger.goIn())
+			if found != nil {
+				return found
 			}
+		}
 
-			if searchParams.continueOnModules {
-				found := l.findSymbolsInModuleOtherFiles(scopedTree.GetModule(), searchParams, debugger.goIn())
-				if found != nil {
-					return found
+		// Try to find element in one of the imported modules
+		if len(scopedTree.Imports) > 0 {
+
+			for i := 0; i < len(scopedTree.Imports); i++ {
+				mt, ok := traversedModules[scopedTree.Imports[i]]
+				trackValue := Ready
+				if ok && mt == Lock {
+					continue
+				} else if mt == Ready {
+					trackValue = Lock
 				}
-			}
+				traversedModules[scopedTree.Imports[i]] = trackValue
 
-			// Try to find element in one of the imported modules
-			if len(scopedTree.Imports) > 0 {
-				traversedModules := searchParams.traversedModules
-				for i := 0; i < len(scopedTree.Imports); i++ {
-					if inSlice(scopedTree.Imports[i], traversedModules) {
-						continue
-					}
-
-					// TODO: Some scenarios cause an infinite loop here
-					module := scopedTree.Imports[i]
-					sp := SearchParams{
-						selectedSymbol:   searchParams.selectedSymbol,
-						modulePath:       indexables.NewModulePath([]string{module}),
-						scopeMode:        AnyPosition,
-						traversedModules: traversedModules,
-					}
-					l.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\"", module), debugger)
-					symbol := l._findSymbolDeclarationInModule(sp, debugger.goIn())
-					if symbol != nil {
-						return symbol
-					}
-					// TODO: This next line is an optimization to remember imported submodules in `module`
-					traversedModules = append(traversedModules, module)
+				// TODO: Some scenarios cause an infinite loop here
+				module := scopedTree.Imports[i]
+				sp := SearchParams{
+					selectedSymbol: searchParams.selectedSymbol,
+					modulePath:     indexables.NewModulePath([]string{module}),
+					scopeMode:      AnyPosition,
+					trackedModules: traversedModules,
 				}
+				l.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\": %s", module, searchParams.selectedSymbol.token), debugger)
+				symbol := l._findSymbolDeclarationInModule(sp, debugger.goIn())
+				if symbol != nil {
+					return symbol
+				}
+				// TODO: This next line is an optimization to remember imported submodules in `module`
+				//traversedModules = append(traversedModules, module)
 			}
 		}
 	}
-
-	// Not found yet, let's try search the selectedSymbol defined as global in other files
-	// Note: Iterating a map is not guaranteed to be done always in the same order.
 
 	// Not found...
 	return nil
 }
 
 func (l *Language) findSymbolsInModuleOtherFiles(module indexables.ModulePath, searchParams SearchParams, debugger DebugFind) indexables.Indexable {
-
+	l.debug(fmt.Sprintf("find in other module files"), debugger)
 	for docId, modulesByDoc := range l.functionTreeByDocument {
 		if docId == searchParams.docId {
 			continue
@@ -180,6 +202,7 @@ func (l *Language) findSymbolsInModuleOtherFiles(module indexables.ModulePath, s
 					docId:             scope.GetDocumentURI(),
 					scopeMode:         AnyPosition,
 					continueOnModules: false,
+					trackedModules:    searchParams.trackedModules,
 				},
 				DebugFind{depth: debugger.depth + 1},
 			)
@@ -188,10 +211,11 @@ func (l *Language) findSymbolsInModuleOtherFiles(module indexables.ModulePath, s
 			}
 		}
 	}
-
+	l.debug(fmt.Sprintf("</end> find in other module files"), debugger)
 	return nil
 }
 
+// Search symbols inside a given module
 func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams, debugger DebugFind) indexables.Indexable {
 	expectedModule := searchParams.modulePath.GetName()
 
@@ -200,9 +224,15 @@ func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams, deb
 			if scope.GetModuleString() != expectedModule { // TODO Ignore current doc we are comming from
 				continue
 			}
-			if inSlice(scope.GetModuleString(), searchParams.traversedModules) {
+
+			mt, ok := searchParams.trackedModules[scope.GetModuleString()]
+			trackValue := Ready
+			if ok && mt == Lock {
 				continue
+			} else if mt == Ready {
+				trackValue = Lock
 			}
+			searchParams.trackedModules[scope.GetModuleString()] = trackValue
 
 			l.debug(fmt.Sprintf("findSymbolDeclarationInModule: search symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
 			symbol := l.findClosestSymbolDeclaration(SearchParams{
@@ -210,7 +240,7 @@ func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams, deb
 				docId:             docId,
 				scopeMode:         searchParams.scopeMode,
 				continueOnModules: true,
-				traversedModules:  append(searchParams.traversedModules, scope.GetModuleString()),
+				trackedModules:    searchParams.trackedModules,
 			}, DebugFind{depth: debugger.depth + 1})
 			l.debug(fmt.Sprintf("end searching symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
 			if symbol != nil {

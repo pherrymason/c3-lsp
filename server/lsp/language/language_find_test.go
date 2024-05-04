@@ -104,6 +104,35 @@ func find(language *Language, searchParams SearchParams) idx.Indexable {
 	return language.findClosestSymbolDeclaration(searchParams, DebugFind{})
 }
 
+func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
+	cases := []struct {
+		source string
+	}{
+		{"if"},
+		{"else"},
+	}
+	parser := createParser()
+	language := NewLanguage(commonlog.MockLogger{})
+	doc := document.NewDocument("x", "?", "module foo;")
+	language.RefreshDocumentIdentifiers(&doc, &parser)
+
+	doc = document.NewDocument("z", "?", "module bar;import foo;")
+	language.RefreshDocumentIdentifiers(&doc, &parser)
+
+	for _, tt := range cases {
+		t.Run(tt.source, func(t *testing.T) {
+			doc := document.NewDocument("y", "?", "module foo;"+tt.source)
+			language.RefreshDocumentIdentifiers(&doc, &parser)
+			position := buildPosition(0, 12) // Cursor at BA|R_WEIGHT
+			searchParams, _ := NewSearchParamsFromPosition(&doc, position)
+
+			symbol := find(&language, searchParams)
+
+			assert.Nil(t, symbol, "Symbol should not be found")
+		})
+	}
+}
+
 func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 	language, documents := initTestEnv()
 

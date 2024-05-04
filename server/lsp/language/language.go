@@ -82,6 +82,10 @@ func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, posi
 }
 
 func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) (protocol.Hover, error) {
+
+	//module := l.findModuleInPosition(doc.URI, params.Position)
+	//fmt.Println(module)
+
 	search, err := NewSearchParamsFromPosition(doc, params.Position)
 	if err != nil {
 		return protocol.Hover{}, err
