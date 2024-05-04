@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -70,8 +71,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 		qc.Exec(q, doc.ContextSyntaxTree.RootNode())*/
 	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
 	sourceCode := []byte(doc.Content)
-	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
-	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
+	fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
+	fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
 
 	var scopeTree *idx.Function
 	moduleFunctions := make(map[string]*idx.Function)

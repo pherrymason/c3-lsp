@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
@@ -33,7 +35,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 
 	for i := uint32(0); i < declarationNode.ChildCount(); i++ {
 		n := declarationNode.Child(int(i))
-		//fmt.Println(i, ":", n.Type(), ":: ", n.Content(sourceCode))
+		fmt.Println(i, ":", n.Type(), ":: ", n.Content(sourceCode), ":: has errors: ", n.HasError())
 		switch n.Type() {
 		case "type":
 			typeNodeContent = n.Content(sourceCode)
@@ -52,6 +54,12 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 					declarationNode.EndPoint()),
 			)
 			variables = append(variables, variable)
+		case ";":
+			if n.HasError() {
+				// Last variable is incomplete, remove it
+				variables = variables[:len(variables)-1]
+			}
+
 		case "multi_declaration":
 			sub := n.Child(1)
 			variable := idx.NewVariable(

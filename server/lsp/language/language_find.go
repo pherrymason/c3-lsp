@@ -8,9 +8,12 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (l *Language) findAllScopeSymbols(docSymbols *parser.ParsedModules, position protocol.Position) []indexables.Indexable {
+func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, position protocol.Position) []indexables.Indexable {
 	var symbols []indexables.Indexable
-	for _, scopeFunction := range docSymbols.SymbolsByModule() {
+	for _, scopeFunction := range parsedModules.SymbolsByModule() {
+		if !scopeFunction.GetDocumentRange().HasPosition(position) {
+			continue // We are in a different module
+		}
 
 		for _, variable := range scopeFunction.Variables {
 			symbols = append(symbols, variable)
@@ -23,6 +26,12 @@ func (l *Language) findAllScopeSymbols(docSymbols *parser.ParsedModules, positio
 		}
 		for _, def := range scopeFunction.Defs {
 			symbols = append(symbols, def)
+		}
+		for _, faults := range scopeFunction.Faults {
+			symbols = append(symbols, faults)
+		}
+		for _, interfaces := range scopeFunction.Interfaces {
+			symbols = append(symbols, interfaces)
 		}
 
 		for _, function := range scopeFunction.ChildrenFunctions {

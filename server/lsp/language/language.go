@@ -1,6 +1,8 @@
 package language
 
 import (
+	"strings"
+
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
@@ -34,12 +36,22 @@ func (l *Language) BuildCompletionList(doc *document.Document, position protocol
 	// 2 - TODO if previous character is '.', find previous symbol and if a struct, complete only with struct methods
 	// 3 - TODO if writing function call arguments, complete with argument names. ¿Feasible?
 
+	symbolInPosition, _ := doc.SymbolInPosition(
+		protocol.Position{
+			Line:      position.Line,
+			Character: position.Character - 1,
+		})
+
 	// Find symbols in document
 	moduleSymbols := l.functionTreeByDocument[doc.URI]
 	scopeSymbols := l.findAllScopeSymbols(&moduleSymbols, position)
 
 	var items []protocol.CompletionItem
 	for _, storedIdentifier := range scopeSymbols {
+		if !strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition) {
+			continue
+		}
+
 		tempKind := storedIdentifier.GetKind()
 
 		items = append(items, protocol.CompletionItem{
