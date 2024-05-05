@@ -21,9 +21,8 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 	fn void test() { int value = 1; }
 	fn void test2() { int value, value2; }
 	`
-	module := "variables"
 	docId := "x"
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("finds global variable declarations", func(t *testing.T) {
@@ -102,7 +101,7 @@ func TestExtractSymbols_find_constants(t *testing.T) {
 
 	source := `const int A_VALUE = 12;`
 
-	doc := document.NewDocument("docId", "mod", source)
+	doc := document.NewDocument("docId", source)
 	parser := createParser()
 
 	symbols := parser.ParseSymbols(&doc)

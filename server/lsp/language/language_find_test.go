@@ -54,7 +54,7 @@ func installDocuments(language *Language, parser *p.Parser) map[string]document.
 	for _, filename := range filenames {
 		fullPath := filepath.Join(baseDir, filename)
 		fileContent = readC3File(fullPath)
-		documents[filename] = document.NewDocument(filename, "?", fileContent)
+		documents[filename] = document.NewDocument(filename, fileContent)
 		doc := documents[filename]
 		language.RefreshDocumentIdentifiers(&doc, parser)
 	}
@@ -119,16 +119,16 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 		tracker: make(map[string][]string),
 	}
 	language := NewLanguage(logger)
-	doc := document.NewDocument("x", "?", "module foo;")
+	doc := document.NewDocument("x", "module foo;")
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 
-	doc = document.NewDocument("z", "?", "module bar;import foo;")
+	doc = document.NewDocument("z", "module bar;import foo;")
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 
 	for _, tt := range cases {
 		t.Run(tt.source, func(t *testing.T) {
 			logger.tracker = make(map[string][]string)
-			doc := document.NewDocument("y", "?", "module foo;"+tt.source)
+			doc := document.NewDocument("y", "module foo;"+tt.source)
 			language.RefreshDocumentIdentifiers(&doc, &parser)
 			position := buildPosition(1, 12) // Cursor at BA|R_WEIGHT
 			searchParams, _ := NewSearchParamsFromPosition(&doc, position)

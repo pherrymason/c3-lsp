@@ -14,7 +14,7 @@ func TestLanguage_FindHoverInformation(t *testing.T) {
 	language := NewLanguage(commonlog.MockLogger{})
 	parser := createParser()
 
-	doc := document.NewDocument("x", "", `
+	doc := document.NewDocument("x", `
 	int value = 1;
 	fn void main() {
 		char value = 3;
@@ -48,7 +48,7 @@ func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	language := NewLanguage(commonlog.MockLogger{})
 	parser := createParser()
 	docId := "x"
-	doc := document.NewDocument(docId, "a", `
+	doc := document.NewDocument(docId, `
 	module a;
 	fn void main() {
 		importedMethod();
@@ -57,7 +57,7 @@ func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 
 	doc2Id := "y"
-	doc2 := document.NewDocument(doc2Id, "a", `
+	doc2 := document.NewDocument(doc2Id, `
 	module a;
 	fn void importedMethod() {}
 	`)

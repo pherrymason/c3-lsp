@@ -13,7 +13,7 @@ import (
 
 func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_position(t *testing.T) {
 	sourceCode := "int emu;"
-	doc := d.NewDocument("filename", "module", sourceCode)
+	doc := d.NewDocument("filename", sourceCode)
 
 	sp, err := NewSearchParamsFromPosition(&doc, buildPosition(1, 5))
 
@@ -38,7 +38,7 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_positio
 func TestSearchParams_NewSearchParamsFromPosition_finds_all_parent_symbols(t *testing.T) {
 	sourceCode := `// This blank line is intended.
 system.cpu.init();`
-	doc := d.NewDocument("filename", "module", sourceCode)
+	doc := d.NewDocument("filename", sourceCode)
 	// Cursor at "i|init"
 	sp, err := NewSearchParamsFromPosition(&doc, buildPosition(2, 12))
 
@@ -85,7 +85,7 @@ mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
 
 	for i, tt := range cases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
-			doc := d.NewDocument("filename", "module", tt.source)
+			doc := d.NewDocument("filename", tt.source)
 			sp, err := NewSearchParamsFromPosition(&doc, tt.position)
 
 			assert.Nil(t, err)

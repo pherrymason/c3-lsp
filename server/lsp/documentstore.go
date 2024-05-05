@@ -51,9 +51,6 @@ func (s *documentStore) Open(params protocol.DidOpenTextDocumentParams, notify g
 	// TODO test that document is created with the normalized path and not params.TextDocument.URI
 	doc := NewDocumentFromString(path, params.TextDocument.Text)
 
-	moduleName := parser.ExtractModuleName(&doc)
-	doc.ModuleName = moduleName
-
 	s.documents[path] = &doc
 	return &doc, nil
 }

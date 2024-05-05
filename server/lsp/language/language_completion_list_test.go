@@ -33,7 +33,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
 
-				doc := document.NewDocument("test.c3", "?", source+"\n"+tt.input)
+				doc := document.NewDocument("test.c3", source+"\n"+tt.input)
 				language.RefreshDocumentIdentifiers(&doc, &parser)
 				position := buildPosition(4, 1) // Cursor after `v|`
 
@@ -67,7 +67,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
 
-				doc := document.NewDocument("test.c3", "?", source+`
+				doc := document.NewDocument("test.c3", source+`
 `+tt.input+`
 				}`)
 				language.RefreshDocumentIdentifiers(&doc, &parser)
@@ -104,7 +104,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
 
-				doc := document.NewDocument("test.c3", "?", source+tt.input+`}`)
+				doc := document.NewDocument("test.c3", source+tt.input+`}`)
 				language.RefreshDocumentIdentifiers(&doc, &parser)
 				position := buildPosition(5, 7+uint32(len(tt.input))) // Cursor after `<input>|`
 

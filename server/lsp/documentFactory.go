@@ -5,5 +5,5 @@ import (
 )
 
 func NewDocumentFromString(docId string, documentContent string) document.Document {
-	return document.NewDocument(docId, "", documentContent)
+	return document.NewDocument(docId, documentContent)
 }

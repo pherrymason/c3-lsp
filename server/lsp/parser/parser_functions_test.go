@@ -12,9 +12,8 @@ func TestExtractSymbols_Functions(t *testing.T) {
 	source := `fn void test() {
 		return 1;
 	}`
-	module := "x"
 	docId := "docId"
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("Finds function", func(t *testing.T) {
@@ -33,9 +32,8 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 	source := `fn void test(int number, char ch, int* pointer) {
 		return 1;
 	}`
-	module := "x"
 	docId := "docId"
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("Finds function", func(t *testing.T) {
@@ -79,9 +77,8 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 	source := `fn Object* UserStruct.method(self, int* pointer) {
 		return 1;
 	}`
-	module := "x"
 	docId := "docId"
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("Finds method", func(t *testing.T) {
@@ -120,9 +117,8 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 		source := `fn Object* UserStruct.method(&self, int* pointer) {
 			return 1;
 		}`
-		module := "x"
 		docId := "docId"
-		doc := document.NewDocument(docId, module, source)
+		doc := document.NewDocument(docId, source)
 		parser := createParser()
 		symbols := parser.ParseSymbols(&doc)
 

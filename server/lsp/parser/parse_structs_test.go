@@ -23,10 +23,8 @@ fn void MyStruct.init(&self)
 	};
 }
 `
-
-	module := "x"
 	docId := "docId"
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("finds struct", func(t *testing.T) {
@@ -73,9 +71,8 @@ func TestParse_Unions(t *testing.T) {
 		short as_short;
 		int as_int;
 	}`
-	module := "x"
 	docId := "docId"
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("parses union", func(t *testing.T) {

@@ -15,17 +15,15 @@ const MODULE_SEPARATOR = ':'
 
 type Document struct {
 	ContextSyntaxTree       *sitter.Tree
-	ModuleName              string // to deprecate, as a file can have multiple modules defined.
 	URI                     protocol.DocumentUri
 	NeedsRefreshDiagnostics bool
 	Content                 string
 	lines                   []string
 }
 
-func NewDocument(docId protocol.DocumentUri, moduleName string, documentContent string) Document {
+func NewDocument(docId protocol.DocumentUri, documentContent string) Document {
 	return Document{
 		ContextSyntaxTree:       cst.GetParsedTreeFromString(documentContent),
-		ModuleName:              moduleName,
 		URI:                     docId,
 		NeedsRefreshDiagnostics: false,
 		Content:                 documentContent,

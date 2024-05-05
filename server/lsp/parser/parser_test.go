@@ -16,10 +16,9 @@ func createParser() Parser {
 }
 
 func TestFindsTypedEnums(t *testing.T) {
-	module := "x"
 	docId := "doc"
 	source := `enum Colors:int { RED, BLUE, GREEN };`
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("finds Colors enum identifier", func(t *testing.T) {
@@ -61,10 +60,9 @@ func TestFindsTypedEnums(t *testing.T) {
 }
 
 func TestFindsUnTypedEnums(t *testing.T) {
-	module := "mod-x"
 	docId := "doc"
 	source := `enum Colors { RED, BLUE, GREEN };`
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("finds Colors enum identifier", func(t *testing.T) {
@@ -104,7 +102,6 @@ func TestFindsUnTypedEnums(t *testing.T) {
 }
 
 func TestParse_fault(t *testing.T) {
-	module := "mod-x"
 	docId := "doc"
 	source := `fault IOResult
 	{
@@ -112,7 +109,7 @@ func TestParse_fault(t *testing.T) {
 	  PARSE_ERROR
 	};`
 
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("finds Fault identifier", func(t *testing.T) {
@@ -154,7 +151,7 @@ func TestParse_interface(t *testing.T) {
 		fn String method();
 	};`
 
-	doc := document.NewDocument(docId, module, source)
+	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("finds interface", func(t *testing.T) {
@@ -195,7 +192,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	`
 	// TODO: Missing def different definition examples. See parser.nodeToDef
 	mod := "mod"
-	doc := document.NewDocument("x", mod, source)
+	doc := document.NewDocument("x", source)
 	parser := createParser()
 
 	symbols := parser.ParseSymbols(&doc)
@@ -245,7 +242,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
     	return x + 2;
 	}`
 
-	doc := document.NewDocument("docId", "module", source)
+	doc := document.NewDocument("docId", source)
 	parser := createParser()
 	symbols := parser.ParseSymbols(&doc)
 
@@ -262,7 +259,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 	int value = 1;
 	`
 
-		doc := document.NewDocument("file name.c3", "-", source)
+		doc := document.NewDocument("file name.c3", source)
 		parser := createParser()
 		symbols := parser.ParseSymbols(&doc)
 		fn := symbols.Get("file_name")
@@ -276,13 +273,12 @@ func TestExtractSymbols_find_module(t *testing.T) {
 	int value = 1;
 	`
 
-		doc := document.NewDocument("docId", "??", source)
+		doc := document.NewDocument("docId", source)
 		parser := createParser()
 		symbols := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("foo")
 		assert.Equal(t, "foo", fn.GetModuleString(), "Function module is wrong")
-		assert.Equal(t, "foo", doc.ModuleName, "Document module is wrong")
 	})
 
 	t.Run("finds different modules defined in single file", func(t *testing.T) {
@@ -294,7 +290,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 	int value = 2;
 	`
 
-		doc := document.NewDocument("docid", "??", source)
+		doc := document.NewDocument("docid", source)
 		parser := createParser()
 		symbols := parser.ParseSymbols(&doc)
 
@@ -317,7 +313,7 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 	int value = 1;
 	`
 
-	doc := document.NewDocument("docid", "??", source)
+	doc := document.NewDocument("docid", source)
 	parser := createParser()
 	symbols := parser.ParseSymbols(&doc)
 

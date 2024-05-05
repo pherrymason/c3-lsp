@@ -1,10 +1,6 @@
 package parser
 
 import (
-	"path/filepath"
-	"regexp"
-	"strings"
-
 	"github.com/pherrymason/c3-lsp/lsp/cst"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
@@ -97,12 +93,12 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 			case "module":
 				anonymousModuleName = false
 				lastModuleName = p.nodeToModule(doc, c.Node, sourceCode)
-				doc.ModuleName = lastModuleName
+				//doc.ModuleName = lastModuleName
 
 				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, false)
 				start := c.Node.StartPoint()
 				scopeTree.SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
-				scopeTree.ChangeModule(doc.ModuleName)
+				scopeTree.ChangeModule(lastModuleName)
 				parsedSymbols.RegisterModule(scopeTree)
 
 			case "import_declaration":
@@ -213,61 +209,4 @@ func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, 
 	}
 
 	return variables
-}
-
-func (p *Parser) FindFunctionDeclarations(doc *document.Document) []idx.Indexable {
-	query := FunctionDeclarationQuery
-	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
-
-	var identifiers []idx.Indexable
-	found := make(map[string]bool)
-	sourceCode := []byte(doc.Content)
-	for {
-		m, ok := qc.NextMatch()
-		if !ok {
-			break
-		}
-		// Apply predicates filtering
-		m = qc.FilterPredicates(m, sourceCode)
-		for _, c := range m.Captures {
-			content := c.Node.Content(sourceCode)
-			c.Node.Parent().Type()
-			if _, exists := found[content]; !exists {
-				found[content] = true
-				identifier := idx.NewFunction(content, "", []string{}, doc.ModuleName, doc.URI, idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()), idx.NewRangeFromSitterPositions(c.Node.StartPoint(), c.Node.EndPoint()))
-
-				identifiers = append(identifiers, identifier)
-			}
-		}
-	}
-
-	return identifiers
-}
-
-func (p *Parser) ExtractModuleName(doc *document.Document) string {
-	qc := cst.RunQuery(ModuleDeclaration, doc.ContextSyntaxTree.RootNode())
-
-	sourceCode := []byte(doc.Content)
-
-	var moduleName string
-	for {
-		m, ok := qc.NextMatch()
-		if !ok {
-			break
-		}
-
-		for _, c := range m.Captures {
-			moduleName = c.Node.Content(sourceCode)
-			moduleName = moduleName
-		}
-	}
-
-	if moduleName == "" {
-		moduleName = filepath.Base(doc.URI)
-		moduleName = strings.TrimSuffix(moduleName, filepath.Ext(moduleName))
-		regexpPattern := regexp.MustCompile(`[^_0-9a-z]`)
-		moduleName = regexpPattern.ReplaceAllString(moduleName, "_")
-	}
-
-	return moduleName
 }
