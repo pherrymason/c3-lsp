@@ -140,7 +140,7 @@ func NewServer(opts ServerOpts) *Server {
 
 		identifier, err := server.language.FindSymbolDeclarationInWorkspace(doc, params.Position)
 
-		if err == nil {
+		if err == nil && identifier != nil {
 			return protocol.Location{
 				URI:   identifier.GetDocumentURI(),
 				Range: lsp_NewRangeFromRange(identifier.GetIdRange()),
