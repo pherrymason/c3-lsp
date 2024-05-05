@@ -2,7 +2,7 @@
 [![Go](https://github.com/pherrymason/c3-lsp/actions/workflows/go.yml/badge.svg)](https://github.com/pherrymason/c3-lsp/actions/workflows/go.yml)
 
 WIP LSP for [C3 language](https://github.com/c3lang/c3c)  
-Using tree-sitter grammar rules from https://github.com/zweimach/tree-sitter-c3
+Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.git
 
 ## Server
 **Features**
