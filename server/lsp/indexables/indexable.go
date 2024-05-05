@@ -52,8 +52,8 @@ func NewRange(startLine uint, startChar uint, endLine uint, endChar uint) Range 
 
 func NewRangeFromSitterPositions(start sitter.Point, end sitter.Point) Range {
 	return Range{
-		Start: NewPositionFromSitterPoint(start),
-		End:   NewPositionFromSitterPoint(end),
+		Start: NewPositionFromTreeSitterPoint(start),
+		End:   NewPositionFromTreeSitterPoint(end),
 	}
 }
 
@@ -85,6 +85,13 @@ func NewPosition(line uint, char uint) Position {
 	return Position{Line: line, Character: char}
 }
 
-func NewPositionFromSitterPoint(position sitter.Point) Position {
+func NewPositionFromTreeSitterPoint(position sitter.Point) Position {
 	return NewPosition(uint(position.Row), uint(position.Column))
+}
+
+func (p Position) ToLSPPosition() protocol.Position {
+	return protocol.Position{
+		Line:      uint32(p.Line),
+		Character: uint32(p.Character),
+	}
 }

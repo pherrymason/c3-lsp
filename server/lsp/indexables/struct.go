@@ -147,6 +147,7 @@ func NewStructMember(name string, baseType string, posRange Range, module string
 			documentURI:  docId,
 			moduleString: module,
 			module:       NewModulePathFromString(module),
+			Kind:         protocol.CompletionItemKindField,
 		},
 	}
 }

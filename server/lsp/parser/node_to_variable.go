@@ -22,7 +22,7 @@ func (p *Parser) nodeToVariable(doc *document.Document, variableNode *sitter.Nod
 	return variable
 }
 
-func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document, declarationNode *sitter.Node, sourceCode []byte) []idx.Variable {
+func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId string, sourceCode []byte) []idx.Variable {
 	var variables []idx.Variable
 	var typeNodeContent string
 
@@ -41,8 +41,8 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 			variable := idx.NewVariable(
 				n.Content(sourceCode),
 				indexables.NewTypeFromString(typeNodeContent),
-				doc.ModuleName,
-				doc.URI,
+				moduleName,
+				docId,
 				idx.NewRangeFromSitterPositions(
 					n.StartPoint(),
 					n.EndPoint(),
@@ -63,8 +63,8 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 			variable := idx.NewVariable(
 				sub.Content(sourceCode),
 				indexables.NewTypeFromString(typeNodeContent),
-				doc.ModuleName,
-				doc.URI,
+				moduleName,
+				docId,
 				idx.NewRangeFromSitterPositions(
 					sub.StartPoint(),
 					sub.EndPoint(),
@@ -81,7 +81,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(doc *document.Document,
 	return variables
 }
 
-func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, declarationNode *sitter.Node, sourceCode []byte) []idx.Variable {
+func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId string, sourceCode []byte) []idx.Variable {
 	var variables []idx.Variable
 	var typeNodeContent string
 
@@ -102,8 +102,8 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 			variable := idx.NewVariable(
 				identifier.Content(sourceCode),
 				indexables.NewTypeFromString(typeNodeContent),
-				doc.ModuleName,
-				doc.URI,
+				moduleName,
+				docId,
 				idx.NewRangeFromSitterPositions(
 					identifier.StartPoint(),
 					identifier.EndPoint(),
@@ -129,7 +129,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(doc *document.Document, 
 	      ';'
 	    )
 */
-func (p *Parser) nodeToConstant(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Variable {
+func (p *Parser) nodeToConstant(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Variable {
 	var constant idx.Variable
 	var typeNodeContent string
 	var idNode *sitter.Node
@@ -152,8 +152,8 @@ func (p *Parser) nodeToConstant(doc *document.Document, node *sitter.Node, sourc
 	constant = idx.NewConstant(
 		idNode.Content(sourceCode),
 		indexables.NewTypeFromString(typeNodeContent),
-		doc.ModuleName,
-		doc.URI,
+		moduleName,
+		docId,
 		idx.NewRangeFromSitterPositions(
 			idNode.StartPoint(),
 			idNode.EndPoint(),

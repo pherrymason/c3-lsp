@@ -187,7 +187,7 @@ func TestParse_interface(t *testing.T) {
 }
 
 func TestExtractSymbols_finds_definition(t *testing.T) {
-	source := `
+	source := `module mod;
 	def Kilo = int;
 	def KiloPtr = Kilo*;
 	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
@@ -224,11 +224,11 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithDocumentRange(4, 1, 4, 40).
 		Build()
 
-	assert.Equal(t, expectedDefKilo, symbols.Get("x").Defs["Kilo"])
-	assert.Equal(t, expectedDefKiloPtr, symbols.Get("x").Defs["KiloPtr"])
-	assert.Equal(t, expectedDefFunction, symbols.Get("x").Defs["MyFunction"])
+	assert.Equal(t, expectedDefKilo, symbols.Get(mod).Defs["Kilo"])
+	assert.Equal(t, expectedDefKiloPtr, symbols.Get(mod).Defs["KiloPtr"])
+	assert.Equal(t, expectedDefFunction, symbols.Get(mod).Defs["MyFunction"])
 
-	assert.Equal(t, expectedDefTypeWithGenerics, symbols.Get("x").Defs["MyMap"])
+	assert.Equal(t, expectedDefTypeWithGenerics, symbols.Get(mod).Defs["MyMap"])
 }
 
 func TestExtractSymbols_find_macro(t *testing.T) {

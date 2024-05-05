@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -14,7 +13,7 @@ interface_declaration: $ => seq(
 	  field('body', $.interface_body),
 	),
 */
-func (p *Parser) nodeToInterface(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Interface {
+func (p *Parser) nodeToInterface(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Interface {
 	// TODO parse attributes
 	methods := []idx.Function{}
 
@@ -25,7 +24,7 @@ func (p *Parser) nodeToInterface(doc *document.Document, node *sitter.Node, sour
 			for i := 0; i < int(n.ChildCount()); i++ {
 				m := n.Child(i)
 				if m.Type() == "func_declaration" {
-					methods = append(methods, p.nodeToFunction(doc, m, sourceCode))
+					methods = append(methods, p.nodeToFunction(m, moduleName, docId, sourceCode))
 				}
 			}
 		}
@@ -34,8 +33,8 @@ func (p *Parser) nodeToInterface(doc *document.Document, node *sitter.Node, sour
 	nameNode := node.ChildByFieldName("name")
 	_interface := idx.NewInterface(
 		nameNode.Content(sourceCode),
-		doc.ModuleName,
-		doc.URI,
+		moduleName,
+		docId,
 		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
 	)

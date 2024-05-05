@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -33,7 +32,7 @@ import (
 			optional($.attributes),
 		),
 */
-func (p *Parser) nodeToEnum(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Enum {
+func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Enum {
 	// TODO parse attributes
 
 	baseType := ""
@@ -52,11 +51,12 @@ func (p *Parser) nodeToEnum(doc *document.Document, node *sitter.Node, sourceCod
 				if enumeratorNode.Type() == "enum_constant" {
 					name := enumeratorNode.ChildByFieldName("name")
 					enumerators = append(enumerators,
-						idx.NewEnumerator(name.Content(sourceCode),
+						idx.NewEnumerator(
+							name.Content(sourceCode),
 							"",
-							"",
+							moduleName,
 							idx.NewRangeFromSitterPositions(name.StartPoint(), name.EndPoint()),
-							doc.URI,
+							docId,
 						),
 					)
 				}
@@ -69,8 +69,8 @@ func (p *Parser) nodeToEnum(doc *document.Document, node *sitter.Node, sourceCod
 		nameNode.Content(sourceCode),
 		baseType,
 		[]idx.Enumerator{},
-		doc.ModuleName,
-		doc.URI,
+		moduleName,
+		docId,
 		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
 	)

@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/pherrymason/c3-lsp/lsp/document"
+	d "github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/stretchr/testify/assert"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_position(t *testing.T) {
 	sourceCode := "int emu;"
-	doc := document.NewDocument("filename", "module", sourceCode)
+	doc := d.NewDocument("filename", "module", sourceCode)
 
 	sp, err := NewSearchParamsFromPosition(&doc, buildPosition(1, 5))
 
@@ -20,7 +21,11 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_positio
 	assert.Equal(
 		t,
 		SearchParams{
-			selectedSymbol:    Token{token: "emu", position: buildPosition(1, 5)},
+			selectedSymbol: d.Token{
+				Token: "emu",
+				//position: buildPosition(1, 5),
+				TokenRange: idx.NewRange(0, 4, 0, 7),
+			},
 			docId:             "filename",
 			scopeMode:         InScope,
 			continueOnModules: true,
@@ -33,7 +38,7 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_positio
 func TestSearchParams_NewSearchParamsFromPosition_finds_all_parent_symbols(t *testing.T) {
 	sourceCode := `// This blank line is intended.
 system.cpu.init();`
-	doc := document.NewDocument("filename", "module", sourceCode)
+	doc := d.NewDocument("filename", "module", sourceCode)
 	// Cursor at "i|init"
 	sp, err := NewSearchParamsFromPosition(&doc, buildPosition(2, 12))
 
@@ -41,10 +46,10 @@ system.cpu.init();`
 	assert.Equal(
 		t,
 		SearchParams{
-			selectedSymbol: Token{token: "init", position: buildPosition(2, 12)},
-			parentSymbols: []Token{
-				{token: "system", position: buildPosition(2, 0)},
-				{token: "cpu", position: buildPosition(2, 7)},
+			selectedSymbol: d.NewToken("init", idx.NewRange(1, 11, 1, 15)),
+			parentSymbols: []d.Token{
+				d.NewToken("system", idx.NewRange(1, 0, 1, 6)),
+				d.NewToken("cpu", idx.NewRange(1, 7, 1, 10)),
 			},
 			docId:             "filename",
 			scopeMode:         InScope,
@@ -60,34 +65,34 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_full_module_path(t *test
 		source         string
 		position       protocol.Position
 		expectedModule indexables.ModulePath
-		expectedToken  string
+		expectedToken  d.Token
 	}{
 		{
 			`// This blank line is intended.
 			system::cpu::value;`,
 			buildPosition(2, 17),
 			indexables.NewModulePath([]string{"system", "cpu"}),
-			"value",
+			d.NewToken("value", idx.NewRange(1, 16, 1, 21)),
 		},
 		{
 			`// This blank line is intended.
 mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
 			buildPosition(2, 25),
 			indexables.NewModulePath([]string{"foo", "bar"}),
-			"DEFAULT_BAR_COLOR",
+			d.NewToken("DEFAULT_BAR_COLOR", idx.NewRange(1, 24, 1, 41)),
 		},
 	}
 
 	for i, tt := range cases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
-			doc := document.NewDocument("filename", "module", tt.source)
+			doc := d.NewDocument("filename", "module", tt.source)
 			sp, err := NewSearchParamsFromPosition(&doc, tt.position)
 
 			assert.Nil(t, err)
 			assert.Equal(
 				t,
 				SearchParams{
-					selectedSymbol:    Token{token: tt.expectedToken, position: tt.position},
+					selectedSymbol:    tt.expectedToken,
 					docId:             "filename",
 					modulePath:        tt.expectedModule,
 					scopeMode:         InScope,

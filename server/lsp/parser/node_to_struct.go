@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -33,7 +32,7 @@ struct_member_declaration: $ => choice(
 	  seq('inline', field('type', $.type), optional($.ident), optional($.attributes), ';'),
 	),
 */
-func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Struct {
+func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Struct {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
@@ -96,8 +95,8 @@ func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceC
 					identifiers[y],
 					fieldType,
 					identifiersRange[y],
-					doc.ModuleName,
-					doc.URI,
+					moduleName,
+					docId,
 				),
 			)
 		}
@@ -108,8 +107,8 @@ func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceC
 		_struct = idx.NewUnion(
 			name,
 			structFields,
-			doc.ModuleName,
-			doc.URI,
+			moduleName,
+			docId,
 			idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 			idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
 		)
@@ -118,8 +117,8 @@ func (p *Parser) nodeToStruct(doc *document.Document, node *sitter.Node, sourceC
 			name,
 			interfaces,
 			structFields,
-			doc.ModuleName,
-			doc.URI,
+			moduleName,
+			docId,
 			idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 			idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
 		)

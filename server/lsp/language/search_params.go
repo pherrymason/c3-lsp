@@ -6,11 +6,6 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-type Token struct {
-	token    string
-	position protocol.Position
-}
-
 const (
 	Nullo int = iota
 	Ready
@@ -18,8 +13,8 @@ const (
 )
 
 type SearchParams struct {
-	selectedSymbol Token
-	parentSymbols  []Token // Limit search to symbols that has are child from parentSymbol
+	selectedSymbol document.Token
+	parentSymbols  []document.Token // Limit search to symbols that has are child from parentSymbol
 	docId          string
 	modulePath     indexables.ModulePath
 
@@ -29,9 +24,20 @@ type SearchParams struct {
 	trackedModules map[string]int // Here we register what modules have been already inspected in this search. Helps avoiding infinite loops
 }
 
+/*
 func NewSearchParams(selectedSymbol string, position protocol.Position, docId string) SearchParams {
 	return SearchParams{
-		selectedSymbol:    Token{token: selectedSymbol, position: position},
+		selectedSymbol:    document.NewToken(selectedSymbol, position),
+		docId:             docId,
+		scopeMode:         InScope,
+		continueOnModules: true,
+		trackedModules:    make(map[string]int),
+	}
+}*/
+
+func NewSearchParamsFromToken(selectedSymbol document.Token, docId string) SearchParams {
+	return SearchParams{
+		selectedSymbol:    selectedSymbol,
 		docId:             docId,
 		scopeMode:         InScope,
 		continueOnModules: true,
@@ -45,7 +51,7 @@ func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol
 		return SearchParams{}, err
 	}
 
-	search := NewSearchParams(symbolInPosition, cursorPosition, doc.URI)
+	search := NewSearchParamsFromToken(symbolInPosition, doc.URI)
 
 	// Check if selectedSymbol has '.' in front
 	if !doc.HasPointInFrontSymbol(cursorPosition) && !doc.HasModuleSeparatorInFrontSymbol(cursorPosition) {
@@ -58,29 +64,34 @@ func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol
 	iterating_module_path := false
 
 	for i := int(positionStart.Character - 1); i >= 0; i-- {
-		positionStart = protocol.Position{Line: cursorPosition.Line, Character: protocol.UInteger(i)}
-		parentSymbol, err := doc.SymbolInPosition(positionStart)
+		positionStart = indexables.Position{
+			Line:      uint(cursorPosition.Line),
+			Character: uint(i),
+		}
+		parentSymbol, err := doc.SymbolInPosition(positionStart.ToLSPPosition())
 		if err != nil {
 			// No symbol found, check was is in parentSymbol anyway
-			if parentSymbol == "." {
+			if parentSymbol.Token == "." {
 
-			} else if parentSymbol == ":" {
+			} else if parentSymbol.Token == ":" {
 				iterating_module_path = true
-			} else if parentSymbol == " " {
+			} else if parentSymbol.Token == " " {
 				break
 			}
 			continue
 		}
 
 		if iterating_module_path {
-			search.modulePath.AddPath(parentSymbol)
-			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart)
+			search.modulePath.AddPath(parentSymbol.Token)
+			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart.ToLSPPosition())
 			i = int(positionStart.Character)
 		} else {
-			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart)
-			search.parentSymbols = append([]Token{{token: parentSymbol, position: positionStart}}, search.parentSymbols...)
+			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart.ToLSPPosition())
+			search.parentSymbols = append([]document.Token{
+				parentSymbol,
+			}, search.parentSymbols...)
 
-			if doc.HasPointInFrontSymbol(positionStart) {
+			if doc.HasPointInFrontSymbol(positionStart.ToLSPPosition()) {
 				i = int(positionStart.Character) - 1
 			} else {
 				break

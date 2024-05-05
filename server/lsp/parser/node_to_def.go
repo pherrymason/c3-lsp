@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -24,7 +23,7 @@ define_declaration: $ => seq(
 	  ';'
 	),
 */
-func (p *Parser) nodeToDef(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Def {
+func (p *Parser) nodeToDef(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Def {
 	definition := ""
 	var identifierNode *sitter.Node
 
@@ -45,8 +44,8 @@ func (p *Parser) nodeToDef(doc *document.Document, node *sitter.Node, sourceCode
 	return idx.NewDef(
 		identifierNode.Content(sourceCode),
 		definition,
-		doc.ModuleName,
-		doc.URI,
+		moduleName,
+		docId,
 		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()),
 		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
 	)

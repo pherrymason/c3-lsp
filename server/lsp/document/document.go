@@ -2,10 +2,9 @@ package document
 
 import (
 	"errors"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/pherrymason/c3-lsp/lsp/cst"
+	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -74,59 +73,9 @@ func (d *Document) updateParsedTree() {
 	//		})
 }
 
-func (d *Document) SymbolInPosition(position protocol.Position) (string, error) {
-	index := position.IndexIn(d.Content)
-	return d.symbolInIndex(index)
-}
-
-func (d *Document) ParentSymbolInPosition(position protocol.Position) (string, error) {
-	if !d.HasPointInFrontSymbol(position) {
-		return "", errors.New("No previous '.' found.")
-	}
-
-	index := position.IndexIn(d.Content)
-	start, _, errRange := d.getSymbolRangeAtIndex(index)
-	if errRange != nil {
-		return "", errRange
-	}
-
-	index = start - 2
-	foundPreviousChar := false
-	for {
-		if index == 0 {
-			break
-		}
-		r := rune(d.Content[index])
-		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
-			foundPreviousChar = true
-			break
-		}
-		index -= 1
-	}
-
-	if foundPreviousChar {
-		parentSymbol, errSymbol := d.symbolInIndex(index)
-
-		return parentSymbol, errSymbol
-	}
-
-	return "", errors.New("No previous symbol found")
-}
-
-func (d *Document) symbolInIndex(index int) (string, error) {
-
-	start, end, err := d.getSymbolRangeAtIndex(index)
-
-	if err != nil {
-		return d.Content[index : index+1], err
-	}
-
-	return d.Content[start : end+1], nil
-}
-
 func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
 	index := position.IndexIn(d.Content)
-	start, _, _ := d.getSymbolRangeAtIndex(index)
+	start, _, _ := d.getSymbolRangeIndexesAtIndex(index)
 
 	if start == 0 {
 		return false
@@ -141,7 +90,7 @@ func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
 
 func (d *Document) HasModuleSeparatorInFrontSymbol(position protocol.Position) bool {
 	index := position.IndexIn(d.Content)
-	start, _, _ := d.getSymbolRangeAtIndex(index)
+	start, _, _ := d.getSymbolRangeIndexesAtIndex(index)
 
 	if start == 0 {
 		return false
@@ -154,47 +103,18 @@ func (d *Document) HasModuleSeparatorInFrontSymbol(position protocol.Position) b
 	return false
 }
 
-func (d *Document) GetSymbolPositionAtPosition(position protocol.Position) (protocol.Position, error) {
+func (d *Document) GetSymbolPositionAtPosition(position protocol.Position) (indexables.Position, error) {
 	index := position.IndexIn(d.Content)
-	startIndex, _, _error := d.getSymbolRangeAtIndex(index)
+	startIndex, _, _error := d.getSymbolRangeIndexesAtIndex(index)
 
-	symbolStartPosition := d.IndexToPosition(startIndex)
+	symbolStartPosition := d.indexToPosition(startIndex)
 
 	return symbolStartPosition, _error
 }
 
-func (d *Document) IndexToPosition(index int) protocol.Position {
-	character := 0
-	line := 0
-
-	for i := 0; i < len(d.Content); {
-		r, size := utf8.DecodeRuneInString(d.Content[i:])
-		if i == index {
-			// We've reached the wanted position skip and build position
-			break
-		}
-
-		if r == '\n' {
-			// We've found a new line
-			line++
-			character = 0
-		} else {
-			character++
-		}
-
-		// Advance the correct number of bytes
-		i += size
-	}
-
-	return protocol.Position{
-		Line:      protocol.UInteger(line),
-		Character: protocol.UInteger(character),
-	}
-}
-
 // Returns start and end index of symbol present in index.
 // If no symbol is found in index, error will be returned
-func (d *Document) getSymbolRangeAtIndex(index int) (int, int, error) {
+func (d *Document) getSymbolRangeIndexesAtIndex(index int) (int, int, error) {
 	if !utils.IsAZ09_(rune(d.Content[index])) {
 		return 0, 0, errors.New("No symbol at position")
 	}

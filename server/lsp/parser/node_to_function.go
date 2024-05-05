@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -21,7 +20,7 @@ import (
 			field('name', $._func_macro_name),
 		),
 */
-func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Function {
+func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Function {
 	var typeIdentifier string
 	funcHeader := node.Child(1)
 	nameNode := funcHeader.ChildByFieldName("name")
@@ -40,7 +39,7 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
 				continue
 			}
 
-			argument := p.nodeToArgument(doc, argNode, typeIdentifier, sourceCode)
+			argument := p.nodeToArgument(argNode, typeIdentifier, moduleName, docId, sourceCode)
 			arguments = append(
 				arguments,
 				argument,
@@ -55,8 +54,8 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
 			typeIdentifier,
 			nameNode.Content(sourceCode),
 			funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
-			doc.ModuleName,
-			doc.URI,
+			moduleName,
+			docId,
 			idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
 			idx.NewRangeFromSitterPositions(node.StartPoint(),
@@ -67,8 +66,8 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
 		symbol = idx.NewFunction(
 			nameNode.Content(sourceCode),
 			funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
-			doc.ModuleName,
-			doc.URI,
+			moduleName,
+			docId,
 			idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
 			idx.NewRangeFromSitterPositions(node.StartPoint(),
@@ -77,7 +76,7 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
 	}
 
 	if node.ChildByFieldName("body") != nil {
-		variables := p.FindVariableDeclarations(doc, node)
+		variables := p.FindVariableDeclarations(node, moduleName, docId, sourceCode)
 		variables = append(arguments, variables...)
 		symbol.AddVariables(variables)
 	}
@@ -105,7 +104,7 @@ func (p *Parser) nodeToFunction(doc *document.Document, node *sitter.Node, sourc
       seq($.ct_ident, '...'),								// 2
     ),
 */
-func (p *Parser) nodeToArgument(doc *document.Document, argNode *sitter.Node, methodIdentifier string, sourceCode []byte) idx.Variable {
+func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, moduleName string, docId string, sourceCode []byte) idx.Variable {
 	var identifier string = ""
 	var idRange idx.Range
 	var argType string = ""
@@ -149,8 +148,8 @@ func (p *Parser) nodeToArgument(doc *document.Document, argNode *sitter.Node, me
 	variable := idx.NewVariable(
 		identifier,
 		idx.NewTypeFromString(argType),
-		doc.ModuleName,
-		doc.URI,
+		moduleName,
+		docId,
 		idRange,
 		idx.NewRangeFromSitterPositions(argNode.StartPoint(),
 			argNode.EndPoint()),
@@ -186,7 +185,7 @@ func (p *Parser) nodeToArgument(doc *document.Document, argNode *sitter.Node, me
 		  field('name', $._func_macro_name),
 		),
 */
-func (p *Parser) nodeToMacro(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Function {
+func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Function {
 	var typeIdentifier string
 	var nameNode *sitter.Node
 	funcHeader := node.Child(1)
@@ -207,7 +206,7 @@ func (p *Parser) nodeToMacro(doc *document.Document, node *sitter.Node, sourceCo
 				continue
 			}
 
-			argument := p.nodeToArgument(doc, argNode, typeIdentifier, sourceCode)
+			argument := p.nodeToArgument(argNode, typeIdentifier, moduleName, docId, sourceCode)
 			arguments = append(
 				arguments,
 				argument,
@@ -219,8 +218,8 @@ func (p *Parser) nodeToMacro(doc *document.Document, node *sitter.Node, sourceCo
 	symbol := idx.NewMacro(
 		nameNode.Content(sourceCode),
 		argumentIds,
-		doc.ModuleName,
-		doc.URI,
+		moduleName,
+		docId,
 		idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
 			nameNode.EndPoint()),
 		idx.NewRangeFromSitterPositions(node.StartPoint(),
@@ -228,7 +227,7 @@ func (p *Parser) nodeToMacro(doc *document.Document, node *sitter.Node, sourceCo
 	)
 
 	if node.ChildByFieldName("body") != nil {
-		variables := p.FindVariableDeclarations(doc, node)
+		variables := p.FindVariableDeclarations(node, moduleName, docId, sourceCode)
 		variables = append(arguments, variables...)
 		symbol.AddVariables(variables)
 	}

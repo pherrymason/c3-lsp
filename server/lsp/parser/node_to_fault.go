@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -25,7 +24,7 @@ fault_body: $ => seq(
 
 ),
 */
-func (p *Parser) nodeToFault(doc *document.Document, node *sitter.Node, sourceCode []byte) idx.Fault {
+func (p *Parser) nodeToFault(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Fault {
 	// TODO parse attributes
 
 	baseType := ""
@@ -55,8 +54,8 @@ func (p *Parser) nodeToFault(doc *document.Document, node *sitter.Node, sourceCo
 		nameNode.Content(sourceCode),
 		baseType,
 		constants,
-		doc.ModuleName,
-		doc.URI,
+		moduleName,
+		docId,
 		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
 	)

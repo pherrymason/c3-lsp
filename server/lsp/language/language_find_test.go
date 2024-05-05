@@ -202,7 +202,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		position := buildPosition(6, 5) // Cursor at `B|ar`
 		doc := documents["module_foo_bar_dashed.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
-		searchParams.selectedSymbol.token = "Circle"
+		searchParams.selectedSymbol.Token = "Circle"
 
 		symbol := find(language, searchParams)
 
@@ -255,11 +255,13 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
-	language, _ := initTestEnv()
+	language, documents := initTestEnv()
 
 	t.Run("Find local variable definition, with cursor in same declaration", func(t *testing.T) {
-		position := buildPosition(23, 9)
-		searchParams := NewSearchParams("emulator", position, "emu.c3")
+		doc := documents["emu.c3"]
+		position := buildPosition(24, 9) // Cursor at `e|mulator`
+		//searchParams := NewSearchParams("emulator", position, "emu.c3")
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := find(language, searchParams)
 
@@ -271,8 +273,9 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 	})
 
 	t.Run("Find local variable definition from usage", func(t *testing.T) {
+		doc := documents["emu.c3"]
 		position := buildPosition(24, 10)
-		searchParams := NewSearchParams("emulator", position, "emu.c3")
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := find(language, searchParams)
 
@@ -284,8 +287,9 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 	})
 
 	t.Run("Should find the right element when there is a different element with the same name up in the scope", func(t *testing.T) {
-		position := buildPosition(16, 9)
-		searchParams := NewSearchParams("ambiguousVariable", position, "app.c3")
+		doc := documents["app.c3"]
+		position := buildPosition(16, 9) // Cursor a|mbiguousVariable
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := find(language, searchParams)
 
@@ -297,8 +301,9 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 	})
 
 	t.Run("Find variable definition in same module, but different file", func(t *testing.T) {
-		position := buildPosition(2, 2)
-		searchParams := NewSearchParams("helpDisplayedTimes", position, "app.c3")
+		doc := documents["app.c3"]
+		position := buildPosition(20, 5) // Cursor h|elpDisplayedTimes
+		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := find(language, searchParams)
 

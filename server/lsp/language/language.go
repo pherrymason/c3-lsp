@@ -33,38 +33,6 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 	l.functionTreeByDocument[parsedSymbols.DocId()] = parsedSymbols
 }
 
-func (l *Language) BuildCompletionList(doc *document.Document, position protocol.Position) []protocol.CompletionItem {
-	// 1 - TODO find scoped symbols starting with same letters
-	// 2 - TODO if previous character is '.', find previous symbol and if a struct, complete only with struct methods
-	// 3 - TODO if writing function call arguments, complete with argument names. ¿Feasible?
-
-	symbolInPosition, _ := doc.SymbolInPosition(
-		protocol.Position{
-			Line:      position.Line,
-			Character: position.Character - 1,
-		})
-
-	// Find symbols in document
-	moduleSymbols := l.functionTreeByDocument[doc.URI]
-	scopeSymbols := l.findAllScopeSymbols(&moduleSymbols, position)
-
-	var items []protocol.CompletionItem
-	for _, storedIdentifier := range scopeSymbols {
-		if !strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition) {
-			continue
-		}
-
-		tempKind := storedIdentifier.GetKind()
-
-		items = append(items, protocol.CompletionItem{
-			Label: storedIdentifier.GetName(),
-			Kind:  &tempKind,
-		})
-	}
-
-	return items
-}
-
 const (
 	AnyPosition FindMode = iota
 	InScope
@@ -93,7 +61,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 		return protocol.Hover{}, err
 	}
 
-	if IsLanguageKeyword(search.selectedSymbol.token) {
+	if IsLanguageKeyword(search.selectedSymbol.Token) {
 		return protocol.Hover{}, err
 	}
 

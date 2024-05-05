@@ -3,6 +3,7 @@ package language
 import (
 	"fmt"
 
+	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -77,14 +78,14 @@ func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, posi
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
 func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, debugger FindDebugger) indexables.Indexable {
-	if IsLanguageKeyword(searchParams.selectedSymbol.token) {
+	if IsLanguageKeyword(searchParams.selectedSymbol.Token) {
 		l.debug("Ignore because C3 keyword", debugger)
 		return nil
 	}
 
-	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s", searchParams.docId, searchParams.selectedSymbol.token), debugger)
+	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s", searchParams.docId, searchParams.selectedSymbol.Token), debugger)
 
-	position := searchParams.selectedSymbol.position
+	position := searchParams.selectedSymbol.TokenRange.Start
 	// Check if there's parent contextual information in searchParams
 	if searchParams.HasParentSymbol() {
 		identifier := l.findInParentSymbols(searchParams, debugger)
@@ -111,7 +112,13 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, debug
 	for module, scopedTree := range documentModules.SymbolsByModule() {
 		l.debug(fmt.Sprintf("Checking module \"%s\"", module), debugger)
 		// Go through every element defined in scopedTree
-		identifier, _ := findDeepFirst(searchParams.selectedSymbol.token, position, scopedTree, 0, searchParams.scopeMode)
+		identifier, _ := findDeepFirst(
+			searchParams.selectedSymbol.Token,
+			position,
+			scopedTree,
+			0,
+			searchParams.scopeMode,
+		)
 
 		if identifier != nil {
 			return identifier
@@ -145,7 +152,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, debug
 					scopeMode:      AnyPosition,
 					trackedModules: traversedModules,
 				}
-				l.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\": %s", module, searchParams.selectedSymbol.token), debugger)
+				l.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\": %s", module, searchParams.selectedSymbol.Token), debugger)
 				symbol := l._findSymbolDeclarationInModule(sp, debugger.goIn())
 				if symbol != nil {
 					return symbol
@@ -246,20 +253,27 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 		isLastToken := it == (totalTokens - 1)
 
 		if parentSymbol == nil {
-			levelToken := token.token
+			levelSymbol := token.Token
 			levelDocId := searchParams.docId
 			for {
-				symbolFound := false
-				levelSearchParams := NewSearchParams(
-					levelToken,
-					token.position,
+				symbolFound := false /*
+					levelSearchParams := NewSearchParams(
+						levelToken,
+						token.TokenRange.Start,
+						levelDocId,
+					)*/
+				// TODO: Check this, here the position is NOT correct
+				// we are not interested in searching by position!!!
+				// Also, should ignore DocumentURI too
+				levelSearchParams := NewSearchParamsFromToken(
+					document.NewToken(levelSymbol, token.TokenRange),
 					levelDocId,
 				)
 				found = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
 				switch found.(type) {
 				case indexables.Variable:
 					variable, _ := found.(indexables.Variable)
-					levelToken = variable.GetType().GetName()
+					levelSymbol = variable.GetType().GetName()
 					levelDocId = variable.GetDocumentURI()
 
 				case indexables.Struct, indexables.Enum, indexables.Fault: // TODO Is this tested for Enum and Fault?
@@ -280,11 +294,19 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 				strukt, _ := parentSymbol.(indexables.Struct)
 				members := strukt.GetMembers()
 				for i := 0; i < len(members); i++ {
-					if members[i].GetName() == token.token {
+					if members[i].GetName() == token.Token {
 						if !isLastToken {
-							levelSearchParams := NewSearchParams(
-								members[i].GetType(), // Bug: When searching System.init() this evaluated to System.System!!
-								token.position,
+							// Search type of this member
+							/*levelSearchParams := NewSearchParams(
+								members[i].GetType(),
+								token.TokenRange.Start,
+								strukt.GetDocumentURI(),
+							)*/
+							// TODO: Check this, here the position is NOT correct
+							// we are not interested in searching by position!!!
+							// Also, should ignore DocumentURI too
+							levelSearchParams := NewSearchParamsFromToken(
+								document.NewToken(members[i].GetType(), token.TokenRange),
 								strukt.GetDocumentURI(),
 							)
 							nextSymbol = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
@@ -297,9 +319,11 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 
 				if nextSymbol == nil {
 					// Not found... should search in functions
-					levelSearchParams := NewSearchParams(
-						strukt.GetName()+"."+token.token,
-						token.position,
+					// TODO: Check this, here the position is NOT correct
+					// we are not interested in searching by position!!!
+					// Also, should ignore DocumentURI too
+					levelSearchParams := NewSearchParamsFromToken(
+						document.NewToken(strukt.GetName()+"."+token.Token, token.TokenRange),
 						strukt.GetDocumentURI(),
 					)
 					nextSymbol = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
@@ -310,7 +334,7 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 				_enum := parentSymbol.(indexables.Enum)
 				enumerators := _enum.GetEnumerators()
 				for i := 0; i < len(enumerators); i++ {
-					if enumerators[i].GetName() == token.token {
+					if enumerators[i].GetName() == token.Token {
 						nextSymbol = enumerators[i]
 						break
 					}
@@ -320,7 +344,7 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 				_fault := parentSymbol.(indexables.Fault)
 				enumerators := _fault.GetConstants()
 				for i := 0; i < len(enumerators); i++ {
-					if enumerators[i].GetName() == token.token {
+					if enumerators[i].GetName() == token.Token {
 						nextSymbol = enumerators[i]
 						break
 					}
@@ -340,7 +364,7 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 	return found
 }
 
-func findDeepFirst(identifier string, position protocol.Position, function *indexables.Function, depth uint, mode FindMode) (indexables.Indexable, uint) {
+func findDeepFirst(identifier string, position indexables.Position, function *indexables.Function, depth uint, mode FindMode) (indexables.Indexable, uint) {
 	if function.FunctionType() == indexables.UserDefined && identifier == function.GetFullName() {
 		return function, depth
 	}
@@ -348,8 +372,9 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 	// When mode is InPosition, we are specifying it is important for us that
 	// the function being searched contains the position specified.
 	// We use mode = AnyPosition when search for a symbol definition outside the document where the user has its cursor. For example, we are looking in imported files or files of the same module.
+	lspPosition := position.ToLSPPosition()
 	if mode == InScope &&
-		!function.GetDocumentRange().HasPosition(position) {
+		!function.GetDocumentRange().HasPosition(lspPosition) {
 		return nil, depth
 	}
 
@@ -363,7 +388,7 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 	// If true, priorize searching there first.
 	// If not found, search in the `function`
 	for _, structs := range function.Structs {
-		if structs.GetDocumentRange().HasPosition(position) {
+		if structs.GetDocumentRange().HasPosition(lspPosition) {
 			// What we are looking is inside this, look for struct member
 			for _, member := range structs.GetMembers() {
 				if member.GetName() == identifier {
@@ -374,7 +399,7 @@ func findDeepFirst(identifier string, position protocol.Position, function *inde
 	}
 
 	for _, scopedEnums := range function.Enums {
-		if scopedEnums.GetDocumentRange().HasPosition(position) {
+		if scopedEnums.GetDocumentRange().HasPosition(lspPosition) {
 			if scopedEnums.HasEnumerator(identifier) {
 				enumerator := scopedEnums.GetEnumerator(identifier)
 				return enumerator, depth

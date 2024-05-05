@@ -80,4 +80,39 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Should suggest struct members", func(t *testing.T) {
+		source := `
+		struct Square { int width; int height; }
+		fn void main() {
+			Square inst;
+			inst`
+		expectedKind := protocol.CompletionItemKindField
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{".", []protocol.CompletionItem{
+				{Label: "width", Kind: &expectedKind},
+				{Label: "height", Kind: &expectedKind},
+			}},
+			{".w", []protocol.CompletionItem{
+				{Label: "width", Kind: &expectedKind},
+			}},
+		}
+		t.Skip()
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+
+				doc := document.NewDocument("test.c3", "?", source+tt.input+`}`)
+				language.RefreshDocumentIdentifiers(&doc, &parser)
+				position := buildPosition(5, 7+uint32(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := language.BuildCompletionList(&doc, position)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
 }

@@ -86,7 +86,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 
 		for _, c := range m.Captures {
 			nodeType := c.Node.Type()
-			nodeEndPoint := idx.NewPositionFromSitterPoint(c.Node.EndPoint())
+			nodeEndPoint := idx.NewPositionFromTreeSitterPoint(c.Node.EndPoint())
 
 			if nodeType != "module" {
 				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, anonymousModuleName)
@@ -101,7 +101,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 
 				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, false)
 				start := c.Node.StartPoint()
-				scopeTree.SetStartPosition(idx.NewPositionFromSitterPoint(start))
+				scopeTree.SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
 				scopeTree.ChangeModule(doc.ModuleName)
 				parsedSymbols.RegisterModule(scopeTree)
 
@@ -110,39 +110,39 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				scopeTree.AddImports(imports)
 
 			case "global_declaration":
-				variables := p.globalVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+				variables := p.globalVariableDeclarationNodeToVariable(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddVariables(variables)
 
 			case "func_definition":
-				function := p.nodeToFunction(doc, c.Node, sourceCode)
+				function := p.nodeToFunction(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddFunction(function)
 
 			case "enum_declaration":
-				enum := p.nodeToEnum(doc, c.Node, sourceCode)
+				enum := p.nodeToEnum(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddEnum(enum)
 
 			case "struct_declaration":
-				_struct := p.nodeToStruct(doc, c.Node, sourceCode)
+				_struct := p.nodeToStruct(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddStruct(_struct)
 
 			case "define_declaration":
-				def := p.nodeToDef(doc, c.Node, sourceCode)
+				def := p.nodeToDef(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddDef(def)
 
 			case "const_declaration":
-				_const := p.nodeToConstant(doc, c.Node, sourceCode)
+				_const := p.nodeToConstant(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddVariable(_const)
 
 			case "fault_declaration":
-				fault := p.nodeToFault(doc, c.Node, sourceCode)
+				fault := p.nodeToFault(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddFault(fault)
 
 			case "interface_declaration":
-				interf := p.nodeToInterface(doc, c.Node, sourceCode)
+				interf := p.nodeToInterface(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddInterface(interf)
 
 			case "macro_declaration":
-				macro := p.nodeToMacro(doc, c.Node, sourceCode)
+				macro := p.nodeToMacro(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
 				scopeTree.AddFunction(macro)
 			default:
 				// TODO test that module ends up with wrong endPosition
@@ -186,13 +186,13 @@ func getModuleScopedFunction(moduleName string, moduleScopes map[string]*idx.Fun
 	return fn
 }
 
-func (p *Parser) FindVariableDeclarations(doc *document.Document, node *sitter.Node) []idx.Variable {
+func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []idx.Variable {
 	query := LocalVarDeclaration
 	qc := cst.RunQuery(query, node)
 
 	var variables []idx.Variable
 	found := make(map[string]bool)
-	sourceCode := []byte(doc.Content)
+	//sourceCode := []byte(doc.Content)
 	for {
 		m, ok := qc.NextMatch()
 		if !ok {
@@ -205,7 +205,7 @@ func (p *Parser) FindVariableDeclarations(doc *document.Document, node *sitter.N
 
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				funcVariables := p.localVariableDeclarationNodeToVariable(doc, c.Node, sourceCode)
+				funcVariables := p.localVariableDeclarationNodeToVariable(c.Node, moduleName, docId, sourceCode)
 
 				variables = append(variables, funcVariables...)
 			}
