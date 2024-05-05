@@ -1,11 +1,13 @@
 package language
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
+	"github.com/pherrymason/c3-lsp/lsp/utils"
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -76,7 +78,7 @@ func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, posi
 		return indexables.Variable{}, err
 	}
 
-	symbol := l.findClosestSymbolDeclaration(searchParams, DebugFind{depth: 0})
+	symbol := l.findClosestSymbolDeclaration(searchParams, FindDebugger{depth: 0})
 
 	return symbol, nil
 }
@@ -95,7 +97,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 		return protocol.Hover{}, err
 	}
 
-	foundSymbol := l.findClosestSymbolDeclaration(search, DebugFind{depth: 0})
+	foundSymbol := l.findClosestSymbolDeclaration(search, FindDebugger{depth: 0})
 	if foundSymbol == nil {
 		return protocol.Hover{}, nil
 	}
@@ -112,6 +114,20 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 	}
 
 	return hover, nil
+}
+
+func (l *Language) debug(message string, debugger FindDebugger) {
+	if !debugger.enabled {
+		return
+	}
+
+	maxo := utils.Min(debugger.depth, 20)
+	prep := "|" + strings.Repeat(".", maxo)
+	if debugger.depth > 8 {
+		prep = fmt.Sprintf("%s (%d)", prep, debugger.depth)
+	}
+
+	l.logger.Debug(fmt.Sprintf("%s %s", prep, message))
 }
 
 func IsLanguageKeyword(symbol string) bool {

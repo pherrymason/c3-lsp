@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/pherrymason/c3-lsp/lsp/cst"
+	"github.com/pherrymason/c3-lsp/lsp/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -191,21 +192,17 @@ func (d *Document) IndexToPosition(index int) protocol.Position {
 	}
 }
 
-func isAZ09_(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_'
-}
-
 // Returns start and end index of symbol present in index.
 // If no symbol is found in index, error will be returned
 func (d *Document) getSymbolRangeAtIndex(index int) (int, int, error) {
-	if !isAZ09_(rune(d.Content[index])) {
+	if !utils.IsAZ09_(rune(d.Content[index])) {
 		return 0, 0, errors.New("No symbol at position")
 	}
 
 	symbolStart := 0
 	for i := index; i >= 0; i-- {
 		r := rune(d.Content[i])
-		if !isAZ09_(r) {
+		if !utils.IsAZ09_(r) {
 			// First invalid character found, that means previous iteration contained first character of symbol
 			symbolStart = i + 1
 			break
@@ -215,7 +212,7 @@ func (d *Document) getSymbolRangeAtIndex(index int) (int, int, error) {
 	symbolEnd := len(d.Content) - 1
 	for i := index; i < len(d.Content); i++ {
 		r := rune(d.Content[i])
-		if !isAZ09_(r) {
+		if !utils.IsAZ09_(r) {
 			// First invalid character found, that means previous iteration contained last character of symbol
 			symbolEnd = i - 1
 			break

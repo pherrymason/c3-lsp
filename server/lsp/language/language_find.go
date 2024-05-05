@@ -2,7 +2,6 @@ package language
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
@@ -72,36 +71,17 @@ func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, posi
 	return symbols
 }
 
-type DebugFind struct {
-	depth int
-}
-
-func (d DebugFind) goIn() DebugFind {
-	return DebugFind{depth: d.depth + 1}
-}
-
-func min(num1, num2 int) int {
-	if num1 < num2 {
-		return num1
-	}
-	return num2
-}
-func (l *Language) debug(message string, debugger DebugFind) {
-	maxo := min(debugger.depth, 20)
-	prep := "|" + strings.Repeat(".", maxo)
-	if debugger.depth > 8 {
-		prep = fmt.Sprintf("%s (%d)", prep, debugger.depth)
-	}
-
-	l.logger.Debug(fmt.Sprintf("%s %s", prep, message))
-}
-
 // Finds the closest selectedSymbol based on current scope.
 // If not present in current Scope:
 // - Search in files of same module
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
-func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, debugger DebugFind) indexables.Indexable {
+func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, debugger FindDebugger) indexables.Indexable {
+	if IsLanguageKeyword(searchParams.selectedSymbol.token) {
+		l.debug("Ignore because C3 keyword", debugger)
+		return nil
+	}
+
 	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s", searchParams.docId, searchParams.selectedSymbol.token), debugger)
 
 	position := searchParams.selectedSymbol.position
@@ -180,7 +160,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams SearchParams, debug
 	return nil
 }
 
-func (l *Language) findSymbolsInModuleOtherFiles(module indexables.ModulePath, searchParams SearchParams, debugger DebugFind) indexables.Indexable {
+func (l *Language) findSymbolsInModuleOtherFiles(module indexables.ModulePath, searchParams SearchParams, debugger FindDebugger) indexables.Indexable {
 	l.debug(fmt.Sprintf("find in other module files"), debugger)
 	for docId, modulesByDoc := range l.functionTreeByDocument {
 		if docId == searchParams.docId {
@@ -204,7 +184,7 @@ func (l *Language) findSymbolsInModuleOtherFiles(module indexables.ModulePath, s
 					continueOnModules: false,
 					trackedModules:    searchParams.trackedModules,
 				},
-				DebugFind{depth: debugger.depth + 1},
+				FindDebugger{depth: debugger.depth + 1},
 			)
 			if found != nil {
 				return found
@@ -216,7 +196,7 @@ func (l *Language) findSymbolsInModuleOtherFiles(module indexables.ModulePath, s
 }
 
 // Search symbols inside a given module
-func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams, debugger DebugFind) indexables.Indexable {
+func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams, debugger FindDebugger) indexables.Indexable {
 	expectedModule := searchParams.modulePath.GetName()
 
 	for docId, modulesByDoc := range l.functionTreeByDocument {
@@ -241,7 +221,7 @@ func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams, deb
 				scopeMode:         searchParams.scopeMode,
 				continueOnModules: true,
 				trackedModules:    searchParams.trackedModules,
-			}, DebugFind{depth: debugger.depth + 1})
+			}, FindDebugger{depth: debugger.depth + 1})
 			l.debug(fmt.Sprintf("end searching symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
 			if symbol != nil {
 				return symbol
@@ -253,7 +233,7 @@ func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams, deb
 }
 
 // TODO Document what this does
-func (l *Language) findInParentSymbols(searchParams SearchParams, debugger DebugFind) indexables.Indexable {
+func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindDebugger) indexables.Indexable {
 	var found indexables.Indexable
 
 	tokens := append(searchParams.parentSymbols, searchParams.selectedSymbol)
