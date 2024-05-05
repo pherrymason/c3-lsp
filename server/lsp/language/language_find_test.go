@@ -376,7 +376,18 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 	t.Run("Should find struct method", func(t *testing.T) {
 		// Cursor at `emulator.i|nit();`
 		doc := documents["structs.c3"]
-		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(37, 14))
+		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(38, 14))
+
+		resolvedSymbol := find(language, searchParams)
+		fun := resolvedSymbol.(*idx.Function)
+		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Emu.init", fun.GetFullName())
+	})
+
+	t.Run("Should find struct method on alternative callable", func(t *testing.T) {
+		// Cursor at `Emu.i|nit(&emulator);`
+		doc := documents["structs.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(39, 9))
 
 		resolvedSymbol := find(language, searchParams)
 		fun := resolvedSymbol.(*idx.Function)
@@ -385,7 +396,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 	})
 
 	t.Run("Should find struct method when cursor is already in method declaration", func(t *testing.T) {
-		// Cursor at `emulator.i|nit();`
+		// Cursor at `Emu.i|nit();`
 		doc := documents["structs.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(28, 13))
 
@@ -410,9 +421,20 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		assert.Equal(t, "Audio.init", fun.GetFullName())
 	})
 
+	t.Run("Should find struct method on alternative callable when there are N nested structs", func(t *testing.T) {
+		// Cursor at `Audio.i|nit(&emu.audio);`
+		doc := documents["structs.c3"]
+		searchParams, _ := NewSearchParamsFromPosition(&doc, buildPosition(32, 11))
+
+		resolvedSymbol := find(language, searchParams)
+		fun := resolvedSymbol.(*idx.Function)
+		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Audio.init", fun.GetFullName())
+	})
+
 	t.Run("Should not find local struct method definition", func(t *testing.T) {
 		doc := documents["structs.c3"]
-		position := buildPosition(38, 16) // Cursor is at emu.audio.u|nknown
+		position := buildPosition(31, 16) // Cursor is at emu.audio.u|nknown
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
 
 		resolvedSymbol := find(language, searchParams)

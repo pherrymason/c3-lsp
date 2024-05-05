@@ -29,12 +29,14 @@ fn void Emu.init(Emu* emu) {
     emu.cpu.init();
     emu.audio.init();
     emu.audio.unknown();
+    Audio.init(&emu.audio); // Another way to call emu.audio.init()
 }
 
 
 fn void main() {
     Emu emulator;
     emulator.init();
+    Emu.init(&emulator);
 }
 
 
