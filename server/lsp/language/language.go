@@ -40,7 +40,7 @@ const (
 
 type FindMode int
 
-func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position protocol.Position) (indexables.Indexable, error) {
+func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position indexables.Position) (indexables.Indexable, error) {
 	searchParams, err := NewSearchParamsFromPosition(doc, position)
 	if err != nil {
 		return indexables.Variable{}, err
@@ -56,7 +56,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 	//module := l.findModuleInPosition(doc.URI, params.Position)
 	//fmt.Println(module)
 
-	search, err := NewSearchParamsFromPosition(doc, params.Position)
+	search, err := NewSearchParamsFromPosition(doc, indexables.NewPositionFromLSPPosition(params.Position))
 	if err != nil {
 		return protocol.Hover{}, err
 	}

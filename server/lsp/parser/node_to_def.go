@@ -46,7 +46,7 @@ func (p *Parser) nodeToDef(node *sitter.Node, moduleName string, docId string, s
 		definition,
 		moduleName,
 		docId,
-		idx.NewRangeFromSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+		idx.NewRangeFromTreeSitterPositions(identifierNode.StartPoint(), identifierNode.EndPoint()),
+		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 	)
 }

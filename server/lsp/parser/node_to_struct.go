@@ -80,7 +80,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 				for j := uint32(0); j < n.ChildCount(); j++ {
 					identifiers = append(identifiers, n.Child(int(j)).Content(sourceCode))
 					identifiersRange = append(identifiersRange,
-						idx.NewRangeFromSitterPositions(n.StartPoint(), n.EndPoint()),
+						idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
 					)
 				}
 			case "attributes":
@@ -109,8 +109,8 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 			structFields,
 			moduleName,
 			docId,
-			idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-			idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+			idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 		)
 	} else {
 		_struct = idx.NewStruct(
@@ -119,8 +119,8 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 			structFields,
 			moduleName,
 			docId,
-			idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-			idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+			idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 		)
 	}
 

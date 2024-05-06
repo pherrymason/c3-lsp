@@ -27,11 +27,11 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 				indexables.NewTypeFromString(typeNodeContent),
 				moduleName,
 				docId,
-				idx.NewRangeFromSitterPositions(
+				idx.NewRangeFromTreeSitterPositions(
 					n.StartPoint(),
 					n.EndPoint(),
 				),
-				idx.NewRangeFromSitterPositions(
+				idx.NewRangeFromTreeSitterPositions(
 					declarationNode.StartPoint(),
 					declarationNode.EndPoint()),
 			)
@@ -49,11 +49,11 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 				indexables.NewTypeFromString(typeNodeContent),
 				moduleName,
 				docId,
-				idx.NewRangeFromSitterPositions(
+				idx.NewRangeFromTreeSitterPositions(
 					sub.StartPoint(),
 					sub.EndPoint(),
 				),
-				idx.NewRangeFromSitterPositions(
+				idx.NewRangeFromTreeSitterPositions(
 					declarationNode.StartPoint(),
 					declarationNode.EndPoint()),
 			)
@@ -88,11 +88,11 @@ func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.
 				indexables.NewTypeFromString(typeNodeContent),
 				moduleName,
 				docId,
-				idx.NewRangeFromSitterPositions(
+				idx.NewRangeFromTreeSitterPositions(
 					identifier.StartPoint(),
 					identifier.EndPoint(),
 				),
-				idx.NewRangeFromSitterPositions(
+				idx.NewRangeFromTreeSitterPositions(
 					declarationNode.StartPoint(),
 					declarationNode.EndPoint()),
 			)
@@ -138,11 +138,11 @@ func (p *Parser) nodeToConstant(node *sitter.Node, moduleName string, docId stri
 		indexables.NewTypeFromString(typeNodeContent),
 		moduleName,
 		docId,
-		idx.NewRangeFromSitterPositions(
+		idx.NewRangeFromTreeSitterPositions(
 			idNode.StartPoint(),
 			idNode.EndPoint(),
 		),
-		idx.NewRangeFromSitterPositions(
+		idx.NewRangeFromTreeSitterPositions(
 			node.StartPoint(),
 			node.EndPoint()),
 	)

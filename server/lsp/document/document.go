@@ -1,11 +1,8 @@
 package document
 
 import (
-	"errors"
-
 	"github.com/pherrymason/c3-lsp/lsp/cst"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
-	"github.com/pherrymason/c3-lsp/lsp/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -15,13 +12,12 @@ const MODULE_SEPARATOR = ':'
 
 type Document struct {
 	ContextSyntaxTree       *sitter.Tree
-	URI                     protocol.DocumentUri
+	URI                     string
 	NeedsRefreshDiagnostics bool
 	Content                 string
-	lines                   []string
 }
 
-func NewDocument(docId protocol.DocumentUri, documentContent string) Document {
+func NewDocument(docId string, documentContent string) Document {
 	return Document{
 		ContextSyntaxTree:       cst.GetParsedTreeFromString(documentContent),
 		URI:                     docId,
@@ -71,7 +67,7 @@ func (d *Document) updateParsedTree() {
 	//		})
 }
 
-func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
+func (d *Document) HasPointInFrontSymbol(position indexables.Position) bool {
 	index := position.IndexIn(d.Content)
 	start, _, _ := d.getSymbolRangeIndexesAtIndex(index)
 
@@ -86,7 +82,7 @@ func (d *Document) HasPointInFrontSymbol(position protocol.Position) bool {
 	return false
 }
 
-func (d *Document) HasModuleSeparatorInFrontSymbol(position protocol.Position) bool {
+func (d *Document) HasModuleSeparatorInFrontSymbol(position indexables.Position) bool {
 	index := position.IndexIn(d.Content)
 	start, _, _ := d.getSymbolRangeIndexesAtIndex(index)
 
@@ -101,49 +97,11 @@ func (d *Document) HasModuleSeparatorInFrontSymbol(position protocol.Position) b
 	return false
 }
 
-func (d *Document) GetSymbolPositionAtPosition(position protocol.Position) (indexables.Position, error) {
+func (d *Document) GetSymbolPositionAtPosition(position indexables.Position) (indexables.Position, error) {
 	index := position.IndexIn(d.Content)
 	startIndex, _, _error := d.getSymbolRangeIndexesAtIndex(index)
 
 	symbolStartPosition := d.indexToPosition(startIndex)
 
 	return symbolStartPosition, _error
-}
-
-// Returns start and end index of symbol present in index.
-// If no symbol is found in index, error will be returned
-func (d *Document) getSymbolRangeIndexesAtIndex(index int) (int, int, error) {
-	if !utils.IsAZ09_(rune(d.Content[index])) {
-		return 0, 0, errors.New("No symbol at position")
-	}
-
-	symbolStart := 0
-	for i := index; i >= 0; i-- {
-		r := rune(d.Content[i])
-		if !utils.IsAZ09_(r) {
-			// First invalid character found, that means previous iteration contained first character of symbol
-			symbolStart = i + 1
-			break
-		}
-	}
-
-	symbolEnd := len(d.Content) - 1
-	for i := index; i < len(d.Content); i++ {
-		r := rune(d.Content[i])
-		if !utils.IsAZ09_(r) {
-			// First invalid character found, that means previous iteration contained last character of symbol
-			symbolEnd = i - 1
-			break
-		}
-	}
-
-	if symbolStart > len(d.Content) {
-		return 0, 0, errors.New("wordStart out of bounds")
-	} else if symbolEnd > len(d.Content) {
-		return 0, 0, errors.New("wordEnd out of bounds")
-	} else if symbolStart > symbolEnd {
-		return 0, 0, errors.New("wordStart > wordEnd!")
-	}
-
-	return symbolStart, symbolEnd, nil
 }

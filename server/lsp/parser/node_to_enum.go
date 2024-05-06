@@ -55,7 +55,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 							name.Content(sourceCode),
 							"",
 							moduleName,
-							idx.NewRangeFromSitterPositions(name.StartPoint(), name.EndPoint()),
+							idx.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
 							docId,
 						),
 					)
@@ -71,8 +71,8 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 		[]idx.Enumerator{},
 		moduleName,
 		docId,
-		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 	)
 
 	enum.AddEnumerators(enumerators)

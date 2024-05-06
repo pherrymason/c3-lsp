@@ -5,8 +5,7 @@ import (
 )
 
 type Token struct {
-	Token string
-	//position   protocol.Position
+	Token      string
 	TokenRange indexables.Range
 }
 

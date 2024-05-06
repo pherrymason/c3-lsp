@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/pherrymason/c3-lsp/fs"
+	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	l "github.com/pherrymason/c3-lsp/lsp/language"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pkg/errors"
@@ -138,7 +139,7 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 
-		identifier, err := server.language.FindSymbolDeclarationInWorkspace(doc, params.Position)
+		identifier, err := server.language.FindSymbolDeclarationInWorkspace(doc, indexables.NewPositionFromLSPPosition(params.Position))
 
 		if err == nil && identifier != nil {
 			return protocol.Location{
@@ -157,7 +158,7 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 		glspServer.Log.Debug("building completion list")
-		suggestions := server.language.BuildCompletionList(doc, params.Position)
+		suggestions := server.language.BuildCompletionList(doc, indexables.NewPositionFromLSPPosition(params.Position))
 
 		return suggestions, nil
 	}

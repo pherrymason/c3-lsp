@@ -71,7 +71,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 `+tt.input+`
 				}`)
 				language.RefreshDocumentIdentifiers(&doc, &parser)
-				position := buildPosition(5, uint32(len(tt.input))) // Cursor after `<input>|`
+				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
 				completionList := language.BuildCompletionList(&doc, position)
 
@@ -106,7 +106,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 
 				doc := document.NewDocument("test.c3", source+tt.input+`}`)
 				language.RefreshDocumentIdentifiers(&doc, &parser)
-				position := buildPosition(5, 7+uint32(len(tt.input))) // Cursor after `<input>|`
+				position := buildPosition(5, 7+uint(len(tt.input))) // Cursor after `<input>|`
 
 				completionList := language.BuildCompletionList(&doc, position)
 

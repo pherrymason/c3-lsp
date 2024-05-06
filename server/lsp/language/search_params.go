@@ -3,7 +3,6 @@ package language
 import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 const (
@@ -24,17 +23,6 @@ type SearchParams struct {
 	trackedModules map[string]int // Here we register what modules have been already inspected in this search. Helps avoiding infinite loops
 }
 
-/*
-func NewSearchParams(selectedSymbol string, position protocol.Position, docId string) SearchParams {
-	return SearchParams{
-		selectedSymbol:    document.NewToken(selectedSymbol, position),
-		docId:             docId,
-		scopeMode:         InScope,
-		continueOnModules: true,
-		trackedModules:    make(map[string]int),
-	}
-}*/
-
 func NewSearchParamsFromToken(selectedSymbol document.Token, docId string) SearchParams {
 	return SearchParams{
 		selectedSymbol:    selectedSymbol,
@@ -45,7 +33,7 @@ func NewSearchParamsFromToken(selectedSymbol document.Token, docId string) Searc
 	}
 }
 
-func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol.Position) (SearchParams, error) {
+func NewSearchParamsFromPosition(doc *document.Document, cursorPosition indexables.Position) (SearchParams, error) {
 	symbolInPosition, err := doc.SymbolInPosition(cursorPosition)
 	if err != nil {
 		return SearchParams{}, err
@@ -68,7 +56,7 @@ func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol
 			Line:      uint(cursorPosition.Line),
 			Character: uint(i),
 		}
-		parentSymbol, err := doc.SymbolInPosition(positionStart.ToLSPPosition())
+		parentSymbol, err := doc.SymbolInPosition(positionStart)
 		if err != nil {
 			// No symbol found, check was is in parentSymbol anyway
 			if parentSymbol.Token == "." {
@@ -83,15 +71,15 @@ func NewSearchParamsFromPosition(doc *document.Document, cursorPosition protocol
 
 		if iterating_module_path {
 			search.modulePath.AddPath(parentSymbol.Token)
-			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart.ToLSPPosition())
+			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart)
 			i = int(positionStart.Character)
 		} else {
-			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart.ToLSPPosition())
+			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart)
 			search.parentSymbols = append([]document.Token{
 				parentSymbol,
 			}, search.parentSymbols...)
 
-			if doc.HasPointInFrontSymbol(positionStart.ToLSPPosition()) {
+			if doc.HasPointInFrontSymbol(positionStart) {
 				i = int(positionStart.Character) - 1
 			} else {
 				break

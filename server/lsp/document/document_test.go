@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/stretchr/testify/assert"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func TestDocument_GetSymbolRangeAtIndex_does_not_find_symbol(t *testing.T) {
@@ -42,15 +42,15 @@ func TestDocument_HasPointInFrontSymbol(t *testing.T) {
 	cases := []struct {
 		source   string
 		expected bool
-		position protocol.Position
+		position idx.Position
 	}{
-		{"int symbol", false, protocol.Position{0, 6}},
-		{"int symbol", false, protocol.Position{0, 0}},
-		{"object.symbol", true, protocol.Position{0, 9}},
-		{"int symbol0; object.symbol", false, protocol.Position{0, 7}},
-		{"object.symbol;int symbol0; ", true, protocol.Position{0, 7}},
-		{"object.symbol;int symbol0; ", true, protocol.Position{0, 8}},
-		{"object.symbol;int symbol0; ", false, protocol.Position{0, 21}},
+		{"int symbol", false, idx.Position{Line: 0, Character: 6}},
+		{"int symbol", false, idx.Position{Line: 0, Character: 0}},
+		{"object.symbol", true, idx.Position{Line: 0, Character: 9}},
+		{"int symbol0; object.symbol", false, idx.Position{Line: 0, Character: 7}},
+		{"object.symbol;int symbol0; ", true, idx.Position{Line: 0, Character: 7}},
+		{"object.symbol;int symbol0; ", true, idx.Position{Line: 0, Character: 8}},
+		{"object.symbol;int symbol0; ", false, idx.Position{Line: 0, Character: 21}},
 	}
 
 	for _, tt := range cases {
@@ -67,19 +67,19 @@ func TestDocument_ParentSymbolInPosition(t *testing.T) {
 	cases := []struct {
 		source   string
 		expected string
-		position protocol.Position
+		position idx.Position
 	}{
-		{"int symbol", "", protocol.Position{0, 6}},
-		{"int symbol", "", protocol.Position{0, 0}},
-		{"object.symbol", "object", protocol.Position{0, 9}},
-		{"int symbol0; object.symbol", "", protocol.Position{0, 7}},
-		{"object.symbol;int symbol0; ", "object", protocol.Position{0, 7}},
-		{"object.symbol;int symbol0; ", "object", protocol.Position{0, 8}},
-		{"object.symbol;int symbol0; ", "", protocol.Position{0, 21}},
+		{"int symbol", "", idx.Position{Line: 0, Character: 6}},
+		{"int symbol", "", idx.Position{Line: 0, Character: 0}},
+		{"object.symbol", "object", idx.Position{Line: 0, Character: 9}},
+		{"int symbol0; object.symbol", "", idx.Position{Line: 0, Character: 7}},
+		{"object.symbol;int symbol0; ", "object", idx.Position{Line: 0, Character: 7}},
+		{"object.symbol;int symbol0; ", "object", idx.Position{Line: 0, Character: 8}},
+		{"object.symbol;int symbol0; ", "", idx.Position{Line: 0, Character: 21}},
 		{`object
-				.symbol`, "object", protocol.Position{1, 6}},
+				.symbol`, "object", idx.Position{Line: 1, Character: 6}},
 		//{`object.
-		//		symbol`, "object", protocol.Position{1, 6}},
+		//		symbol`, "object", idx.Position{1, 6}},
 	}
 
 	for _, tt := range cases {

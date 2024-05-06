@@ -6,10 +6,9 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (l *Language) findModuleInPosition(docId string, position protocol.Position) string {
+func (l *Language) findModuleInPosition(docId string, position indexables.Position) string {
 	for id, modulesByDoc := range l.functionTreeByDocument {
 		if id == docId {
 			continue
@@ -25,7 +24,7 @@ func (l *Language) findModuleInPosition(docId string, position protocol.Position
 	panic("Module not found in position")
 }
 
-func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, position protocol.Position) []indexables.Indexable {
+func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, position indexables.Position) []indexables.Indexable {
 	var symbols []indexables.Indexable
 	for _, scopeFunction := range parsedModules.SymbolsByModule() {
 		if !scopeFunction.GetDocumentRange().HasPosition(position) {
@@ -372,9 +371,8 @@ func findDeepFirst(identifier string, position indexables.Position, function *in
 	// When mode is InPosition, we are specifying it is important for us that
 	// the function being searched contains the position specified.
 	// We use mode = AnyPosition when search for a symbol definition outside the document where the user has its cursor. For example, we are looking in imported files or files of the same module.
-	lspPosition := position.ToLSPPosition()
 	if mode == InScope &&
-		!function.GetDocumentRange().HasPosition(lspPosition) {
+		!function.GetDocumentRange().HasPosition(position) {
 		return nil, depth
 	}
 
@@ -388,7 +386,7 @@ func findDeepFirst(identifier string, position indexables.Position, function *in
 	// If true, priorize searching there first.
 	// If not found, search in the `function`
 	for _, structs := range function.Structs {
-		if structs.GetDocumentRange().HasPosition(lspPosition) {
+		if structs.GetDocumentRange().HasPosition(position) {
 			// What we are looking is inside this, look for struct member
 			for _, member := range structs.GetMembers() {
 				if member.GetName() == identifier {
@@ -399,7 +397,7 @@ func findDeepFirst(identifier string, position indexables.Position, function *in
 	}
 
 	for _, scopedEnums := range function.Enums {
-		if scopedEnums.GetDocumentRange().HasPosition(lspPosition) {
+		if scopedEnums.GetDocumentRange().HasPosition(position) {
 			if scopedEnums.HasEnumerator(identifier) {
 				enumerator := scopedEnums.GetEnumerator(identifier)
 				return enumerator, depth

@@ -9,22 +9,22 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (l *Language) BuildCompletionList(doc *document.Document, position protocol.Position) []protocol.CompletionItem {
+func (l *Language) BuildCompletionList(doc *document.Document, position indexables.Position) []protocol.CompletionItem {
 	// 2 - TODO if previous character is '.', find previous symbol and if a struct, complete only with struct methods
 	// 3 - TODO if writing function call arguments, complete with argument names. ¿Feasible?
 
 	symbolInPosition, _ := doc.SymbolInPosition(
-		protocol.Position{
-			Line:      position.Line,
-			Character: position.Character - 1,
+		indexables.Position{
+			Line:      uint(position.Line),
+			Character: uint(position.Character - 1),
 		})
 	l.logger.Debug(fmt.Sprintf("building completion list: %s", symbolInPosition.Token))
 
 	var parentSymbol indexables.Indexable
 	if symbolInPosition.Token == "." {
-		prevPosition := protocol.Position{
-			Line:      position.Line,
-			Character: position.Character - 2,
+		prevPosition := indexables.Position{
+			Line:      uint(position.Line),
+			Character: uint(position.Character - 2),
 		}
 		searchParams, _ := NewSearchParamsFromPosition(doc, prevPosition)
 		parentSymbol = l.findInParentSymbols(searchParams, NewFindDebugger(false))

@@ -6,17 +6,17 @@ import (
 	"unicode/utf8"
 
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
-	protocol "github.com/tliron/glsp/protocol_3_16"
+	"github.com/pherrymason/c3-lsp/lsp/utils"
 )
 
-func (d *Document) SymbolInPosition(position protocol.Position) (Token, error) {
+func (d *Document) SymbolInPosition(position indexables.Position) (Token, error) {
 	index := position.IndexIn(d.Content)
 	return d.symbolInIndex(index)
 }
 
-func (d *Document) ParentSymbolInPosition(position protocol.Position) (Token, error) {
+func (d *Document) ParentSymbolInPosition(position indexables.Position) (Token, error) {
 	if !d.HasPointInFrontSymbol(position) {
-		return Token{}, errors.New("No previous '.' found.")
+		return Token{}, errors.New("no previous '.' found")
 	}
 
 	index := position.IndexIn(d.Content)
@@ -93,4 +93,42 @@ func (d *Document) indexToPosition(index int) indexables.Position {
 		Line:      uint(line),
 		Character: uint(character),
 	}
+}
+
+// Returns start and end index of symbol present in index.
+// If no symbol is found in index, error will be returned
+func (d *Document) getSymbolRangeIndexesAtIndex(index int) (int, int, error) {
+	if !utils.IsAZ09_(rune(d.Content[index])) {
+		return 0, 0, errors.New("No symbol at position")
+	}
+
+	symbolStart := 0
+	for i := index; i >= 0; i-- {
+		r := rune(d.Content[i])
+		if !utils.IsAZ09_(r) {
+			// First invalid character found, that means previous iteration contained first character of symbol
+			symbolStart = i + 1
+			break
+		}
+	}
+
+	symbolEnd := len(d.Content) - 1
+	for i := index; i < len(d.Content); i++ {
+		r := rune(d.Content[i])
+		if !utils.IsAZ09_(r) {
+			// First invalid character found, that means previous iteration contained last character of symbol
+			symbolEnd = i - 1
+			break
+		}
+	}
+
+	if symbolStart > len(d.Content) {
+		return 0, 0, errors.New("wordStart out of bounds")
+	} else if symbolEnd > len(d.Content) {
+		return 0, 0, errors.New("wordEnd out of bounds")
+	} else if symbolStart > symbolEnd {
+		return 0, 0, errors.New("wordStart > wordEnd!")
+	}
+
+	return symbolStart, symbolEnd, nil
 }

@@ -8,7 +8,6 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/stretchr/testify/assert"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_position(t *testing.T) {
@@ -63,7 +62,7 @@ system.cpu.init();`
 func TestSearchParams_NewSearchParamsFromPosition_finds_full_module_path(t *testing.T) {
 	cases := []struct {
 		source         string
-		position       protocol.Position
+		position       indexables.Position
 		expectedModule indexables.ModulePath
 		expectedToken  d.Token
 	}{

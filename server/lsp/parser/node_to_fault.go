@@ -41,7 +41,7 @@ func (p *Parser) nodeToFault(node *sitter.Node, moduleName string, docId string,
 					constants = append(constants,
 						idx.NewFaultConstant(
 							constantNode.Content(sourceCode),
-							idx.NewRangeFromSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
+							idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
 						),
 					)
 				}
@@ -56,8 +56,8 @@ func (p *Parser) nodeToFault(node *sitter.Node, moduleName string, docId string,
 		constants,
 		moduleName,
 		docId,
-		idx.NewRangeFromSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(), node.EndPoint()),
+		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 	)
 
 	return enum

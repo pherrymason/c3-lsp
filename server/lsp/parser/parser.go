@@ -169,7 +169,7 @@ func getModuleScopedFunction(moduleName string, moduleScopes map[string]*idx.Fun
 		fnV := idx.NewModuleScopeFunction(
 			moduleName,
 			doc.URI,
-			idx.NewRangeFromSitterPositions(
+			idx.NewRangeFromTreeSitterPositions(
 				doc.ContextSyntaxTree.RootNode().StartPoint(),
 				doc.ContextSyntaxTree.RootNode().EndPoint(),
 			),

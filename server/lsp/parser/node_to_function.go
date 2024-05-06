@@ -56,9 +56,9 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 			funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
 			moduleName,
 			docId,
-			idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
+			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
-			idx.NewRangeFromSitterPositions(node.StartPoint(),
+			idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
 				node.EndPoint()),
 			protocol.CompletionItemKindFunction,
 		)
@@ -68,9 +68,9 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 			funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
 			moduleName,
 			docId,
-			idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
+			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
-			idx.NewRangeFromSitterPositions(node.StartPoint(),
+			idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
 				node.EndPoint()),
 		)
 	}
@@ -117,7 +117,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 			argType = n.Content(sourceCode)
 		case "ident":
 			identifier = n.Content(sourceCode)
-			idRange = idx.NewRangeFromSitterPositions(n.StartPoint(), n.EndPoint())
+			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
 			if identifier == "self" && methodIdentifier != "" {
 				argType = methodIdentifier
 			}
@@ -151,7 +151,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 		moduleName,
 		docId,
 		idRange,
-		idx.NewRangeFromSitterPositions(argNode.StartPoint(),
+		idx.NewRangeFromTreeSitterPositions(argNode.StartPoint(),
 			argNode.EndPoint()),
 	)
 
@@ -220,9 +220,9 @@ func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId string,
 		argumentIds,
 		moduleName,
 		docId,
-		idx.NewRangeFromSitterPositions(nameNode.StartPoint(),
+		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 			nameNode.EndPoint()),
-		idx.NewRangeFromSitterPositions(node.StartPoint(),
+		idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
 			node.EndPoint()),
 	)
 

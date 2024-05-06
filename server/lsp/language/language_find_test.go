@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
+	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func readC3File(filePath string) string {
@@ -76,8 +76,8 @@ func initTestEnv() (*Language, map[string]document.Document) {
 	return &language, documents
 }
 
-func buildPosition(line protocol.UInteger, character protocol.UInteger) protocol.Position {
-	return protocol.Position{Line: line - 1, Character: character}
+func buildPosition(line uint, character uint) indexables.Position {
+	return indexables.Position{Line: line - 1, Character: character}
 }
 
 func find(language *Language, searchParams SearchParams) idx.Indexable {
