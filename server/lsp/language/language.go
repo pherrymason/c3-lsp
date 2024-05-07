@@ -33,13 +33,6 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 	l.functionTreeByDocument[parsedSymbols.DocId()] = parsedSymbols
 }
 
-const (
-	AnyPosition FindMode = iota
-	InScope
-)
-
-type FindMode int
-
 func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position indexables.Position) (indexables.Indexable, error) {
 	searchParams, err := NewSearchParamsFromPosition(doc, position)
 	if err != nil {
@@ -61,7 +54,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 		return protocol.Hover{}, err
 	}
 
-	if IsLanguageKeyword(search.selectedSymbol.Token) {
+	if IsLanguageKeyword(search.selectedToken.Token) {
 		return protocol.Hover{}, err
 	}
 

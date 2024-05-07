@@ -202,7 +202,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_scope(t *testing.T) {
 		position := buildPosition(6, 5) // Cursor at `B|ar`
 		doc := documents["module_foo_bar_dashed.c3"]
 		searchParams, _ := NewSearchParamsFromPosition(&doc, position)
-		searchParams.selectedSymbol.Token = "Circle"
+		searchParams.selectedToken.Token = "Circle"
 
 		symbol := find(language, searchParams)
 

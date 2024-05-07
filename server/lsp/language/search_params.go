@@ -7,25 +7,37 @@ import (
 
 const (
 	Nullo int = iota
-	Ready
-	Lock
+	LockStatusReady
+	LockStatusLocked
 )
 
-type SearchParams struct {
-	selectedSymbol document.Token
-	parentSymbols  []document.Token // Limit search to symbols that has are child from parentSymbol
-	docId          string
-	modulePath     indexables.ModulePath
+type LockStatus int
 
+const (
+	AnyPosition FindMode = iota
+	InScope
+)
+
+type FindMode int
+
+type SearchParams struct {
+	// Values setable by developer
+	docId             string // Document from where we start searching
 	continueOnModules bool
 	scopeMode         FindMode // TODO Rename this to boolean
 
+	// Values automatically calculated from cursor position
+	selectedToken document.Token   // token (textual symbol) currently under the cursor
+	parentSymbols []document.Token // Limit search to symbols that has are child from parentSymbol
+	modulePath    indexables.ModulePath
+
+	// Tracking values used by search functions
 	trackedModules map[string]int // Here we register what modules have been already inspected in this search. Helps avoiding infinite loops
 }
 
-func NewSearchParamsFromToken(selectedSymbol document.Token, docId string) SearchParams {
+func NewSearchParamsFromToken(selectedToken document.Token, docId string) SearchParams {
 	return SearchParams{
-		selectedSymbol:    selectedSymbol,
+		selectedToken:     selectedToken,
 		docId:             docId,
 		scopeMode:         InScope,
 		continueOnModules: true,
@@ -98,6 +110,15 @@ func (s SearchParams) HasModuleSpecified() bool {
 	return s.modulePath.Has()
 }
 
-func (s *SearchParams) RegisterTraversedModule(module string) {
-	//s.traversedModules = append(s.traversedModules, module)
+func (s *SearchParams) TrackTraversedModule(module string) bool {
+	mt, ok := s.trackedModules[module]
+	trackValue := LockStatusReady
+	if ok && mt == LockStatusLocked {
+		return false
+	} else if mt == LockStatusReady {
+		trackValue = LockStatusLocked
+	}
+	s.trackedModules[module] = trackValue
+
+	return true
 }

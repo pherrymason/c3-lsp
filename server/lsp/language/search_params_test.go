@@ -20,7 +20,7 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_positio
 	assert.Equal(
 		t,
 		SearchParams{
-			selectedSymbol: d.Token{
+			selectedToken: d.Token{
 				Token: "emu",
 				//position: buildPosition(1, 5),
 				TokenRange: idx.NewRange(0, 4, 0, 7),
@@ -45,7 +45,7 @@ system.cpu.init();`
 	assert.Equal(
 		t,
 		SearchParams{
-			selectedSymbol: d.NewToken("init", idx.NewRange(1, 11, 1, 15)),
+			selectedToken: d.NewToken("init", idx.NewRange(1, 11, 1, 15)),
 			parentSymbols: []d.Token{
 				d.NewToken("system", idx.NewRange(1, 0, 1, 6)),
 				d.NewToken("cpu", idx.NewRange(1, 7, 1, 10)),
@@ -91,7 +91,7 @@ mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
 			assert.Equal(
 				t,
 				SearchParams{
-					selectedSymbol:    tt.expectedToken,
+					selectedToken:     tt.expectedToken,
 					docId:             "filename",
 					modulePath:        tt.expectedModule,
 					scopeMode:         InScope,
