@@ -6,13 +6,15 @@ let client = null;
 
 module.exports = {
   activate: function (context) {
-    const executable = {
-      command: '/Volumes/Development/raul/c3/go-lsp/server/c3-lsp',
-    }
-
+    const executable = '/Volumes/Development/raul/c3/go-lsp/server/c3-lsp';
     const serverOptions = {
-      run: executable,
-      debug: executable,
+      run: {
+        command: executable,
+      },
+      debug: {
+        command:executable,
+        options: { execArgv: ['--nolazy', '--inspect=6009'] }
+      }
     }
 
     const clientOptions = {

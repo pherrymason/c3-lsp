@@ -3,5 +3,4 @@ tree-sitter-c3
 tree-sitter-c3-alt
 .DS_Store
 .idea
-.vscode
 *.log
