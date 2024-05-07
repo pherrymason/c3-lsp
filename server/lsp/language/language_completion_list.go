@@ -79,7 +79,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position indexabl
 		// We need to limit the search to subtypes of parent token
 		// Let's find parent token
 		searchParams, _ := NewSearchParamsFromPosition(doc, prevPosition)
-		prevIndexable := l.findInParentSymbols(searchParams, FindDebugger{depth: 0})
+		prevIndexable := l.findParentType(searchParams, FindDebugger{depth: 0})
 		//fmt.Print(prevIndexable.GetName())
 
 		switch prevIndexable.(type) {

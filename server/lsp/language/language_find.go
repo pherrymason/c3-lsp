@@ -227,7 +227,9 @@ func (l *Language) _findSymbolDeclarationInModule(searchParams SearchParams, deb
 	return nil
 }
 
-// TODO Document what this does
+// Looks for immediate parent symbol.
+// Useful when cursor is at a struct members: square.color.re|d
+// in order to know what type is `red`, it needs first to traverse and find the types of `square` and `color`. It will return StructMember for `red` symbol.
 func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindDebugger) indexables.Indexable {
 	var found indexables.Indexable
 
@@ -244,15 +246,7 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 			levelSymbol := token.Token
 			levelDocId := searchParams.docId
 			for {
-				symbolFound := false /*
-					levelSearchParams := NewSearchParams(
-						levelToken,
-						token.TokenRange.Start,
-						levelDocId,
-					)*/
-				// TODO: Check this, here the position is NOT correct
-				// we are not interested in searching by position!!!
-				// Also, should ignore DocumentURI too
+				symbolFound := false
 				levelSearchParams := NewSearchParamsFromToken(
 					document.NewToken(levelSymbol, token.TokenRange),
 					levelDocId,
@@ -350,6 +344,27 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 
 	l.debug("finish findInParentSymbols", debugger)
 	return found
+}
+
+func (l *Language) findParentType(searchParams SearchParams, debugger FindDebugger) indexables.Indexable {
+	prevIndexable := l.findInParentSymbols(searchParams, debugger)
+
+	_, isStructMember := prevIndexable.(indexables.StructMember)
+	if isStructMember {
+		var token document.Token
+		switch prevIndexable.(type) {
+		case indexables.StructMember:
+			structMember, _ := prevIndexable.(indexables.StructMember)
+			token = document.NewToken(structMember.GetType(), prevIndexable.GetIdRange())
+		}
+		levelSearchParams := NewSearchParamsFromToken(
+			token,
+			prevIndexable.GetDocumentURI(),
+		)
+		prevIndexable = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
+	}
+
+	return prevIndexable
 }
 
 func findDeepFirst(identifier string, position indexables.Position, function *indexables.Function, depth uint, mode FindMode) (indexables.Indexable, uint) {

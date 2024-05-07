@@ -143,7 +143,8 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 
 	t.Run("Should suggest struct members", func(t *testing.T) {
 		source := `
-		struct Square { int width; int height; }
+		struct Color { int red; int green; int blue; }
+		struct Square { int width; int height; Color color; }
 		fn void main() {
 			Square inst;
 			inst`
@@ -155,10 +156,21 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 			{".", []protocol.CompletionItem{
 				{Label: "width", Kind: &expectedKind},
 				{Label: "height", Kind: &expectedKind},
+				{Label: "color", Kind: &expectedKind},
 			}},
 
 			{".w", []protocol.CompletionItem{
 				{Label: "width", Kind: &expectedKind},
+			}},
+
+			{".color.", []protocol.CompletionItem{
+				{Label: "red", Kind: &expectedKind},
+				{Label: "green", Kind: &expectedKind},
+				{Label: "blue", Kind: &expectedKind},
+			}},
+
+			{".color.r", []protocol.CompletionItem{
+				{Label: "red", Kind: &expectedKind},
 			}},
 		}
 
@@ -167,7 +179,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 
 				doc := document.NewDocument("test.c3", source+tt.input+`}`)
 				language.RefreshDocumentIdentifiers(&doc, &parser)
-				position := buildPosition(5, 7+uint(len(tt.input))) // Cursor after `<input>|`
+				position := buildPosition(6, 7+uint(len(tt.input))) // Cursor after `<input>|`
 
 				completionList := language.BuildCompletionList(&doc, position)
 
