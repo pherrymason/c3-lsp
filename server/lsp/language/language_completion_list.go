@@ -10,19 +10,6 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func buildSearchParamsForCompletionList(doc *document.Document, position indexables.Position) SearchParams {
-	// There are two cases (TBC):
-	// User writing with a new symbol: With a ¿space? in front
-	// User writing a chained symbol and is expecting to autocomplete with member/methods children of previous token type.
-	// So first detect which of these two cases are we in
-
-	// Read backwards until first ¿space?
-
-	searchParams := SearchParams{}
-
-	return searchParams
-}
-
 // Checks if writing seems to be a chain of components (example: aStruct.aMember)
 // If that's the case, it will return the position of the last character of previous token
 func isCompletingAChain(doc *document.Document, cursorPosition indexables.Position) (bool, indexables.Position) {
@@ -93,8 +80,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position indexabl
 		// Let's find parent token
 		searchParams, _ := NewSearchParamsFromPosition(doc, prevPosition)
 		prevIndexable := l.findInParentSymbols(searchParams, FindDebugger{depth: 0})
-		fmt.Print(prevIndexable.GetName())
-		//filterMembers := len(symbolInPosition.Token) > 1
+		//fmt.Print(prevIndexable.GetName())
 
 		switch prevIndexable.(type) {
 		case indexables.Struct:
