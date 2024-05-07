@@ -51,6 +51,7 @@ func (self Position) IndexIn(content string) int {
 		if next := strings.Index(content_, "\n"); next != -1 {
 			index += next + 1
 		} else {
+			panic("Position.Line is past content")
 			return 0
 		}
 	}
@@ -67,6 +68,7 @@ func (self Position) IndexIn(content string) int {
 		if len(remains) <= 0 {
 			// char goes past content
 			// this a error
+			panic("Position.Character is past content")
 			return 0
 		}
 
@@ -93,4 +95,13 @@ func (self Position) IndexIn(content string) int {
 	}
 
 	return byteOffset
+}
+
+// TODO: Cover when character is first character of line, and rewinding implies going one line back.
+func (p Position) RewindCharacter() Position {
+	if p.Character > 0 {
+		return NewPosition(p.Line, p.Character-1)
+	}
+
+	return p
 }

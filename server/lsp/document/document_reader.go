@@ -52,6 +52,8 @@ func (d *Document) symbolInIndex(index int) (Token, error) {
 	start, end, err := d.getSymbolRangeIndexesAtIndex(index)
 
 	if err != nil {
+		// Why is this logic here??
+		// This causes problems, index+1 might be out of bounds!
 		posRange := indexables.Range{
 			Start: d.indexToPosition(index),
 			End:   d.indexToPosition(index + 1),
