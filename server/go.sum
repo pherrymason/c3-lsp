@@ -37,8 +37,8 @@ github.com/stretchr/testify v1.7.4 h1:wZRexSlwd7ZXfKINDLsO4r7WBt3gTKONc6K/VesHvH
 github.com/stretchr/testify v1.7.4/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/tliron/commonlog v0.2.9 h1:hxNA/kLKjbfoWSjJX2VOy2BLChmJJExzeoBgMvMIC80=
 github.com/tliron/commonlog v0.2.9/go.mod h1:mFKOlVFWWokA86nVMc21EHdDvdLrHPuSCHuQk7CHWGE=
-github.com/tliron/glsp v0.2.1 h1:QS1c22YO1EiY0YZmJXca4Eq13gP0HX2vgy2t38gLNJ0=
-github.com/tliron/glsp v0.2.1/go.mod h1:GMVWDNeODxHzmDPvYbYTCs7yHVaEATfYtXiYJ9w1nBg=
+github.com/tliron/glsp v0.2.2 h1:IKPfwpE8Lu8yB6Dayta+IyRMAbTVunudeauEgjXBt+c=
+github.com/tliron/glsp v0.2.2/go.mod h1:GMVWDNeODxHzmDPvYbYTCs7yHVaEATfYtXiYJ9w1nBg=
 github.com/tliron/kutil v0.3.13 h1:hB2k7zWYhuuQ8pqJ6Gu/LxDw8UUnjBlhBbwUt5rUiSs=
 github.com/tliron/kutil v0.3.13/go.mod h1:sazY84VhpRez9rFf6ajtZBdpThJ/OIVL7Mue6GC/rds=
 golang.org/x/crypto v0.16.0 h1:mMMrFzRSCF0GvB7Ne27XVtVAaXLrPmgPC7/v0tkwHaY=
