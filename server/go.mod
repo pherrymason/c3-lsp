@@ -7,7 +7,7 @@ toolchain go1.21.5
 require (
 	github.com/pkg/errors v0.9.1
 	github.com/smacker/go-tree-sitter v0.0.0-20231219031718-233c2f923ac7
-	github.com/stretchr/testify v1.7.4
+	github.com/stretchr/testify v1.9.0
 	github.com/tliron/commonlog v0.2.9
 	github.com/tliron/glsp v0.2.2
 )
