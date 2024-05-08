@@ -9,7 +9,7 @@ require (
 	github.com/smacker/go-tree-sitter v0.0.0-20231219031718-233c2f923ac7
 	github.com/stretchr/testify v1.7.4
 	github.com/tliron/commonlog v0.2.9
-	github.com/tliron/glsp v0.2.1
+	github.com/tliron/glsp v0.2.2
 )
 
 require (
