@@ -24,10 +24,14 @@ func (l *Language) findModuleInPosition(docId string, position indexables.Positi
 	panic("Module not found in position")
 }
 
+// Returns all symbols in scope.
+// Detail: StructMembers and Enumerables are inlined
 func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, position indexables.Position) []indexables.Indexable {
 	var symbols []indexables.Indexable
 	for _, scopeFunction := range parsedModules.SymbolsByModule() {
-		if !scopeFunction.GetDocumentRange().HasPosition(position) {
+		// Allow also when position is +1 line, in case we are writing new contentn at the end of the file
+		has := scopeFunction.GetDocumentRange().HasPosition(indexables.NewPosition(position.Line-1, 0))
+		if !scopeFunction.GetDocumentRange().HasPosition(position) && !has {
 			continue // We are in a different module
 		}
 
@@ -36,6 +40,9 @@ func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, posi
 		}
 		for _, enum := range scopeFunction.Enums {
 			symbols = append(symbols, enum)
+			for _, enumerable := range enum.GetEnumerators() {
+				symbols = append(symbols, enumerable)
+			}
 		}
 		for _, strukt := range scopeFunction.Structs {
 			symbols = append(symbols, strukt)
@@ -245,7 +252,12 @@ func (l *Language) findInParentSymbols(searchParams SearchParams, debugger FindD
 		if parentSymbol == nil {
 			levelSymbol := token.Token
 			levelDocId := searchParams.docId
+			protection := 0
 			for {
+				if protection > 500 {
+					break
+				}
+				protection += 1
 				symbolFound := false
 				levelSearchParams := NewSearchParamsFromToken(
 					document.NewToken(levelSymbol, token.TokenRange),
