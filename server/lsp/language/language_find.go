@@ -3,7 +3,6 @@ package language
 import (
 	"fmt"
 
-	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
@@ -116,7 +115,8 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	docIdOption := searchParams.DocId()
 	var collectionParsedModules []parser.ParsedModules
 	if docIdOption.IsSome() {
-		parsedModules, found := l.functionTreeByDocument[docIdOption.Get()]
+		docId := docIdOption.Get()
+		parsedModules, found := l.functionTreeByDocument[docId]
 		if !found {
 			return option.None[indexables.Indexable]()
 		}
@@ -260,140 +260,6 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 	}
 
 	return option.None[indexables.Indexable]()
-}
-
-// Looks for immediate parent symbol.
-// Useful when cursor is at a struct members: square.color.re|d
-// in order to know what type is `red`, it needs first to traverse and find the types of `square` and `color`. It will return StructMember for `red` symbol.
-func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[indexables.Indexable] {
-	var searchingSymbol document.Token
-
-	symbolsAccessPath := searchParams.GetFullAccessPath()
-	stepPath := 0
-	searchingSymbol = symbolsAccessPath[stepPath]
-	protection := 0
-	var indexable indexables.Indexable
-	var indexableFound indexables.Indexable
-
-	doSearch := true
-	noseque := false
-
-	for {
-		isLastToken := stepPath == len(symbolsAccessPath)-1
-		if stepPath >= len(symbolsAccessPath) || protection > 500 {
-			indexableFound = indexable
-			break
-		}
-		protection += 1
-
-		if doSearch {
-			levelSearchParams := search_params.NewSearchParams(
-				searchingSymbol.Token,
-				searchingSymbol.TokenRange,
-				searchParams.Module(),
-				searchParams.DocId(),
-			)
-			resultOption := l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
-			if resultOption.IsNone() {
-				return resultOption
-			}
-			indexable = resultOption.Get()
-			doSearch = false
-		}
-
-		// Si es una variable, debemos hacer otra búsqueda para encontrar el tipo y avanzar al
-		switch indexable.(type) {
-		case indexables.Variable:
-			variable, _ := indexable.(indexables.Variable)
-			searchingSymbol = document.NewToken(variable.GetType().GetName(), variable.GetIdRange())
-			doSearch = true
-			stepPath += 1
-			noseque = true
-
-		case *indexables.Function:
-			fun, _ := indexable.(*indexables.Function)
-			indexable = fun
-
-			if !isLastToken {
-				//stepPath += 1
-				searchingSymbol = document.NewToken(fun.GetReturnType(), indexables.NewRange(0, 0, 0, 0))
-				doSearch = true
-			}
-
-		case indexables.Struct:
-			if !noseque {
-				stepPath += 1
-			}
-
-			strukt, _ := indexable.(indexables.Struct)
-			members := strukt.GetMembers()
-			foundInMembers := false
-			searchingSymbol = symbolsAccessPath[stepPath]
-			for i := 0; i < len(members); i++ {
-				if members[i].GetName() == searchingSymbol.Token {
-					foundInMembers = true
-					//if !isLastToken {
-					// Search type of this member
-					// TODO: Check this, here the position is NOT correct
-					// we are not interested in searching by position!!!
-					// Also, should ignore DocumentURI too
-					indexable = members[i]
-					searchingSymbol = document.NewToken(members[i].GetType(), indexables.NewRange(0, 0, 0, 0))
-					doSearch = true
-					stepPath += 1
-					break
-				}
-			}
-
-			if !foundInMembers {
-				// Not found... should search in functions
-				// TODO: Check this, here the position is NOT correct
-				// we are not interested in searching by position!!!
-				// Also, should ignore DocumentURI too
-				searchingSymbol = document.NewToken(strukt.GetName()+"."+searchingSymbol.Token, indexables.NewRange(0, 0, 0, 0))
-				doSearch = true
-			}
-
-		case indexables.Enum:
-			if !noseque {
-				stepPath += 1
-			}
-			noseque = false
-
-			// Search searchParams.selectedSymbol in enumerators
-			_enum := indexable.(indexables.Enum)
-			enumerators := _enum.GetEnumerators()
-			//foundInMembers := false
-			searchingSymbol = symbolsAccessPath[stepPath]
-			for i := 0; i < len(enumerators); i++ {
-				if enumerators[i].GetName() == searchingSymbol.Token {
-					//foundInMembers = true
-					indexable = enumerators[i]
-					break
-				}
-			}
-		// Restore and test faults
-		case indexables.Fault:
-			if !noseque {
-				stepPath += 1
-			}
-			_fault := indexable.(indexables.Fault)
-			enumerators := _fault.GetConstants()
-			searchingSymbol = symbolsAccessPath[stepPath]
-			for i := 0; i < len(enumerators); i++ {
-				if enumerators[i].GetName() == searchingSymbol.Token {
-					indexable = enumerators[i]
-					break
-				}
-			}
-		}
-	}
-
-	if indexableFound == nil {
-		return option.None[indexables.Indexable]()
-	} else {
-		return option.Some(indexableFound)
-	}
 }
 
 func findDeepFirst(identifier string, position indexables.Position, function *indexables.Function, depth uint, limitSearchInScope bool) (indexables.Indexable, uint) {

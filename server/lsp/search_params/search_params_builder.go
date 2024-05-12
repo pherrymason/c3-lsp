@@ -15,9 +15,13 @@ func NewSearchParamsBuilder() *SearchParamsBuilder {
 	}
 }
 
-// Métodos para configurar los campos de SearchParams
 func (b *SearchParamsBuilder) WithSymbol(param1 string) *SearchParamsBuilder {
 	b.params.symbol = param1
+	return b
+}
+
+func (b *SearchParamsBuilder) WithSymbolRange(posRange indexables.Range) *SearchParamsBuilder {
+	b.params.symbolRange = posRange
 	return b
 }
 
