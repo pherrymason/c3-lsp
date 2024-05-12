@@ -40,11 +40,13 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 			Enums:             make(map[string]Enum),
 			Structs:           make(map[string]Struct),
 			ChildrenFunctions: make([]Function, 0),
-			BaseIndexable: BaseIndexable{
-				moduleString: module,
-				documentURI:  docId,
-				Kind:         protocol.CompletionItemKindFunction,
-			},
+			BaseIndexable: NewBaseIndexable(
+				module,
+				docId,
+				NewRange(0, 0, 0, 0),
+				NewRange(0, 0, 0, 0),
+				protocol.CompletionItemKindFunction,
+			),
 		},
 	}
 }

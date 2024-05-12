@@ -37,6 +37,8 @@ fn void main() {
     Emu emulator;
     emulator.init();
     Emu.init(&emulator);
+    newEmu().init();
+    newEmu().on = true;
 }
 
 

@@ -28,11 +28,13 @@ type BaseIndexable struct {
 	Kind         protocol.CompletionItemKind
 }
 
-func NewBaseIndexable(docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
+func NewBaseIndexable(module string, docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
 	return BaseIndexable{
-		documentURI: docId,
-		idRange:     idRange,
-		docRange:    docRange,
-		Kind:        kind,
+		module:       NewModulePathFromString(module),
+		moduleString: module,
+		documentURI:  docId,
+		idRange:      idRange,
+		docRange:     docRange,
+		Kind:         kind,
 	}
 }

@@ -7,7 +7,9 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
+	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
+	"github.com/pherrymason/c3-lsp/option"
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -33,35 +35,46 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 	l.functionTreeByDocument[parsedSymbols.DocId()] = parsedSymbols
 }
 
-func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position indexables.Position) (indexables.Indexable, error) {
-	searchParams, err := NewSearchParamsFromPosition(doc, position)
-	if err != nil {
-		return indexables.Variable{}, err
-	}
+func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position indexables.Position) option.Option[indexables.Indexable] {
 
-	symbol := l.findClosestSymbolDeclaration(searchParams, FindDebugger{depth: 0})
+	searchParams := search_params.BuildSearchBySymbolUnderCursor(
+		doc,
+		l.functionTreeByDocument[doc.URI],
+		position,
+	)
 
-	return symbol, nil
+	/*if err != nil {
+		return option.None[indexables.Indexable]()
+	}*/
+
+	return l.findClosestSymbolDeclaration(searchParams, FindDebugger{depth: 0})
 }
 
-func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) (protocol.Hover, error) {
+func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) option.Option[protocol.Hover] {
 
 	//module := l.findModuleInPosition(doc.URI, params.Position)
 	//fmt.Println(module)
 
-	search, err := NewSearchParamsFromPosition(doc, indexables.NewPositionFromLSPPosition(params.Position))
+	/*search, err := NewSearchParamsFromPosition(doc, indexables.NewPositionFromLSPPosition(params.Position))
 	if err != nil {
 		return protocol.Hover{}, err
+	}*/
+	search := search_params.BuildSearchBySymbolUnderCursor(
+		doc,
+		l.functionTreeByDocument[doc.URI],
+		indexables.NewPositionFromLSPPosition(params.Position),
+	)
+
+	if IsLanguageKeyword(search.Symbol()) {
+		return option.None[protocol.Hover]()
 	}
 
-	if IsLanguageKeyword(search.selectedToken.Token) {
-		return protocol.Hover{}, err
+	foundSymbolOption := l.findClosestSymbolDeclaration(search, FindDebugger{depth: 0})
+	if foundSymbolOption.IsNone() {
+		return option.None[protocol.Hover]()
 	}
 
-	foundSymbol := l.findClosestSymbolDeclaration(search, FindDebugger{depth: 0})
-	if foundSymbol == nil {
-		return protocol.Hover{}, nil
-	}
+	foundSymbol := foundSymbolOption.Get()
 
 	// expected behaviour:
 	// hovering on variables: display variable type + any description
@@ -74,7 +87,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 		},
 	}
 
-	return hover, nil
+	return option.Some(hover)
 }
 
 func (l *Language) debug(message string, debugger FindDebugger) {

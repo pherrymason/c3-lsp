@@ -38,8 +38,8 @@ func (mp ModulePath) GetName() string {
 	return concatPaths(mp.tokens, "::")
 }
 
-func (mp ModulePath) Has() bool {
-	return len(mp.tokens) > 0
+func (mp ModulePath) IsEmpty() bool {
+	return len(mp.tokens) == 0
 }
 
 func (mp ModulePath) IsSubModuleOf(parentModule ModulePath) bool {
@@ -60,6 +60,17 @@ func (mp ModulePath) IsSubModuleOf(parentModule ModulePath) bool {
 	}
 
 	return isChild
+}
+
+func (mp ModulePath) IsImplicitlyImported(otherModule ModulePath) bool {
+	if mp.GetName() == otherModule.GetName() {
+		return true
+	}
+
+	isSubModuleOf := mp.IsSubModuleOf(otherModule)
+	isParentOf := otherModule.IsSubModuleOf(mp)
+
+	return isSubModuleOf || isParentOf
 }
 
 func concatPaths(slice []string, delimiter string) string {

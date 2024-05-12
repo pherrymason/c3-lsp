@@ -124,12 +124,13 @@ func NewServer(opts ServerOpts) *Server {
 		}
 
 		server.server.Log.Debug(fmt.Sprint("HOVER requested on ", len(doc.Content), params.Position.IndexIn(doc.Content)))
-		hover, err := server.language.FindHoverInformation(doc, params)
-		if err != nil {
-			server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
+		hoverOption := server.language.FindHoverInformation(doc, params)
+		if hoverOption.IsNone() {
+			//server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
 			return nil, nil
 		}
 
+		hover := hoverOption.Get()
 		return &hover, nil
 	}
 
@@ -139,16 +140,17 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 
-		identifier, err := server.language.FindSymbolDeclarationInWorkspace(doc, indexables.NewPositionFromLSPPosition(params.Position))
+		identifierOption := server.language.FindSymbolDeclarationInWorkspace(doc, indexables.NewPositionFromLSPPosition(params.Position))
 
-		if err == nil && identifier != nil {
-			return protocol.Location{
-				URI:   identifier.GetDocumentURI(),
-				Range: lsp_NewRangeFromRange(identifier.GetIdRange()),
-			}, nil
+		if identifierOption.IsNone() {
+			return nil, nil
 		}
 
-		return nil, nil
+		indexable := identifierOption.Get()
+		return protocol.Location{
+			URI:   indexable.GetDocumentURI(),
+			Range: lsp_NewRangeFromRange(indexable.GetIdRange()),
+		}, nil
 	}
 
 	handler.TextDocumentCompletion = func(context *glsp.Context, params *protocol.CompletionParams) (any, error) {

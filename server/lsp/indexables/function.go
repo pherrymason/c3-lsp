@@ -115,6 +115,10 @@ func (f Function) GetModule() ModulePath {
 }
 
 func (f Function) IsSubModuleOf(module ModulePath) bool {
+	if module.IsEmpty() {
+		return false
+	}
+
 	return f.module.IsSubModuleOf(module)
 }
 

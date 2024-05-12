@@ -9,20 +9,6 @@ type Range struct {
 	End   Position
 }
 
-func NewRange(startLine uint, startChar uint, endLine uint, endChar uint) Range {
-	return Range{
-		Start: NewPosition(startLine, startChar),
-		End:   NewPosition(endLine, endChar),
-	}
-}
-
-func NewRangeFromTreeSitterPositions(start sitter.Point, end sitter.Point) Range {
-	return Range{
-		Start: NewPositionFromTreeSitterPoint(start),
-		End:   NewPositionFromTreeSitterPoint(end),
-	}
-}
-
 func (r Range) HasPosition(position Position) bool {
 	line := uint(position.Line)
 	ch := uint(position.Character)
@@ -40,4 +26,48 @@ func (r Range) HasPosition(position Position) bool {
 	}
 
 	return false
+}
+
+func (r Range) IsBeforePosition(position Position) bool {
+	if r.Start.Line > position.Line ||
+		(r.Start.Line == position.Line && r.Start.Character > position.Character) {
+		return true
+	}
+
+	return false
+}
+
+func (r Range) IsAfterPosition(position Position) bool {
+	if r.End.Line < position.Line ||
+		(r.End.Line == position.Line && r.End.Character < position.Character) {
+		return true
+	}
+
+	return false
+}
+
+func (r Range) IsAfter(crange Range) bool {
+	if r.End.Line > crange.End.Line {
+		return true
+	}
+
+	if r.End.Line == crange.End.Line && r.End.Character > crange.End.Character {
+		return true
+	}
+
+	return false
+}
+
+func NewRange(startLine uint, startChar uint, endLine uint, endChar uint) Range {
+	return Range{
+		Start: NewPosition(startLine, startChar),
+		End:   NewPosition(endLine, endChar),
+	}
+}
+
+func NewRangeFromTreeSitterPositions(start sitter.Point, end sitter.Point) Range {
+	return Range{
+		Start: NewPositionFromTreeSitterPoint(start),
+		End:   NewPositionFromTreeSitterPoint(end),
+	}
 }

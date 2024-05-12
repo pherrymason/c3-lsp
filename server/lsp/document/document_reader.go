@@ -7,7 +7,33 @@ import (
 
 	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
+	"github.com/pherrymason/c3-lsp/option"
 )
+
+func (d *Document) SymbolInPosition2(position indexables.Position) option.Option[Token] {
+	index := position.IndexIn(d.Content)
+	return d.symbolInIndex2(index)
+}
+
+func (d *Document) symbolInIndex2(index int) option.Option[Token] {
+	start, end, err := d.getSymbolRangeIndexesAtIndex(index)
+
+	if err != nil {
+		// Why is this logic here??
+		// This causes problems, index+1 might be out of bounds!
+		posRange := indexables.Range{
+			Start: d.indexToPosition(index),
+			End:   d.indexToPosition(index + 1),
+		}
+		return option.Some(NewToken(d.Content[index:index+1], posRange))
+	}
+
+	posRange := indexables.Range{
+		Start: d.indexToPosition(start),
+		End:   d.indexToPosition(end + 1),
+	}
+	return option.Some(NewToken(d.Content[start:end+1], posRange))
+}
 
 func (d *Document) SymbolInPosition(position indexables.Position) (Token, error) {
 	index := position.IndexIn(d.Content)

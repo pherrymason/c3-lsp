@@ -1,7 +1,6 @@
 package language
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
@@ -55,65 +54,83 @@ func isCompletingAChain(doc *document.Document, cursorPosition indexables.Positi
 }
 
 func (l *Language) BuildCompletionList(doc *document.Document, position indexables.Position) []protocol.CompletionItem {
-
 	var items []protocol.CompletionItem
-	filterMembers := true
-	symbolInPosition, error := doc.SymbolInPosition(
-		indexables.Position{
-			Line:      uint(position.Line),
-			Character: uint(position.Character - 1),
-		})
-	if error != nil {
-		// Probably, theres no symbol at cursor!
-		filterMembers = false
-	}
-	l.logger.Debug(fmt.Sprintf("building completion list: %s", symbolInPosition.Token))
+	/*
+		filterMembers := true
+		symbolInPosition, error := doc.SymbolInPosition(
+			indexables.Position{
+				Line:      uint(position.Line),
+				Character: uint(position.Character - 1),
+			})
+		if error != nil {
+			// Probably, theres no symbol at cursor!
+			filterMembers = false
+		}
+		l.logger.Debug(fmt.Sprintf("building completion list: %s", symbolInPosition.Token))
 
-	// There are two cases (TBC):
-	// User writing with a new symbol: With a ¿space? in front
-	// User writing a chained symbol and is expecting to autocomplete with member/methods children of previous token type.
-	// So first detect which of these two cases are we in
-	isCompletingAChain, prevPosition := isCompletingAChain(doc, position)
-	if isCompletingAChain {
-		// Is writing a symbol child of a parent one.
-		// We need to limit the search to subtypes of parent token
-		// Let's find parent token
-		searchParams, _ := NewSearchParamsFromPosition(doc, prevPosition)
-		prevIndexable := l.findParentType(searchParams, FindDebugger{depth: 0})
-		//fmt.Print(prevIndexable.GetName())
+		// There are two cases (TBC):
+		// User writing with a new symbol: With a ¿space? in front
+		// User writing a chained symbol and is expecting to autocomplete with member/methods children of previous token type.
+		// So first detect which of these two cases are we in
+		isCompletingAChain, prevPosition := isCompletingAChain(doc, position)
+		if isCompletingAChain {
+			// Is writing a symbol child of a parent one.
+			// We need to limit the search to subtypes of parent token
+			// Let's find parent token
+			searchParams, _ := NewSearchParamsFromPosition(doc, prevPosition)
+			searchParams.scopeMode = AnyPosition
 
-		switch prevIndexable.(type) {
-		case indexables.Struct:
-			strukt := prevIndexable.(indexables.Struct)
+			prevIndexable := l.findParentType(searchParams, FindDebugger{depth: 0, enabled: true})
+			//fmt.Print(prevIndexable.GetName())
 
-			for _, member := range strukt.GetMembers() {
-				if !filterMembers || strings.HasPrefix(member.GetName(), symbolInPosition.Token) {
-					items = append(items, protocol.CompletionItem{
-						Label: member.GetName(),
-						Kind:  &member.Kind,
-					})
+			switch prevIndexable.(type) {
+			case indexables.Struct:
+				strukt := prevIndexable.(indexables.Struct)
+
+				for _, member := range strukt.GetMembers() {
+					if !filterMembers || strings.HasPrefix(member.GetName(), symbolInPosition.Token) {
+						items = append(items, protocol.CompletionItem{
+							Label: member.GetName(),
+							Kind:  &member.Kind,
+						})
+					}
+				}
+				// TODO get struct methods
+
+			case indexables.Enum:
+				enum := prevIndexable.(indexables.Enum)
+				for _, enumerator := range enum.GetEnumerators() {
+					if !filterMembers || strings.HasPrefix(enumerator.GetName(), symbolInPosition.Token) {
+						items = append(items, protocol.CompletionItem{
+							Label: enumerator.GetName(),
+							Kind:  &enumerator.Kind,
+						})
+					}
 				}
 			}
-			// TODO get struct methods
-		}
-	} else {
-		// Find symbols in document
-		moduleSymbols := l.functionTreeByDocument[doc.URI]
-		scopeSymbols := l.findAllScopeSymbols(&moduleSymbols, position)
+		} else {
+			// Find symbols in document
+			moduleSymbols := l.functionTreeByDocument[doc.URI]
+			scopeSymbols := l.findAllScopeSymbols(&moduleSymbols, position)
 
-		for _, storedIdentifier := range scopeSymbols {
-			if !strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition.Token) {
-				continue
+			for _, storedIdentifier := range scopeSymbols {
+				hasPrefix := strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition.Token)
+				if !filterMembers || (filterMembers && !hasPrefix) {
+					continue
+				}
+
+				tempKind := storedIdentifier.GetKind()
+
+				items = append(items, protocol.CompletionItem{
+					Label: storedIdentifier.GetName(),
+					Kind:  &tempKind,
+				})
 			}
-
-			tempKind := storedIdentifier.GetKind()
-
-			items = append(items, protocol.CompletionItem{
-				Label: storedIdentifier.GetName(),
-				Kind:  &tempKind,
-			})
 		}
-	}
 
+		slices.SortFunc(items, func(a, b protocol.CompletionItem) int {
+			return cmp.Compare(a.Label, b.Label)
+		})
+	*/
 	return items
 }
