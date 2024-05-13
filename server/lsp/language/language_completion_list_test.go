@@ -94,7 +94,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 					source+"\n"+tt.input,
 				)
 
-				doc := state.docs["test.c3"]
+				doc := state.GetDoc("test.c3")
 				position := buildPosition(4, 1) // Cursor after `v|`
 
 				completionList := state.language.BuildCompletionList(&doc, position)
@@ -130,7 +130,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 					"test.c3",
 					source+"\n"+tt.input+"\n}",
 				)
-				doc := state.docs["test.c3"]
+				doc := state.GetDoc("test.c3")
 				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
 				completionList := state.language.BuildCompletionList(&doc, position)
@@ -167,7 +167,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 					"test.c3",
 					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
 				)
-				doc := state.docs["test.c3"]
+				doc := state.GetDoc("test.c3")
 				position := buildPosition(4, uint(len(tt.input))) // Cursor after `<input>|`
 
 				completionList := state.language.BuildCompletionList(&doc, position)
@@ -235,7 +235,7 @@ func TestLanguage_BuildCompletionList_structs(t *testing.T) {
 					Square inst;
 					inst`+tt.input+`}`,
 				)
-				doc := state.docs["test.c3"]
+				doc := state.GetDoc("test.c3")
 				position := buildPosition(6, 9+uint(len(tt.input))) // Cursor after `<input>|`
 
 				completionList := state.language.BuildCompletionList(&doc, position)
