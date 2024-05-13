@@ -60,6 +60,7 @@ func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, posi
 		}
 
 		for _, function := range scopeFunction.ChildrenFunctions {
+			symbols = append(symbols, function)
 			if function.GetDocumentRange().HasPosition(position) {
 				symbols = append(symbols, function)
 
@@ -395,28 +396,6 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 	}
 }
 
-/*
-	func (l *Language) findParentType(searchParams SearchParams, debugger FindDebugger) indexables.Indexable {
-		prevIndexable := l.findInParentSymbols(searchParams, debugger)
-
-		_, isStructMember := prevIndexable.(indexables.StructMember)
-		if isStructMember {
-			var token document.Token
-			switch prevIndexable.(type) {
-			case indexables.StructMember:
-				structMember, _ := prevIndexable.(indexables.StructMember)
-				token = document.NewToken(structMember.GetType(), prevIndexable.GetIdRange())
-			}
-			levelSearchParams := NewSearchParamsFromToken(
-				token,
-				prevIndexable.GetDocumentURI(),
-			)
-			prevIndexable = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
-		}
-
-		return prevIndexable
-	}
-*/
 func findDeepFirst(identifier string, position indexables.Position, function *indexables.Function, depth uint, limitSearchInScope bool) (indexables.Indexable, uint) {
 	if function.FunctionType() == indexables.UserDefined && identifier == function.GetFullName() {
 		return function, depth
