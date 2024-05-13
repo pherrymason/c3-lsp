@@ -71,11 +71,7 @@ func Test_isCompletingAChain(t *testing.T) {
 }
 
 func TestLanguage_BuildCompletionList(t *testing.T) {
-	t.Skip()
-	parser := createParser()
-	language := NewLanguage(commonlog.MockLogger{})
-
-	//documents := installDocuments(&language, &parser)
+	state := NewTestState()
 
 	t.Run("Should suggest variable names defined in module", func(t *testing.T) {
 		source := `
@@ -93,12 +89,15 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				state.registerDoc(
+					"test.c3",
+					source+"\n"+tt.input,
+				)
 
-				doc := document.NewDocument("test.c3", source+"\n"+tt.input)
-				language.RefreshDocumentIdentifiers(&doc, &parser)
+				doc := state.docs["test.c3"]
 				position := buildPosition(4, 1) // Cursor after `v|`
 
-				completionList := language.BuildCompletionList(&doc, position)
+				completionList := state.language.BuildCompletionList(&doc, position)
 
 				assert.Equal(t, 1, len(completionList))
 				assert.Equal(t, tt.expected, completionList[0])
@@ -127,14 +126,51 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
-
-				doc := document.NewDocument("test.c3", source+`
-`+tt.input+`
-				}`)
-				language.RefreshDocumentIdentifiers(&doc, &parser)
+				state.registerDoc(
+					"test.c3",
+					source+"\n"+tt.input+"\n}",
+				)
+				doc := state.docs["test.c3"]
 				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
-				completionList := language.BuildCompletionList(&doc, position)
+				completionList := state.language.BuildCompletionList(&doc, position)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should suggest function names", func(t *testing.T) {
+		sourceStart := `
+		fn void process(){}
+		fn void main() {`
+		sourceEnd := `
+		}`
+
+		expectedKind := protocol.CompletionItemKindFunction
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"p", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind},
+			}},
+			{"proc", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind},
+			}},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				state.registerDoc(
+					"test.c3",
+					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
+				)
+				doc := state.docs["test.c3"]
+				position := buildPosition(4, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := state.language.BuildCompletionList(&doc, position)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -144,54 +180,65 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 }
 
 func TestLanguage_BuildCompletionList_structs(t *testing.T) {
-	t.Skip()
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
-
-	parser := createParser()
-	language := NewLanguage(logger)
+	state := NewTestState(logger)
+	//parser := createParser()
+	//language := NewLanguage(logger)
 
 	t.Run("Should suggest struct members", func(t *testing.T) {
-		source := `
-		struct Color { int red; int green; int blue; }
-		struct Square { int width; int height; Color color; }
-		fn void main() {
-			Square inst;
-			inst`
 		expectedKind := protocol.CompletionItemKindField
 		cases := []struct {
+			name     string
 			input    string
 			expected []protocol.CompletionItem
 		}{
-			{".", []protocol.CompletionItem{
-				{Label: "color", Kind: &expectedKind},
-				{Label: "height", Kind: &expectedKind},
-				{Label: "width", Kind: &expectedKind},
-			}},
+			{
+				"suggest all struct members",
+				".",
+				[]protocol.CompletionItem{
+					{Label: "color", Kind: &expectedKind},
+					{Label: "height", Kind: &expectedKind},
+					{Label: "width", Kind: &expectedKind},
+				}},
 
-			{".w", []protocol.CompletionItem{
-				{Label: "width", Kind: &expectedKind},
-			}},
+			{
+				"suggest members starting with `w`",
+				".w",
+				[]protocol.CompletionItem{
+					{Label: "width", Kind: &expectedKind},
+				}},
 
-			{".color.", []protocol.CompletionItem{
-				{Label: "blue", Kind: &expectedKind},
-				{Label: "green", Kind: &expectedKind},
-				{Label: "red", Kind: &expectedKind},
-			}},
+			{
+				"suggest members of Color",
+				".color.", []protocol.CompletionItem{
+					{Label: "blue", Kind: &expectedKind},
+					{Label: "green", Kind: &expectedKind},
+					{Label: "red", Kind: &expectedKind},
+				}},
 
-			{".color.r", []protocol.CompletionItem{
-				{Label: "red", Kind: &expectedKind},
-			}},
+			{
+				"suggest members of Color starting with `r`",
+				".color.r",
+				[]protocol.CompletionItem{
+					{Label: "red", Kind: &expectedKind},
+				}},
 		}
 
-		for n, tt := range cases {
-			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+		for _, tt := range cases {
+			t.Run(tt.name, func(t *testing.T) {
+				state.registerDoc("test.c3",
+					`
+				struct Color { int red; int green; int blue; }
+				struct Square { int width; int height; Color color; }
+				fn void main() {
+					Square inst;
+					inst`+tt.input+`}`,
+				)
+				doc := state.docs["test.c3"]
+				position := buildPosition(6, 9+uint(len(tt.input))) // Cursor after `<input>|`
 
-				doc := document.NewDocument("test.c3", source+tt.input+`}`)
-				language.RefreshDocumentIdentifiers(&doc, &parser)
-				position := buildPosition(6, 7+uint(len(tt.input))) // Cursor after `<input>|`
-
-				completionList := language.BuildCompletionList(&doc, position)
+				completionList := state.language.BuildCompletionList(&doc, position)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)

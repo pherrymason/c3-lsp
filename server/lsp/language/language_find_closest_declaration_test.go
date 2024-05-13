@@ -33,8 +33,23 @@ type TestState struct {
 	parser   p.Parser
 }
 
-func NewState() TestState {
-	logger := &commonlog.MockLogger{}
+func (t TestState) GetDoc(docId string) document.Document {
+	return t.docs[docId]
+}
+
+func (t TestState) GetParsedModules(docId string) p.ParsedModules {
+	return t.language.functionTreeByDocument[docId]
+}
+
+func NewTestState(loggers ...commonlog.Logger) TestState {
+	var logger commonlog.Logger
+
+	if len(loggers) == 0 {
+		logger = commonlog.MockLogger{}
+	} else {
+		logger = loggers[0]
+	}
+
 	l := NewLanguage(logger)
 
 	s := TestState{
@@ -43,6 +58,10 @@ func NewState() TestState {
 		parser:   p.NewParser(logger),
 	}
 	return s
+}
+
+func (s *TestState) clearDocs() {
+	s.docs = make(map[string]document.Document, 0)
 }
 
 func (s *TestState) registerDoc(docId string, source string) {
@@ -169,7 +188,7 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
-	state := NewState()
+	state := NewTestState()
 
 	t.Run("Find global variable definition, with cursor in usage", func(t *testing.T) {
 		state.registerDoc(
@@ -283,7 +302,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 // Tests related to structs:
 func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
-	state := NewState()
+	state := NewTestState()
 
 	t.Run("Should find struct declaration in variable declaration", func(t *testing.T) {
 		state.registerDoc(
@@ -358,7 +377,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
-	state := NewState()
+	state := NewTestState()
 
 	t.Run("Find local enum variable definition when cursor is in enum declaration", func(t *testing.T) {
 		state.registerDoc(
@@ -449,7 +468,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
-	state := NewState()
+	state := NewTestState()
 
 	t.Run("Find local fault definition in type declaration", func(t *testing.T) {
 		state.registerDoc(
@@ -518,7 +537,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
-	state := NewState()
+	state := NewTestState()
 
 	t.Run("Find local definition definition", func(t *testing.T) {
 		state.registerDoc(
@@ -538,7 +557,7 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
-	state := NewState()
+	state := NewTestState()
 
 	t.Run("Find local function definition", func(t *testing.T) {
 		state.registerDoc(
