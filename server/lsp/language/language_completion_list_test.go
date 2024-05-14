@@ -248,7 +248,6 @@ func TestLanguage_BuildCompletionList_structs(t *testing.T) {
 }
 
 func TestLanguage_BuildCompletionList_enums(t *testing.T) {
-	t.Skip()
 	parser := createParser()
 	language := NewLanguage(commonlog.MockLogger{})
 
@@ -309,10 +308,10 @@ func TestLanguage_BuildCompletionList_enums(t *testing.T) {
 				"Find all enum enumerables when prefixed with enum name",
 				"Color.",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("RED", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("GREEN", protocol.CompletionItemKindEnumMember),
 					CreateCompletionItem("BLUE", protocol.CompletionItemKindEnumMember),
 					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("GREEN", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("RED", protocol.CompletionItemKindEnumMember),
 				}},
 			{
 				"Find matching enum enumerables",
