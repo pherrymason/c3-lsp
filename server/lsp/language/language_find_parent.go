@@ -20,8 +20,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 		WithModule(searchParams.Module()).
 		Build()
 
-	resiñt := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
-	elm := resiñt.Get()
+	result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
+	elm := result.Get()
 
 	for {
 		for {
@@ -83,12 +83,12 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					WithDocId(docId.Get()).
 					WithModule(searchParams.Module()).
 					Build()
-				resiñt := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
-				if resiñt.IsNone() {
+				result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
+				if result.IsNone() {
 					return option.None[idx.Indexable]()
 				}
 
-				elm = resiñt.Get()
+				elm = result.Get()
 				state.Advance()
 			}
 		}

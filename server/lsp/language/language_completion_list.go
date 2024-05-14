@@ -110,6 +110,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position indexabl
 				}
 			}
 			// TODO get struct methods
+			// Current way of storing struct methods makes this kind of difficult.
 
 		case indexables.Enum:
 			enum := prevIndexable.(indexables.Enum)

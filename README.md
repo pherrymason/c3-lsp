@@ -7,39 +7,44 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 ## Server
 **Features**
 - [x] Indexes workspace variables and function definitions
-- [x] Naïve auto completion items of variables and function names defined in the workspace.
-- [x] Go to declaration.
-- [x] Hover
+- [x] **TextDocumentCompletion.** Suggests symbols located in project's source code. See notes.
+- [x] **Go to declaration.**
+- [x] **Hover** Displays information about symbol under cursor.
 
-**TODO list**
-- Parser:
-  - [x] Variables & type
-  - [x] [Global constants]()
-  - [x] Functions
-    - [x] Function parameters
-    - [x] Function return type
-  - [x] Enums + Enumerators
-    - [x] base type 
-    - [ ] enum methods
-  - [x] [Faults](https://c3-lang.org/references/docs/types/#faults)
-  - [x] Structs
-    - [x] Struct members
-    - [x] Struct methods
-    - [x] Struct implementing interface
-  - [x] Unions
-    - [x] Union members
-  - [~] defines
-  - [x] Interfaces
-  - [~] [Macros](https://c3-lang.org/references/docs/macros/)
-  - [x] imports
-  - [x] modules
-    - [x] multiple modules per file
-    - [x] implicit module name is assumed to be the file name, converted to lower case, with any invalid characters replaced by underscore (_).
-  - [ ] [Generics](https://c3-lang.org/references/docs/generics/)
-  - [ ] [Language Builtins](https://c3-lang.org/references/docs/builtins/)
+**Next release**
+- Index Generics
+- TextDocumentCompletion: Be able to suggest `defs`, `Interfaces`, `module names`
 
+**Current status**
+***Index status***
+- [ ] Attributes
+- [x] Variables & type
+- [x] [Global constants]()
+- [x] Functions
+- [x] Function parameters
+- [x] Function return type
+- [x] Enums + Enumerators
+- [x] base type 
+- [ ] enum methods
+- [x] [Faults](https://c3-lang.org/references/docs/types/#faults)
+- [x] Structs
+- [x] Struct members
+- [x] Struct methods
+- [x] Struct implementing interface
+- [x] Unions
+- [x] Union members
+- [~] defines
+- [x] Interfaces
+- [~] [Macros](https://c3-lang.org/references/docs/macros/)
+- [x] imports
+- [x] modules
+- [x] multiple modules per file
+- [x] implicit module name is assumed to be the file name, converted to lower case, with any invalid characters replaced by underscore (_).
+- [ ] [Generics](https://c3-lang.org/references/docs/generics/)
+- [ ] [Language Builtins](https://c3-lang.org/references/docs/builtins/)
+
+***LSP Features Status***
 - [x] Index scopes and its hierarchy to improve hover and Auto Completion.
-- [ ] Complete Hover
 - [ ] Complete Go to declaration
   - [x] Find symbol in same scope
   - [x] Find symbol in parent scope
@@ -47,11 +52,9 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
   - [x] Find symbol in imported module
   - [x] Find symbol in implicit parent module.
   - [ ] Find symbol in stdlib
-- [ ] Go to definition
-- [ ] Go to type definition
-- [ ] Go to implementation
-- [ ] Find references
-- [ ] Rename
+- [~] TextDocumentCompletion:
+    - Struct methods are not suggested until first letter is written.
+    - Completion of symbols defined in stdlib.
 
 ## Useful links:
 - LSP specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
