@@ -9,9 +9,9 @@ type FaultBuilder struct {
 func NewFaultBuilder(name string, baseType string, module string, docId string) *FaultBuilder {
 	return &FaultBuilder{
 		fault: Fault{
-			name:     name,
 			baseType: baseType,
 			BaseIndexable: BaseIndexable{
+				name:         name,
 				moduleString: module,
 				module:       NewModulePathFromString(module),
 				documentURI:  docId,
@@ -49,8 +49,8 @@ type FaultConstantBuilder struct {
 func NewFaultConstantBuilder(name string, docId string) *FaultConstantBuilder {
 	return &FaultConstantBuilder{
 		faultConstant: FaultConstant{
-			name: name,
 			BaseIndexable: BaseIndexable{
+				name:        name,
 				documentURI: docId,
 				Kind:        protocol.CompletionItemKindEnumMember,
 			},

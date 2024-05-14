@@ -9,13 +9,14 @@ type DefBuilder struct {
 func NewDefBuilder(name string, module string, docId string) *DefBuilder {
 	return &DefBuilder{
 		def: Def{
-			name: name,
-			BaseIndexable: BaseIndexable{
-				module:       NewModulePathFromString(module),
-				moduleString: module,
-				documentURI:  docId,
-				Kind:         protocol.CompletionItemKindTypeParameter,
-			},
+			BaseIndexable: NewBaseIndexable(
+				name,
+				module,
+				docId,
+				NewRange(0, 0, 0, 0),
+				NewRange(0, 0, 0, 0),
+				protocol.CompletionItemKindTypeParameter,
+			),
 		},
 	}
 }

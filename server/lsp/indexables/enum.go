@@ -7,7 +7,6 @@ import (
 )
 
 type Enum struct {
-	name        string
 	baseType    string
 	enumerators []Enumerator
 	BaseIndexable
@@ -15,53 +14,21 @@ type Enum struct {
 
 func NewEnum(name string, baseType string, enumerators []Enumerator, module string, docId string, idRange Range, docRange Range) Enum {
 	return Enum{
-		name:        name,
 		baseType:    baseType,
 		enumerators: enumerators,
-		BaseIndexable: BaseIndexable{
-			moduleString: module,
-			module:       NewModulePathFromString(module),
-			documentURI:  docId,
-			idRange:      idRange,
-			docRange:     docRange,
-			Kind:         protocol.CompletionItemKindEnum,
-		},
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			docRange,
+			protocol.CompletionItemKindEnum,
+		),
 	}
-}
-
-func (e Enum) GetName() string {
-	return e.name
 }
 
 func (e Enum) GetType() string {
 	return e.baseType
-}
-
-func (e Enum) GetModuleString() string {
-	return e.moduleString
-}
-func (e Enum) GetModule() ModulePath {
-	return e.module
-}
-
-func (e Enum) IsSubModuleOf(module ModulePath) bool {
-	return e.module.IsSubModuleOf(module)
-}
-
-func (e Enum) GetKind() protocol.CompletionItemKind {
-	return e.Kind
-}
-
-func (e Enum) GetDocumentURI() string {
-	return e.documentURI
-}
-
-func (e Enum) GetIdRange() Range {
-	return e.idRange
-}
-
-func (e Enum) GetDocumentRange() Range {
-	return e.docRange
 }
 
 func (e *Enum) RegisterEnumerator(name string, value string, posRange Range) {

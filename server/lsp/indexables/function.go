@@ -51,11 +51,11 @@ func NewMacro(name string, argumentIds []string, module string, docId string, id
 func newFunctionType(fType FunctionType, typeIdentifier string, name string, returnType string, argumentIds []string, module string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return Function{
 		fType:          fType,
-		name:           name,
 		returnType:     returnType,
 		argumentIds:    argumentIds,
 		typeIdentifier: typeIdentifier,
 		BaseIndexable: BaseIndexable{
+			name:         name,
 			moduleString: module,
 			module:       NewModulePathFromString(module),
 			documentURI:  docId,
@@ -82,10 +82,6 @@ func (f Function) FunctionType() FunctionType {
 	return f.fType
 }
 
-func (f Function) GetName() string {
-	return f.name
-}
-
 func (f Function) GetFullName() string {
 	if f.typeIdentifier == "" {
 		return f.GetName()
@@ -100,38 +96,6 @@ func (f Function) GetReturnType() string {
 
 func (f Function) ArgumentIds() []string {
 	return f.argumentIds
-}
-
-func (f Function) GetKind() protocol.CompletionItemKind {
-	return f.Kind
-}
-
-func (f Function) GetModuleString() string {
-	return f.moduleString
-}
-
-func (f Function) GetModule() ModulePath {
-	return f.module
-}
-
-func (f Function) IsSubModuleOf(module ModulePath) bool {
-	if module.IsEmpty() {
-		return false
-	}
-
-	return f.module.IsSubModuleOf(module)
-}
-
-func (f Function) GetDocumentURI() string {
-	return f.documentURI
-}
-
-func (f Function) GetIdRange() Range {
-	return f.idRange
-}
-
-func (f Function) GetDocumentRange() Range {
-	return f.docRange
 }
 
 func (f *Function) AddVariables(variables []Variable) {

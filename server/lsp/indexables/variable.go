@@ -7,38 +7,35 @@ import (
 )
 
 type Variable struct {
-	name string
 	Type Type
 	BaseIndexable
 }
 
-func NewVariable(name string, variableType Type, module string, uri string, idRange Range, docRange Range) Variable {
+func NewVariable(name string, variableType Type, module string, docId string, idRange Range, docRange Range) Variable {
 	return Variable{
-		name: name,
 		Type: variableType,
-		BaseIndexable: BaseIndexable{
-			moduleString: module,
-			module:       NewModulePathFromString(module),
-			documentURI:  uri,
-			idRange:      idRange,
-			docRange:     docRange,
-			Kind:         protocol.CompletionItemKindVariable,
-		},
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			docRange,
+			protocol.CompletionItemKindVariable,
+		),
 	}
 }
 
-func NewConstant(name string, variableType Type, module string, uri string, idRange Range, docRange Range) Variable {
+func NewConstant(name string, variableType Type, module string, docId string, idRange Range, docRange Range) Variable {
 	return Variable{
-		name: name,
 		Type: variableType,
-		BaseIndexable: BaseIndexable{
-			moduleString: module,
-			module:       NewModulePathFromString(module),
-			documentURI:  uri,
-			idRange:      idRange,
-			docRange:     docRange,
-			Kind:         protocol.CompletionItemKindConstant,
-		},
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			docRange,
+			protocol.CompletionItemKindConstant,
+		),
 	}
 }
 
@@ -46,37 +43,8 @@ func (v Variable) GetType() Type {
 	return v.Type
 }
 
-func (v Variable) GetName() string {
-	return v.name
-}
-
-func (v Variable) GetModuleString() string { return v.moduleString }
-
-func (v Variable) GetModule() ModulePath {
-	return v.module
-}
-
-func (v Variable) IsSubModuleOf(module ModulePath) bool {
-	return v.module.IsSubModuleOf(module)
-}
-
-func (v Variable) GetKind() protocol.CompletionItemKind {
-	return v.Kind
-}
-
 func (v Variable) IsConstant() bool {
 	return v.Kind == protocol.CompletionItemKindConstant
-}
-
-func (v Variable) GetDocumentURI() string {
-	return v.documentURI
-}
-
-func (v Variable) GetIdRange() Range {
-	return v.idRange
-}
-func (v Variable) GetDocumentRange() Range {
-	return v.docRange
 }
 
 func (v Variable) GetHoverInfo() string {

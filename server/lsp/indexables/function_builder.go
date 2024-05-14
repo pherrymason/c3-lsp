@@ -32,7 +32,6 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 	return &FunctionBuilder{
 		function: Function{
 			fType:             UserDefined,
-			name:              name,
 			returnType:        returnType,
 			argumentIds:       nil,
 			Variables:         make(map[string]Variable),
@@ -41,6 +40,7 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 			Structs:           make(map[string]Struct),
 			ChildrenFunctions: make([]Function, 0),
 			BaseIndexable: NewBaseIndexable(
+				name,
 				module,
 				docId,
 				NewRange(0, 0, 0, 0),

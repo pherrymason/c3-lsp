@@ -7,7 +7,6 @@ import (
 )
 
 type Struct struct {
-	name       string
 	members    []StructMember
 	isUnion    bool
 	implements []string
@@ -16,39 +15,33 @@ type Struct struct {
 
 func NewStruct(name string, interfaces []string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
 	return Struct{
-		name:       name,
 		members:    members,
 		isUnion:    false,
 		implements: interfaces,
-		BaseIndexable: BaseIndexable{
-			moduleString: module,
-			module:       NewModulePathFromString(module),
-			documentURI:  docId,
-			idRange:      idRange,
-			docRange:     docRange,
-			Kind:         protocol.CompletionItemKindStruct,
-		},
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			docRange,
+			protocol.CompletionItemKindStruct,
+		),
 	}
 }
 
 func NewUnion(name string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
 	return Struct{
-		name:    name,
 		members: members,
 		isUnion: true,
-		BaseIndexable: BaseIndexable{
-			moduleString: module,
-			module:       NewModulePathFromString(module),
-			documentURI:  docId,
-			idRange:      idRange,
-			docRange:     docRange,
-			Kind:         protocol.CompletionItemKindStruct,
-		},
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			docRange,
+			protocol.CompletionItemKindStruct,
+		),
 	}
-}
-
-func (s Struct) GetName() string {
-	return s.name
 }
 
 func (s Struct) GetMembers() []StructMember {
@@ -59,35 +52,8 @@ func (s Struct) GetInterfaces() []string {
 	return s.implements
 }
 
-func (s Struct) GetModuleString() string {
-	return s.moduleString
-}
-
-func (s Struct) GetModule() ModulePath {
-	return s.module
-}
-
-func (s Struct) IsSubModuleOf(module ModulePath) bool {
-	return s.module.IsSubModuleOf(module)
-}
-
-func (s Struct) GetKind() protocol.CompletionItemKind {
-	return s.Kind
-}
-
 func (s Struct) IsUnion() bool {
 	return s.isUnion
-}
-
-func (s Struct) GetDocumentURI() string {
-	return s.documentURI
-}
-
-func (s Struct) GetIdRange() Range {
-	return s.idRange
-}
-func (s Struct) GetDocumentRange() Range {
-	return s.docRange
 }
 
 func (s Struct) GetHoverInfo() string {

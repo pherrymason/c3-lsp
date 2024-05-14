@@ -9,14 +9,15 @@ type EnumBuilder struct {
 func NewEnumBuilder(name string, baseType string, module string, docId string) *EnumBuilder {
 	return &EnumBuilder{
 		enum: Enum{
-			name:     name,
 			baseType: baseType,
-			BaseIndexable: BaseIndexable{
-				moduleString: module,
-				module:       NewModulePathFromString(module),
-				documentURI:  docId,
-				Kind:         protocol.CompletionItemKindEnum,
-			},
+			BaseIndexable: NewBaseIndexable(
+				name,
+				module,
+				docId,
+				NewRange(0, 0, 0, 0),
+				NewRange(0, 0, 0, 0),
+				protocol.CompletionItemKindEnum,
+			),
 		},
 	}
 }
@@ -49,12 +50,15 @@ type EnumeratorBuilder struct {
 func NewEnumeratorBuilder(name string, docId string) *EnumeratorBuilder {
 	return &EnumeratorBuilder{
 		enumerator: Enumerator{
-			name:  name,
 			value: "",
-			BaseIndexable: BaseIndexable{
-				documentURI: docId,
-				Kind:        protocol.CompletionItemKindEnumMember,
-			},
+			BaseIndexable: NewBaseIndexable(
+				name,
+				"",
+				docId,
+				NewRange(0, 0, 0, 0),
+				NewRange(0, 0, 0, 0),
+				protocol.CompletionItemKindEnumMember,
+			),
 		},
 	}
 }
