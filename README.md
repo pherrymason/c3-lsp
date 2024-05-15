@@ -23,9 +23,9 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 - [x] Functions
 - [x] Function parameters
 - [x] Function return type
-- [x] Enums + Enumerators
-- [x] base type 
-- [ ] enum methods
+    - [x] Enums + Enumerators
+    - [x] base type 
+    - [ ] enum methods
 - [x] [Faults](https://c3-lang.org/references/docs/types/#faults)
 - [x] Structs
     - [x] Struct members
@@ -33,7 +33,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
     - [x] Struct implementing interface
 - [x] bitstruct
 - [x] Unions
-- [x] Union members
+    - [x] Union members
 - [~] defines
 - [x] Interfaces
 - [~] [Macros](https://c3-lang.org/references/docs/macros/)
