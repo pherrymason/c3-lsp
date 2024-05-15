@@ -1,13 +1,11 @@
 package lsp
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/pherrymason/c3-lsp/fs"
+	"github.com/pherrymason/c3-lsp/lsp/document"
+	"github.com/pherrymason/c3-lsp/lsp/handlers"
 	l "github.com/pherrymason/c3-lsp/lsp/language"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
-	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	_ "github.com/tliron/commonlog/simple"
@@ -17,10 +15,7 @@ import (
 )
 
 type Server struct {
-	server    *glspserv.Server
-	documents *documentStore
-	language  l.Language
-	parser    p.Parser
+	server *glspserv.Server
 }
 
 // ServerOpts holds the options to create a new Server.
@@ -28,30 +23,26 @@ type ServerOpts struct {
 	Name    string
 	Version string
 	LogFile string
-	//Logger         *util.ProxyLogger
-	//Notebooks      *core.NotebookStore
-	//TemplateLoader core.TemplateLoader
-	FS fs.FileStorage
+	FS      fs.FileStorage
 }
 
 func NewServer(opts ServerOpts) *Server {
-	lsName := "C3-LSP"
-	version := "0.0.1"
+	serverName := "C3-LSP"
+	serverVersion := "0.0.1"
 
 	// This increases logging verbosity (optional)
 	commonlog.Configure(2, nil)
 
 	handler := protocol.Handler{}
-	glspServer := glspserv.NewServer(&handler, lsName, true)
+	glspServer := glspserv.NewServer(&handler, serverName, true)
 
 	logger := commonlog.GetLogger("C3-LSP.parser")
 
-	server := &Server{
-		server:    glspServer,
-		documents: newDocumentStore(opts.FS, &glspServer.Log),
-		language:  l.NewLanguage(logger),
-		parser:    p.NewParser(&logger),
-	}
+	documents := document.NewDocumentStore(opts.FS, &glspServer.Log)
+	language := l.NewLanguage(logger)
+	parser := p.NewParser(&logger)
+
+	handlers := handlers.NewHandlers(documents, &language, &parser)
 
 	handler.Initialized = initialized
 	handler.Shutdown = shutdown
@@ -59,114 +50,22 @@ func NewServer(opts ServerOpts) *Server {
 
 	handler.Initialize = func(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 		capabilities := handler.CreateServerCapabilities()
-
-		change := protocol.TextDocumentSyncKindIncremental
-		capabilities.TextDocumentSync = protocol.TextDocumentSyncOptions{
-			OpenClose: boolPtr(true),
-			Change:    &change,
-			Save:      boolPtr(true),
-		}
-		capabilities.DeclarationProvider = true
-		capabilities.CompletionProvider = &protocol.CompletionOptions{
-			TriggerCharacters: []string{"."},
-		}
-		server.documents.rootURI = *params.RootURI
-		server.indexWorkspace()
-
-		return protocol.InitializeResult{
-			Capabilities: capabilities,
-			ServerInfo: &protocol.InitializeResultServerInfo{
-				Name:    lsName,
-				Version: &version,
-			},
-		}, nil
+		return handlers.Initialize(
+			serverName,
+			serverVersion,
+			capabilities,
+			context,
+			params,
+		)
 	}
 
-	handler.TextDocumentDidOpen = func(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
-		doc, err := server.documents.Open(*params, context.Notify, &server.parser)
-		if err != nil {
-			glspServer.Log.Debug("Could not open file document.")
-			return err
-		}
-
-		if doc != nil {
-			server.language.RefreshDocumentIdentifiers(doc, &server.parser)
-		}
-
-		return nil
-	}
-
-	handler.TextDocumentDidChange = func(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
-		doc, ok := server.documents.Get(params.TextDocument.URI)
-		if !ok {
-			return nil
-		}
-
-		doc.ApplyChanges(params.ContentChanges)
-
-		server.language.RefreshDocumentIdentifiers(doc, &server.parser)
-		return nil
-	}
-
-	handler.TextDocumentDidClose = func(context *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
-		server.documents.Close(params.TextDocument.URI)
-		return nil
-	}
-
-	handler.TextDocumentDidSave = func(ctx *glsp.Context, params *protocol.DidSaveTextDocumentParams) error {
-		return nil
-	}
-
-	// Support "Hover"
-	handler.TextDocumentHover = func(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
-		doc, ok := server.documents.Get(params.TextDocument.URI)
-		if !ok {
-			return nil, nil
-		}
-
-		server.server.Log.Debug(fmt.Sprint("HOVER requested on ", len(doc.Content), params.Position.IndexIn(doc.Content)))
-		hoverOption := server.language.FindHoverInformation(doc, params)
-		if hoverOption.IsNone() {
-			//server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
-			return nil, nil
-		}
-
-		hover := hoverOption.Get()
-		return &hover, nil
-	}
-
-	// Support "Go to declaration"
-	handler.TextDocumentDeclaration = func(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
-		doc, ok := server.documents.Get(params.TextDocument.URI)
-		if !ok {
-			return nil, nil
-		}
-
-		identifierOption := server.language.FindSymbolDeclarationInWorkspace(doc, symbols.NewPositionFromLSPPosition(params.Position))
-
-		if identifierOption.IsNone() {
-			return nil, nil
-		}
-
-		indexable := identifierOption.Get()
-		return protocol.Location{
-			URI:   indexable.GetDocumentURI(),
-			Range: lsp_NewRangeFromRange(indexable.GetIdRange()),
-		}, nil
-	}
-
-	// Support "Completion"
-	handler.TextDocumentCompletion = func(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
-		doc, ok := server.documents.Get(params.TextDocumentPositionParams.TextDocument.URI)
-		if !ok {
-			glspServer.Log.Debug(fmt.Sprintf("Could not find document: %s", params.TextDocumentPositionParams.TextDocument.URI))
-			return nil, nil
-		}
-		glspServer.Log.Debug("building completion list")
-		suggestions := server.language.BuildCompletionList(doc, symbols.NewPositionFromLSPPosition(params.Position))
-
-		return suggestions, nil
-	}
+	handler.TextDocumentDidOpen = handlers.TextDocumentDidOpen
+	handler.TextDocumentDidChange = handlers.TextDocumentDidChange
+	handler.TextDocumentDidClose = handlers.TextDocumentDidClose
+	handler.TextDocumentDidSave = handlers.TextDocumentDidSave
+	handler.TextDocumentHover = handlers.TextDocumentHover
+	handler.TextDocumentDeclaration = handlers.TextDocumentDeclaration
+	handler.TextDocumentCompletion = handlers.TextDocumentCompletion
 
 	handler.CompletionItemResolve = func(context *glsp.Context, params *protocol.CompletionItem) (*protocol.CompletionItem, error) {
 		return params, nil
@@ -175,6 +74,10 @@ func NewServer(opts ServerOpts) *Server {
 	handler.WorkspaceDidChangeWorkspaceFolders = func(context *glsp.Context, params *protocol.DidChangeWorkspaceFoldersParams) error {
 
 		return nil
+	}
+
+	server := &Server{
+		server: glspServer,
 	}
 
 	return server
@@ -203,18 +106,4 @@ func shutdown(context *glsp.Context) error {
 func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
 	protocol.SetTraceValue(params.Value)
 	return nil
-}
-
-func (s *Server) indexWorkspace() {
-	path, _ := fs.UriToPath(s.documents.rootURI)
-	files, _ := fs.ScanForC3(fs.GetCanonicalPath(path))
-	s.server.Log.Debug(fmt.Sprint("Workspace FILES:", len(files), files))
-
-	for _, filePath := range files {
-		s.server.Log.Debug(fmt.Sprint("Parsing ", filePath))
-
-		content, _ := os.ReadFile(filePath)
-		doc := NewDocumentFromString(filePath, string(content))
-		s.language.RefreshDocumentIdentifiers(&doc, &s.parser)
-	}
 }

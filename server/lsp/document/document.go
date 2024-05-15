@@ -26,6 +26,10 @@ func NewDocument(docId string, documentContent string) Document {
 	}
 }
 
+func NewDocumentFromString(docId string, documentContent string) Document {
+	return NewDocument(docId, documentContent)
+}
+
 // ApplyChanges updates the content of the Document from LSP textDocument/didChange events.
 func (d *Document) ApplyChanges(changes []interface{}) {
 	for _, change := range changes {

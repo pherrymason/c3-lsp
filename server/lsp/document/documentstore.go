@@ -1,33 +1,31 @@
-package lsp
+package document
 
 import (
 	"fmt"
 
 	"github.com/pherrymason/c3-lsp/fs"
-	"github.com/pherrymason/c3-lsp/lsp/document"
-	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-type documentStore struct {
-	rootURI   string
-	documents map[string]*document.Document
+type DocumentStore struct {
+	RootURI   string
+	documents map[string]*Document
 	fs        fs.FileStorage
 	logger    commonlog.Logger
 }
 
-func newDocumentStore(fs fs.FileStorage, logger *commonlog.Logger) *documentStore {
-	return &documentStore{
-		documents: map[string]*document.Document{},
+func NewDocumentStore(fs fs.FileStorage, logger *commonlog.Logger) *DocumentStore {
+	return &DocumentStore{
+		documents: map[string]*Document{},
 		fs:        fs,
 		logger:    *logger,
 	}
 }
 
-func (s *documentStore) normalizePath(pathOrUri string) (string, error) {
+func (s *DocumentStore) normalizePath(pathOrUri string) (string, error) {
 	path, err := fs.UriToPath(pathOrUri)
 	if err != nil {
 		return "", errors.Wrapf(err, "unable to parse URI: %s", pathOrUri)
@@ -35,7 +33,7 @@ func (s *documentStore) normalizePath(pathOrUri string) (string, error) {
 	return fs.GetCanonicalPath(path), nil
 }
 
-func (s *documentStore) Open(params protocol.DidOpenTextDocumentParams, notify glsp.NotifyFunc, parser *parser.Parser) (*document.Document, error) {
+func (s *DocumentStore) Open(params protocol.DidOpenTextDocumentParams, notify glsp.NotifyFunc) (*Document, error) {
 	langID := params.TextDocument.LanguageID
 	if langID != "c3" {
 		return nil, nil
@@ -55,11 +53,11 @@ func (s *documentStore) Open(params protocol.DidOpenTextDocumentParams, notify g
 	return &doc, nil
 }
 
-func (s *documentStore) Close(uri protocol.DocumentUri) {
+func (s *DocumentStore) Close(uri protocol.DocumentUri) {
 	delete(s.documents, uri)
 }
 
-func (s *documentStore) Get(pathOrURI string) (*document.Document, bool) {
+func (s *DocumentStore) Get(pathOrURI string) (*Document, bool) {
 	path, err := s.normalizePath(pathOrURI)
 	s.logger.Debugf("normalized path:%s", path)
 
