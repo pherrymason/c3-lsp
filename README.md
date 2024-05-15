@@ -15,7 +15,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 - Index Generics
 - TextDocumentCompletion: Be able to suggest `defs`, `Interfaces`, `module names`
 
-**Current status**
+**Current status**  
 ***Index status***
 - [ ] Attributes
 - [x] Variables & type
@@ -28,9 +28,10 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 - [ ] enum methods
 - [x] [Faults](https://c3-lang.org/references/docs/types/#faults)
 - [x] Structs
-- [x] Struct members
-- [x] Struct methods
-- [x] Struct implementing interface
+    - [x] Struct members
+    - [x] Struct methods
+    - [x] Struct implementing interface
+- [x] bitstruct
 - [x] Unions
 - [x] Union members
 - [~] defines

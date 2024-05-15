@@ -1,5 +1,7 @@
 package indexables
 
+import protocol "github.com/tliron/glsp/protocol_3_16"
+
 type InterfaceBuilder struct {
 	_interface Interface
 }
@@ -7,13 +9,15 @@ type InterfaceBuilder struct {
 func NewInterfaceBuilder(name string, module string, docId string) *InterfaceBuilder {
 	f := &InterfaceBuilder{
 		_interface: Interface{
-			name:    name,
 			methods: make(map[string]Function, 0),
-			BaseIndexable: BaseIndexable{
-				moduleString: module,
-				module:       NewModulePathFromString(module),
-				documentURI:  docId,
-			},
+			BaseIndexable: NewBaseIndexable(
+				name,
+				module,
+				docId,
+				NewRange(0, 0, 0, 0),
+				NewRange(0, 0, 0, 0),
+				protocol.CompletionItemKindInterface,
+			),
 		},
 	}
 

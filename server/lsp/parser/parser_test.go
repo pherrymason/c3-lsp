@@ -172,7 +172,7 @@ func TestParse_interface(t *testing.T) {
 		assert.Equal(t, idx.NewRange(0, 10, 0, 16), found.GetIdRange(), "Wrong identifier range")
 	})
 
-	t.Run("finds defined methods", func(t *testing.T) {
+	t.Run("finds defined methods in interface", func(t *testing.T) {
 		symbols := parser.ParseSymbols(&doc)
 
 		_interface := symbols.Get("doc").Interfaces["MyName"]

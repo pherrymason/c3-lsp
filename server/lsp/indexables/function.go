@@ -15,7 +15,6 @@ const (
 
 type Function struct {
 	fType          FunctionType
-	name           string
 	returnType     string
 	argumentIds    []string // Used to list which variables are defined in function signature. They are fully defined in Variables
 	typeIdentifier string
@@ -24,6 +23,7 @@ type Function struct {
 	Enums             map[string]Enum
 	Faults            map[string]Fault
 	Structs           map[string]Struct
+	Bitstructs        map[string]Bitstruct
 	Defs              map[string]Def
 	ChildrenFunctions []Function
 	Interfaces        map[string]Interface
@@ -67,6 +67,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 		Variables:         make(map[string]Variable),
 		Enums:             make(map[string]Enum),
 		Structs:           make(map[string]Struct),
+		Bitstructs:        make(map[string]Bitstruct),
 		Defs:              make(map[string]Def),
 		ChildrenFunctions: []Function{},
 		Interfaces:        make(map[string]Interface),
@@ -154,6 +155,10 @@ func (f Function) GetChildrenFunctionByName(name string) (fn Function, found boo
 
 func (f Function) AddStruct(s Struct) {
 	f.Structs[s.name] = s
+}
+
+func (f Function) AddBitstruct(b Bitstruct) {
+	f.Bitstructs[b.name] = b
 }
 
 func (f Function) GetHoverInfo() string {

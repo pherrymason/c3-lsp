@@ -2,6 +2,7 @@ package parser
 
 import (
 	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	"github.com/pherrymason/c3-lsp/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -73,6 +74,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 
 		for x := uint32(0); x < memberNode.ChildCount(); x++ {
 			n := memberNode.Child(int(x))
+			//fmt.Println("child:", n.Type())
 			switch n.Type() {
 			case "type":
 				fieldType = n.Content(sourceCode)
@@ -85,6 +87,9 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 				}
 			case "attributes":
 				// TODO
+			case "bitstruct_body":
+				bitStructs := p.nodeToBitStructMembers(n, moduleName, docId, sourceCode)
+				structFields = append(structFields, bitStructs...)
 			}
 		}
 
@@ -94,9 +99,10 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 				idx.NewStructMember(
 					identifiers[y],
 					fieldType,
-					identifiersRange[y],
+					option.None[[2]uint](),
 					moduleName,
 					docId,
+					identifiersRange[y],
 				),
 			)
 		}

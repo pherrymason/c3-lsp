@@ -71,7 +71,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		variable := symbol.(idx.StructMember)
 		assert.Equal(t, "on", symbol.GetName())
-		assert.Equal(t, "bool", variable.GetType())
+		assert.Equal(t, "bool", variable.GetType().GetName())
 	})
 
 	t.Run("Should find local struct member variable definition when struct is a pointer", func(t *testing.T) {
@@ -99,7 +99,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		variable := symbol.(idx.StructMember)
 		assert.Equal(t, "on", symbol.GetName())
-		assert.Equal(t, "bool", variable.GetType())
+		assert.Equal(t, "bool", variable.GetType().GetName())
 	})
 
 	// This test maybe works better in language_find_closes_declaration_test.go
@@ -219,7 +219,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 		variable := resolvedSymbolOption.Get().(idx.StructMember)
 		assert.Equal(t, "on", variable.GetName())
-		assert.Equal(t, "bool", variable.GetType())
+		assert.Equal(t, "bool", variable.GetType().GetName())
 	})
 
 	t.Run("Should find struct method when cursor is on chained returned from function", func(t *testing.T) {

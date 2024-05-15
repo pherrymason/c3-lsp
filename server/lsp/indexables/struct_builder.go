@@ -1,5 +1,7 @@
 package indexables
 
+import "github.com/pherrymason/c3-lsp/option"
+
 type StructBuilder struct {
 	strukt Struct
 }
@@ -10,8 +12,8 @@ func NewStructBuilder(name string, module string, docId string) *StructBuilder {
 	}
 }
 
-func (b *StructBuilder) WithStructMember(name string, baseType string, posRange Range, module string, docId string) *StructBuilder {
-	b.strukt.members = append(b.strukt.members, NewStructMember(name, baseType, posRange, module, docId))
+func (b *StructBuilder) WithStructMember(name string, baseType string, idRange Range, module string, docId string) *StructBuilder {
+	b.strukt.members = append(b.strukt.members, NewStructMember(name, baseType, option.None[[2]uint](), module, docId, idRange))
 	return b
 }
 

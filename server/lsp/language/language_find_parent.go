@@ -123,7 +123,7 @@ func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, d
 		symbol = document.NewToken(variable.GetType().GetName(), variable.GetIdRange())
 	case idx.StructMember:
 		sm, _ := elm.(idx.StructMember)
-		symbol = document.NewToken(sm.GetType(), sm.GetIdRange())
+		symbol = document.NewToken(sm.GetType().GetName(), sm.GetIdRange())
 	case *idx.Function:
 		fun, _ := elm.(*idx.Function)
 		symbol = document.NewToken(fun.GetReturnType(), fun.GetIdRange())

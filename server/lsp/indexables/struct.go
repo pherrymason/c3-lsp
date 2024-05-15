@@ -3,6 +3,7 @@ package indexables
 import (
 	"fmt"
 
+	"github.com/pherrymason/c3-lsp/option"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -61,59 +62,34 @@ func (s Struct) GetHoverInfo() string {
 }
 
 type StructMember struct {
-	name     string
-	baseType string
+	baseType Type
+	bitRange option.Option[[2]uint]
 	BaseIndexable
 }
 
-func (m StructMember) GetName() string {
-	return m.name
-}
-
-func (m StructMember) GetType() string {
+func (m StructMember) GetType() Type {
 	return m.baseType
 }
 
-func (m StructMember) GetIdRange() Range {
-	return m.idRange
-}
-
-func (m StructMember) GetDocumentRange() Range {
-	return m.docRange
-}
-
-func (m StructMember) GetDocumentURI() string {
-	return m.documentURI
+func (m StructMember) GetBitRange() [2]uint {
+	return m.bitRange.Get()
 }
 
 func (s StructMember) GetHoverInfo() string {
 	return fmt.Sprintf("%s %s", s.baseType, s.name)
 }
-func (s StructMember) GetKind() protocol.CompletionItemKind {
-	return s.Kind
-}
-func (s StructMember) GetModuleString() string {
-	return s.moduleString
-}
 
-func (s StructMember) GetModule() ModulePath {
-	return s.module
-}
-
-func (s StructMember) IsSubModuleOf(module ModulePath) bool {
-	return s.module.IsSubModuleOf(module)
-}
-
-func NewStructMember(name string, baseType string, posRange Range, module string, docId string) StructMember {
+func NewStructMember(name string, fieldType string, bitRanges option.Option[[2]uint], module string, docId string, idRange Range) StructMember {
 	return StructMember{
-		name:     name,
-		baseType: baseType,
-		BaseIndexable: BaseIndexable{
-			idRange:      posRange,
-			documentURI:  docId,
-			moduleString: module,
-			module:       NewModulePathFromString(module),
-			Kind:         protocol.CompletionItemKindField,
-		},
+		baseType: NewTypeFromString(fieldType),
+		bitRange: bitRanges,
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			NewRange(0, 0, 0, 0),
+			protocol.CompletionItemKindField,
+		),
 	}
 }

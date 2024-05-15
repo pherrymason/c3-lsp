@@ -160,7 +160,7 @@ func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDeb
 		switch prevIndexable.(type) {
 		case indexables.StructMember:
 			structMember, _ := prevIndexable.(indexables.StructMember)
-			token = document.NewToken(structMember.GetType(), prevIndexable.GetIdRange())
+			token = document.NewToken(structMember.GetType().GetName(), prevIndexable.GetIdRange())
 		}
 		levelSearchParams := sp.NewSearchParamsBuilder().
 			WithSymbol(token.Token).

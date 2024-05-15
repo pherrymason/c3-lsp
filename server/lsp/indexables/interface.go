@@ -7,7 +7,6 @@ import (
 )
 
 type Interface struct {
-	name    string
 	methods map[string]Function
 	BaseIndexable
 }
