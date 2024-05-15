@@ -3,7 +3,7 @@ package parser
 import (
 	"github.com/pherrymason/c3-lsp/lsp/cst"
 	"github.com/pherrymason/c3-lsp/lsp/document"
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )

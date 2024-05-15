@@ -1,6 +1,6 @@
 package language
 
-import idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+import idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 
 type IndexStore struct {
 	symbols []idx.Indexable

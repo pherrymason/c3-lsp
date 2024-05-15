@@ -1,7 +1,7 @@
 package lsp
 
 import (
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 

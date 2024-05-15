@@ -31,6 +31,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
     - [x] Struct members
     - [x] Struct methods
     - [x] Struct implementing interface
+    - [x] Anonymous bitstructs
 - [x] bitstruct
 - [x] Unions
     - [x] Union members

@@ -1,7 +1,7 @@
 package parser
 
 import (
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )

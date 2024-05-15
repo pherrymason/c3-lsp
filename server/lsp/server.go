@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/pherrymason/c3-lsp/fs"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	l "github.com/pherrymason/c3-lsp/lsp/language"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	_ "github.com/tliron/commonlog/simple"
@@ -117,6 +117,7 @@ func NewServer(opts ServerOpts) *Server {
 		return nil
 	}
 
+	// Support "Hover"
 	handler.TextDocumentHover = func(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
 		doc, ok := server.documents.Get(params.TextDocument.URI)
 		if !ok {
@@ -134,13 +135,14 @@ func NewServer(opts ServerOpts) *Server {
 		return &hover, nil
 	}
 
+	// Support "Go to declaration"
 	handler.TextDocumentDeclaration = func(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
 		doc, ok := server.documents.Get(params.TextDocument.URI)
 		if !ok {
 			return nil, nil
 		}
 
-		identifierOption := server.language.FindSymbolDeclarationInWorkspace(doc, indexables.NewPositionFromLSPPosition(params.Position))
+		identifierOption := server.language.FindSymbolDeclarationInWorkspace(doc, symbols.NewPositionFromLSPPosition(params.Position))
 
 		if identifierOption.IsNone() {
 			return nil, nil
@@ -153,6 +155,7 @@ func NewServer(opts ServerOpts) *Server {
 		}, nil
 	}
 
+	// Support "Completion"
 	handler.TextDocumentCompletion = func(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
 		doc, ok := server.documents.Get(params.TextDocumentPositionParams.TextDocument.URI)
 		if !ok {
@@ -160,7 +163,7 @@ func NewServer(opts ServerOpts) *Server {
 			return nil, nil
 		}
 		glspServer.Log.Debug("building completion list")
-		suggestions := server.language.BuildCompletionList(doc, indexables.NewPositionFromLSPPosition(params.Position))
+		suggestions := server.language.BuildCompletionList(doc, symbols.NewPositionFromLSPPosition(params.Position))
 
 		return suggestions, nil
 	}

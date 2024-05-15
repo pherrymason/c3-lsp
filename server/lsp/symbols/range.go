@@ -1,4 +1,4 @@
-package indexables
+package symbols
 
 import (
 	sitter "github.com/smacker/go-tree-sitter"

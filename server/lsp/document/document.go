@@ -2,7 +2,7 @@ package document
 
 import (
 	"github.com/pherrymason/c3-lsp/lsp/cst"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -67,7 +67,7 @@ func (d *Document) updateParsedTree() {
 	//		})
 }
 
-func (d *Document) HasPointInFrontSymbol(position indexables.Position) bool {
+func (d *Document) HasPointInFrontSymbol(position symbols.Position) bool {
 	index := position.IndexIn(d.Content)
 	start, _, _ := d.getSymbolRangeIndexesAtIndex(index)
 
@@ -82,7 +82,7 @@ func (d *Document) HasPointInFrontSymbol(position indexables.Position) bool {
 	return false
 }
 
-func (d *Document) HasModuleSeparatorInFrontSymbol(position indexables.Position) bool {
+func (d *Document) HasModuleSeparatorInFrontSymbol(position symbols.Position) bool {
 	index := position.IndexIn(d.Content)
 	start, _, _ := d.getSymbolRangeIndexesAtIndex(index)
 
@@ -97,7 +97,7 @@ func (d *Document) HasModuleSeparatorInFrontSymbol(position indexables.Position)
 	return false
 }
 
-func (d *Document) GetSymbolPositionAtPosition(position indexables.Position) (indexables.Position, error) {
+func (d *Document) GetSymbolPositionAtPosition(position symbols.Position) (symbols.Position, error) {
 	index := position.IndexIn(d.Content)
 	startIndex, _, _error := d.getSymbolRangeIndexesAtIndex(index)
 

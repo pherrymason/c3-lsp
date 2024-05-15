@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	sp "github.com/pherrymason/c3-lsp/lsp/search_params"
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
 	"github.com/pherrymason/c3-lsp/option"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -16,7 +16,7 @@ import (
 
 // Checks if writing seems to be a chain of components (example: aStruct.aMember)
 // If that's the case, it will return the position of the last character of previous token
-func isCompletingAChain(doc *document.Document, cursorPosition indexables.Position) (bool, indexables.Position) {
+func isCompletingAChain(doc *document.Document, cursorPosition symbols.Position) (bool, symbols.Position) {
 	// Cursor is just right after last char, let's rewind one place
 	position := cursorPosition
 	if cursorPosition.Character > 0 {
@@ -38,7 +38,7 @@ func isCompletingAChain(doc *document.Document, cursorPosition indexables.Positi
 	}
 	sentence := doc.Content[startIndex : index+1]
 	//fmt.Println("sentence: ", sentence)
-	var previousPosition indexables.Position
+	var previousPosition symbols.Position
 
 	containsSeparator := strings.Contains(sentence, ".") || strings.Contains(sentence, ":")
 	if containsSeparator {
@@ -49,7 +49,7 @@ func isCompletingAChain(doc *document.Document, cursorPosition indexables.Positi
 			lastIndex = strings.LastIndex(sentence, "::")
 		}
 		sub := len(sentence) - lastIndex
-		previousPosition = indexables.NewPosition(
+		previousPosition = symbols.NewPosition(
 			position.Line,
 			cursorPosition.Character-uint(sub)-1, // one extra -1 to stay just behind last character
 		)
@@ -58,12 +58,12 @@ func isCompletingAChain(doc *document.Document, cursorPosition indexables.Positi
 	return containsSeparator, previousPosition
 }
 
-func (l *Language) BuildCompletionList(doc *document.Document, position indexables.Position) []protocol.CompletionItem {
+func (l *Language) BuildCompletionList(doc *document.Document, position symbols.Position) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 
 	filterMembers := true
 	symbolInPosition, error := doc.SymbolInPosition(
-		indexables.Position{
+		symbols.Position{
 			Line:      uint(position.Line),
 			Character: uint(position.Character - 1),
 		})
@@ -98,8 +98,8 @@ func (l *Language) BuildCompletionList(doc *document.Document, position indexabl
 		//fmt.Print(prevIndexable.GetName())
 
 		switch prevIndexable.(type) {
-		case indexables.Struct:
-			strukt := prevIndexable.(indexables.Struct)
+		case symbols.Struct:
+			strukt := prevIndexable.(symbols.Struct)
 
 			for _, member := range strukt.GetMembers() {
 				if !filterMembers || strings.HasPrefix(member.GetName(), symbolInPosition.Token) {
@@ -112,8 +112,8 @@ func (l *Language) BuildCompletionList(doc *document.Document, position indexabl
 			// TODO get struct methods
 			// Current way of storing struct methods makes this kind of difficult.
 
-		case indexables.Enum:
-			enum := prevIndexable.(indexables.Enum)
+		case symbols.Enum:
+			enum := prevIndexable.(symbols.Enum)
 			for _, enumerator := range enum.GetEnumerators() {
 				if !filterMembers || strings.HasPrefix(enumerator.GetName(), symbolInPosition.Token) {
 					items = append(items, protocol.CompletionItem{
@@ -150,16 +150,16 @@ func (l *Language) BuildCompletionList(doc *document.Document, position indexabl
 	return items
 }
 
-func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDebugger) option.Option[indexables.Indexable] {
+func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
 	prevIndexableOption := l.findInParentSymbols(searchParams, debugger)
 	prevIndexable := prevIndexableOption.Get()
 
-	_, isStructMember := prevIndexable.(indexables.StructMember)
+	_, isStructMember := prevIndexable.(symbols.StructMember)
 	if isStructMember {
 		var token document.Token
 		switch prevIndexable.(type) {
-		case indexables.StructMember:
-			structMember, _ := prevIndexable.(indexables.StructMember)
+		case symbols.StructMember:
+			structMember, _ := prevIndexable.(symbols.StructMember)
 			token = document.NewToken(structMember.GetType().GetName(), prevIndexable.GetIdRange())
 		}
 		levelSearchParams := sp.NewSearchParamsBuilder().

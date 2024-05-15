@@ -1,7 +1,7 @@
 package search_params
 
 import (
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 )
 
@@ -20,17 +20,17 @@ func (b *SearchParamsBuilder) WithSymbol(param1 string) *SearchParamsBuilder {
 	return b
 }
 
-func (b *SearchParamsBuilder) WithSymbolRange(posRange indexables.Range) *SearchParamsBuilder {
+func (b *SearchParamsBuilder) WithSymbolRange(posRange symbols.Range) *SearchParamsBuilder {
 	b.params.symbolRange = posRange
 	return b
 }
 
 func (b *SearchParamsBuilder) WithModule(moduleName string) *SearchParamsBuilder {
-	b.params.symbolModulePath = indexables.NewModulePathFromString(moduleName)
+	b.params.symbolModulePath = symbols.NewModulePathFromString(moduleName)
 	return b
 }
 
-func (b *SearchParamsBuilder) WithSymbolModule(modulePath indexables.ModulePath) *SearchParamsBuilder {
+func (b *SearchParamsBuilder) WithSymbolModule(modulePath symbols.ModulePath) *SearchParamsBuilder {
 	b.params.symbolModulePath = modulePath
 	return b
 }

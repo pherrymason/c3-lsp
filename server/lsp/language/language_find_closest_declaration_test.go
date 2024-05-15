@@ -8,10 +8,9 @@ import (
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 )
@@ -122,8 +121,8 @@ func initTestEnv() (*Language, map[string]document.Document) {
 	return &language, documents
 }
 
-func buildPosition(line uint, character uint) indexables.Position {
-	return indexables.Position{Line: line - 1, Character: character}
+func buildPosition(line uint, character uint) idx.Position {
+	return idx.Position{Line: line - 1, Character: character}
 }
 
 var debugger = NewFindDebugger(true)

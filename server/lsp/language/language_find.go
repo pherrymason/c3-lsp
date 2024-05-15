@@ -3,13 +3,13 @@ package language
 import (
 	"fmt"
 
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 )
 
-func (l *Language) findModuleInPosition(docId string, position indexables.Position) string {
+func (l *Language) findModuleInPosition(docId string, position symbols.Position) string {
 	for id, modulesByDoc := range l.functionTreeByDocument {
 		if id == docId {
 			continue
@@ -27,41 +27,41 @@ func (l *Language) findModuleInPosition(docId string, position indexables.Positi
 
 // Returns all symbols in scope.
 // Detail: StructMembers and Enumerables are inlined
-func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, position indexables.Position) []indexables.Indexable {
-	var symbols []indexables.Indexable
+func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, position symbols.Position) []symbols.Indexable {
+	var symbolsCollection []symbols.Indexable
 	for _, scopeFunction := range parsedModules.SymbolsByModule() {
 		// Allow also when position is +1 line, in case we are writing new contentn at the end of the file
-		has := scopeFunction.GetDocumentRange().HasPosition(indexables.NewPosition(position.Line-1, 0))
+		has := scopeFunction.GetDocumentRange().HasPosition(symbols.NewPosition(position.Line-1, 0))
 		if !scopeFunction.GetDocumentRange().HasPosition(position) && !has {
 			continue // We are in a different module
 		}
 
 		for _, variable := range scopeFunction.Variables {
-			symbols = append(symbols, variable)
+			symbolsCollection = append(symbolsCollection, variable)
 		}
 		for _, enum := range scopeFunction.Enums {
-			symbols = append(symbols, enum)
+			symbolsCollection = append(symbolsCollection, enum)
 			for _, enumerable := range enum.GetEnumerators() {
-				symbols = append(symbols, enumerable)
+				symbolsCollection = append(symbolsCollection, enumerable)
 			}
 		}
 		for _, strukt := range scopeFunction.Structs {
-			symbols = append(symbols, strukt)
+			symbolsCollection = append(symbolsCollection, strukt)
 		}
 		for _, def := range scopeFunction.Defs {
-			symbols = append(symbols, def)
+			symbolsCollection = append(symbolsCollection, def)
 		}
 		for _, faults := range scopeFunction.Faults {
-			symbols = append(symbols, faults)
+			symbolsCollection = append(symbolsCollection, faults)
 		}
 		for _, interfaces := range scopeFunction.Interfaces {
-			symbols = append(symbols, interfaces)
+			symbolsCollection = append(symbolsCollection, interfaces)
 		}
 
 		for _, function := range scopeFunction.ChildrenFunctions {
-			symbols = append(symbols, function)
+			symbolsCollection = append(symbolsCollection, function)
 			if function.GetDocumentRange().HasPosition(position) {
-				symbols = append(symbols, function)
+				symbolsCollection = append(symbolsCollection, function)
 
 				for _, variable := range function.Variables {
 					l.logger.Debug(fmt.Sprintf("Checking %s variable:", variable.GetName()))
@@ -71,13 +71,13 @@ func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, posi
 						continue
 					}
 
-					symbols = append(symbols, variable)
+					symbolsCollection = append(symbolsCollection, variable)
 				}
 			}
 		}
 	}
 
-	return symbols
+	return symbolsCollection
 }
 
 // Finds the closest selectedSymbol based on current scope.
@@ -85,10 +85,10 @@ func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, posi
 // - Search in files of same module
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
-func (l *Language) findClosestSymbolDeclaration(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[indexables.Indexable] {
+func (l *Language) findClosestSymbolDeclaration(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
 	if IsLanguageKeyword(searchParams.Symbol()) {
 		l.debug("Ignore because C3 keyword", debugger)
-		return option.None[indexables.Indexable]()
+		return option.None[symbols.Indexable]()
 	}
 
 	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s: %s", searchParams.DocId(), searchParams.Module(), searchParams.Symbol()), debugger)
@@ -118,7 +118,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		docId := docIdOption.Get()
 		parsedModules, found := l.functionTreeByDocument[docId]
 		if !found {
-			return option.None[indexables.Indexable]()
+			return option.None[symbols.Indexable]()
 		}
 
 		collectionParsedModules = append(collectionParsedModules, parsedModules)
@@ -152,7 +152,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 			}
 		}
 
-		//return option.None[indexables.Indexable]()
+		//return option.None[symbols.Indexable]()
 	}
 
 	trackedModules := searchParams.TrackTraversedModules()
@@ -206,7 +206,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 			module := imports[i]
 			sp := search_params.NewSearchParamsBuilder().
 				WithSymbol(searchParams.Symbol()).
-				WithSymbolModule(indexables.NewModulePathFromString(module)).
+				WithSymbolModule(symbols.NewModulePathFromString(module)).
 				WithTrackedModules(trackedModules).
 				Build()
 
@@ -219,11 +219,11 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	}
 
 	// Not found...
-	return option.None[indexables.Indexable]()
+	return option.None[symbols.Indexable]()
 }
 
 // Search symbols inside a given module
-func (l *Language) findSymbolDeclarationInModule(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[indexables.Indexable] {
+func (l *Language) findSymbolDeclarationInModule(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
 	//expectedModule := searchParams.ModulePath().GetName()
 
 	for docId, modulesByDoc := range l.functionTreeByDocument {
@@ -259,11 +259,11 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 		}
 	}
 
-	return option.None[indexables.Indexable]()
+	return option.None[symbols.Indexable]()
 }
 
-func findDeepFirst(identifier string, position indexables.Position, function *indexables.Function, depth uint, limitSearchInScope bool) (indexables.Indexable, uint) {
-	if function.FunctionType() == indexables.UserDefined && identifier == function.GetFullName() {
+func findDeepFirst(identifier string, position symbols.Position, function *symbols.Function, depth uint, limitSearchInScope bool) (symbols.Indexable, uint) {
+	if function.FunctionType() == symbols.UserDefined && identifier == function.GetFullName() {
 		return function, depth
 	}
 
@@ -323,7 +323,7 @@ func findDeepFirst(identifier string, position indexables.Position, function *in
 	}
 
 	// Apparently, removing this makes enumerator tests in language fail.
-	var enumerator indexables.Enumerator
+	var enumerator symbols.Enumerator
 	foundEnumeratorInThisScope := false
 	for _, scopedEnums := range function.Enums {
 		if scopedEnums.HasEnumerator(identifier) {
@@ -350,7 +350,7 @@ func findDeepFirst(identifier string, position indexables.Position, function *in
 		return fault, depth
 	}
 	foundEnumeratorInThisScope = false
-	var faultConstant indexables.FaultConstant
+	var faultConstant symbols.FaultConstant
 	for _, scopedEnum := range function.Faults {
 		if scopedEnum.HasConstant(identifier) {
 			faultConstant = scopedEnum.GetConstant(identifier)

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -3,8 +3,8 @@ package language
 import (
 	"testing"
 
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/stretchr/testify/assert"
 )
 

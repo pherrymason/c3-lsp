@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 )

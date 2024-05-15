@@ -2,9 +2,8 @@ package language
 
 import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 )
 
@@ -60,8 +59,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					break
 				}
 			}
-		case indexables.Struct:
-			strukt, _ := elm.(indexables.Struct)
+		case idx.Struct:
+			strukt, _ := elm.(idx.Struct)
 			members := strukt.GetMembers()
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
@@ -98,7 +97,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 		}
 	}
 
-	return option.Some(elm)
+	return option.Some[idx.Indexable](elm)
 }
 
 func isInspectable(elm idx.Indexable) bool {

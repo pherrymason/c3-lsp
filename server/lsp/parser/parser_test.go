@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"

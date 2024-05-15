@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -15,9 +15,9 @@ func Test_isCompletingAChain(t *testing.T) {
 	cases := []struct {
 		name                     string
 		input                    string
-		position                 indexables.Position
+		position                 symbols.Position
 		expected                 bool
-		expectedPreviousPosition indexables.Position
+		expectedPreviousPosition symbols.Position
 	}{
 		{
 			name:     "Writing blank line",

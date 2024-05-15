@@ -1,4 +1,4 @@
-package indexables
+package symbols
 
 import "github.com/pherrymason/c3-lsp/option"
 

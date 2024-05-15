@@ -5,14 +5,13 @@ import (
 	"testing"
 
 	d "github.com/pherrymason/c3-lsp/lsp/document"
-	"github.com/pherrymason/c3-lsp/lsp/indexables"
-	idx "github.com/pherrymason/c3-lsp/lsp/indexables"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 	"github.com/stretchr/testify/assert"
 )
 
-func buildPosition(line uint, character uint) indexables.Position {
-	return indexables.Position{Line: line - 1, Character: character}
+func buildPosition(line uint, character uint) idx.Position {
+	return idx.Position{Line: line - 1, Character: character}
 }
 
 type MockParsedModules struct {
@@ -72,16 +71,16 @@ system.cpu.init();`
 func TestSearchParams_NewSearchParamsFromPosition_finds_full_module_path(t *testing.T) {
 	cases := []struct {
 		source              string
-		position            indexables.Position
-		expectedModule      indexables.ModulePath
+		position            idx.Position
+		expectedModule      idx.ModulePath
 		expectedSymbol      string
-		expectedSymbolRange indexables.Range
+		expectedSymbolRange idx.Range
 	}{
 		{
 			`// This blank line is intended.
 			system::cpu::value;`,
 			buildPosition(2, 17),
-			indexables.NewModulePath([]string{"system", "cpu"}),
+			idx.NewModulePath([]string{"system", "cpu"}),
 			"value",
 			idx.NewRange(1, 16, 1, 21),
 		},
@@ -89,7 +88,7 @@ func TestSearchParams_NewSearchParamsFromPosition_finds_full_module_path(t *test
 			`// This blank line is intended.
 mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
 			buildPosition(2, 25),
-			indexables.NewModulePath([]string{"foo", "bar"}),
+			idx.NewModulePath([]string{"foo", "bar"}),
 			"DEFAULT_BAR_COLOR",
 			idx.NewRange(1, 24, 1, 41),
 		},
