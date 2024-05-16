@@ -15,6 +15,8 @@ type Indexable interface {
 	IsSubModuleOf(parentModule ModulePath) bool
 
 	GetHoverInfo() string
+
+	Children() Indexable
 }
 
 type IndexableCollection []Indexable
@@ -75,4 +77,12 @@ func NewBaseIndexable(name string, module string, docId protocol.DocumentUri, id
 		docRange:     docRange,
 		Kind:         kind,
 	}
+}
+
+type ChildrenIndexable struct {
+	children []Indexable
+}
+
+func (c ChildrenIndexable) Children() []Indexable {
+	return c.children
 }
