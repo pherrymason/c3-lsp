@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -13,12 +14,27 @@ func (h *Handlers) TextDocumentHover(context *glsp.Context, params *protocol.Hov
 	}
 
 	//server.server.Log.Debug(fmt.Sprint("HOVER requested on ", len(doc.Content), params.Position.IndexIn(doc.Content)))
-	hoverOption := h.language.FindHoverInformation(doc, params)
-	if hoverOption.IsNone() {
-		//server.server.Log.Debug(fmt.Sprint("Error trying to find word: ", err))
+	// TODO improve output by setting language
+	// example: {"contents":{"kind":"markdown","value":"```go\nvar server *Server\n```"},"range":{"start":{"line":78,"character":1},"end":{"line":78,"character":7}}}
+
+	pos := symbols.NewPositionFromLSPPosition(params.Position)
+	foundSymbolOption := h.language.FindSymbolDeclarationInWorkspace(doc, pos)
+	if foundSymbolOption.IsNone() {
 		return nil, nil
 	}
 
-	hover := hoverOption.Get()
+	foundSymbol := foundSymbolOption.Get()
+
+	// expected behaviour:
+	// hovering on variables: display variable type + any description
+	// hovering on functions: display function signature
+	// hovering on members: same as variable
+	hover := protocol.Hover{
+		Contents: protocol.MarkupContent{
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: foundSymbol.GetHoverInfo(),
+		},
+	}
+
 	return &hover, nil
 }

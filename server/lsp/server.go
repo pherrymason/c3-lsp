@@ -1,6 +1,8 @@
 package lsp
 
 import (
+	"fmt"
+
 	"github.com/pherrymason/c3-lsp/fs"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/handlers"
@@ -32,16 +34,14 @@ func NewServer(opts ServerOpts) *Server {
 
 	// This increases logging verbosity (optional)
 	commonlog.Configure(2, nil)
+	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", serverName))
 
 	handler := protocol.Handler{}
 	glspServer := glspserv.NewServer(&handler, serverName, true)
 
-	logger := commonlog.GetLogger("C3-LSP.parser")
-
 	documents := document.NewDocumentStore(opts.FS, &glspServer.Log)
 	language := l.NewLanguage(logger)
 	parser := p.NewParser(&logger)
-
 	handlers := handlers.NewHandlers(documents, &language, &parser)
 
 	handler.Initialized = initialized
@@ -65,6 +65,7 @@ func NewServer(opts ServerOpts) *Server {
 	handler.TextDocumentDidSave = handlers.TextDocumentDidSave
 	handler.TextDocumentHover = handlers.TextDocumentHover
 	handler.TextDocumentDeclaration = handlers.TextDocumentDeclaration
+	handler.TextDocumentDefinition = handlers.TextDocumentDefinition
 	handler.TextDocumentCompletion = handlers.TextDocumentCompletion
 
 	handler.CompletionItemResolve = func(context *glsp.Context, params *protocol.CompletionItem) (*protocol.CompletionItem, error) {

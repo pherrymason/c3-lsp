@@ -9,6 +9,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 - [x] Indexes workspace variables and function definitions
 - [x] **TextDocumentCompletion.** Suggests symbols located in project's source code. See notes.
 - [x] **Go to declaration.**
+- [x] **Go to definition.** 
 - [x] **Hover** Displays information about symbol under cursor.
 
 **Next release**
