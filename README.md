@@ -14,7 +14,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 
 **Next release**
 - Index Generics
-- TextDocumentCompletion: Be able to suggest `defs`, `Interfaces`, `module names`
+- TextDocumentCompletion: Be able to suggest `Interfaces`, `module names`
 
 **Current status**  
 ***Index status***
@@ -33,6 +33,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
     - [x] Struct methods
     - [x] Struct implementing interface
     - [x] Anonymous bitstructs
+    - [ ] Struct subtyping
 - [x] bitstruct
 - [x] Unions
     - [x] Union members
@@ -43,7 +44,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 - [x] modules
 - [x] multiple modules per file
 - [x] implicit module name is assumed to be the file name, converted to lower case, with any invalid characters replaced by underscore (_).
-- [ ] [Generics](https://c3-lang.org/references/docs/generics/)
+- [x] [Generics](https://c3-lang.org/references/docs/generics/)
 - [ ] [Language Builtins](https://c3-lang.org/references/docs/builtins/)
 
 ***LSP Features Status***

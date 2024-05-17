@@ -128,7 +128,49 @@ func TestParse_struct_with_anonymous_bitstructs(t *testing.T) {
 			assert.Equal(t, bitRange, member.GetBitRange())
 		}
 	}
+}
 
+func TestParse_struct_subtyping(t *testing.T) {
+	source := `module x;
+	struct Person {
+		int age;
+		String name;
+	}
+	struct ImportantPerson {
+		inline Person person;
+		String title;
+	}`
+	doc := document.NewDocument("docId", source)
+	parser := createParser()
+
+	symbols := parser.ParseSymbols(&doc)
+	module := symbols.Get("x")
+
+	strukt, ok := module.Structs["ImportantPerson"]
+	assert.True(t, ok)
+
+	// Check ImportantPersons contains Person members
+	members := strukt.GetMembers()
+	assert.Equal(t, "title", members[1].GetName())
+	assert.Equal(t, "String", members[1].GetType().GetName())
+	assert.Equal(t, idx.NewRange(7, 9, 7, 14), members[1].GetIdRange())
+	//assert.Equal(t, idx.NewRange(7, 2, 7, 15), members[1].GetDocumentRange())
+
+	assert.Equal(t, "person", members[0].GetName())
+	assert.Equal(t, "Person", members[0].GetType().GetName())
+	assert.Equal(t, idx.NewRange(6, 16, 6, 22), members[0].GetIdRange(), "Identifier range is wrong")
+	//assert.Equal(t, idx.NewRange(6, 2, 6, 23), members[0].GetDocumentRange(), "Doc range is wrong")
+	/* Ideally, we should be able to resolve Person, but can happen that Person is in another file
+	assert.Equal(t, "age", members[1].GetName())
+	assert.Equal(t, "int", members[1].GetType().GetName())
+	assert.Equal(t, idx.NewRange(2, 9, 2, 14), members[0].GetIdRange())
+	assert.Equal(t, idx.NewRange(2, 2, 2, 15), members[0].GetDocumentRange())
+
+	assert.Equal(t, "name", members[2].GetName())
+	assert.Equal(t, "String", members[2].GetType().GetName())
+	assert.Equal(t, idx.NewRange(2, 6, 2, 10), members[0].GetIdRange())
+	assert.Equal(t, idx.NewRange(2, 2, 2, 11), members[0].GetDocumentRange())
+	*/
 }
 
 func TestParse_Unions(t *testing.T) {

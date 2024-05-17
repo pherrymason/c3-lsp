@@ -74,8 +74,9 @@ func (s Struct) GetHoverInfo() string {
 }
 
 type StructMember struct {
-	baseType Type
-	bitRange option.Option[[2]uint]
+	baseType             Type
+	bitRange             option.Option[[2]uint]
+	pendingInlineResolve bool
 	BaseIndexable
 }
 
@@ -95,6 +96,22 @@ func NewStructMember(name string, fieldType string, bitRanges option.Option[[2]u
 	return StructMember{
 		baseType: NewTypeFromString(fieldType),
 		bitRange: bitRanges,
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			NewRange(0, 0, 0, 0),
+			protocol.CompletionItemKindField,
+		),
+	}
+}
+
+func NewInlineSubtype(name string, fieldType string, module string, docId string, idRange Range) StructMember {
+	return StructMember{
+		baseType:             NewTypeFromString(fieldType),
+		bitRange:             option.None[[2]uint](),
+		pendingInlineResolve: true,
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
