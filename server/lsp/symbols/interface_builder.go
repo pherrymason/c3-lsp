@@ -9,7 +9,7 @@ type InterfaceBuilder struct {
 func NewInterfaceBuilder(name string, module string, docId string) *InterfaceBuilder {
 	f := &InterfaceBuilder{
 		_interface: Interface{
-			methods: make(map[string]Function, 0),
+			methods: make(map[string]*Function, 0),
 			BaseIndexable: NewBaseIndexable(
 				name,
 				module,

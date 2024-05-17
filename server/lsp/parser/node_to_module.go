@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -18,19 +19,36 @@ import (
 
 ),
 */
-func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceCode []byte) string {
+func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceCode []byte) (string, map[string]*symbols.GenericParameter) {
 
-	name := node.ChildByFieldName("path").Content(sourceCode)
-	/*
-		for i := 0; i < int(node.ChildCount()); i++ {
-			n := node.Child(i)
-			switch n.Type() {
-			case "alias":
+	moduleName := node.ChildByFieldName("path").Content(sourceCode)
 
+	generic_parameters := make(map[string]*symbols.GenericParameter)
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		//fmt.Println("Node type:", n.Type(), ":: ", n.Content(sourceCode))
+		switch n.Type() {
+		case "generic_parameters", "generic_module_parameters":
+			for g := 0; g < int(node.ChildCount()); g++ {
+				gn := n.Child(g)
+				//fmt.Println("G Node type:", gn.Type(), ":: ", gn.Content(sourceCode))
+				if gn.Type() == "type_ident" {
+					genericName := gn.Content(sourceCode)
+					param := symbols.NewGenericParameter(
+						genericName,
+						moduleName,
+						doc.URI,
+						symbols.NewRangeFromTreeSitterPositions(gn.StartPoint(), gn.EndPoint()),
+						symbols.NewRangeFromTreeSitterPositions(gn.StartPoint(), gn.EndPoint()),
+					)
+					generic_parameters[genericName] = param
+				}
 			}
-		}*/
+		}
+	}
 
-	return name
+	return moduleName, generic_parameters
 }
 
 /*

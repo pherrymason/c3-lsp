@@ -21,7 +21,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_or_submodules(t *testing.
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.Variable)
+		variable := symbol.(*idx.Variable)
 		assert.Equal(t, "helpDisplayedTimes", symbol.GetName())
 		assert.Equal(t, "int", variable.GetType().String())
 	})
@@ -139,7 +139,35 @@ func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T)
 		assert.Equal(t, "value", symbol.GetName())
 		assert.Equal(t, "module_multiple_same_file.c3", symbol.GetDocumentURI())
 		assert.Equal(t, "luigi", symbol.GetModuleString())
-
 	})
+}
 
+func TestResolve_generic_module_parameters(t *testing.T) {
+	state := NewTestState()
+
+	state.registerDoc(
+		"module.c3",
+		`module foo_test(<Type1, Type2>);
+		struct Foo
+		{
+			Type1 a;
+		}
+		fn Type2 test(Type2 b, Foo *foo)
+		{
+			return foo.a + b;
+		}`,
+	)
+
+	position := buildPosition(6, 17) // Cursor at `fn Type2 test(T|ype2 b, Foo *foo)`
+	doc := state.GetDoc("module.c3")
+	searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.GetParsedModules(doc.URI), position)
+
+	symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+	assert.True(t, symbolOption.IsSome())
+
+	genericParameter := symbolOption.Get()
+	assert.Equal(t, "Type2", genericParameter.GetName())
+	assert.Equal(t, idx.NewRange(0, 24, 0, 29), genericParameter.GetIdRange())
+	assert.Equal(t, idx.NewRange(0, 24, 0, 29), genericParameter.GetDocumentRange())
 }

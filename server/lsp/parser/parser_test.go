@@ -5,7 +5,6 @@ import (
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
-	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 )
@@ -15,7 +14,7 @@ func createParser() Parser {
 	return NewParser(logger)
 }
 
-func TestFindsTypedEnums(t *testing.T) {
+func TestParses_TypedEnums(t *testing.T) {
 	docId := "doc"
 	source := `enum Colors:int { RED, BLUE, GREEN };`
 	doc := document.NewDocument(docId, source)
@@ -24,11 +23,12 @@ func TestFindsTypedEnums(t *testing.T) {
 	t.Run("finds Colors enum identifier", func(t *testing.T) {
 		symbols := parser.ParseSymbols(&doc)
 
-		scope := symbols.Get("doc")
+		module := symbols.Get("doc")
 
-		assert.NotNil(t, scope.Enums["Colors"])
-		assert.Equal(t, "Colors", scope.Enums["Colors"].GetName())
-		assert.Equal(t, "int", scope.Enums["Colors"].GetType())
+		assert.NotNil(t, module.Enums["Colors"])
+		assert.Equal(t, "Colors", module.Enums["Colors"].GetName())
+		assert.Equal(t, "int", module.Enums["Colors"].GetType())
+		assert.Same(t, module.Enums["Colors"], module.Children()[0])
 	})
 
 	t.Run("reads ranges for enum", func(t *testing.T) {
@@ -48,18 +48,21 @@ func TestFindsTypedEnums(t *testing.T) {
 		e := enum.GetEnumerator("RED")
 		assert.Equal(t, "RED", e.GetName())
 		assert.Equal(t, idx.NewRange(0, 18, 0, 21), e.GetIdRange())
+		assert.Same(t, enum.Children()[0], e)
 
 		e = enum.GetEnumerator("BLUE")
 		assert.Equal(t, "BLUE", e.GetName())
 		assert.Equal(t, idx.NewRange(0, 23, 0, 27), e.GetIdRange())
+		assert.Same(t, enum.Children()[1], e)
 
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
 		assert.Equal(t, idx.NewRange(0, 29, 0, 34), e.GetIdRange())
+		assert.Same(t, enum.Children()[2], e)
 	})
 }
 
-func TestFindsUnTypedEnums(t *testing.T) {
+func TestParses_UnTypedEnums(t *testing.T) {
 	docId := "doc"
 	source := `enum Colors { RED, BLUE, GREEN };`
 	doc := document.NewDocument(docId, source)
@@ -73,6 +76,7 @@ func TestFindsUnTypedEnums(t *testing.T) {
 		assert.NotNil(t, scope.Enums["Colors"])
 		assert.Equal(t, "Colors", scope.Enums["Colors"].GetName())
 		assert.Equal(t, "", scope.Enums["Colors"].GetType())
+		assert.Same(t, scope.Children()[0], scope.Enums["Colors"])
 	})
 
 	t.Run("reads ranges for enum", func(t *testing.T) {
@@ -116,9 +120,10 @@ func TestParse_fault(t *testing.T) {
 		symbols := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("doc")
-		assert.NotNil(t, scope.Enums["IOResult"])
+		assert.NotNil(t, scope.Faults["IOResult"])
 		assert.Equal(t, "IOResult", scope.Faults["IOResult"].GetName())
 		assert.Equal(t, "", scope.Faults["IOResult"].GetType())
+		assert.Same(t, scope.Children()[0], scope.Faults["IOResult"])
 	})
 
 	t.Run("reads ranges for fault", func(t *testing.T) {
@@ -129,17 +134,19 @@ func TestParse_fault(t *testing.T) {
 		assert.Equal(t, idx.NewRange(0, 6, 0, 14), found.GetIdRange(), "Wrong identifier range")
 	})
 
-	t.Run("finds defined enumerators", func(t *testing.T) {
+	t.Run("finds defined fault constants", func(t *testing.T) {
 		symbols := parser.ParseSymbols(&doc)
 
 		fault := symbols.Get("doc").Faults["IOResult"]
 		e := fault.GetConstant("IO_ERROR")
 		assert.Equal(t, "IO_ERROR", e.GetName())
 		assert.Equal(t, idx.NewRange(2, 3, 2, 11), e.GetIdRange())
+		assert.Same(t, fault.Children()[0], e)
 
 		e = fault.GetConstant("PARSE_ERROR")
 		assert.Equal(t, "PARSE_ERROR", e.GetName())
 		assert.Equal(t, idx.NewRange(3, 3, 3, 14), e.GetIdRange())
+		assert.Same(t, fault.Children()[1], e)
 	})
 }
 
@@ -157,11 +164,15 @@ func TestParse_interface(t *testing.T) {
 	t.Run("finds interface", func(t *testing.T) {
 		symbols := parser.ParseSymbols(&doc)
 
-		expected := idx.NewFaultBuilder("MyName", "", module, docId).
+		expected := idx.NewInterfaceBuilder("MyName", module, docId).
 			Build()
 
-		assert.NotNil(t, symbols.Get("doc").Interfaces["MyName"])
-		assert.Equal(t, expected.GetName(), symbols.Get("doc").Interfaces["MyName"].GetName())
+		module := symbols.Get("doc")
+		interfac := module.Interfaces["MyName"]
+		assert.NotNil(t, interfac)
+		assert.Same(t, module.Children()[0], interfac)
+
+		assert.Equal(t, expected.GetName(), interfac.GetName())
 	})
 
 	t.Run("reads ranges for interface", func(t *testing.T) {
@@ -175,11 +186,13 @@ func TestParse_interface(t *testing.T) {
 	t.Run("finds defined methods in interface", func(t *testing.T) {
 		symbols := parser.ParseSymbols(&doc)
 
-		_interface := symbols.Get("doc").Interfaces["MyName"]
+		module := symbols.Get("doc")
+		_interface := module.Interfaces["MyName"]
 		m := _interface.GetMethod("method")
 		assert.Equal(t, "method", m.GetName())
 		assert.Equal(t, "String", m.GetReturnType())
 		assert.Equal(t, idx.NewRange(2, 12, 2, 18), m.GetIdRange())
+		assert.Equal(t, module.Children()[0], _interface)
 	})
 }
 
@@ -221,11 +234,18 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithDocumentRange(4, 1, 4, 40).
 		Build()
 
-	assert.Equal(t, expectedDefKilo, symbols.Get(mod).Defs["Kilo"])
-	assert.Equal(t, expectedDefKiloPtr, symbols.Get(mod).Defs["KiloPtr"])
-	assert.Equal(t, expectedDefFunction, symbols.Get(mod).Defs["MyFunction"])
+	module := symbols.Get(mod)
+	assert.Equal(t, &expectedDefKilo, module.Defs["Kilo"])
+	assert.Same(t, module.Children()[0], module.Defs["Kilo"])
 
-	assert.Equal(t, expectedDefTypeWithGenerics, symbols.Get(mod).Defs["MyMap"])
+	assert.Equal(t, &expectedDefKiloPtr, module.Defs["KiloPtr"])
+	assert.Same(t, module.Children()[1], module.Defs["KiloPtr"])
+
+	assert.Equal(t, &expectedDefFunction, module.Defs["MyFunction"])
+	assert.Same(t, module.Children()[2], module.Defs["MyFunction"])
+
+	assert.Equal(t, &expectedDefTypeWithGenerics, module.Defs["MyMap"])
+	assert.Same(t, module.Children()[3], module.Defs["MyMap"])
 }
 
 func TestExtractSymbols_find_macro(t *testing.T) {
@@ -246,18 +266,18 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 	parser := createParser()
 	symbols := parser.ParseSymbols(&doc)
 
-	fn, found := symbols.Get("docid").GetChildrenFunctionByName("m")
-	assert.True(t, found)
-	assert.Equal(t, "m", fn.GetName())
-	assert.Equal(t, "x", fn.Variables["x"].GetName())
-	assert.Equal(t, "", fn.Variables["x"].GetType().String())
+	module := symbols.Get("docid")
+	fn := module.GetChildrenFunctionByName("m")
+	assert.True(t, fn.IsSome())
+	assert.Equal(t, "m", fn.Get().GetName())
+	assert.Equal(t, "x", fn.Get().Variables["x"].GetName())
+	assert.Equal(t, "", fn.Get().Variables["x"].GetType().String())
+	assert.Same(t, module.NestedScopes()[0], fn.Get())
 }
 
 func TestExtractSymbols_find_module(t *testing.T) {
 	t.Run("finds anonymous module", func(t *testing.T) {
-		source := `
-	int value = 1;
-	`
+		source := `int value = 1;`
 
 		doc := document.NewDocument("file name.c3", source)
 		parser := createParser()
@@ -277,8 +297,8 @@ func TestExtractSymbols_find_module(t *testing.T) {
 		parser := createParser()
 		symbols := parser.ParseSymbols(&doc)
 
-		fn := symbols.Get("foo")
-		assert.Equal(t, "foo", fn.GetModuleString(), "Function module is wrong")
+		module := symbols.Get("foo")
+		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
 	})
 
 	t.Run("finds different modules defined in single file", func(t *testing.T) {
@@ -294,13 +314,15 @@ func TestExtractSymbols_find_module(t *testing.T) {
 		parser := createParser()
 		symbols := parser.ParseSymbols(&doc)
 
-		fn := symbols.Get("foo")
-		assert.Equal(t, "foo", fn.GetModuleString(), "Function module is wrong")
-		assert.Equal(t, idx.NewRange(1, 1, 2, 15), fn.GetDocumentRange(), "Wrong range for foo module")
+		module := symbols.Get("foo")
+		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
+		assert.Equal(t, "foo", module.GetName(), "module name is wrong")
+		assert.Equal(t, idx.NewRange(1, 1, 2, 15), module.GetDocumentRange(), "Wrong range for foo module")
 
-		fn = symbols.Get("foo2")
-		assert.Equal(t, "foo2", fn.GetModuleString(), "Function module is wrong")
-		assert.Equal(t, idx.NewRange(4, 1, 5, 15), fn.GetDocumentRange(), "Wrong range for foo2 module")
+		module = symbols.Get("foo2")
+		assert.Equal(t, "foo2", module.GetModuleString(), "module name is wrong")
+		assert.Equal(t, "foo2", module.GetName(), "module name is wrong")
+		assert.Equal(t, idx.NewRange(4, 1, 5, 15), module.GetDocumentRange(), "Wrong range for foo2 module")
 	})
 }
 
@@ -318,26 +340,4 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 	symbols := parser.ParseSymbols(&doc)
 
 	assert.Equal(t, []string{"some", "other", "foo::bar::final", "another", "another2"}, symbols.Get("foo").Imports)
-}
-
-func dfs(n *sitter.Node, level int) {
-	if n == nil {
-		return
-	}
-
-	// Procesa el nodo actual (puedes imprimir, almacenar en un slice, etc.)
-	//tabs := strings.Repeat("\t", level)
-	//fmt.Printf("%sNode", tabs)
-	//fmt.Printf("%sPos: %d - %d -> ", tabs, n.StartPoint().Row, n.StartPoint().Column)
-	//fmt.Printf("%d - %d\n", n.EndPoint().Row, n.EndPoint().Column)
-	//fmt.Printf("%sType: %s", tabs, n.Type())
-	//fmt.Printf("\tContent: %s", n.C)
-	//fmt.Printf("\n")
-
-	// Llama recursivamente a DFS para los nodos hijos
-	//fmt.Printf("~inside~")
-	for i := uint32(0); i < n.ChildCount(); i++ {
-		child := n.Child(int(i))
-		dfs(child, level+1)
-	}
 }

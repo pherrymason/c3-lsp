@@ -19,15 +19,7 @@ type Function struct {
 	argumentIds    []string // Used to list which variables are defined in function signature. They are fully defined in Variables
 	typeIdentifier string
 
-	Variables         map[string]Variable
-	Enums             map[string]Enum
-	Faults            map[string]Fault
-	Structs           map[string]Struct
-	Bitstructs        map[string]Bitstruct
-	Defs              map[string]Def
-	ChildrenFunctions []Function
-	Interfaces        map[string]Interface
-	Imports           []string // modules imported in this scope
+	Variables map[string]*Variable
 
 	BaseIndexable
 }
@@ -63,15 +55,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 			docRange:     docRange,
 			Kind:         kind,
 		},
-		Faults:            make(map[string]Fault),
-		Variables:         make(map[string]Variable),
-		Enums:             make(map[string]Enum),
-		Structs:           make(map[string]Struct),
-		Bitstructs:        make(map[string]Bitstruct),
-		Defs:              make(map[string]Def),
-		ChildrenFunctions: []Function{},
-		Interfaces:        make(map[string]Interface),
-		Imports:           []string{},
+		Variables: make(map[string]*Variable),
 	}
 }
 
@@ -81,6 +65,14 @@ func (f Function) Id() string {
 
 func (f Function) FunctionType() FunctionType {
 	return f.fType
+}
+
+func (f Function) GetName() string {
+	if f.typeIdentifier == "" {
+		return f.name
+	}
+
+	return f.typeIdentifier + "." + f.name
 }
 
 func (f Function) GetFullName() string {
@@ -99,35 +91,16 @@ func (f Function) ArgumentIds() []string {
 	return f.argumentIds
 }
 
-func (f *Function) AddVariables(variables []Variable) {
+func (f *Function) AddVariables(variables []*Variable) {
 	for _, variable := range variables {
 		f.Variables[variable.name] = variable
+		f.Insert(variable)
 	}
 }
 
-func (f *Function) AddVariable(variable Variable) {
+func (f *Function) AddVariable(variable *Variable) {
 	f.Variables[variable.name] = variable
-}
-
-func (f *Function) AddEnum(enum Enum) {
-	f.Enums[enum.name] = enum
-}
-
-func (f *Function) AddFault(fault Fault) {
-	f.Faults[fault.name] = fault
-}
-
-func (f *Function) AddFunction(f2 Function) {
-	f.ChildrenFunctions = append(f.ChildrenFunctions, f2)
-}
-
-func (f *Function) AddInterface(_interface Interface) {
-	f.Interfaces[_interface.name] = _interface
-}
-
-func (f *Function) ChangeModule(module string) {
-	f.moduleString = module
-	f.module = NewModulePathFromString(module)
+	f.Insert(variable)
 }
 
 func (f *Function) SetDocRange(docRange Range) {
@@ -142,37 +115,10 @@ func (f *Function) SetEndPosition(position Position) {
 	f.docRange.End = position
 }
 
-func (f Function) GetChildrenFunctionByName(name string) (fn Function, found bool) {
-	for _, fun := range f.ChildrenFunctions {
-		if fun.GetFullName() == name {
-			return fun, true
-		}
-	}
-
-	//panic("Function not found")
-	return Function{}, false
-}
-
-func (f Function) AddStruct(s Struct) {
-	f.Structs[s.name] = s
-}
-
-func (f Function) AddBitstruct(b Bitstruct) {
-	f.Bitstructs[b.name] = b
-}
-
 func (f Function) GetHoverInfo() string {
 	if f.typeIdentifier == "" {
 		return fmt.Sprintf("%s %s()", f.GetReturnType(), f.GetName())
 	}
 
 	return fmt.Sprintf("%s %s.%s()", f.GetReturnType(), f.typeIdentifier, f.GetName())
-}
-
-func (f Function) AddDef(def Def) {
-	f.Defs[def.GetName()] = def
-}
-
-func (f *Function) AddImports(imports []string) {
-	f.Imports = append(f.Imports, imports...)
 }

@@ -18,8 +18,7 @@ import (
 func readC3File(filePath string) string {
 	contentBytes, err := os.ReadFile(filePath)
 	if err != nil {
-		fmt.Printf("Error al leer el archivo: %v\n", err)
-		return ""
+		panic(fmt.Sprintf("Error reading file: %v\n", err))
 	}
 
 	// Convierte el slice de bytes a un string
@@ -207,7 +206,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.Variable)
+		variable := symbol.(*idx.Variable)
 		assert.Equal(t, "number", symbol.GetName())
 		assert.Equal(t, "int", variable.GetType().String())
 	})
@@ -229,7 +228,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.Variable)
+		variable := symbol.(*idx.Variable)
 		assert.Equal(t, "number", symbol.GetName())
 		assert.Equal(t, "int", variable.GetType().String())
 	})
@@ -251,7 +250,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.Variable)
+		variable := symbol.(*idx.Variable)
 		assert.Equal(t, "emulator", symbol.GetName())
 		assert.Equal(t, "Emu", variable.GetType().String())
 	})
@@ -273,7 +272,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.Variable)
+		variable := symbol.(*idx.Variable)
 		assert.Equal(t, "ambiguousVariable", symbol.GetName())
 		assert.Equal(t, "int", variable.GetType().String())
 	})
@@ -293,7 +292,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		assert.True(t, symbolOption.IsSome(), "Element not found")
 
-		variable := symbolOption.Get().(idx.Variable)
+		variable := symbolOption.Get().(*idx.Variable)
 		assert.Equal(t, "tick", symbolOption.Get().GetName())
 		assert.Equal(t, "int", variable.GetType().String())
 	})
@@ -323,7 +322,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		_struct := symbol.(idx.Struct)
+		_struct := symbol.(*idx.Struct)
 		assert.Equal(t, "Emu", _struct.GetName())
 	})
 
@@ -345,7 +344,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
-		_struct := symbol.(idx.Struct)
+		_struct := symbol.(*idx.Struct)
 		assert.Equal(t, "Emu", _struct.GetName())
 	})
 
@@ -367,7 +366,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_interface, ok := symbolOption.Get().(idx.Interface)
+		_interface, ok := symbolOption.Get().(*idx.Interface)
 		assert.True(t, ok, "Element found should be an Interface")
 		assert.Equal(t, "EmulatorConsole", _interface.GetName())
 	})
@@ -394,7 +393,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 
-		variable := symbolOption.Get().(idx.Variable)
+		variable := symbolOption.Get().(*idx.Variable)
 		assert.Equal(t, "status", symbolOption.Get().GetName())
 		assert.Equal(t, "WindowStatus", variable.GetType().String())
 	})
@@ -415,7 +414,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 
-		enum := symbolOption.Get().(idx.Enum)
+		enum := symbolOption.Get().(*idx.Enum)
 		assert.Equal(t, "WindowStatus", enum.GetName())
 	})
 
@@ -435,7 +434,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(idx.Enumerator)
+		_, ok := symbolOption.Get().(*idx.Enumerator)
 		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "BACKGROUND", symbolOption.Get().GetName())
 	})
@@ -456,7 +455,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(idx.Enumerator)
+		_, ok := symbolOption.Get().(*idx.Enumerator)
 		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "BACKGROUND", symbolOption.Get().GetName())
 	})
@@ -486,7 +485,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 
 		assert.False(t, symbolOption.IsNone(), "Fault not found")
 
-		fault := symbolOption.Get().(idx.Fault)
+		fault := symbolOption.Get().(*idx.Fault)
 		assert.Equal(t, "WindowError", fault.GetName())
 	})
 
@@ -507,7 +506,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 
 		assert.False(t, symbolOption.IsNone(), "Fault not found")
 
-		fault := symbolOption.Get().(idx.Variable)
+		fault := symbolOption.Get().(*idx.Variable)
 		assert.Equal(t, "error", fault.GetName())
 	})
 
@@ -527,7 +526,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(idx.FaultConstant)
+		_, ok := symbolOption.Get().(*idx.FaultConstant)
 		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "UNEXPECTED_ERROR", symbolOption.Get().GetName())
 	})

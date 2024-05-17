@@ -8,14 +8,14 @@ import (
 )
 
 type Struct struct {
-	members    []StructMember
+	members    []*StructMember
 	isUnion    bool
 	implements []string
 	BaseIndexable
 }
 
-func NewStruct(name string, interfaces []string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
-	return Struct{
+func NewStruct(name string, interfaces []string, members []*StructMember, module string, docId string, idRange Range, docRange Range) Struct {
+	strukt := Struct{
 		members:    members,
 		isUnion:    false,
 		implements: interfaces,
@@ -28,10 +28,16 @@ func NewStruct(name string, interfaces []string, members []StructMember, module 
 			protocol.CompletionItemKindStruct,
 		),
 	}
+
+	for _, member := range members {
+		strukt.Insert(member)
+	}
+
+	return strukt
 }
 
-func NewUnion(name string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
-	return Struct{
+func NewUnion(name string, members []*StructMember, module string, docId string, idRange Range, docRange Range) Struct {
+	union := Struct{
 		members: members,
 		isUnion: true,
 		BaseIndexable: NewBaseIndexable(
@@ -43,9 +49,15 @@ func NewUnion(name string, members []StructMember, module string, docId string, 
 			protocol.CompletionItemKindStruct,
 		),
 	}
+
+	for _, member := range members {
+		union.Insert(member)
+	}
+
+	return union
 }
 
-func (s Struct) GetMembers() []StructMember {
+func (s Struct) GetMembers() []*StructMember {
 	return s.members
 }
 
@@ -61,10 +73,27 @@ func (s Struct) GetHoverInfo() string {
 	return fmt.Sprintf("%s", s.name)
 }
 
+func (s *Struct) InheritMembersFrom(inlinedMemberName string, otherStruct *Struct) {
+	for _, member := range s.GetMembers() {
+		if member.GetType().GetName() == inlinedMemberName {
+			member.inlinePendingResolve = false
+		}
+	}
+
+	for _, member := range otherStruct.GetMembers() {
+		s.members = append(s.members, member)
+	}
+}
+
 type StructMember struct {
-	baseType Type
-	bitRange option.Option[[2]uint]
+	baseType             Type
+	bitRange             option.Option[[2]uint]
+	inlinePendingResolve bool
 	BaseIndexable
+}
+
+func (m StructMember) IsInlinePendingToResolve() bool {
+	return m.inlinePendingResolve
 }
 
 func (m StructMember) GetType() Type {
@@ -83,6 +112,22 @@ func NewStructMember(name string, fieldType string, bitRanges option.Option[[2]u
 	return StructMember{
 		baseType: NewTypeFromString(fieldType),
 		bitRange: bitRanges,
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			NewRange(0, 0, 0, 0),
+			protocol.CompletionItemKindField,
+		),
+	}
+}
+
+func NewInlineSubtype(name string, fieldType string, module string, docId string, idRange Range) StructMember {
+	return StructMember{
+		baseType:             NewTypeFromString(fieldType),
+		bitRange:             option.None[[2]uint](),
+		inlinePendingResolve: true,
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,

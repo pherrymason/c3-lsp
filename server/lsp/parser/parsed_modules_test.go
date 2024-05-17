@@ -3,50 +3,52 @@ package parser
 import (
 	"testing"
 
+	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParserModules_should_get_scopes_of_given_module(t *testing.T) {
 	pm := NewParsedModules("a-doc")
-	fun := symbols.NewFunctionBuilder("xxx", "void", "foo", "a-doc").Build()
-	pm.fnByModules["foo"] = &fun
+	module := symbols.NewModuleBuilder("xxx", "a-doc").Build()
+	pm.modules["foo"] = &module
 
-	assert.Equal(t, &fun, pm.Get("foo"))
+	assert.Equal(t, &module, pm.Get("foo"))
 }
 
 func TestParserModules_GetLoadableModules_should_get_scopes_that_are_children_of_given_module(t *testing.T) {
 	pm := NewParsedModules("a-doc")
-	loadableFunc := symbols.NewFunctionBuilder("xxx", "void", "foo::bar", "a-doc").Build()
-	pm.fnByModules["foo::bar"] = &loadableFunc
-	loadableFunc2 := symbols.NewFunctionBuilder("xxx", "void", "foo", "a-doc").Build()
-	pm.fnByModules["foo"] = &loadableFunc2
-	notLoadableFunc := symbols.NewFunctionBuilder("xxx", "void", "yyy", "a-doc").Build()
-	pm.fnByModules["yyy"] = &notLoadableFunc
+	loadableModule := symbols.NewModuleBuilder("foo::bar", "a-doc").Build()
+	pm.modules["foo::bar"] = &loadableModule
+	loadableModule2 := symbols.NewModuleBuilder("foo", "a-doc").Build()
+	pm.modules["foo"] = &loadableModule2
+	notLoadableModule := symbols.NewModuleBuilder("yyy", "a-doc").Build()
+	pm.modules["yyy"] = &notLoadableModule
 
-	funcs := pm.GetLoadableModules(symbols.NewModulePathFromString("foo"))
+	modules := pm.GetLoadableModules(symbols.NewModulePathFromString("foo"))
 
-	assert.Equal(t, &loadableFunc, funcs[0])
-	assert.Equal(t, &loadableFunc2, funcs[1])
-	assert.Equal(t, 2, len(funcs))
+	assert.Equal(t, &loadableModule, modules[0])
+	assert.Equal(t, &loadableModule2, modules[1])
+	assert.Equal(t, 2, len(modules))
 }
 
 func TestParserModules_GetLoadableModules_should_get_scopes_that_are_parent_of_given_module(t *testing.T) {
 	pm := NewParsedModules("a-doc")
-	loadableFunc := symbols.NewFunctionBuilder("xxx", "void", "foo::bar", "a-doc").Build()
-	pm.fnByModules["foo::bar"] = &loadableFunc
-	loadableFunc2 := symbols.NewFunctionBuilder("xxx", "void", "foo", "a-doc").Build()
-	pm.fnByModules["foo"] = &loadableFunc2
-	notLoadableFunc := symbols.NewFunctionBuilder("xxx", "void", "yyy", "a-doc").Build()
-	pm.fnByModules["yyy"] = &notLoadableFunc
-	notLoadableFunc2 := symbols.NewFunctionBuilder("xxx", "void", "foo::circle", "a-doc").Build()
-	pm.fnByModules["foo::circle"] = &notLoadableFunc2
+	loadableModule := symbols.NewModuleBuilder("foo::bar", "a-doc").Build()
+	pm.modules["foo::bar"] = &loadableModule
+	loadableModule2 := symbols.NewModuleBuilder("foo", "a-doc").Build()
+	pm.modules["foo"] = &loadableModule2
+	notLoadableModule := symbols.NewModuleBuilder("yyy", "a-doc").Build()
+	pm.modules["yyy"] = &notLoadableModule
+	notLoadableModule2 := symbols.NewModuleBuilder("foo::circle", "a-doc").Build()
+	pm.modules["foo::circle"] = &notLoadableModule2
 
-	funcs := pm.GetLoadableModules(symbols.NewModulePathFromString("foo::bar::line"))
+	modules := pm.GetLoadableModules(symbols.NewModulePathFromString("foo::bar::line"))
 
-	assert.Equal(t, &loadableFunc, funcs[0])
-	assert.Equal(t, &loadableFunc2, funcs[1])
-	assert.Equal(t, 2, len(funcs))
+	assert.Equal(t, &loadableModule, modules[0])
+	assert.Equal(t, &loadableModule2, modules[1])
+	assert.Equal(t, 2, len(modules))
 }
 
 func TestParserModules_HasImplicitLoadableModules_should_return_false_when_there_are_not_implicitly_loadable_modules(t *testing.T) {
@@ -62,8 +64,8 @@ func TestParserModules_HasImplicitLoadableModules_should_return_false_when_there
 		t.Run(tt.desc, func(t *testing.T) {
 			module := symbols.NewModulePathFromString(tt.searchingModule)
 			pm := NewParsedModules("a-doc")
-			loadableFunc := symbols.NewFunctionBuilder("xxx", "void", tt.existingModule, "a-doc").Build()
-			pm.fnByModules[tt.existingModule] = &loadableFunc
+			loadableModule := symbols.NewModuleBuilder(tt.existingModule, "a-doc").Build()
+			pm.modules[tt.existingModule] = &loadableModule
 
 			assert.False(t, pm.HasImplicitLoadableModules(module))
 		})
@@ -74,8 +76,8 @@ func TestParserModules_HasImplicitLoadableModules_should_return_true_when_there_
 	module := symbols.NewModulePathFromString("foo")
 
 	pm := NewParsedModules("a-doc")
-	loadableFunc := symbols.NewFunctionBuilder("xxx", "void", "foo", "a-doc").Build()
-	pm.fnByModules["foo"] = &loadableFunc
+	loadableModule := symbols.NewModuleBuilder("foo", "a-doc").Build()
+	pm.modules["foo"] = &loadableModule
 
 	assert.True(t, pm.HasImplicitLoadableModules(module))
 }
@@ -84,8 +86,8 @@ func TestParserModules_HasImplicitLoadableModules_should_return_true_when_there_
 	module := symbols.NewModulePathFromString("foo")
 
 	pm := NewParsedModules("a-doc")
-	loadableFunc := symbols.NewFunctionBuilder("xxx", "void", "foo::bar", "a-doc").Build()
-	pm.fnByModules["foo::bar"] = &loadableFunc
+	loadableModule := symbols.NewModuleBuilder("foo::bar", "a-doc").Build()
+	pm.modules["foo::bar"] = &loadableModule
 
 	assert.True(t, pm.HasImplicitLoadableModules(module))
 }
@@ -94,8 +96,42 @@ func TestParserModules_HasImplicitLoadableModules_should_return_true_when_there_
 	module := symbols.NewModulePathFromString("foo::bar")
 
 	pm := NewParsedModules("a-doc")
-	loadableFunc := symbols.NewFunctionBuilder("xxx", "void", "foo", "a-doc").Build()
-	pm.fnByModules["foo"] = &loadableFunc
+	loadableModule := symbols.NewModuleBuilder("foo", "a-doc").Build()
+	pm.modules["foo"] = &loadableModule
 
 	assert.True(t, pm.HasImplicitLoadableModules(module))
+}
+
+func TestExtractSymbols_module_with_generics(t *testing.T) {
+
+	source := `module foo_test(<Type1, Type2>);
+		struct Foo
+		{
+			Type1 a;
+		}
+		fn Type2 test(Type2 b, Foo *foo)
+		{
+			return foo.a + b;
+		}`
+
+	doc := document.NewDocument("docid", source)
+	parser := createParser()
+	symbols := parser.ParseSymbols(&doc)
+
+	module := symbols.Get("foo_test")
+	assert.Equal(t, "foo_test", module.GetName())
+
+	// Generic parameter was found
+	generic, ok := module.GenericParameters["Type1"]
+	assert.True(t, ok)
+	assert.Equal(t, "Type1", generic.GetName())
+	assert.Equal(t, idx.NewRange(0, 17, 0, 22), generic.GetIdRange())
+	assert.Equal(t, idx.NewRange(0, 17, 0, 22), generic.GetDocumentRange())
+
+	// Generic parameter was found
+	generic, ok = module.GenericParameters["Type2"]
+	assert.True(t, ok)
+	assert.Equal(t, "Type2", generic.GetName())
+	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetIdRange())
+	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetDocumentRange())
 }

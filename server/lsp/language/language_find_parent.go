@@ -20,6 +20,10 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 		Build()
 
 	result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
+	if result.IsNone() {
+		return result
+	}
+
 	elm := result.Get()
 
 	for {
@@ -37,8 +41,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 		// Here we can look inside elm
 		switch elm.(type) {
-		case idx.Enum:
-			_enum := elm.(idx.Enum)
+		case *idx.Enum:
+			_enum := elm.(*idx.Enum)
 			enumerators := _enum.GetEnumerators()
 			searchingSymbol := state.GetNextSymbol()
 			for i := 0; i < len(enumerators); i++ {
@@ -48,8 +52,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					break
 				}
 			}
-		case idx.Fault:
-			_enum := elm.(idx.Fault)
+		case *idx.Fault:
+			_enum := elm.(*idx.Fault)
 			constants := _enum.GetConstants()
 			searchingSymbol := state.GetNextSymbol()
 			for i := 0; i < len(constants); i++ {
@@ -59,8 +63,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					break
 				}
 			}
-		case idx.Struct:
-			strukt, _ := elm.(idx.Struct)
+		case *idx.Struct:
+			strukt, _ := elm.(*idx.Struct)
 			members := strukt.GetMembers()
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
@@ -103,11 +107,11 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 func isInspectable(elm idx.Indexable) bool {
 	isInspectable := true
 	switch elm.(type) {
-	case idx.Variable:
+	case *idx.Variable:
 		isInspectable = false
 	case *idx.Function:
 		isInspectable = false
-	case idx.StructMember:
+	case *idx.StructMember:
 		isInspectable = false
 	}
 
@@ -117,11 +121,11 @@ func isInspectable(elm idx.Indexable) bool {
 func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, debugger FindDebugger) idx.Indexable {
 	var symbol document.Token
 	switch elm.(type) {
-	case idx.Variable:
-		variable, _ := elm.(idx.Variable)
+	case *idx.Variable:
+		variable, _ := elm.(*idx.Variable)
 		symbol = document.NewToken(variable.GetType().GetName(), variable.GetIdRange())
-	case idx.StructMember:
-		sm, _ := elm.(idx.StructMember)
+	case *idx.StructMember:
+		sm, _ := elm.(*idx.StructMember)
 		symbol = document.NewToken(sm.GetType().GetName(), sm.GetIdRange())
 	case *idx.Function:
 		fun, _ := elm.(*idx.Function)

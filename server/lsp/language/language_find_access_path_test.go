@@ -26,7 +26,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(idx.Enumerator)
+		_, ok := symbolOption.Get().(*idx.Enumerator)
 		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "OPEN", symbolOption.Get().GetName())
 	})
@@ -44,7 +44,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(idx.FaultConstant)
+		_, ok := symbolOption.Get().(*idx.FaultConstant)
 		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "SOMETHING_HAPPENED", symbolOption.Get().GetName())
 	})
@@ -69,7 +69,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.StructMember)
+		variable := symbol.(*idx.StructMember)
 		assert.Equal(t, "on", symbol.GetName())
 		assert.Equal(t, "bool", variable.GetType().GetName())
 	})
@@ -97,7 +97,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.StructMember)
+		variable := symbol.(*idx.StructMember)
 		assert.Equal(t, "on", symbol.GetName())
 		assert.Equal(t, "bool", variable.GetType().GetName())
 	})
@@ -123,7 +123,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.StructMember)
+		variable := symbol.(*idx.StructMember)
 		assert.Equal(t, "cpu", symbol.GetName())
 		assert.Equal(t, "Cpu", variable.GetType())
 	})
@@ -148,7 +148,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 		fun := symbolOption.Get().(*idx.Function)
-		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
@@ -172,7 +172,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
-		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
@@ -192,7 +192,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
-		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
@@ -217,7 +217,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.GetParsedModules(doc.URI), buildPosition(11, 14))
 
 		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
-		variable := resolvedSymbolOption.Get().(idx.StructMember)
+		variable := resolvedSymbolOption.Get().(*idx.StructMember)
 		assert.Equal(t, "on", variable.GetName())
 		assert.Equal(t, "bool", variable.GetType().GetName())
 	})
@@ -245,7 +245,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
-		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
@@ -275,7 +275,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		fun, ok := resolvedSymbolOption.Get().(*idx.Function)
 		assert.True(t, ok, "Struct method not found")
-		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Audio.init", fun.GetName())
 		assert.Equal(t, "Audio.init", fun.GetFullName())
 	})
 
@@ -301,7 +301,7 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 		fun := symbolOption.Get().(*idx.Function)
-		assert.Equal(t, "init", fun.GetName())
+		assert.Equal(t, "Audio.init", fun.GetName())
 		assert.Equal(t, "Audio.init", fun.GetFullName())
 	})
 

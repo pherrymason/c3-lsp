@@ -67,10 +67,10 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		line := uint(4)
 		symbols := parser.ParseSymbols(&doc)
 
-		function, found := symbols.Get("x").GetChildrenFunctionByName("test")
-		assert.True(t, found)
+		function := symbols.Get("x").GetChildrenFunctionByName("test")
+		assert.True(t, function.IsSome())
 
-		variable := function.Variables["value"]
+		variable := function.Get().Variables["value"]
 		assert.Equal(t, "value", variable.GetName(), "variable name")
 		assert.Equal(t, "int", variable.GetType().String(), "variable type")
 		assert.Equal(t, idx.NewRange(line, 22, line, 27), variable.GetIdRange(), "variable identifier range")
@@ -81,15 +81,15 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		line := uint(5)
 		symbols := parser.ParseSymbols(&doc)
 
-		function, found := symbols.Get("x").GetChildrenFunctionByName("test2")
-		assert.True(t, found)
-		variable := function.Variables["value"]
+		function := symbols.Get("x").GetChildrenFunctionByName("test2")
+		assert.True(t, function.IsSome())
+		variable := function.Get().Variables["value"]
 		assert.Equal(t, "value", variable.GetName(), "First Variable name")
 		assert.Equal(t, "int", variable.GetType().String(), "First Variable type")
 		assert.Equal(t, idx.NewRange(line, 23, line, 28), variable.GetIdRange(), "First variable identifier range")
 		assert.Equal(t, idx.NewRange(line, 19, line, 37), variable.GetDocumentRange(), "First variable declaration range")
 
-		variable = function.Variables["value2"]
+		variable = function.Get().Variables["value2"]
 		assert.Equal(t, "value2", variable.GetName(), "Second variable name")
 		assert.Equal(t, "int", variable.GetType().String(), "Second variable type")
 		assert.Equal(t, idx.NewRange(line, 30, line, 36), variable.GetIdRange(), "Second variable identifier range")

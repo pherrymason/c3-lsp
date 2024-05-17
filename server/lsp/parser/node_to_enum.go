@@ -36,7 +36,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 	// TODO parse attributes
 
 	baseType := ""
-	var enumerators []idx.Enumerator
+	var enumerators []*idx.Enumerator
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -50,15 +50,14 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 
 				if enumeratorNode.Type() == "enum_constant" {
 					name := enumeratorNode.ChildByFieldName("name")
-					enumerators = append(enumerators,
-						idx.NewEnumerator(
-							name.Content(sourceCode),
-							"",
-							moduleName,
-							idx.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
-							docId,
-						),
+					enumerator := idx.NewEnumerator(
+						name.Content(sourceCode),
+						"",
+						moduleName,
+						idx.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
+						docId,
 					)
+					enumerators = append(enumerators, enumerator)
 				}
 			}
 		}
@@ -68,7 +67,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 	enum := idx.NewEnum(
 		nameNode.Content(sourceCode),
 		baseType,
-		[]idx.Enumerator{},
+		[]*idx.Enumerator{},
 		moduleName,
 		docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),

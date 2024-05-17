@@ -92,14 +92,14 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 
 		prevIndexableOption := l.findParentType(searchParams, FindDebugger{depth: 0, enabled: true})
 		if prevIndexableOption.IsNone() {
-			panic("Not found!")
+			return items
 		}
 		prevIndexable := prevIndexableOption.Get()
 		//fmt.Print(prevIndexable.GetName())
 
 		switch prevIndexable.(type) {
-		case symbols.Struct:
-			strukt := prevIndexable.(symbols.Struct)
+		case *symbols.Struct:
+			strukt := prevIndexable.(*symbols.Struct)
 
 			for _, member := range strukt.GetMembers() {
 				if !filterMembers || strings.HasPrefix(member.GetName(), symbolInPosition.Token) {
@@ -112,8 +112,8 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			// TODO get struct methods
 			// Current way of storing struct methods makes this kind of difficult.
 
-		case symbols.Enum:
-			enum := prevIndexable.(symbols.Enum)
+		case *symbols.Enum:
+			enum := prevIndexable.(*symbols.Enum)
 			for _, enumerator := range enum.GetEnumerators() {
 				if !filterMembers || strings.HasPrefix(enumerator.GetName(), symbolInPosition.Token) {
 					items = append(items, protocol.CompletionItem{
@@ -152,14 +152,18 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 
 func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
 	prevIndexableOption := l.findInParentSymbols(searchParams, debugger)
+	if prevIndexableOption.IsNone() {
+		return prevIndexableOption
+	}
+
 	prevIndexable := prevIndexableOption.Get()
 
-	_, isStructMember := prevIndexable.(symbols.StructMember)
+	_, isStructMember := prevIndexable.(*symbols.StructMember)
 	if isStructMember {
 		var token document.Token
 		switch prevIndexable.(type) {
-		case symbols.StructMember:
-			structMember, _ := prevIndexable.(symbols.StructMember)
+		case *symbols.StructMember:
+			structMember, _ := prevIndexable.(*symbols.StructMember)
 			token = document.NewToken(structMember.GetType().GetName(), prevIndexable.GetIdRange())
 		}
 		levelSearchParams := sp.NewSearchParamsBuilder().
