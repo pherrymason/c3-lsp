@@ -33,6 +33,7 @@ fn void MyStruct.init(&self)
 		symbols := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Structs["MyStruct"]
+		assert.Same(t, symbols.Get("x").Children()[0], found)
 		assert.Equal(t, "MyStruct", found.GetName())
 		assert.False(t, found.IsUnion())
 		assert.Equal(t, idx.NewRange(2, 0, 5, 1), found.GetDocumentRange())
@@ -49,6 +50,7 @@ fn void MyStruct.init(&self)
 		assert.Equal(t, idx.NewRange(3, 5, 3, 9), member.GetIdRange())
 		assert.Equal(t, "docId", member.GetDocumentURI())
 		assert.Equal(t, "x", member.GetModuleString())
+		assert.Same(t, found.Children()[0], member)
 
 		member = found.GetMembers()[1]
 		assert.Equal(t, "key", member.GetName())
@@ -56,6 +58,7 @@ fn void MyStruct.init(&self)
 		assert.Equal(t, idx.NewRange(4, 6, 4, 9), member.GetIdRange())
 		assert.Equal(t, "docId", member.GetDocumentURI())
 		assert.Equal(t, "x", member.GetModuleString())
+		assert.Same(t, found.Children()[1], member)
 	})
 
 	t.Run("finds struct implementing interface", func(t *testing.T) {
@@ -117,6 +120,7 @@ func TestParse_struct_with_anonymous_bitstructs(t *testing.T) {
 			break
 		}
 
+		assert.Same(t, found.Children()[i], member)
 		assert.Equal(t, cases[i].name, member.GetName())
 		assert.Equal(t, cases[i].fieldType, member.GetType().GetName())
 		if cases[i].bitRange.IsSome() {
@@ -139,11 +143,13 @@ func TestParse_Unions(t *testing.T) {
 	t.Run("parses union", func(t *testing.T) {
 		symbols := parser.ParseSymbols(&doc)
 
-		found := symbols.Get("x").Structs["MyUnion"]
+		module := symbols.Get("x")
+		found := module.Structs["MyUnion"]
 		assert.Equal(t, "MyUnion", found.GetName())
 		assert.True(t, found.IsUnion())
 		assert.Equal(t, idx.NewRange(1, 1, 4, 2), found.GetDocumentRange())
 		assert.Equal(t, idx.NewRange(1, 7, 1, 14), found.GetIdRange())
+		assert.Same(t, module.Children()[0], found)
 	})
 }
 
@@ -163,6 +169,7 @@ func TestParse_bitstructs(t *testing.T) {
 		symbols := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Bitstructs["Test"]
+		assert.Same(t, symbols.Get("x").Children()[0], found)
 		assert.Equal(t, "Test", found.GetName())
 		assert.Equal(t, "uint", found.Type().GetName())
 
@@ -175,17 +182,20 @@ func TestParse_bitstructs(t *testing.T) {
 		assert.Equal(t, "ushort", members[0].GetType().GetName())
 		assert.Equal(t, [2]uint{0, 15}, members[0].GetBitRange())
 		assert.Equal(t, idx.NewRange(3, 9, 3, 10), members[0].GetIdRange())
+		assert.Same(t, found.Children()[0], member)
 
 		// Check field b
 		assert.Equal(t, "b", members[1].GetName())
 		assert.Equal(t, "ushort", members[1].GetType().GetName())
 		assert.Equal(t, [2]uint{16, 31}, members[1].GetBitRange())
 		assert.Equal(t, idx.NewRange(4, 9, 4, 10), members[1].GetIdRange())
+		assert.Same(t, found.Children()[1], members[1])
 
 		// Check field c
 		assert.Equal(t, "c", members[2].GetName())
 		assert.Equal(t, "bool", members[2].GetType().GetName())
 		assert.Equal(t, [2]uint{7}, members[2].GetBitRange())
 		assert.Equal(t, idx.NewRange(5, 7, 5, 8), members[2].GetIdRange())
+		assert.Same(t, found.Children()[2], members[2])
 	})
 }

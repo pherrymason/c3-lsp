@@ -183,8 +183,6 @@ func TestLanguage_BuildCompletionList_structs(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
 	state := NewTestState(logger)
-	//parser := createParser()
-	//language := NewLanguage(logger)
 
 	t.Run("Should suggest struct members", func(t *testing.T) {
 		expectedKind := protocol.CompletionItemKindField

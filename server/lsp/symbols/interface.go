@@ -7,13 +7,13 @@ import (
 )
 
 type Interface struct {
-	methods map[string]Function
+	methods map[string]*Function
 	BaseIndexable
 }
 
 func NewInterface(name string, module string, docId string, idRange Range, docRange Range) Interface {
 	return Interface{
-		methods: make(map[string]Function, 0),
+		methods: make(map[string]*Function, 0),
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
@@ -25,13 +25,14 @@ func NewInterface(name string, module string, docId string, idRange Range, docRa
 	}
 }
 
-func (i Interface) GetMethod(name string) Function {
+func (i Interface) GetMethod(name string) *Function {
 	return i.methods[name]
 }
 
-func (i *Interface) AddMethods(methods []Function) {
+func (i *Interface) AddMethods(methods []*Function) {
 	for _, method := range methods {
 		i.methods[method.GetName()] = method
+		i.Insert(method)
 	}
 }
 

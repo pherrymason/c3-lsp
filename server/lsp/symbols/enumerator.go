@@ -11,8 +11,8 @@ type Enumerator struct {
 	BaseIndexable
 }
 
-func NewEnumerator(name string, value string, module string, idRange Range, docId string) Enumerator {
-	return Enumerator{
+func NewEnumerator(name string, value string, module string, idRange Range, docId string) *Enumerator {
+	return &Enumerator{
 		value: value,
 		BaseIndexable: NewBaseIndexable(
 			name,

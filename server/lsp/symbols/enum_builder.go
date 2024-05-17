@@ -32,7 +32,7 @@ func (eb *EnumBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd
 	return eb
 }
 
-func (eb *EnumBuilder) WithEnumerator(enumerator Enumerator) *EnumBuilder {
+func (eb *EnumBuilder) WithEnumerator(enumerator *Enumerator) *EnumBuilder {
 	eb.enum.enumerators = append(eb.enum.enumerators, enumerator)
 
 	return eb

@@ -4,34 +4,34 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/pherrymason/c3-lsp/option"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 type Module struct {
-	Variables         map[string]Variable
-	Enums             map[string]Enum
-	Faults            map[string]Fault
-	Structs           map[string]Struct
-	Bitstructs        map[string]Bitstruct
-	Defs              map[string]Def
-	ChildrenFunctions []Function
-	Interfaces        map[string]Interface
+	Variables         map[string]*Variable
+	Enums             map[string]*Enum
+	Faults            map[string]*Fault
+	Structs           map[string]*Struct
+	Bitstructs        map[string]*Bitstruct
+	Defs              map[string]*Def
+	ChildrenFunctions []*Function
+	Interfaces        map[string]*Interface
 	Imports           []string // modules imported in this scope
 
 	BaseIndexable
-	ChildrenIndexable
 }
 
 func NewModule(name string, docId string, idRange Range, docRange Range) *Module {
 	return &Module{
-		Variables:         make(map[string]Variable),
-		Enums:             make(map[string]Enum),
-		Faults:            make(map[string]Fault),
-		Structs:           make(map[string]Struct),
-		Bitstructs:        make(map[string]Bitstruct),
-		Defs:              make(map[string]Def),
-		ChildrenFunctions: []Function{},
-		Interfaces:        make(map[string]Interface),
+		Variables:         make(map[string]*Variable),
+		Enums:             make(map[string]*Enum),
+		Faults:            make(map[string]*Fault),
+		Structs:           make(map[string]*Struct),
+		Bitstructs:        make(map[string]*Bitstruct),
+		Defs:              make(map[string]*Def),
+		ChildrenFunctions: []*Function{},
+		Interfaces:        make(map[string]*Interface),
 		Imports:           []string{},
 
 		BaseIndexable: NewBaseIndexable(
@@ -45,42 +45,51 @@ func NewModule(name string, docId string, idRange Range, docRange Range) *Module
 	}
 }
 
-func (m *Module) AddVariable(variable Variable) {
+func (m *Module) AddVariable(variable *Variable) {
 	m.Variables[variable.name] = variable
+	m.Insert(variable)
 }
 
-func (m *Module) AddVariables(variables []Variable) {
+func (m *Module) AddVariables(variables []*Variable) {
 	for _, variable := range variables {
 		m.Variables[variable.name] = variable
+		m.Insert(variable)
 	}
 }
 
-func (m *Module) AddEnum(enum Enum) {
+func (m *Module) AddEnum(enum *Enum) {
 	m.Enums[enum.name] = enum
+	m.Insert(enum)
 }
 
-func (m *Module) AddFault(fault Fault) {
+func (m *Module) AddFault(fault *Fault) {
 	m.Faults[fault.name] = fault
+	m.Insert(fault)
 }
 
-func (m *Module) AddFunction(f2 Function) {
-	m.ChildrenFunctions = append(m.ChildrenFunctions, f2)
+func (m *Module) AddFunction(fun *Function) {
+	m.ChildrenFunctions = append(m.ChildrenFunctions, fun)
+	m.InsertNestedScope(fun)
 }
 
-func (m *Module) AddInterface(_interface Interface) {
+func (m *Module) AddInterface(_interface *Interface) {
 	m.Interfaces[_interface.name] = _interface
+	m.Insert(_interface)
 }
 
-func (m Module) AddStruct(s Struct) {
+func (m *Module) AddStruct(s *Struct) {
 	m.Structs[s.name] = s
+	m.Insert(s)
 }
 
-func (m Module) AddBitstruct(b Bitstruct) {
+func (m *Module) AddBitstruct(b *Bitstruct) {
 	m.Bitstructs[b.name] = b
+	m.Insert(b)
 }
 
-func (m Module) AddDef(def Def) {
+func (m *Module) AddDef(def *Def) {
 	m.Defs[def.GetName()] = def
+	m.Insert(def)
 }
 
 func (m *Module) AddImports(imports []string) {
@@ -104,14 +113,14 @@ func (m Module) GetHoverInfo() string {
 	return m.name
 }
 
-func (m Module) GetChildrenFunctionByName(name string) (fn Function, found bool) {
+func (m Module) GetChildrenFunctionByName(name string) option.Option[*Function] {
 	for _, fun := range m.ChildrenFunctions {
 		if fun.GetFullName() == name {
-			return fun, true
+			return option.Some(fun)
 		}
 	}
 
-	return Function{}, false
+	return option.None[*Function]()
 }
 
 type ModulePath struct {

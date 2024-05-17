@@ -8,12 +8,13 @@ type StructBuilder struct {
 
 func NewStructBuilder(name string, module string, docId string) *StructBuilder {
 	return &StructBuilder{
-		strukt: NewStruct(name, []string{}, []StructMember{}, module, docId, Range{}, Range{}),
+		strukt: NewStruct(name, []string{}, []*StructMember{}, module, docId, Range{}, Range{}),
 	}
 }
 
 func (b *StructBuilder) WithStructMember(name string, baseType string, idRange Range, module string, docId string) *StructBuilder {
-	b.strukt.members = append(b.strukt.members, NewStructMember(name, baseType, option.None[[2]uint](), module, docId, idRange))
+	member := NewStructMember(name, baseType, option.None[[2]uint](), module, docId, idRange)
+	b.strukt.members = append(b.strukt.members, &member)
 	return b
 }
 

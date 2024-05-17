@@ -31,7 +31,7 @@ func (eb *FaultBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEn
 	return eb
 }
 
-func (eb *FaultBuilder) WithConstant(constant FaultConstant) *FaultBuilder {
+func (eb *FaultBuilder) WithConstant(constant *FaultConstant) *FaultBuilder {
 	eb.fault.constants = append(eb.fault.constants, constant)
 
 	return eb

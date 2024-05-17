@@ -21,7 +21,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_or_submodules(t *testing.
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
 
-		variable := symbol.(idx.Variable)
+		variable := symbol.(*idx.Variable)
 		assert.Equal(t, "helpDisplayedTimes", symbol.GetName())
 		assert.Equal(t, "int", variable.GetType().String())
 	})

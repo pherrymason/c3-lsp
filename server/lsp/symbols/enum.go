@@ -8,11 +8,11 @@ import (
 
 type Enum struct {
 	baseType    string
-	enumerators []Enumerator
+	enumerators []*Enumerator
 	BaseIndexable
 }
 
-func NewEnum(name string, baseType string, enumerators []Enumerator, module string, docId string, idRange Range, docRange Range) Enum {
+func NewEnum(name string, baseType string, enumerators []*Enumerator, module string, docId string, idRange Range, docRange Range) Enum {
 	return Enum{
 		baseType:    baseType,
 		enumerators: enumerators,
@@ -32,12 +32,17 @@ func (e Enum) GetType() string {
 }
 
 func (e *Enum) RegisterEnumerator(name string, value string, posRange Range) {
-	e.enumerators = append(e.enumerators,
-		NewEnumerator(name, value, "", posRange, e.documentURI))
+	enumerator := NewEnumerator(name, value, "", posRange, e.documentURI)
+	e.enumerators = append(e.enumerators, enumerator)
+	e.Insert(enumerator)
 }
 
-func (e *Enum) AddEnumerators(enumerators []Enumerator) {
+func (e *Enum) AddEnumerators(enumerators []*Enumerator) {
 	e.enumerators = enumerators
+	e.children = []Indexable{}
+	for _, en := range enumerators {
+		e.Insert(en)
+	}
 }
 
 func (e Enum) HasEnumerator(identifier string) bool {
@@ -50,7 +55,7 @@ func (e Enum) HasEnumerator(identifier string) bool {
 	return false
 }
 
-func (e Enum) GetEnumerator(identifier string) Enumerator {
+func (e Enum) GetEnumerator(identifier string) *Enumerator {
 	for _, enumerator := range e.enumerators {
 		if enumerator.name == identifier {
 			return enumerator
@@ -60,7 +65,7 @@ func (e Enum) GetEnumerator(identifier string) Enumerator {
 	panic(fmt.Sprint(identifier, " enumerator not found"))
 }
 
-func (e Enum) GetEnumerators() []Enumerator {
+func (e Enum) GetEnumerators() []*Enumerator {
 	return e.enumerators
 }
 

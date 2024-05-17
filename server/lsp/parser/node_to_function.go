@@ -30,7 +30,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 	}
 
 	var argumentIds []string
-	arguments := []idx.Variable{}
+	arguments := []*idx.Variable{}
 	parameters := node.Child(2)
 	if parameters.ChildCount() > 2 {
 		for i := uint32(0); i < parameters.ChildCount(); i++ {
@@ -77,7 +77,9 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 
 	if node.ChildByFieldName("body") != nil {
 		variables := p.FindVariableDeclarations(node, moduleName, docId, sourceCode)
-		variables = append(arguments, variables...)
+		for _, variable := range arguments {
+			variables = append(variables, variable)
+		}
 		symbol.AddVariables(variables)
 	}
 
@@ -104,7 +106,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
       seq($.ct_ident, '...'),								// 2
     ),
 */
-func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, moduleName string, docId string, sourceCode []byte) idx.Variable {
+func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, moduleName string, docId string, sourceCode []byte) *idx.Variable {
 	var identifier string = ""
 	var idRange idx.Range
 	var argType string = ""
@@ -155,7 +157,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 			argNode.EndPoint()),
 	)
 
-	return variable
+	return &variable
 }
 
 /*
@@ -197,7 +199,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId string,
 		}*/
 
 	var argumentIds []string
-	arguments := []idx.Variable{}
+	arguments := []*idx.Variable{}
 	parameters := node.Child(2)
 	if parameters.ChildCount() > 2 {
 		for i := uint32(0); i < parameters.ChildCount(); i++ {

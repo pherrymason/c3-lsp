@@ -5,7 +5,6 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 const VarDeclarationQuery = `(var_declaration
@@ -40,7 +39,7 @@ func NewParser(logger interface{}) Parser {
 }
 
 func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
-	parsedSymbols := NewParsedModules(doc.URI)
+	parsedModules := NewParsedModules(doc.URI)
 	//fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
 	query := `[
@@ -71,8 +70,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
 	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
 
-	var scopeTree *idx.Function
-	moduleFunctions := make(map[string]*idx.Function)
+	var moduleSymbol *idx.Module
+	//moduleFunctions := make(idx.ModulesInDocument)
 	anonymousModuleName := true
 	lastModuleName := ""
 
@@ -93,8 +92,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				}*/
 
 			if nodeType != "module" {
-				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, anonymousModuleName)
-				parsedSymbols.RegisterModule(scopeTree)
+				moduleSymbol = parsedModules.GetOrInitModule(lastModuleName, doc, anonymousModuleName)
+				//parsedModules.RegisterModule(moduleSymbol)
 			}
 
 			switch nodeType {
@@ -103,55 +102,60 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				lastModuleName = p.nodeToModule(doc, c.Node, sourceCode)
 				//doc.ModuleName = lastModuleName
 
-				scopeTree = getModuleScopedFunction(lastModuleName, moduleFunctions, doc, false)
+				moduleSymbol = parsedModules.GetOrInitModule(lastModuleName, doc, false)
+
+				//				moduleSymbol = buildModule(lastModuleName, moduleFunctions, doc, false)
 				start := c.Node.StartPoint()
-				scopeTree.SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
-				scopeTree.ChangeModule(lastModuleName)
-				parsedSymbols.RegisterModule(scopeTree)
+
+				moduleSymbol.
+					SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
+
+				moduleSymbol.SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
+				moduleSymbol.ChangeModule(lastModuleName)
 
 			case "import_declaration":
 				imports := p.nodeToImport(doc, c.Node, sourceCode)
-				scopeTree.AddImports(imports)
+				moduleSymbol.AddImports(imports)
 
 			case "global_declaration":
-				variables := p.globalVariableDeclarationNodeToVariable(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddVariables(variables)
+				variables := p.globalVariableDeclarationNodeToVariable(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddVariables(variables)
 
 			case "func_definition":
-				function := p.nodeToFunction(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddFunction(function)
+				function := p.nodeToFunction(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddFunction(&function)
 
 			case "enum_declaration":
-				enum := p.nodeToEnum(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddEnum(enum)
+				enum := p.nodeToEnum(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddEnum(&enum)
 
 			case "struct_declaration":
-				_struct := p.nodeToStruct(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddStruct(_struct)
+				_struct := p.nodeToStruct(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddStruct(&_struct)
 
 			case "bitstruct_declaration":
-				bitstruct := p.nodeToBitStruct(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddBitstruct(bitstruct)
+				bitstruct := p.nodeToBitStruct(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddBitstruct(&bitstruct)
 
 			case "define_declaration":
-				def := p.nodeToDef(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddDef(def)
+				def := p.nodeToDef(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddDef(&def)
 
 			case "const_declaration":
-				_const := p.nodeToConstant(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddVariable(_const)
+				_const := p.nodeToConstant(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddVariable(&_const)
 
 			case "fault_declaration":
-				fault := p.nodeToFault(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddFault(fault)
+				fault := p.nodeToFault(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddFault(&fault)
 
 			case "interface_declaration":
-				interf := p.nodeToInterface(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddInterface(interf)
+				interf := p.nodeToInterface(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddInterface(&interf)
 
 			case "macro_declaration":
-				macro := p.nodeToMacro(c.Node, scopeTree.GetModuleString(), doc.URI, sourceCode)
-				scopeTree.AddFunction(macro)
+				macro := p.nodeToMacro(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddFunction(&macro)
 			default:
 				// TODO test that module ends up with wrong endPosition
 				// when this source code:
@@ -163,14 +167,15 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				continue
 			}
 
-			scopeTree.SetEndPosition(nodeEndPoint)
+			moduleSymbol.SetEndPosition(nodeEndPoint)
 		}
 	}
 
-	return parsedSymbols
+	return parsedModules
 }
 
-func getModuleScopedFunction(moduleName string, moduleScopes map[string]*idx.Function, doc *document.Document, anonymousModuleName bool) *idx.Function {
+/*
+func buildModule(moduleName string, moduleScopes idx.ModulesInDocument, doc *document.Document, anonymousModuleName bool) *idx.Module {
 	if anonymousModuleName {
 		// Build module name from filename
 		moduleName = idx.NormalizeModuleName(doc.URI)
@@ -178,27 +183,29 @@ func getModuleScopedFunction(moduleName string, moduleScopes map[string]*idx.Fun
 
 	fn, exists := moduleScopes[moduleName]
 	if !exists {
-		fnV := idx.NewModuleScopeFunction(
+		moduleSymbol := idx.NewModule(
 			moduleName,
 			doc.URI,
 			idx.NewRangeFromTreeSitterPositions(
 				doc.ContextSyntaxTree.RootNode().StartPoint(),
 				doc.ContextSyntaxTree.RootNode().EndPoint(),
 			),
-			protocol.CompletionItemKindModule,
+			idx.NewRangeFromTreeSitterPositions(
+				doc.ContextSyntaxTree.RootNode().StartPoint(),
+				doc.ContextSyntaxTree.RootNode().EndPoint(),
+			),
 		)
-		fn = &fnV
-		moduleScopes[moduleName] = &fnV
+		moduleScopes[moduleName] = &moduleSymbol
 	}
 
-	return fn
-}
+	return &moduleSymbol
+}*/
 
-func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []idx.Variable {
+func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.Variable {
 	query := LocalVarDeclaration
 	qc := cst.RunQuery(query, node)
 
-	var variables []idx.Variable
+	var variables []*idx.Variable
 	found := make(map[string]bool)
 	//sourceCode := []byte(doc.Content)
 	for {
@@ -215,7 +222,9 @@ func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, 
 				found[content] = true
 				funcVariables := p.localVariableDeclarationNodeToVariable(c.Node, moduleName, docId, sourceCode)
 
-				variables = append(variables, funcVariables...)
+				for _, variable := range funcVariables {
+					variables = append(variables, variable)
+				}
 			}
 		}
 	}

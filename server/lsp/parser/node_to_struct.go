@@ -59,7 +59,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 
 	// TODO parse attributes
 	bodyNode := node.ChildByFieldName("body")
-	structFields := make([]idx.StructMember, 0)
+	structFields := make([]*idx.StructMember, 0)
 
 	for i := uint32(0); i < bodyNode.ChildCount(); i++ {
 		memberNode := bodyNode.Child(int(i))
@@ -94,17 +94,15 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 		}
 
 		for y := 0; y < len(identifiers); y++ {
-			structFields = append(
-				structFields,
-				idx.NewStructMember(
-					identifiers[y],
-					fieldType,
-					option.None[[2]uint](),
-					moduleName,
-					docId,
-					identifiersRange[y],
-				),
+			structMember := idx.NewStructMember(
+				identifiers[y],
+				fieldType,
+				option.None[[2]uint](),
+				moduleName,
+				docId,
+				identifiersRange[y],
 			)
+			structFields = append(structFields, &structMember)
 		}
 	}
 

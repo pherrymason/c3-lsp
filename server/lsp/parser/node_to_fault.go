@@ -28,7 +28,7 @@ func (p *Parser) nodeToFault(node *sitter.Node, moduleName string, docId string,
 	// TODO parse attributes
 
 	baseType := "" // TODO Parse type!
-	var constants []idx.FaultConstant
+	var constants []*idx.FaultConstant
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)

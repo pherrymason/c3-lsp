@@ -8,14 +8,14 @@ import (
 )
 
 type Struct struct {
-	members    []StructMember
+	members    []*StructMember
 	isUnion    bool
 	implements []string
 	BaseIndexable
 }
 
-func NewStruct(name string, interfaces []string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
-	return Struct{
+func NewStruct(name string, interfaces []string, members []*StructMember, module string, docId string, idRange Range, docRange Range) Struct {
+	strukt := Struct{
 		members:    members,
 		isUnion:    false,
 		implements: interfaces,
@@ -28,10 +28,16 @@ func NewStruct(name string, interfaces []string, members []StructMember, module 
 			protocol.CompletionItemKindStruct,
 		),
 	}
+
+	for _, member := range members {
+		strukt.Insert(member)
+	}
+
+	return strukt
 }
 
-func NewUnion(name string, members []StructMember, module string, docId string, idRange Range, docRange Range) Struct {
-	return Struct{
+func NewUnion(name string, members []*StructMember, module string, docId string, idRange Range, docRange Range) Struct {
+	union := Struct{
 		members: members,
 		isUnion: true,
 		BaseIndexable: NewBaseIndexable(
@@ -43,9 +49,15 @@ func NewUnion(name string, members []StructMember, module string, docId string, 
 			protocol.CompletionItemKindStruct,
 		),
 	}
+
+	for _, member := range members {
+		union.Insert(member)
+	}
+
+	return union
 }
 
-func (s Struct) GetMembers() []StructMember {
+func (s Struct) GetMembers() []*StructMember {
 	return s.members
 }
 

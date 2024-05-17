@@ -5,8 +5,8 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId string, sourceCode []byte) []idx.Variable {
-	var variables []idx.Variable
+func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.Variable {
+	var variables []*idx.Variable
 	var typeNodeContent string
 
 	//fmt.Println(declarationNode.ChildCount())
@@ -34,7 +34,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 					declarationNode.StartPoint(),
 					declarationNode.EndPoint()),
 			)
-			variables = append(variables, variable)
+			variables = append(variables, &variable)
 		case ";":
 			if n.HasError() && len(variables) > 0 {
 				// Last variable is incomplete, remove it
@@ -56,7 +56,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 					declarationNode.StartPoint(),
 					declarationNode.EndPoint()),
 			)
-			variables = append(variables, variable)
+			variables = append(variables, &variable)
 		}
 
 	}
@@ -64,8 +64,8 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 	return variables
 }
 
-func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId string, sourceCode []byte) []idx.Variable {
-	var variables []idx.Variable
+func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.Variable {
+	var variables []*idx.Variable
 	var typeNodeContent string
 
 	//fmt.Println(declarationNode.ChildCount())
@@ -95,7 +95,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.
 					declarationNode.StartPoint(),
 					declarationNode.EndPoint()),
 			)
-			variables = append(variables, variable)
+			variables = append(variables, &variable)
 		}
 	}
 

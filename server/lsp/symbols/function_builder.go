@@ -9,12 +9,12 @@ type FunctionBuilder struct {
 func NewFunctionBuilderARoot(module string, docId string) *FunctionBuilder {
 	f := &FunctionBuilder{
 		function: Function{
-			fType:             ModuleScope,
-			Variables:         make(map[string]Variable),
-			Defs:              make(map[string]Def),
-			Enums:             make(map[string]Enum),
-			Structs:           make(map[string]Struct),
-			ChildrenFunctions: make([]Function, 0),
+			fType:     ModuleScope,
+			Variables: make(map[string]*Variable),
+			//Defs:              make(map[string]Def),
+			//Enums:             make(map[string]Enum),
+			//Structs:           make(map[string]Struct),
+			//ChildrenFunctions: make([]Function, 0),
 			BaseIndexable: BaseIndexable{
 				moduleString: module,
 				module:       NewModulePathFromString(module),
@@ -31,14 +31,14 @@ func NewFunctionBuilderARoot(module string, docId string) *FunctionBuilder {
 func NewFunctionBuilder(name string, returnType string, module string, docId string) *FunctionBuilder {
 	return &FunctionBuilder{
 		function: Function{
-			fType:             UserDefined,
-			returnType:        returnType,
-			argumentIds:       nil,
-			Variables:         make(map[string]Variable),
-			Defs:              make(map[string]Def),
-			Enums:             make(map[string]Enum),
-			Structs:           make(map[string]Struct),
-			ChildrenFunctions: make([]Function, 0),
+			fType:       UserDefined,
+			returnType:  returnType,
+			argumentIds: nil,
+			Variables:   make(map[string]*Variable),
+			//Defs:              make(map[string]Def),
+			//Enums:             make(map[string]Enum),
+			//Structs:           make(map[string]Struct),
+			//ChildrenFunctions: make([]Function, 0),
 			BaseIndexable: NewBaseIndexable(
 				name,
 				module,
@@ -56,7 +56,7 @@ func (fb *FunctionBuilder) WithTypeIdentifier(typeIdentifier string) *FunctionBu
 	return fb
 }
 
-func (fb *FunctionBuilder) WithArgument(variable Variable) *FunctionBuilder {
+func (fb *FunctionBuilder) WithArgument(variable *Variable) *FunctionBuilder {
 	if fb.function.argumentIds == nil {
 		fb.function.argumentIds = []string{}
 	}

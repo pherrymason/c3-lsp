@@ -13,7 +13,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId str
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
 	bakedType := ""
-	structFields := []idx.StructMember{}
+	structFields := []*idx.StructMember{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
@@ -51,9 +51,9 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId str
 	return _struct
 }
 
-func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []idx.StructMember {
+func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.StructMember {
 
-	structFields := []idx.StructMember{}
+	structFields := []*idx.StructMember{}
 	for j := int(0); j < int(node.ChildCount()); j++ {
 		bdefnode := node.Child(j)
 		bType := bdefnode.Type()
@@ -67,17 +67,16 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, do
 				bitRanges[1] = uint(highBit)
 			}
 
-			structFields = append(structFields,
-				idx.NewStructMember(
-					bdefnode.Child(1).Content(sourceCode),
-					bdefnode.Child(0).Content(sourceCode),
-					option.Some(bitRanges),
-					moduleName,
-					docId,
-					idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
-					//idx.NewRangeFromTreeSitterPositions(child.StartPoint(), child.EndPoint()),
-				),
+			member := idx.NewStructMember(
+				bdefnode.Child(1).Content(sourceCode),
+				bdefnode.Child(0).Content(sourceCode),
+				option.Some(bitRanges),
+				moduleName,
+				docId,
+				idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
+				//idx.NewRangeFromTreeSitterPositions(child.StartPoint(), child.EndPoint()),
 			)
+			structFields = append(structFields, &member)
 		} else if bType == "_bitstruct_simple_defs" {
 			// Could not make examples with these to parse.
 		}
