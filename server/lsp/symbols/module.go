@@ -18,6 +18,7 @@ type Module struct {
 	ChildrenFunctions []*Function
 	Interfaces        map[string]*Interface
 	Imports           []string // modules imported in this scope
+	GenericParameters map[string]*GenericParameter
 
 	BaseIndexable
 }
@@ -107,6 +108,10 @@ func (m *Module) SetStartPosition(position Position) {
 
 func (m *Module) SetEndPosition(position Position) {
 	m.docRange.End = position
+}
+
+func (m *Module) SetGenericParameters(generics map[string]*GenericParameter) {
+	m.GenericParameters = generics
 }
 
 func (m Module) GetHoverInfo() string {

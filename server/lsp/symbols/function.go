@@ -20,14 +20,6 @@ type Function struct {
 	typeIdentifier string
 
 	Variables map[string]*Variable
-	//Enums             map[string]Enum
-	//Faults            map[string]Fault
-	//Structs           map[string]Struct
-	//Bitstructs        map[string]Bitstruct
-	//Defs              map[string]Def
-	//ChildrenFunctions []Function
-	//Interfaces        map[string]Interface
-	//Imports           []string // modules imported in this scope
 
 	BaseIndexable
 }
@@ -63,15 +55,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 			docRange:     docRange,
 			Kind:         kind,
 		},
-		//Faults:            make(map[string]Fault),
 		Variables: make(map[string]*Variable),
-		//Enums:             make(map[string]Enum),
-		//Structs:           make(map[string]Struct),
-		//Bitstructs:        make(map[string]Bitstruct),
-		//Defs:              make(map[string]Def),
-		//ChildrenFunctions: []Function{},
-		//Interfaces:        make(map[string]Interface),
-		//Imports:           []string{},
 	}
 }
 

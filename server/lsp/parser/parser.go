@@ -99,14 +99,12 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 			switch nodeType {
 			case "module":
 				anonymousModuleName = false
-				lastModuleName = p.nodeToModule(doc, c.Node, sourceCode)
-				//doc.ModuleName = lastModuleName
-
+				moduleName, generics := p.nodeToModule(doc, c.Node, sourceCode)
+				lastModuleName := moduleName
 				moduleSymbol = parsedModules.GetOrInitModule(lastModuleName, doc, false)
+				moduleSymbol.SetGenericParameters(generics)
 
-				//				moduleSymbol = buildModule(lastModuleName, moduleFunctions, doc, false)
 				start := c.Node.StartPoint()
-
 				moduleSymbol.
 					SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
 
