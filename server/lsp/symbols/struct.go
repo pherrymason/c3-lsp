@@ -73,11 +73,27 @@ func (s Struct) GetHoverInfo() string {
 	return fmt.Sprintf("%s", s.name)
 }
 
+func (s *Struct) InheritMembersFrom(inlinedMemberName string, otherStruct *Struct) {
+	for _, member := range s.GetMembers() {
+		if member.GetType().GetName() == inlinedMemberName {
+			member.inlinePendingResolve = false
+		}
+	}
+
+	for _, member := range otherStruct.GetMembers() {
+		s.members = append(s.members, member)
+	}
+}
+
 type StructMember struct {
 	baseType             Type
 	bitRange             option.Option[[2]uint]
-	pendingInlineResolve bool
+	inlinePendingResolve bool
 	BaseIndexable
+}
+
+func (m StructMember) IsInlinePendingToResolve() bool {
+	return m.inlinePendingResolve
 }
 
 func (m StructMember) GetType() Type {
@@ -111,7 +127,7 @@ func NewInlineSubtype(name string, fieldType string, module string, docId string
 	return StructMember{
 		baseType:             NewTypeFromString(fieldType),
 		bitRange:             option.None[[2]uint](),
-		pendingInlineResolve: true,
+		inlinePendingResolve: true,
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,

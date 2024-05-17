@@ -162,7 +162,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		for _, scopedTree := range parsedModules.GetLoadableModules(searchParams.ModulePath()) {
 			l.debug(fmt.Sprintf("Checking module \"%s\"", scopedTree.GetModuleString()), debugger)
 			// Go through every element defined in scopedTree
-			identifier, _ := findDF(
+			identifier, _ := findDeepFirst(
 				searchParams.Symbol(),
 				searchParams.SymbolPosition(),
 				scopedTree,
@@ -262,7 +262,7 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 	return option.None[symbols.Indexable]()
 }
 
-func findDF(identifier string, position symbols.Position, node symbols.Indexable, depth uint, limitSearchInScope bool) (symbols.Indexable, uint) {
+func findDeepFirst(identifier string, position symbols.Position, node symbols.Indexable, depth uint, limitSearchInScope bool) (symbols.Indexable, uint) {
 	/*if limitSearchInScope {
 		_, ok := node.(*symbols.Function)
 		if ok && !node.GetDocumentRange().HasPosition(position) {
@@ -284,17 +284,16 @@ func findDF(identifier string, position symbols.Position, node symbols.Indexable
 			return nil, depth
 		}
 
-		if result, resultDepth := findDF(identifier, position, child, depth+1, limitSearchInScope); result != nil {
+		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope); result != nil {
 			return result, resultDepth
 		}
 	}
 
 	for _, child := range node.ChildrenWithoutScopes() {
-		if result, resultDepth := findDF(identifier, position, child, depth+1, limitSearchInScope); result != nil {
+		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope); result != nil {
 			return result, resultDepth
 		}
 	}
-	//}
 
 	// All elements found in nestable symbols checked, check node itself
 	if node.GetName() == identifier {
@@ -302,121 +301,4 @@ func findDF(identifier string, position symbols.Position, node symbols.Indexable
 	}
 
 	return nil, depth
-}
-
-/*
-	func findDeepFirst(identifier string, position symbols.Position, function *symbols.Module, depth uint, limitSearchInScope bool) (symbols.Indexable, uint) {
-		if function.FunctionType() == symbols.UserDefined && identifier == function.GetFullName() {
-			return function, depth
-		}
-
-		// When mode is InPosition, we are specifying it is important for us that
-		// the function being searched contains the position specified.
-		// We use mode = AnyPosition when search for a symbol definition outside the document where the user has its cursor. For example, we are looking in imported files or files of the same module.
-		if limitSearchInScope &&
-			!function.GetDocumentRange().HasPosition(position) {
-			return nil, depth
-		}
-
-		// Try this
-		// First, loop through symbols that can nest other definitions:
-		// - structs, unions [v]
-		// - enum, faults	 [v]
-		// - interface
-		// - functions       [v]
-		// For each of them, check if search.symbol.position is inside that element
-		// If true, priorize searching there first.
-		// If not found, search in the `function`
-
-		for _, structs := range function.Structs {
-			if structs.GetDocumentRange().HasPosition(position) {
-				// What we are looking is inside this, look for struct member
-				for _, member := range structs.GetMembers() {
-					if member.GetName() == identifier {
-						return member, depth
-					}
-				}
-			}
-		}
-
-		for _, scopedEnums := range function.Enums {
-			if scopedEnums.GetDocumentRange().HasPosition(position) {
-				if scopedEnums.HasEnumerator(identifier) {
-					enumerator := scopedEnums.GetEnumerator(identifier)
-					return enumerator, depth
-				}
-			}
-		}
-
-		for _, child := range function.ChildrenFunctions {
-			if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope); result != nil {
-				return result, resultDepth
-			}
-		}
-
-		// All elements found in nestable symbols checked, check rest of function
-		variable, foundVariableInThisScope := function.Variables[identifier]
-		if foundVariableInThisScope {
-			return variable, depth
-		}
-
-		enum, foundEnumInThisScope := function.Enums[identifier]
-		if foundEnumInThisScope {
-			return enum, depth
-		}
-
-		// Apparently, removing this makes enumerator tests in language fail.
-		var enumerator symbols.Enumerator
-		foundEnumeratorInThisScope := false
-		for _, scopedEnums := range function.Enums {
-			if scopedEnums.HasEnumerator(identifier) {
-				enumerator = scopedEnums.GetEnumerator(identifier)
-				foundEnumeratorInThisScope = true
-			}
-		}
-		if foundEnumeratorInThisScope {
-			return enumerator, depth
-		}
-
-		_struct, foundStructInThisScope := function.Structs[identifier]
-		if foundStructInThisScope {
-			return _struct, depth
-		}
-
-		def, foundDefInScope := function.Defs[identifier]
-		if foundDefInScope {
-			return def, depth
-		}
-
-		fault, foundFaultInScope := function.Faults[identifier]
-		if foundFaultInScope {
-			return fault, depth
-		}
-		foundEnumeratorInThisScope = false
-		var faultConstant symbols.FaultConstant
-		for _, scopedEnum := range function.Faults {
-			if scopedEnum.HasConstant(identifier) {
-				faultConstant = scopedEnum.GetConstant(identifier)
-				foundEnumeratorInThisScope = true
-			}
-		}
-		if foundEnumeratorInThisScope {
-			return faultConstant, depth
-		}
-
-		_interface, foundInInterface := function.Interfaces[identifier]
-		if foundInInterface {
-			return _interface, depth
-		}
-
-		return nil, depth
-	}
-*/
-func inSlice(element string, slice []string) bool {
-	for _, value := range slice {
-		if value == element {
-			return true
-		}
-	}
-	return false
 }
