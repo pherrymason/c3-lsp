@@ -22,10 +22,10 @@ type Server struct {
 
 // ServerOpts holds the options to create a new Server.
 type ServerOpts struct {
-	Name    string
-	Version string
-	LogFile string
-	FS      fs.FileStorage
+	Name        string
+	Version     string
+	LogFilepath string
+	FS          fs.FileStorage
 }
 
 func NewServer(opts ServerOpts) *Server {
