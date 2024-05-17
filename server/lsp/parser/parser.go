@@ -100,7 +100,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 			case "module":
 				anonymousModuleName = false
 				moduleName, generics := p.nodeToModule(doc, c.Node, sourceCode)
-				lastModuleName := moduleName
+				lastModuleName = moduleName
 				moduleSymbol = parsedModules.GetOrInitModule(lastModuleName, doc, false)
 				moduleSymbol.SetGenericParameters(generics)
 
