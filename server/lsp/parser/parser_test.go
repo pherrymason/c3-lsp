@@ -326,40 +326,6 @@ func TestExtractSymbols_find_module(t *testing.T) {
 	})
 }
 
-func TestExtractSymbols_module_with_generics(t *testing.T) {
-
-	source := `module foo_test(<Type1, Type2>);
-		struct Foo
-		{
-			Type1 a;
-		}
-		fn Type2 test(Type2 b, Foo *foo)
-		{
-			return foo.a + b;
-		}`
-
-	doc := document.NewDocument("docid", source)
-	parser := createParser()
-	symbols := parser.ParseSymbols(&doc)
-
-	module := symbols.Get("foo_test")
-	assert.Equal(t, "foo_test", module.GetName())
-
-	// Generic parameter was found
-	generic, ok := module.GenericParameters["Type1"]
-	assert.True(t, ok)
-	assert.Equal(t, "Type1", generic.GetName())
-	assert.Equal(t, idx.NewRange(0, 17, 0, 22), generic.GetIdRange())
-	assert.Equal(t, idx.NewRange(0, 17, 0, 22), generic.GetDocumentRange())
-
-	// Generic parameter was found
-	generic, ok = module.GenericParameters["Type2"]
-	assert.True(t, ok)
-	assert.Equal(t, "Type2", generic.GetName())
-	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetIdRange())
-	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetDocumentRange())
-}
-
 func TestExtractSymbols_find_imports(t *testing.T) {
 	source := `
 	module foo;

@@ -112,6 +112,9 @@ func (m *Module) SetEndPosition(position Position) {
 
 func (m *Module) SetGenericParameters(generics map[string]*GenericParameter) {
 	m.GenericParameters = generics
+	for _, gn := range generics {
+		m.Insert(gn)
+	}
 }
 
 func (m Module) GetHoverInfo() string {
