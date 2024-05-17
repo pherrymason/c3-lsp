@@ -33,7 +33,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
     - [x] Struct methods
     - [x] Struct implementing interface
     - [x] Anonymous bitstructs
-    - [ ] Struct subtyping
+    - [~] Struct subtyping: Only for those subtypes defined in same file.
 - [x] bitstruct
 - [x] Unions
     - [x] Union members
