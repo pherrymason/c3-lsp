@@ -32,6 +32,11 @@ type Parser struct {
 	Logger interface{}
 }
 
+type StructWithSubtyping struct {
+	strukt  *idx.Struct
+	members []string
+}
+
 func NewParser(logger interface{}) Parser {
 	return Parser{
 		Logger: logger,
@@ -74,6 +79,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 	//moduleFunctions := make(idx.ModulesInDocument)
 	anonymousModuleName := true
 	lastModuleName := ""
+	subtyptingToResolve := []StructWithSubtyping{}
 
 	for {
 		m, ok := qc.NextMatch()
@@ -128,8 +134,13 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				moduleSymbol.AddEnum(&enum)
 
 			case "struct_declaration":
-				_struct := p.nodeToStruct(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				_struct, membersNeedingSubtypingResolve := p.nodeToStruct(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
 				moduleSymbol.AddStruct(&_struct)
+				if len(membersNeedingSubtypingResolve) > 0 {
+					subtyptingToResolve = append(subtyptingToResolve,
+						StructWithSubtyping{strukt: &_struct, members: membersNeedingSubtypingResolve},
+					)
+				}
 
 			case "bitstruct_declaration":
 				bitstruct := p.nodeToBitStruct(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
@@ -169,35 +180,10 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 		}
 	}
 
+	resolveStructSubtypes(&parsedModules, subtyptingToResolve)
+
 	return parsedModules
 }
-
-/*
-func buildModule(moduleName string, moduleScopes idx.ModulesInDocument, doc *document.Document, anonymousModuleName bool) *idx.Module {
-	if anonymousModuleName {
-		// Build module name from filename
-		moduleName = idx.NormalizeModuleName(doc.URI)
-	}
-
-	fn, exists := moduleScopes[moduleName]
-	if !exists {
-		moduleSymbol := idx.NewModule(
-			moduleName,
-			doc.URI,
-			idx.NewRangeFromTreeSitterPositions(
-				doc.ContextSyntaxTree.RootNode().StartPoint(),
-				doc.ContextSyntaxTree.RootNode().EndPoint(),
-			),
-			idx.NewRangeFromTreeSitterPositions(
-				doc.ContextSyntaxTree.RootNode().StartPoint(),
-				doc.ContextSyntaxTree.RootNode().EndPoint(),
-			),
-		)
-		moduleScopes[moduleName] = &moduleSymbol
-	}
-
-	return &moduleSymbol
-}*/
 
 func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.Variable {
 	query := LocalVarDeclaration
@@ -228,4 +214,21 @@ func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, 
 	}
 
 	return variables
+}
+
+func resolveStructSubtypes(parsedModules *ParsedModules, subtyping []StructWithSubtyping) {
+	for _, struktWithSubtyping := range subtyping {
+		for _, inlinedMemberName := range struktWithSubtyping.members {
+
+			for _, module := range parsedModules.modules {
+
+				// Search
+				for _, strukt := range module.Structs {
+					if strukt.GetName() == inlinedMemberName {
+						struktWithSubtyping.strukt.InheritMembersFrom(inlinedMemberName, strukt)
+					}
+				}
+			}
+		}
+	}
 }

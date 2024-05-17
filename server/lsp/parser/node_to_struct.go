@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -35,11 +33,12 @@ struct_member_declaration: $ => choice(
 	  seq('inline', field('type', $.type), optional($.ident), optional($.attributes), ';'),
 	),
 */
-func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Struct {
+func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string, sourceCode []byte) (idx.Struct, []string) {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
 	isUnion := false
+	membersNeedingSubtypingResolve := []string{}
 
 	for i := uint32(0); i < node.ChildCount(); i++ {
 		child := node.Child(int(i))
@@ -66,7 +65,9 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 
 	for i := uint32(0); i < bodyNode.ChildCount(); i++ {
 		memberNode := bodyNode.Child(int(i))
-		fmt.Println("body child:", memberNode.Type())
+		isInline := false
+
+		//fmt.Println("body child:", memberNode.Type())
 		if memberNode.Type() != "struct_member_declaration" {
 			continue
 		}
@@ -75,7 +76,6 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 		var identifiers []string
 		var identifier string
 		var identifiersRange []idx.Range
-		isInline := false
 
 		/*
 			struct_member_declaration: $ => choice(
@@ -88,7 +88,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 
 		for x := uint32(0); x < memberNode.ChildCount(); x++ {
 			n := memberNode.Child(int(x))
-			fmt.Println("child:", n.Type(), "::", memberNode.Content(sourceCode))
+			//fmt.Println("child:", n.Type(), "::", memberNode.Content(sourceCode))
 			switch n.Type() {
 			case "type":
 				fieldType = n.Content(sourceCode)
@@ -109,7 +109,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 				structFields = append(structFields, bitStructs...)
 			case "inline":
 				isInline = true
-				fmt.Println("inline!: ", n.Content(sourceCode))
+				//fmt.Println("inline!: ", n.Content(sourceCode))
 				inlinedSubTyping = append(inlinedSubTyping, "1")
 
 			case "ident":
@@ -132,26 +132,27 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 				)
 				structFields = append(structFields, &structMember)
 			}
-		} else {
+		} else if isInline {
 			var structMember idx.StructMember
-			if isInline {
-				structMember = idx.NewInlineSubtype(
-					identifier,
-					fieldType,
-					moduleName,
-					docId,
-					identifiersRange[0],
-				)
-			} else {
-				structMember = idx.NewStructMember(
-					identifier,
-					fieldType,
-					option.None[[2]uint](),
-					moduleName,
-					docId,
-					identifiersRange[0],
-				)
-			}
+			membersNeedingSubtypingResolve = append(membersNeedingSubtypingResolve, fieldType)
+			structMember = idx.NewInlineSubtype(
+				identifier,
+				fieldType,
+				moduleName,
+				docId,
+				identifiersRange[0],
+			)
+			structFields = append(structFields, &structMember)
+		} else if len(identifier) > 0 {
+			structMember := idx.NewStructMember(
+				identifier,
+				fieldType,
+				option.None[[2]uint](),
+				moduleName,
+				docId,
+				identifiersRange[0],
+			)
+
 			structFields = append(structFields, &structMember)
 		}
 	}
@@ -178,5 +179,5 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 		)
 	}
 
-	return _struct
+	return _struct, membersNeedingSubtypingResolve
 }

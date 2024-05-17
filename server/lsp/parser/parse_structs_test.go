@@ -130,8 +130,9 @@ func TestParse_struct_with_anonymous_bitstructs(t *testing.T) {
 	}
 }
 
-func TestParse_struct_subtyping(t *testing.T) {
-	source := `module x;
+func TestParse_struct_subtyping_should_resolve(t *testing.T) {
+	t.Run("should resolve subtyping when substruct is in same file", func(t *testing.T) {
+		source := `module x;
 	struct Person {
 		int age;
 		String name;
@@ -140,37 +141,55 @@ func TestParse_struct_subtyping(t *testing.T) {
 		inline Person person;
 		String title;
 	}`
-	doc := document.NewDocument("docId", source)
-	parser := createParser()
+		doc := document.NewDocument("docId", source)
+		parser := createParser()
 
-	symbols := parser.ParseSymbols(&doc)
-	module := symbols.Get("x")
+		symbols := parser.ParseSymbols(&doc)
+		module := symbols.Get("x")
 
-	strukt, ok := module.Structs["ImportantPerson"]
-	assert.True(t, ok)
+		strukt, ok := module.Structs["ImportantPerson"]
+		assert.True(t, ok)
 
-	// Check ImportantPersons contains Person members
-	members := strukt.GetMembers()
-	assert.Equal(t, "title", members[1].GetName())
-	assert.Equal(t, "String", members[1].GetType().GetName())
-	assert.Equal(t, idx.NewRange(7, 9, 7, 14), members[1].GetIdRange())
-	//assert.Equal(t, idx.NewRange(7, 2, 7, 15), members[1].GetDocumentRange())
+		// Check ImportantPersons contains Person members
+		members := strukt.GetMembers()
 
-	assert.Equal(t, "person", members[0].GetName())
-	assert.Equal(t, "Person", members[0].GetType().GetName())
-	assert.Equal(t, idx.NewRange(6, 16, 6, 22), members[0].GetIdRange(), "Identifier range is wrong")
-	//assert.Equal(t, idx.NewRange(6, 2, 6, 23), members[0].GetDocumentRange(), "Doc range is wrong")
-	/* Ideally, we should be able to resolve Person, but can happen that Person is in another file
-	assert.Equal(t, "age", members[1].GetName())
-	assert.Equal(t, "int", members[1].GetType().GetName())
-	assert.Equal(t, idx.NewRange(2, 9, 2, 14), members[0].GetIdRange())
-	assert.Equal(t, idx.NewRange(2, 2, 2, 15), members[0].GetDocumentRange())
+		assert.Equal(t, "person", members[0].GetName())
+		assert.Equal(t, "Person", members[0].GetType().GetName())
+		assert.False(t, members[0].IsInlinePendingToResolve(), "Member should be resolved")
+		assert.Equal(t, idx.NewRange(6, 16, 6, 22), members[0].GetIdRange(), "Identifier range is wrong")
 
-	assert.Equal(t, "name", members[2].GetName())
-	assert.Equal(t, "String", members[2].GetType().GetName())
-	assert.Equal(t, idx.NewRange(2, 6, 2, 10), members[0].GetIdRange())
-	assert.Equal(t, idx.NewRange(2, 2, 2, 11), members[0].GetDocumentRange())
-	*/
+		assert.Equal(t, "age", members[2].GetName())
+		assert.Equal(t, "int", members[2].GetType().GetName())
+		assert.False(t, members[2].IsInlinePendingToResolve(), "Member should be resolved")
+		assert.Equal(t, idx.NewRange(2, 6, 2, 9), members[2].GetIdRange(), "Identifier range is wrong")
+
+		assert.Equal(t, "name", members[3].GetName())
+		assert.Equal(t, "String", members[3].GetType().GetName())
+		assert.False(t, members[3].IsInlinePendingToResolve(), "Member should be resolved")
+		assert.Equal(t, idx.NewRange(3, 9, 3, 13), members[3].GetIdRange(), "Identifier range is wrong")
+	})
+
+	t.Run("should flag pending to resolve subtyping when substruct somewhere", func(t *testing.T) {
+		source := `module x;
+	struct ImportantPerson {
+		inline Person person;
+	}`
+		doc := document.NewDocument("docId", source)
+		parser := createParser()
+
+		symbols := parser.ParseSymbols(&doc)
+		module := symbols.Get("x")
+
+		strukt, ok := module.Structs["ImportantPerson"]
+		assert.True(t, ok)
+
+		// Check ImportantPersons contains Person members
+		members := strukt.GetMembers()
+
+		assert.Equal(t, "person", members[0].GetName())
+		assert.Equal(t, "Person", members[0].GetType().GetName())
+		assert.True(t, members[0].IsInlinePendingToResolve(), "Member should be flagged to be pending to resolve")
+	})
 }
 
 func TestParse_Unions(t *testing.T) {
