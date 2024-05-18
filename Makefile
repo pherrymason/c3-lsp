@@ -14,7 +14,7 @@ build-parser:
 	cp tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
 
 build:
-	go build -C server -o c3-lsp ./bin
+	go build -C server -o bin/c3-lsp
 
 build-all:
 # Build darwin-amd64

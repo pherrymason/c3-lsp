@@ -12,6 +12,21 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 - [x] **Go to definition.** 
 - [x] **Hover** Displays information about symbol under cursor.
 
+## Installation
+Precompiled binaries for the following operating systems are available:
+
+- Linux x64 [download](https://github.com/pherrymason/c3-lsp/releases/download/latest/linux-amd64-c3lsp.zip)  
+- MacOS x64 [download](https://github.com/pherrymason/c3-lsp/releases/download/latest/darwin-amd64-c3lsp.zip).
+
+You can also build from source:
+
+- Download and install golang: https://go.dev/
+- Clone this repo
+- Run `make build`: This will create `c3-lsp` at `server/bin` folder.
+
+
+
+## Status
 **Next release**
 - TextDocumentCompletion: Be able to suggest `Interfaces`, `module names`
 
