@@ -14,7 +14,8 @@ build-parser:
 	cp tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
 
 build:
-	cd server && go build
+	go build -C server
+
 
 build-dev:
 	cd server && go build -gcflags="all=-N -l" -o c3-lsp

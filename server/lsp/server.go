@@ -29,15 +29,12 @@ type ServerOpts struct {
 }
 
 func NewServer(opts ServerOpts) *Server {
-	serverName := "C3-LSP"
-	serverVersion := "0.0.1"
-
 	// This increases logging verbosity (optional)
 	commonlog.Configure(2, nil)
-	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", serverName))
+	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", opts.Name))
 
 	handler := protocol.Handler{}
-	glspServer := glspserv.NewServer(&handler, serverName, true)
+	glspServer := glspserv.NewServer(&handler, opts.Name, true)
 
 	documents := document.NewDocumentStore(opts.FS, &glspServer.Log)
 	language := l.NewLanguage(logger)
@@ -51,8 +48,8 @@ func NewServer(opts ServerOpts) *Server {
 	handler.Initialize = func(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 		capabilities := handler.CreateServerCapabilities()
 		return handlers.Initialize(
-			serverName,
-			serverVersion,
+			opts.Name,
+			opts.Version,
 			capabilities,
 			context,
 			params,
