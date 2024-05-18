@@ -14,7 +14,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_or_submodules(t *testing.
 	t.Run("Find variable definition in same module, but different file", func(t *testing.T) {
 		doc := documents["app.c3"]
 		position := buildPosition(20, 5) // Cursor h|elpDisplayedTimes
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -26,10 +26,48 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_or_submodules(t *testing.
 		assert.Equal(t, "int", variable.GetType().String())
 	})
 
+	t.Run("Should find the right element when there is a different element with the same name up anywhere in the same module", func(t *testing.T) {
+		state := NewTestState()
+		state.registerDoc(
+			"a.c3",
+			`module app;
+			fn void main() {
+				variable = 3;
+			}
+			
+			fn void trap() {
+				bool variable = false;
+			}`,
+		)
+		state.registerDoc(
+			"b.c3",
+			`module app;
+			int variable = 4;
+			fn void foo() {
+				char variable = 'c';
+			}`,
+		)
+
+		doc := state.docs["a.c3"]
+		position := buildPosition(3, 4) // Cursor v|variable
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
+
+		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Symbol not found")
+		symbol := symbolOption.Get()
+
+		variable := symbol.(*idx.Variable)
+		assert.Equal(t, "variable", symbol.GetName())
+		assert.Equal(t, "int", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(1, 7, 1, 15), variable.GetIdRange())
+		assert.Equal(t, "b.c3", variable.GetDocumentURI())
+	})
+
 	t.Run("resolve variable from implicit sub module", func(t *testing.T) {
 		position := buildPosition(7, 21) // Cursor at BA|R_WEIGHT
 		doc := documents["module_foo.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -46,7 +84,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T)
 	t.Run("resolve implicit variable from different module in different file", func(t *testing.T) {
 		position := buildPosition(8, 21) // Cursor at BA|R_WEIGHT
 		doc := documents["module_foo2.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -60,7 +98,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T)
 	t.Run("resolve explicit variable from explicit sub module", func(t *testing.T) {
 		position := buildPosition(9, 28) // Cursor at foo::bar::D|EFAULT_BAR_COLOR;
 		doc := documents["module_foo2.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -74,7 +112,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T)
 	t.Run("finds symbol in parent implicit module", func(t *testing.T) {
 		position := buildPosition(6, 5) // Cursor at `B|ar`
 		doc := documents["module_foo_bar_dashed.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -88,7 +126,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T)
 	t.Run("should not finds symbol in sibling implicit module", func(t *testing.T) {
 		position := buildPosition(6, 5) // Cursor at `B|ar`
 		doc := documents["module_foo_bar_dashed.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 		//searchParams.SetSymbol("Circle")
 
 		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
@@ -100,7 +138,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T)
 		// This test ask specifically for a symbol located in an imported module defined after another module that has a cyclic dependency.
 		position := buildPosition(10, 6) // Cursor at `T|riangle`
 		doc := documents["module_foo2.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -119,7 +157,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T)
 		// This test ask specifically for a symbol located in an imported module defined after another module that has a cyclic dependency.
 		position := buildPosition(6, 16) // Cursor at `something(v|alue);`
 		doc := documents["module_multiple_same_file.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -131,7 +169,7 @@ func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T)
 
 		// Second search
 		position = buildPosition(12, 12) // Cursor at `something(v|alue);`
-		searchParams = search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+		searchParams = search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 		symbolOption = language.findClosestSymbolDeclaration(searchParams, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")

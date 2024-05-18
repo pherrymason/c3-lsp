@@ -13,12 +13,13 @@ const (
 	LockStatusLocked
 )
 
-type FindMode int
+type ScopeMode int
 type TrackedModules map[string]int
 
 const (
-	AnyPosition FindMode = iota
+	AnyPosition ScopeMode = iota
 	InScope
+	InModuleRoot
 )
 
 // TODO: Still confusing difference between module and modulePath
@@ -36,7 +37,7 @@ type SearchParams struct {
 
 	continueOnModules bool // Allow searching on module locate on other files
 
-	scopeMode FindMode
+	scopeMode ScopeMode
 
 	// __ vv Here collected info abot symbol vv __
 	symbolModulePath symbols.ModulePath // Calculated module path where symbol is located
@@ -96,6 +97,10 @@ func (s SearchParams) HasModuleSpecified() bool {
 
 func (s SearchParams) IsLimitSearchInScope() bool {
 	return s.scopeMode == InScope
+}
+
+func (s SearchParams) ScopeMode() ScopeMode {
+	return s.scopeMode
 }
 
 func (s SearchParams) GetFullAccessPath() []document.Token {

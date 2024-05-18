@@ -10,7 +10,7 @@ import (
 )
 
 func (l *Language) findModuleInPosition(docId string, position symbols.Position) string {
-	for id, modulesByDoc := range l.functionTreeByDocument {
+	for id, modulesByDoc := range l.parsedModulesByDocument {
 		if id == docId {
 			continue
 		}
@@ -116,7 +116,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	var collectionParsedModules []parser.ParsedModules
 	if docIdOption.IsSome() {
 		docId := docIdOption.Get()
-		parsedModules, found := l.functionTreeByDocument[docId]
+		parsedModules, found := l.parsedModulesByDocument[docId]
 		if !found {
 			return option.None[symbols.Indexable]()
 		}
@@ -124,7 +124,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		collectionParsedModules = append(collectionParsedModules, parsedModules)
 	} else {
 		// Doc id not specified, search by module. Collect scope belonging to same module as searchParams.module
-		for docId, parsedModules := range l.functionTreeByDocument {
+		for docId, parsedModules := range l.parsedModulesByDocument {
 			if searchParams.ShouldExcludeDocId(docId) {
 				continue
 			}
@@ -134,25 +134,8 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 					collectionParsedModules = append(collectionParsedModules, parsedModules)
 					break
 				}
-				/*
-					scopeModuleName := scope.GetModuleString()
-					var isSameModule, isSubModule, isParentModule bool
-					isSameModule = scopeModuleName == searchParams.Module()
-					if !searchParams.ModulePath().IsEmpty() {
-						isSubModule = scope.IsSubModuleOf(searchParams.ModulePath())
-						isParentModule = searchParams.ModulePath().IsSubModuleOf(scope.GetModule())
-					}
-
-					if !isSameModule && !isSubModule && !isParentModule {
-						continue
-					}
-
-					collectionParsedModules = append(collectionParsedModules, parsedModules)
-					break*/
 			}
 		}
-
-		//return option.None[symbols.Indexable]()
 	}
 
 	trackedModules := searchParams.TrackTraversedModules()
@@ -168,6 +151,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 				scopedTree,
 				0,
 				searchParams.IsLimitSearchInScope(),
+				searchParams.ScopeMode(),
 			)
 
 			if identifier != nil {
@@ -187,7 +171,8 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		sb := search_params.NewSearchParamsBuilder().
 			WithSymbol(searchParams.Symbol()).
 			WithSymbolModule(searchParams.ModulePath()).
-			WithExcludedDocs(searchParams.DocId())
+			WithExcludedDocs(searchParams.DocId()).
+			WithScopeMode(search_params.InModuleRoot)
 		searchInSameModule := sb.Build()
 
 		found := l.findClosestSymbolDeclaration(searchInSameModule, debugger.goIn())
@@ -226,7 +211,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 func (l *Language) findSymbolDeclarationInModule(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
 	//expectedModule := searchParams.ModulePath().GetName()
 
-	for docId, modulesByDoc := range l.functionTreeByDocument {
+	for docId, modulesByDoc := range l.parsedModulesByDocument {
 		for _, scope := range modulesByDoc.GetLoadableModules(searchParams.ModulePath()) {
 			//if scope.GetModuleString() != expectedModule { // TODO Ignore current doc we are comming from
 			//	continue
@@ -262,7 +247,7 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 	return option.None[symbols.Indexable]()
 }
 
-func findDeepFirst(identifier string, position symbols.Position, node symbols.Indexable, depth uint, limitSearchInScope bool) (symbols.Indexable, uint) {
+func findDeepFirst(identifier string, position symbols.Position, node symbols.Indexable, depth uint, limitSearchInScope bool, scopeMode search_params.ScopeMode) (symbols.Indexable, uint) {
 	/*if limitSearchInScope {
 		_, ok := node.(*symbols.Function)
 		if ok && !node.GetDocumentRange().HasPosition(position) {
@@ -278,19 +263,26 @@ func findDeepFirst(identifier string, position symbols.Position, node symbols.In
 
 	//if node.GetDocumentRange().HasPosition(position) {
 	// Iterate first children with more children
-	for _, child := range node.NestedScopes() {
-		if limitSearchInScope &&
-			!node.GetDocumentRange().HasPosition(position) {
-			return nil, depth
-		}
+	if scopeMode != search_params.InModuleRoot {
+		for _, child := range node.NestedScopes() {
+			// Check the fn itself! Maybe we are searching for it!
+			if child.GetName() == identifier {
+				return child, depth
+			}
 
-		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope); result != nil {
-			return result, resultDepth
+			if limitSearchInScope &&
+				!child.GetDocumentRange().HasPosition(position) {
+				return nil, depth
+			}
+
+			if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode); result != nil {
+				return result, resultDepth
+			}
 		}
 	}
 
 	for _, child := range node.ChildrenWithoutScopes() {
-		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope); result != nil {
+		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode); result != nil {
 			return result, resultDepth
 		}
 	}

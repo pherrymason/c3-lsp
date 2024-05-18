@@ -52,6 +52,12 @@ func (b *SearchParamsBuilder) WithExcludedDocs(excludedDocId option.Option[strin
 	return b
 }
 
+func (b *SearchParamsBuilder) WithScopeMode(scopeMode ScopeMode) *SearchParamsBuilder {
+	b.params.scopeMode = scopeMode
+
+	return b
+}
+
 // Otros métodos withXXX según sea necesario
 
 // Método para construir el objeto final

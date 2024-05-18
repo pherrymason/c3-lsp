@@ -84,7 +84,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		// Let's find parent token
 		searchParams := sp.BuildSearchBySymbolUnderCursor(
 			doc,
-			l.functionTreeByDocument[doc.URI],
+			l.parsedModulesByDocument[doc.URI],
 			prevPosition,
 		)
 
@@ -125,7 +125,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		}
 	} else {
 		// Find symbols in document
-		moduleSymbols := l.functionTreeByDocument[doc.URI]
+		moduleSymbols := l.parsedModulesByDocument[doc.URI]
 		scopeSymbols := l.findAllScopeSymbols(&moduleSymbols, position)
 
 		for _, storedIdentifier := range scopeSymbols {

@@ -36,7 +36,7 @@ func (t TestState) GetDoc(docId string) document.Document {
 }
 
 func (t TestState) GetParsedModules(docId string) p.ParsedModules {
-	return t.language.functionTreeByDocument[docId]
+	return t.language.parsedModulesByDocument[docId]
 }
 
 func NewTestState(loggers ...commonlog.Logger) TestState {
@@ -173,7 +173,7 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 			doc := document.NewDocument("y", "module foo;"+tt.source)
 			language.RefreshDocumentIdentifiers(&doc, &parser)
 			position := buildPosition(1, 12) // Cursor at BA|R_WEIGHT
-			searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.functionTreeByDocument[doc.URI], position)
+			searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
 			debugger := NewFindDebugger(true)
 			symbol := language.findClosestSymbolDeclaration(searchParams, debugger)
@@ -199,7 +199,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		doc := state.docs["app.c3"]
 		position := buildPosition(3, 18) // Cursor at `n|umber`
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -221,7 +221,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		doc := state.docs["app.c3"]
 		position := buildPosition(2, 9) // Cursor at `n|umber`
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -243,7 +243,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		)
 		doc := state.docs["app.c3"]
 		position := buildPosition(3, 5) // Cursor at `e|mulator`
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -265,7 +265,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		)
 		doc := state.docs["app.c3"]
 		position := buildPosition(3, 9) // Cursor a|mbiguousVariable
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -286,7 +286,7 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		)
 		position := buildPosition(2, 5) // Cursor at `t|ick = tick + 3;`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -315,7 +315,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 
 		position := buildPosition(5, 5) // Cursor at `E|mu emulator`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -338,7 +338,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		)
 		position := buildPosition(4, 7) // Cursor at `fn E|mu main() {`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -361,7 +361,7 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		)
 		position := buildPosition(5, 15) // Cursor is at struct Emu (E|mulatorConsole) {
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -387,7 +387,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		)
 		position := buildPosition(3, 19)
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -408,7 +408,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		)
 		position := buildPosition(3, 5) // Cursor is at `W|indowStatus status;`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -429,7 +429,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		)
 		position := buildPosition(4, 27) // Cursor is at `status = WindowStatus.B|ACKGROUND`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -450,7 +450,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		)
 		position := buildPosition(4, 13) // Cursor is at `status = B|ACKGROUND`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -479,7 +479,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		)
 		position := buildPosition(3, 5) // Cursor at `W|indowError error =`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -500,7 +500,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		)
 		position := buildPosition(4, 5) // Cursor at `e|rror = UNEXPECTED_ERROR``
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -521,7 +521,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		)
 		position := buildPosition(4, 13) // Cursor at `error = U|NEXPECTED_ERROR;`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -545,7 +545,7 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 		)
 		position := buildPosition(2, 4) // Cursor at `K|ilo value = 3`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -568,7 +568,7 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 		)
 		position := buildPosition(4, 5) // Cursor at r|un(3);
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
@@ -589,7 +589,7 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 		)
 		position := buildPosition(4, 20) // Cursor at m|ain();
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.functionTreeByDocument[doc.URI], position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 

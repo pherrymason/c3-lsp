@@ -16,30 +16,30 @@ import (
 
 // Language will be the center of knowledge of everything parsed.
 type Language struct {
-	index                  IndexStore
-	functionTreeByDocument map[protocol.DocumentUri]parser.ParsedModules
-	logger                 commonlog.Logger
+	index                   IndexStore
+	parsedModulesByDocument map[protocol.DocumentUri]parser.ParsedModules
+	logger                  commonlog.Logger
 }
 
 func NewLanguage(logger commonlog.Logger) Language {
 	return Language{
-		index:                  NewIndexStore(),
-		functionTreeByDocument: make(map[protocol.DocumentUri]parser.ParsedModules),
-		logger:                 logger,
+		index:                   NewIndexStore(),
+		parsedModulesByDocument: make(map[protocol.DocumentUri]parser.ParsedModules),
+		logger:                  logger,
 	}
 }
 
 func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
 	parsedSymbols := parser.ParseSymbols(doc)
 
-	l.functionTreeByDocument[parsedSymbols.DocId()] = parsedSymbols
+	l.parsedModulesByDocument[parsedSymbols.DocId()] = parsedSymbols
 }
 
 func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position symbols.Position) option.Option[symbols.Indexable] {
 
 	searchParams := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
-		l.functionTreeByDocument[doc.URI],
+		l.parsedModulesByDocument[doc.URI],
 		position,
 	)
 
@@ -61,7 +61,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 	}*/
 	search := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
-		l.functionTreeByDocument[doc.URI],
+		l.parsedModulesByDocument[doc.URI],
 		symbols.NewPositionFromLSPPosition(params.Position),
 	)
 
