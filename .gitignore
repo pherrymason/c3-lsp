@@ -1,6 +1,6 @@
 /docs/
-tree-sitter-c3
-tree-sitter-c3-alt
 .DS_Store
 .idea
 *.log
+tree-sitter-c3
+server/bin

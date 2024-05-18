@@ -14,8 +14,20 @@ build-parser:
 	cp tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
 
 build:
-	go build -C server
+	go build -C server -o c3-lsp ./bin
 
+build-all:
+# Build darwin-amd64
+	echo "Building darwin-amd64"
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C server -o bin/c3-lsp
+	cd server/bin && zip ./darwin-amd64-c3lsp.zip c3-lsp
+	echo "darwin-amd64 built"
+
+# Build linux
+	echo "Building linux-amd64"
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" go build -C server -o bin/c3-lsp
+	cd server/bin && zip ./linux-amd64-c3lsp.zip c3-lsp
+	echo "linux-amd64 built"
 
 build-dev:
 	cd server && go build -gcflags="all=-N -l" -o c3-lsp
