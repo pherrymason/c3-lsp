@@ -26,7 +26,7 @@ func main() {
 	if options.allowReporting {
 		err := sentry.Init(sentry.ClientOptions{
 			Dsn:     "https://76f9fe6a1d3e2be7c9083891a644b0a3@o124652.ingest.us.sentry.io/4507278372110336",
-			Release: commitHash,
+			Release: fmt.Sprintf("c3.lsp@%s+%s", version, commitHash),
 		})
 		if err != nil {
 			log.Fatalf("sentry.Init: %s", err)
