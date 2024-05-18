@@ -13,7 +13,6 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 - [x] **Hover** Displays information about symbol under cursor.
 
 **Next release**
-- Index Generics
 - TextDocumentCompletion: Be able to suggest `Interfaces`, `module names`
 
 **Current status**  
