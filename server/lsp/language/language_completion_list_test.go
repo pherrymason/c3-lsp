@@ -335,6 +335,95 @@ func TestLanguage_BuildCompletionList_enums(t *testing.T) {
 		}
 	})
 }
+func TestLanguage_BuildCompletionList_faults(t *testing.T) {
+	parser := createParser()
+	language := NewLanguage(commonlog.MockLogger{})
+
+	t.Run("Should suggest Fault type", func(t *testing.T) {
+		source := `
+		fault WindowError { COH, COUGH, COUGHCOUGH}
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS }
+`
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"Wind", []protocol.CompletionItem{
+				CreateCompletionItem("WindowError", protocol.CompletionItemKindEnum),
+				CreateCompletionItem("WindowFileError", protocol.CompletionItemKindEnum),
+			}},
+			{"WindowFile", []protocol.CompletionItem{
+				CreateCompletionItem("WindowFileError", protocol.CompletionItemKindEnum),
+			}},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				doc := document.NewDocument("test.c3", source+tt.input+`}`)
+				language.RefreshDocumentIdentifiers(&doc, &parser)
+				position := buildPosition(4, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := language.BuildCompletionList(&doc, position)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should suggest Fault constant type", func(t *testing.T) {
+		source := `
+		fault WindowError { COH, COUGH, COUGHCOUGH}
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		fn void main() {
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find constants starting with string",
+				"CO",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COULD_NOT_CREATE", protocol.CompletionItemKindEnumMember),
+				}},
+
+			{
+				"Find all fault constants when prefixed with fault name",
+				"WindowError.",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember),
+				}},
+			{
+				"Find matching fault constants",
+				"WindowFileError.NOT",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("NOT_FOUND", protocol.CompletionItemKindEnumMember),
+				},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
+				doc := document.NewDocument("test.c3", source+tt.input+`
+				}`)
+				language.RefreshDocumentIdentifiers(&doc, &parser)
+				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := language.BuildCompletionList(&doc, position)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+}
 
 func CreateCompletionItem(label string, kind protocol.CompletionItemKind) protocol.CompletionItem {
 	return protocol.CompletionItem{Label: label, Kind: &kind}

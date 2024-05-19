@@ -51,8 +51,11 @@ func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, posi
 		for _, def := range scopeFunction.Defs {
 			symbolsCollection = append(symbolsCollection, def)
 		}
-		for _, faults := range scopeFunction.Faults {
-			symbolsCollection = append(symbolsCollection, faults)
+		for _, fault := range scopeFunction.Faults {
+			symbolsCollection = append(symbolsCollection, fault)
+			for _, constant := range fault.GetConstants() {
+				symbolsCollection = append(symbolsCollection, constant)
+			}
 		}
 		for _, interfaces := range scopeFunction.Interfaces {
 			symbolsCollection = append(symbolsCollection, interfaces)

@@ -96,6 +96,7 @@ func NewFaultConstant(name string, idRange Range) *FaultConstant {
 		BaseIndexable: BaseIndexable{
 			name:    name,
 			idRange: idRange,
+			Kind:    protocol.CompletionItemKindEnumMember,
 		},
 	}
 }

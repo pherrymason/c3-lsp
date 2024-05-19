@@ -122,6 +122,17 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 					})
 				}
 			}
+
+		case *symbols.Fault:
+			fault := prevIndexable.(*symbols.Fault)
+			for _, constant := range fault.GetConstants() {
+				if !filterMembers || strings.HasPrefix(constant.GetName(), symbolInPosition.Token) {
+					items = append(items, protocol.CompletionItem{
+						Label: constant.GetName(),
+						Kind:  &constant.Kind,
+					})
+				}
+			}
 		}
 	} else {
 		// Find symbols in document
