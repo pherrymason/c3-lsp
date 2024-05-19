@@ -25,8 +25,14 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 	}
 
 	elm := result.Get()
+	protection := 0
 
 	for {
+		if protection > 500 {
+			return option.None[idx.Indexable]()
+		}
+		protection++
+
 		for {
 			if !isInspectable(elm) {
 				elm = l.resolve(elm, docId.Get(), searchParams.Module(), debugger)

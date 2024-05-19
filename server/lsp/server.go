@@ -38,7 +38,7 @@ func NewServer(opts ServerOpts) *Server {
 
 	documents := document.NewDocumentStore(opts.FS, &glspServer.Log)
 	language := l.NewLanguage(logger)
-	parser := p.NewParser(&logger)
+	parser := p.NewParser(logger)
 	handlers := handlers.NewHandlers(documents, &language, &parser)
 
 	handler.Initialized = initialized

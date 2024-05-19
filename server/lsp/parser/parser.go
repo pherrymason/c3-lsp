@@ -5,6 +5,7 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
+	"github.com/tliron/commonlog"
 )
 
 const VarDeclarationQuery = `(var_declaration
@@ -29,7 +30,7 @@ const ImportDeclaration = `(import_declaration) @import_dec`
 const ModuleQuery = `(source_file ` + ModuleDeclaration + `)`
 
 type Parser struct {
-	Logger interface{}
+	Logger commonlog.Logger
 }
 
 type StructWithSubtyping struct {
@@ -37,7 +38,7 @@ type StructWithSubtyping struct {
 	members []string
 }
 
-func NewParser(logger interface{}) Parser {
+func NewParser(logger commonlog.Logger) Parser {
 	return Parser{
 		Logger: logger,
 	}
@@ -74,7 +75,9 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 	sourceCode := []byte(doc.Content)
 	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
 	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
-
+	//parsed := fmt.Sprint(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
+	//fmt.Println(parsed)
+	//p.Logger.Debug(parsed)
 	var moduleSymbol *idx.Module
 	anonymousModuleName := true
 	lastModuleName := ""

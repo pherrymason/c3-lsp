@@ -17,5 +17,9 @@ func NewFindDebugger(enabled bool) FindDebugger {
 func (d FindDebugger) goIn() FindDebugger {
 	max := utils.Max(d.depth, d.maxDepth)
 
-	return FindDebugger{depth: d.depth + 1, maxDepth: max}
+	return FindDebugger{
+		depth:    d.depth + 1,
+		maxDepth: max,
+		enabled:  d.enabled,
+	}
 }

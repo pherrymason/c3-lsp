@@ -213,13 +213,13 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 	t.Run("Find local variable definition, with cursor in same declaration", func(t *testing.T) {
 		state.registerDoc(
-			"app.c3",
+			"number.c3",
 			`fn void newNumber(){
 				int number;
 			}`,
 		)
 
-		doc := state.docs["app.c3"]
+		doc := state.docs["number.c3"]
 		position := buildPosition(2, 9) // Cursor at `n|umber`
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 

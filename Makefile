@@ -16,6 +16,9 @@ build-parser:
 build:
 	go build -C server -o bin/c3-lsp
 
+build-dev:
+	go build -C server -gcflags="all=-N -l" -o bin/c3-lsp
+
 build-all:
 # Build darwin-amd64
 	echo "Building darwin-amd64"
@@ -29,8 +32,6 @@ build-all:
 	cd server/bin && zip ./linux-amd64-c3lsp.zip c3-lsp
 	echo "linux-amd64 built"
 
-build-dev:
-	cd server && go build -gcflags="all=-N -l" -o c3-lsp
 
 #attach-process:
 #	dlv attach --headless --listen=:2345 $(pgrep c3-lsp) ./server/c3-lsp --log

@@ -124,7 +124,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 				return option.Some(identifier)
 			}
 
-			// Not found, store its imports
+			// Not found, store imports traversed to avoid checking them again
 			for _, imp := range scopedTree.Imports {
 				if !importsAdded[imp] {
 					imports = append(imports, imp)
@@ -255,7 +255,10 @@ func findDeepFirst(identifier string, position symbols.Position, node symbols.In
 
 	// All elements found in nestable symbols checked, check node itself
 	if node.GetName() == identifier {
-		return node, depth
+		_, ok := node.(*symbols.Module) // Modules will be searched later explicitly.
+		if !ok {
+			return node, depth
+		}
 	}
 
 	return nil, depth
