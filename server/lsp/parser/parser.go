@@ -76,7 +76,6 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
 
 	var moduleSymbol *idx.Module
-	//moduleFunctions := make(idx.ModulesInDocument)
 	anonymousModuleName := true
 	lastModuleName := ""
 	subtyptingToResolve := []StructWithSubtyping{}
@@ -99,7 +98,6 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 
 			if nodeType != "module" {
 				moduleSymbol = parsedModules.GetOrInitModule(lastModuleName, doc, anonymousModuleName)
-				//parsedModules.RegisterModule(moduleSymbol)
 			}
 
 			switch nodeType {
@@ -220,8 +218,8 @@ func resolveStructSubtypes(parsedModules *ParsedModules, subtyping []StructWithS
 	for _, struktWithSubtyping := range subtyping {
 		for _, inlinedMemberName := range struktWithSubtyping.members {
 
-			for _, module := range parsedModules.modules {
-
+			for _, key := range parsedModules.modules.Keys() {
+				module, _ := parsedModules.modules.Get(key)
 				// Search
 				for _, strukt := range module.Structs {
 					if strukt.GetName() == inlinedMemberName {

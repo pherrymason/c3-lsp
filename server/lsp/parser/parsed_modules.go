@@ -3,9 +3,8 @@ package parser
 import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/ordered_map"
 )
-
-type ModulesInDocument map[string]*idx.Module
 
 type ParsedModulesInterface interface {
 	FindModuleInCursorPosition(cursorPosition idx.Position) string
@@ -13,13 +12,13 @@ type ParsedModulesInterface interface {
 
 type ParsedModules struct {
 	docId   string
-	modules ModulesInDocument
+	modules ordered_map.OrderedMap[*idx.Module]
 }
 
 func NewParsedModules(docId string) ParsedModules {
 	return ParsedModules{
 		docId:   docId,
-		modules: make(ModulesInDocument),
+		modules: *ordered_map.NewOrderedMap[*idx.Module](),
 	}
 }
 
@@ -33,7 +32,7 @@ func (ps *ParsedModules) GetOrInitModule(moduleName string, doc *document.Docume
 		moduleName = idx.NormalizeModuleName(doc.URI)
 	}
 
-	module, exists := ps.modules[moduleName]
+	module, exists := ps.modules.Get(moduleName)
 	if !exists {
 		module = idx.NewModule(
 			moduleName,
@@ -48,18 +47,23 @@ func (ps *ParsedModules) GetOrInitModule(moduleName string, doc *document.Docume
 			),
 		)
 
-		ps.modules[moduleName] = module
+		ps.modules.Set(moduleName, module)
 	}
 
 	return module
 }
 
 func (ps *ParsedModules) RegisterModule(symbol *idx.Module) {
-	ps.modules[symbol.GetModule().GetName()] = symbol
+	ps.modules.Set(symbol.GetModule().GetName(), symbol)
 }
 
 func (ps ParsedModules) Get(moduleName string) *idx.Module {
-	return ps.modules[moduleName]
+	mod, ok := ps.modules.Get(moduleName)
+	if ok {
+		return mod
+	}
+
+	return nil
 }
 
 func (ps ParsedModules) GetLoadableModules(modulePath idx.ModulePath) []*idx.Module {
@@ -83,14 +87,16 @@ func (ps ParsedModules) HasImplicitLoadableModules(modulePath idx.ModulePath) bo
 	return false
 }
 
-func (ps ParsedModules) SymbolsByModule() ModulesInDocument {
-	return ps.modules
+// Returns modules sorted by value
+func (ps ParsedModules) SymbolsByModule() []*idx.Module {
+	return ps.modules.Values()
 }
 
 func (ps ParsedModules) FindModuleInCursorPosition(position idx.Position) string {
 	closerPreviousRange := idx.NewRange(0, 0, 0, 0)
 	priorModule := ""
-	for moduleName, module := range ps.modules {
+	for _, moduleName := range ps.modules.Keys() {
+		module, _ := ps.modules.Get(moduleName)
 		if module.GetDocumentRange().HasPosition(position) {
 			return module.GetModule().GetName()
 		}
@@ -104,7 +110,8 @@ func (ps ParsedModules) FindModuleInCursorPosition(position idx.Position) string
 	}
 
 	if priorModule != "" {
-		return ps.modules[priorModule].GetModule().GetName()
+		mod, _ := ps.modules.Get(priorModule)
+		return mod.GetModule().GetName()
 	}
 
 	return ""
