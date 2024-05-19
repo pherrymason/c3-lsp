@@ -14,6 +14,35 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+func isCompletingAModulePath(doc *document.Document, cursorPosition symbols.Position) bool {
+	// Cursor is just right after last char, let's rewind one place
+	position := cursorPosition
+	if cursorPosition.Character > 0 {
+		position = cursorPosition.RewindCharacter()
+	}
+
+	index := position.IndexIn(doc.Content)
+
+	// Read backwards until a separator character is found.
+	startIndex := index
+	for i := index; i >= 0; i-- {
+		r := rune(doc.Content[i])
+		//fmt.Printf("%c\n", r)
+		if utils.IsAZ09_(r) || r == '.' || r == ':' {
+			startIndex = i
+		} else {
+			break
+		}
+	}
+	sentence := doc.Content[startIndex : index+1]
+	// fmt.Println("sentence: ", sentence)
+
+	containsModulePathSeparator := strings.Contains(sentence, ":")
+	containsChainSeparator := strings.Contains(sentence, ".")
+
+	return (!containsModulePathSeparator && !containsChainSeparator) || (containsModulePathSeparator && !containsChainSeparator)
+}
+
 // Checks if writing seems to be a chain of components (example: aStruct.aMember)
 // If that's the case, it will return the position of the last character of previous token
 func isCompletingAChain(doc *document.Document, cursorPosition symbols.Position) (bool, symbols.Position) {
@@ -73,8 +102,13 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 	}
 	l.logger.Debug(fmt.Sprintf("building completion list: %s", symbolInPosition.Token))
 
-	// There are two cases (TBC):
+	// Check if module path is being written/exists
+	//isCompletingModulePath, prevPosition := isCompletingAModulePath(doc, position)
+	//hasImplicitModulePath := false
+
+	// There are three cases (TBC):
 	// User writing with a new symbol: With a ¿space? in front
+	// User writing a module path and is expecting to autocomplete with more module paths
 	// User writing a chained symbol and is expecting to autocomplete with member/methods children of previous token type.
 	// So first detect which of these two cases are we in
 	isCompletingAChain, prevPosition := isCompletingAChain(doc, position)

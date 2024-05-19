@@ -70,6 +70,83 @@ func Test_isCompletingAChain(t *testing.T) {
 	}
 }
 
+func Test_isCompletingAModulePath(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		position symbols.Position
+		expected bool
+	}{
+		{
+			name:     "Writing blank line",
+			input:    "\nw",
+			position: buildPosition(2, 1),
+			expected: true,
+		},
+		{
+			name:     "Writing single character, may be a module path",
+			input:    "w",
+			position: buildPosition(1, 1),
+			expected: true,
+		},
+		{
+			name:     "Writing a dot character, invalidates writing a path",
+			input:    "w.",
+			position: buildPosition(1, 2),
+			expected: false,
+		},
+		{
+			name:     "Writing a module name (including one :)",
+			input:    "aModule:",
+			position: buildPosition(1, 8),
+			expected: true,
+		},
+		{
+			name:     "Writing a module name (including both ::)",
+			input:    "aModule::",
+			position: buildPosition(1, 9),
+			expected: true,
+		},
+		{
+			name:     "Writing a module name (including :: + character)",
+			input:    "aModule::A",
+			position: buildPosition(1, 10),
+			expected: true,
+		},
+		{
+			name:     "Having a previous sentence with module path does not interfere",
+			input:    "app::what=1; a.",
+			position: buildPosition(1, 15),
+			expected: false,
+		},
+		{
+			name:     "Having a previous sentence with module path does not interfere 2",
+			input:    "app::what=1; aModule::A",
+			position: buildPosition(1, 23),
+			expected: true,
+		},
+		{
+			name:     "Having a previous sentence with module path does not interfere 3",
+			input:    "app::what=1; aModule",
+			position: buildPosition(1, 20),
+			expected: true,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			doc := document.NewDocument("test.c3", tt.input)
+			result := isCompletingAModulePath(&doc, tt.position)
+
+			assert.Equal(
+				t,
+				tt.expected,
+				result,
+			)
+		})
+	}
+}
+
 func TestLanguage_BuildCompletionList(t *testing.T) {
 	state := NewTestState()
 
@@ -335,6 +412,7 @@ func TestLanguage_BuildCompletionList_enums(t *testing.T) {
 		}
 	})
 }
+
 func TestLanguage_BuildCompletionList_faults(t *testing.T) {
 	parser := createParser()
 	language := NewLanguage(commonlog.MockLogger{})
@@ -417,6 +495,54 @@ func TestLanguage_BuildCompletionList_faults(t *testing.T) {
 				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
 				completionList := language.BuildCompletionList(&doc, position)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+}
+
+func TestLanguage_BuildCompletionList_modules(t *testing.T) {
+	parser := createParser()
+	language := NewLanguage(commonlog.MockLogger{})
+
+	t.Run("Should suggest module names", func(t *testing.T) {
+		cases := []struct {
+			source   string
+			position symbols.Position
+			expected []protocol.CompletionItem
+		}{
+			{
+				`
+				module app;
+				int version = 1;
+				a
+				`,
+				buildPosition(4, 5), // Cursor at `a|`
+				[]protocol.CompletionItem{
+					CreateCompletionItem("app", protocol.CompletionItemKindModule),
+				},
+			},
+			{
+				`
+				module app;
+				int version = 1;
+				app::
+				module app::foo`,
+				buildPosition(4, 9), // Cursor at `a|`
+				[]protocol.CompletionItem{
+					CreateCompletionItem("app::foo", protocol.CompletionItemKindModule),
+				},
+			},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				doc := document.NewDocument("test.c3", tt.source)
+				language.RefreshDocumentIdentifiers(&doc, &parser)
+
+				completionList := language.BuildCompletionList(&doc, tt.position)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
