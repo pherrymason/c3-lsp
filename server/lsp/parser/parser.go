@@ -218,8 +218,7 @@ func resolveStructSubtypes(parsedModules *ParsedModules, subtyping []StructWithS
 	for _, struktWithSubtyping := range subtyping {
 		for _, inlinedMemberName := range struktWithSubtyping.members {
 
-			for _, key := range parsedModules.modules.Keys() {
-				module, _ := parsedModules.modules.Get(key)
+			for _, module := range parsedModules.SymbolsByModule() {
 				// Search
 				for _, strukt := range module.Structs {
 					if strukt.GetName() == inlinedMemberName {

@@ -95,8 +95,8 @@ func (ps ParsedModules) SymbolsByModule() []*idx.Module {
 func (ps ParsedModules) FindModuleInCursorPosition(position idx.Position) string {
 	closerPreviousRange := idx.NewRange(0, 0, 0, 0)
 	priorModule := ""
-	for _, moduleName := range ps.modules.Keys() {
-		module, _ := ps.modules.Get(moduleName)
+	for _, module := range ps.modules.Values() {
+
 		if module.GetDocumentRange().HasPosition(position) {
 			return module.GetModule().GetName()
 		}
@@ -104,7 +104,7 @@ func (ps ParsedModules) FindModuleInCursorPosition(position idx.Position) string
 		if module.GetDocumentRange().IsBeforePosition(position) {
 			if closerPreviousRange.IsAfter(module.GetDocumentRange()) {
 				closerPreviousRange = module.GetDocumentRange()
-				priorModule = moduleName
+				priorModule = module.GetName()
 			}
 		}
 	}
