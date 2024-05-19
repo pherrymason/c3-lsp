@@ -177,8 +177,12 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	}
 
 	// Last resort, check if any module is compatible with the string being searched
-	if debugger.depth == 0 {
-		fmt.Println("Not found yet!")
+	if debugger.depth == 0 && searchResult.IsNone() {
+		moduleMatches := l.findModuleNameInTraversedModules(searchParams, searchResult.traversedModules)
+
+		if len(moduleMatches) > 0 {
+			searchResult.Set(moduleMatches[0])
+		}
 	}
 
 	// Not found...
@@ -219,6 +223,20 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 	}
 
 	return searchResult
+}
+
+func (l Language) findModuleNameInTraversedModules(searchParams search_params.SearchParams, traversedModules map[string]bool) []*symbols.Module {
+	matches := []*symbols.Module{}
+
+	for _, parsedModulesByDoc := range l.parsedModulesByDocument {
+		for _, module := range parsedModulesByDoc.Modules() {
+			if module.GetName() == searchParams.Symbol() {
+				matches = append(matches, module)
+			}
+		}
+	}
+
+	return matches
 }
 
 func findDeepFirst(identifier string, position symbols.Position, node symbols.Indexable, depth uint, limitSearchInScope bool, scopeMode search_params.ScopeMode) (symbols.Indexable, uint) {

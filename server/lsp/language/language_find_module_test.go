@@ -9,7 +9,6 @@ import (
 )
 
 func TestLanguage_findClosestSymbolDeclaration_should_find_module(t *testing.T) {
-	t.Skip()
 	state := NewTestState()
 	state.registerDoc(
 		"origin.c3",

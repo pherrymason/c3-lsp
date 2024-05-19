@@ -633,7 +633,7 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 					CreateCompletionItem("app::window", protocol.CompletionItemKindModule),
 					CreateCompletionItem("app::window::errors", protocol.CompletionItemKindModule),
 				},
-				true,
+				false,
 			},
 			{
 				`
