@@ -4,12 +4,13 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/option"
 )
 
-func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[idx.Indexable] {
+func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, debugger FindDebugger) SearchResult {
 	accessPath := searchParams.GetFullAccessPath()
 	state := NewFindParentState(accessPath)
+	trackedModules := searchParams.TrackTraversedModules()
+	searchResult := NewSearchResult(trackedModules)
 
 	docId := searchParams.DocId()
 	iterSearch := search_params.NewSearchParamsBuilder().
@@ -17,6 +18,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 		WithSymbolRange(accessPath[0].TokenRange).
 		WithDocId(docId.Get()).
 		WithModule(searchParams.Module()).
+		WithScopeMode(search_params.InScope).
 		Build()
 
 	result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
@@ -29,7 +31,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 	for {
 		if protection > 500 {
-			return option.None[idx.Indexable]()
+			return searchResult
 		}
 		protection++
 
@@ -94,7 +96,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					Build()
 				result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
 				if result.IsNone() {
-					return option.None[idx.Indexable]()
+					return NewSearchResultEmpty(trackedModules)
 				}
 
 				elm = result.Get()
@@ -106,8 +108,9 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 			break
 		}
 	}
+	searchResult.Set(elm)
 
-	return option.Some[idx.Indexable](elm)
+	return searchResult
 }
 
 func isInspectable(elm idx.Indexable) bool {

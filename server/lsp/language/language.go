@@ -47,7 +47,9 @@ func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, posi
 		return option.None[symbols.Indexable]()
 	}*/
 
-	return l.findClosestSymbolDeclaration(searchParams, FindDebugger{depth: 0})
+	searchResult := l.findClosestSymbolDeclaration(searchParams, FindDebugger{depth: 0})
+
+	return searchResult.result
 }
 
 func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) option.Option[protocol.Hover] {

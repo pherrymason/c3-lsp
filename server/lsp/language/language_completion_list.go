@@ -242,12 +242,12 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 }
 
 func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
-	prevIndexableOption := l.findInParentSymbols(searchParams, debugger)
-	if prevIndexableOption.IsNone() {
-		return prevIndexableOption
+	prevIndexableResult := l.findInParentSymbols(searchParams, debugger)
+	if prevIndexableResult.IsNone() {
+		return prevIndexableResult.result
 	}
 
-	prevIndexable := prevIndexableOption.Get()
+	prevIndexable := prevIndexableResult.Get()
 
 	_, isStructMember := prevIndexable.(*symbols.StructMember)
 	if isStructMember {
@@ -262,8 +262,8 @@ func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDeb
 			WithDocId(prevIndexable.GetDocumentURI()).
 			Build()
 
-		prevIndexableOption = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
+		prevIndexableResult = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
 	}
 
-	return prevIndexableOption
+	return prevIndexableResult.result
 }

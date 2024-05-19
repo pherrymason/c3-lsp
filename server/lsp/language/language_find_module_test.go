@@ -8,6 +8,41 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestLanguage_findClosestSymbolDeclaration_should_find_module(t *testing.T) {
+	t.Skip()
+	state := NewTestState()
+	state.registerDoc(
+		"origin.c3",
+		`import other;
+		import trap;`,
+	)
+	state.registerDoc(
+		"other.c3",
+		`module other;`,
+	)
+	state.registerDoc(
+		"traps.c3",
+		`module trap;
+		fn void foo(bool other) {}
+		struct Cpu {
+			System* other;
+		}`,
+	)
+
+	position := buildPosition(1, 8) // Cursor at `o|ther`
+	doc := state.GetDoc("origin.c3")
+	searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.GetParsedModules(doc.URI), position)
+
+	symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+	assert.True(t, symbolOption.IsSome())
+	found := symbolOption.Get()
+	module, ok := found.(*idx.Module)
+	assert.True(t, ok, "Unexpected symbol resolved.")
+	assert.Equal(t, "other", module.GetName())
+
+}
+
 func TestLanguage_findClosestSymbolDeclaration_in_same_or_submodules(t *testing.T) {
 	language, documents := initTestEnv()
 

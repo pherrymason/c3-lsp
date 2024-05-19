@@ -51,32 +51,36 @@ func (l *Language) implicitImportedParsedModules(acceptedModulePaths []symbols.M
 // - Search in files of same module
 // - SearchParams in imported files (TODO)
 // - SearchParams in global symbols in workspace
-func (l *Language) findClosestSymbolDeclaration(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
+func (l *Language) findClosestSymbolDeclaration(searchParams search_params.SearchParams, debugger FindDebugger) SearchResult {
+	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
 	if IsLanguageKeyword(searchParams.Symbol()) {
 		l.debug("Ignore because C3 keyword", debugger)
-		return option.None[symbols.Indexable]()
+		return NewSearchResultEmpty(searchParams.TrackTraversedModules())
 	}
 
 	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s: %s", searchParams.DocId(), searchParams.Module(), searchParams.Symbol()), debugger)
 
-	/*position := searchParams.symbolRange.Start*/
 	// Check if there's parent contextual information in searchParams
 	if searchParams.HasAccessPath() {
-		identifier := l.findInParentSymbols(searchParams, debugger)
-		if identifier.IsSome() {
-			return identifier
+		// Going from here, search should not limit to root search
+		symbolResult := l.findInParentSymbols(searchParams, debugger)
+		if symbolResult.IsSome() {
+			return symbolResult
 		}
 	}
 
+	/* NO LONGER NEEDED??
 	if searchParams.HasModuleSpecified() {
-		/*symbol := l._findSymbolDeclarationInModule(searchParams, debugger.goIn())
+		symbol := l._findSymbolDeclarationInModule(searchParams, debugger.goIn())
 		if symbol != nil {
 			return symbol
 		}
 
 		return nil
-		*/
-	}
+
+	}*/
+
+	// Important, when depth ==0 we really need to transmit to only search into root from here, even if we go multiple levels deep.
 
 	docIdOption := searchParams.DocId()
 	var collectionParsedModules []parser.ParsedModules
@@ -84,7 +88,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		docId := docIdOption.Get()
 		parsedModules, found := l.parsedModulesByDocument[docId]
 		if !found {
-			return option.None[symbols.Indexable]()
+			return searchResult
 		}
 
 		collectionParsedModules = append(collectionParsedModules, parsedModules)
@@ -121,7 +125,8 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 			)
 
 			if identifier != nil {
-				return option.Some(identifier)
+				searchResult.Set(identifier)
+				return searchResult
 			}
 
 			// Not found, store imports traversed to avoid checking them again
@@ -138,7 +143,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 			WithSymbol(searchParams.Symbol()).
 			WithSymbolModule(searchParams.ModulePath()).
 			WithExcludedDocs(searchParams.DocId()).
-			WithScopeMode(search_params.InModuleRoot)
+			WithScopeMode(search_params.InModuleRoot) // Document this
 		searchInSameModule := sb.Build()
 
 		found := l.findClosestSymbolDeclaration(searchInSameModule, debugger.goIn())
@@ -150,6 +155,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	// Try to find element in one of the imported modules
 	if docIdOption.IsSome() && len(imports) > 0 {
 		for i := 0; i < len(imports); i++ {
+			searchResult.TrackTraversedModule(imports[i])
 			if !searchParams.TrackTraversedModule(imports[i]) {
 				continue
 			}
@@ -159,6 +165,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 				WithSymbol(searchParams.Symbol()).
 				WithSymbolModule(symbols.NewModulePathFromString(module)).
 				WithTrackedModules(trackedModules).
+				WithScopeMode(search_params.InModuleRoot). // Document this
 				Build()
 
 			l.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\": %s", module, searchParams.Symbol()), debugger)
@@ -169,16 +176,23 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		}
 	}
 
+	// Last resort, check if any module is compatible with the string being searched
+	if debugger.depth == 0 {
+		fmt.Println("Not found yet!")
+	}
+
 	// Not found...
-	return option.None[symbols.Indexable]()
+	return searchResult
 }
 
 // Search symbols inside a given module
-func (l *Language) findSymbolDeclarationInModule(searchParams search_params.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
-	//expectedModule := searchParams.ModulePath().GetName()
+func (l *Language) findSymbolDeclarationInModule(searchParams search_params.SearchParams, debugger FindDebugger) SearchResult {
+	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
 
 	for docId, modulesByDoc := range l.parsedModulesByDocument {
 		for _, scope := range modulesByDoc.GetLoadableModules(searchParams.ModulePath()) {
+			searchResult.TrackTraversedModule(scope.GetModuleString())
+
 			//if scope.GetModuleString() != expectedModule { // TODO Ignore current doc we are comming from
 			//	continue
 			//}
@@ -191,44 +205,25 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 			sp := search_params.NewSearchParamsBuilder().
 				WithSymbol(searchParams.Symbol()).
 				WithDocId(docId).
+				WithScopeMode(search_params.InModuleRoot).
 				WithTrackedModules(searchParams.TrackedModules()).
 				Build()
 
-			symbol := l.findClosestSymbolDeclaration(
-				sp,
-				/*SearchParams{
-					selectedToken:     searchParams.selectedToken,
-					docId:             docId,
-					scopeMode:         searchParams.scopeMode,
-					continueOnModules: true,
-					trackedModules:    searchParams.trackedModules,
-				}*/FindDebugger{depth: debugger.depth + 1})
+			symbolResult := l.findClosestSymbolDeclaration(
+				sp, FindDebugger{depth: debugger.depth + 1})
 			l.debug(fmt.Sprintf("end searching symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
-			if symbol.IsSome() {
-				return symbol
+			if symbolResult.IsSome() {
+				return symbolResult
 			}
 		}
 	}
 
-	return option.None[symbols.Indexable]()
+	return searchResult
 }
 
 func findDeepFirst(identifier string, position symbols.Position, node symbols.Indexable, depth uint, limitSearchInScope bool, scopeMode search_params.ScopeMode) (symbols.Indexable, uint) {
-	/*if limitSearchInScope {
-		_, ok := node.(*symbols.Function)
-		if ok && !node.GetDocumentRange().HasPosition(position) {
-			return nil, depth
-		}
-	}*/
-	/*
-		if limitSearchInScope &&
-			!node.GetDocumentRange().HasPosition(position) {
-			return nil, depth
-		}
-	*/
-
-	//if node.GetDocumentRange().HasPosition(position) {
 	// Iterate first children with more children
+	// when in InModuleRoot mode, ignore content of functions
 	if scopeMode != search_params.InModuleRoot {
 		for _, child := range node.NestedScopes() {
 			// Check the fn itself! Maybe we are searching for it!
@@ -238,7 +233,7 @@ func findDeepFirst(identifier string, position symbols.Position, node symbols.In
 
 			if limitSearchInScope &&
 				!child.GetDocumentRange().HasPosition(position) {
-				return nil, depth
+				continue
 			}
 
 			if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode); result != nil {
@@ -247,9 +242,11 @@ func findDeepFirst(identifier string, position symbols.Position, node symbols.In
 		}
 	}
 
-	for _, child := range node.ChildrenWithoutScopes() {
-		if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode); result != nil {
-			return result, resultDepth
+	if depth == 0 || (scopeMode == search_params.InScope) {
+		for _, child := range node.ChildrenWithoutScopes() {
+			if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode); result != nil {
+				return result, resultDepth
+			}
 		}
 	}
 
