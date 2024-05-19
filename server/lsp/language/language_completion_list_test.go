@@ -6,6 +6,7 @@ import (
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/option"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -136,7 +137,53 @@ func Test_isCompletingAModulePath(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			doc := document.NewDocument("test.c3", tt.input)
-			result := isCompletingAModulePath(&doc, tt.position)
+			result, _ := isCompletingAModulePath(&doc, tt.position)
+
+			assert.Equal(
+				t,
+				tt.expected,
+				result,
+			)
+		})
+	}
+}
+
+func Test_extractModulePath(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    string
+		expected option.Option[symbols.ModulePath]
+	}{
+		{
+			name:     "Writing single character, may be a module path",
+			input:    "w",
+			expected: option.None[symbols.ModulePath](),
+		},
+		{
+			name:     "Writing a dot character, invalidates writing a path",
+			input:    "w.",
+			expected: option.None[symbols.ModulePath](),
+		},
+		{
+			name:     "Writing a module name (including one :)",
+			input:    "aModule:",
+			expected: option.None[symbols.ModulePath](),
+		},
+		{
+			name:     "Writing a module name (including both ::)",
+			input:    "aModule::",
+			expected: option.Some[symbols.ModulePath](symbols.NewModulePathFromString("aModule")),
+		},
+		{
+			name:     "Writing a module name (including :: + character)",
+			input:    "aModule::A",
+			expected: option.Some[symbols.ModulePath](symbols.NewModulePathFromString("aModule")),
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractExplicitModulePath(tt.input)
 
 			assert.Equal(
 				t,
@@ -507,11 +554,12 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 	parser := createParser()
 	language := NewLanguage(commonlog.MockLogger{})
 
-	t.Run("Should suggest module names", func(t *testing.T) {
+	t.Run("Should suggest module names present in same document", func(t *testing.T) {
 		cases := []struct {
 			source   string
 			position symbols.Position
 			expected []protocol.CompletionItem
+			skip     bool
 		}{
 			{
 				`
@@ -523,28 +571,100 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 				[]protocol.CompletionItem{
 					CreateCompletionItem("app", protocol.CompletionItemKindModule),
 				},
+				false,
 			},
 			{
 				`
 				module app;
 				int version = 1;
-				app::
-				module app::foo`,
-				buildPosition(4, 9), // Cursor at `a|`
+				module app::foo;
+
+				app::`,
+				buildPosition(6, 9), // Cursor at `a|`
 				[]protocol.CompletionItem{
 					CreateCompletionItem("app::foo", protocol.CompletionItemKindModule),
+					CreateCompletionItem("version", protocol.CompletionItemKindVariable),
 				},
+				false,
 			},
 		}
 
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				if tt.skip {
+					t.Skip()
+				}
 				doc := document.NewDocument("test.c3", tt.source)
 				language.RefreshDocumentIdentifiers(&doc, &parser)
 
 				completionList := language.BuildCompletionList(&doc, tt.position)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should suggest module names loaded in scope", func(t *testing.T) {
+		state := NewTestState()
+		state.registerDoc(
+			"app_window.c3",
+			`module app::window;
+
+			module app::window::errors;
+			`,
+		)
+
+		cases := []struct {
+			source   string
+			position symbols.Position
+			expected []protocol.CompletionItem
+			skip     bool
+		}{
+			{
+				`
+				module app;
+				int version = 1;
+				a
+				`,
+				buildPosition(4, 5), // Cursor at `a|`
+				[]protocol.CompletionItem{
+					CreateCompletionItem("app", protocol.CompletionItemKindModule),
+					CreateCompletionItem("app::window", protocol.CompletionItemKindModule),
+					CreateCompletionItem("app::window::errors", protocol.CompletionItemKindModule),
+				},
+				true,
+			},
+			{
+				`
+				module app;
+				int version = 1;
+				module app::foo;
+				
+				app::`,
+				buildPosition(6, 9), // Cursor at `a|`
+				[]protocol.CompletionItem{
+					CreateCompletionItem("app::foo", protocol.CompletionItemKindModule),
+					CreateCompletionItem("app::window", protocol.CompletionItemKindModule),
+					CreateCompletionItem("app::window::errors", protocol.CompletionItemKindModule),
+					CreateCompletionItem("version", protocol.CompletionItemKindVariable),
+				},
+				false,
+			},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				if tt.skip {
+					t.Skip()
+				}
+
+				state.registerDoc("app.c3", tt.source)
+				doc := state.GetDoc("app.c3")
+
+				completionList := state.language.BuildCompletionList(&doc, tt.position)
+
+				assert.Equal(t, len(tt.expected), len(completionList), "Different items to suggest")
 				assert.Equal(t, tt.expected, completionList)
 			})
 		}

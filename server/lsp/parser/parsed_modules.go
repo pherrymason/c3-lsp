@@ -68,7 +68,7 @@ func (ps ParsedModules) Get(moduleName string) *idx.Module {
 
 func (ps ParsedModules) GetLoadableModules(modulePath idx.ModulePath) []*idx.Module {
 	var mods []*idx.Module
-	for _, scope := range ps.SymbolsByModule() {
+	for _, scope := range ps.Modules() {
 		if scope.GetModule().IsImplicitlyImported(modulePath) {
 			mods = append(mods, scope)
 		}
@@ -78,7 +78,7 @@ func (ps ParsedModules) GetLoadableModules(modulePath idx.ModulePath) []*idx.Mod
 }
 
 func (ps ParsedModules) HasImplicitLoadableModules(modulePath idx.ModulePath) bool {
-	for _, scope := range ps.SymbolsByModule() {
+	for _, scope := range ps.Modules() {
 		if scope.GetModule().IsImplicitlyImported(modulePath) {
 			return true
 		}
@@ -88,7 +88,7 @@ func (ps ParsedModules) HasImplicitLoadableModules(modulePath idx.ModulePath) bo
 }
 
 // Returns modules sorted by value
-func (ps ParsedModules) SymbolsByModule() []*idx.Module {
+func (ps ParsedModules) Modules() []*idx.Module {
 	return ps.modules.Values()
 }
 

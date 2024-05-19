@@ -22,7 +22,7 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 	}
 	capabilities.DeclarationProvider = true
 	capabilities.CompletionProvider = &protocol.CompletionOptions{
-		TriggerCharacters: []string{"."},
+		TriggerCharacters: []string{".", ":"},
 	}
 	h.documents.RootURI = *params.RootURI
 	h.indexWorkspace()

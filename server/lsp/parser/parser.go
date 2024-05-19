@@ -178,6 +178,12 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 		}
 	}
 
+	moduleSymbol.SetEndPosition(
+		idx.NewPositionFromTreeSitterPoint(
+			doc.ContextSyntaxTree.RootNode().EndPoint(),
+		),
+	)
+
 	resolveStructSubtypes(&parsedModules, subtyptingToResolve)
 
 	return parsedModules
@@ -218,7 +224,7 @@ func resolveStructSubtypes(parsedModules *ParsedModules, subtyping []StructWithS
 	for _, struktWithSubtyping := range subtyping {
 		for _, inlinedMemberName := range struktWithSubtyping.members {
 
-			for _, module := range parsedModules.SymbolsByModule() {
+			for _, module := range parsedModules.Modules() {
 				// Search
 				for _, strukt := range module.Structs {
 					if strukt.GetName() == inlinedMemberName {

@@ -307,8 +307,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 	int value = 1;
 
 	module foo2;
-	int value = 2;
-	`
+	int value = 2;`
 
 		doc := document.NewDocument("docid", source)
 		parser := createParser()

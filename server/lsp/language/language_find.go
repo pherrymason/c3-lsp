@@ -15,7 +15,7 @@ func (l *Language) findModuleInPosition(docId string, position symbols.Position)
 			continue
 		}
 
-		for _, scope := range modulesByDoc.SymbolsByModule() {
+		for _, scope := range modulesByDoc.Modules() {
 			if scope.GetDocumentRange().HasPosition(position) {
 				return scope.GetModule().GetName()
 			}
@@ -25,62 +25,25 @@ func (l *Language) findModuleInPosition(docId string, position symbols.Position)
 	panic("Module not found in position")
 }
 
-// Returns all symbols in scope.
-// Detail: StructMembers and Enumerables are inlined
-func (l *Language) findAllScopeSymbols(parsedModules *parser.ParsedModules, position symbols.Position) []symbols.Indexable {
-	var symbolsCollection []symbols.Indexable
-	for _, scopeFunction := range parsedModules.SymbolsByModule() {
-		// Allow also when position is +1 line, in case we are writing new contentn at the end of the file
-		has := scopeFunction.GetDocumentRange().HasPosition(symbols.NewPosition(position.Line-1, 0))
-		if !scopeFunction.GetDocumentRange().HasPosition(position) && !has {
-			continue // We are in a different module
+func (l *Language) implicitImportedParsedModules(acceptedModulePaths []symbols.ModulePath, excludeDocId option.Option[string]) []*symbols.Module {
+	//var collectionParsedModules []*parser.ParsedModules
+	var collectionModules []*symbols.Module
+	for docId, parsedModules := range l.parsedModulesByDocument {
+		if excludeDocId.IsSome() && excludeDocId.Get() == docId {
+			continue
 		}
 
-		for _, variable := range scopeFunction.Variables {
-			symbolsCollection = append(symbolsCollection, variable)
-		}
-		for _, enum := range scopeFunction.Enums {
-			symbolsCollection = append(symbolsCollection, enum)
-			for _, enumerable := range enum.GetEnumerators() {
-				symbolsCollection = append(symbolsCollection, enumerable)
-			}
-		}
-		for _, strukt := range scopeFunction.Structs {
-			symbolsCollection = append(symbolsCollection, strukt)
-		}
-		for _, def := range scopeFunction.Defs {
-			symbolsCollection = append(symbolsCollection, def)
-		}
-		for _, fault := range scopeFunction.Faults {
-			symbolsCollection = append(symbolsCollection, fault)
-			for _, constant := range fault.GetConstants() {
-				symbolsCollection = append(symbolsCollection, constant)
-			}
-		}
-		for _, interfaces := range scopeFunction.Interfaces {
-			symbolsCollection = append(symbolsCollection, interfaces)
-		}
-
-		for _, function := range scopeFunction.ChildrenFunctions {
-			symbolsCollection = append(symbolsCollection, function)
-			if function.GetDocumentRange().HasPosition(position) {
-				symbolsCollection = append(symbolsCollection, function)
-
-				for _, variable := range function.Variables {
-					l.logger.Debug(fmt.Sprintf("Checking %s variable:", variable.GetName()))
-					declarationPosition := variable.GetIdRange().End
-					if declarationPosition.Line > uint(position.Line) ||
-						(declarationPosition.Line == uint(position.Line) && declarationPosition.Character > uint(position.Character)) {
-						continue
-					}
-
-					symbolsCollection = append(symbolsCollection, variable)
+		for _, scope := range parsedModules.Modules() {
+			for _, acceptedModule := range acceptedModulePaths {
+				if scope.GetModule().IsImplicitlyImported(acceptedModule) {
+					collectionModules = append(collectionModules, scope)
+					break
 				}
 			}
 		}
 	}
 
-	return symbolsCollection
+	return collectionModules
 }
 
 // Finds the closest selectedSymbol based on current scope.
@@ -132,7 +95,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 				continue
 			}
 
-			for _, scope := range parsedModules.SymbolsByModule() {
+			for _, scope := range parsedModules.Modules() {
 				if scope.GetModule().IsImplicitlyImported(searchParams.ModulePath()) {
 					collectionParsedModules = append(collectionParsedModules, parsedModules)
 					break

@@ -14,7 +14,7 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func isCompletingAModulePath(doc *document.Document, cursorPosition symbols.Position) bool {
+func isCompletingAModulePath(doc *document.Document, cursorPosition symbols.Position) (bool, string) {
 	// Cursor is just right after last char, let's rewind one place
 	position := cursorPosition
 	if cursorPosition.Character > 0 {
@@ -40,7 +40,7 @@ func isCompletingAModulePath(doc *document.Document, cursorPosition symbols.Posi
 	containsModulePathSeparator := strings.Contains(sentence, ":")
 	containsChainSeparator := strings.Contains(sentence, ".")
 
-	return (!containsModulePathSeparator && !containsChainSeparator) || (containsModulePathSeparator && !containsChainSeparator)
+	return (!containsModulePathSeparator && !containsChainSeparator) || (containsModulePathSeparator && !containsChainSeparator), sentence
 }
 
 // Checks if writing seems to be a chain of components (example: aStruct.aMember)
@@ -87,6 +87,40 @@ func isCompletingAChain(doc *document.Document, cursorPosition symbols.Position)
 	return containsSeparator, previousPosition
 }
 
+func extractExplicitModulePath(possibleModulePath string) option.Option[symbols.ModulePath] {
+	// Read backwards until a separator character is found.
+	lastCharIndex := len(possibleModulePath) - 1
+	firstDoubleColonFound := -1
+	separatorsInARow := 0
+
+	for i := lastCharIndex; i >= 0; i-- {
+		r := rune(possibleModulePath[i])
+		//fmt.Printf("%c\n", r)
+		if firstDoubleColonFound == -1 {
+			if r == ':' {
+				separatorsInARow++
+			}
+
+			if separatorsInARow == 2 {
+				firstDoubleColonFound = i
+			}
+		}
+
+		if r != ':' {
+			separatorsInARow = 0
+		}
+
+		if r == '.' {
+			break
+		}
+	}
+
+	if firstDoubleColonFound != -1 {
+		return option.Some(symbols.NewModulePathFromString(possibleModulePath[0:firstDoubleColonFound]))
+	}
+	return option.None[symbols.ModulePath]()
+}
+
 func (l *Language) BuildCompletionList(doc *document.Document, position symbols.Position) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 
@@ -103,16 +137,23 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 	l.logger.Debug(fmt.Sprintf("building completion list: %s", symbolInPosition.Token))
 
 	// Check if module path is being written/exists
-	//isCompletingModulePath, prevPosition := isCompletingAModulePath(doc, position)
-	//hasImplicitModulePath := false
+	isCompletingModulePath, possibleModulePath := isCompletingAModulePath(doc, position)
 
-	// There are three cases (TBC):
-	// User writing with a new symbol: With a ¿space? in front
-	// User writing a module path and is expecting to autocomplete with more module paths
-	// User writing a chained symbol and is expecting to autocomplete with member/methods children of previous token type.
-	// So first detect which of these two cases are we in
+	hasImplicitModulePath := option.None[symbols.ModulePath]()
+	if isCompletingModulePath {
+		hasImplicitModulePath = extractExplicitModulePath(possibleModulePath)
+	}
 	isCompletingAChain, prevPosition := isCompletingAChain(doc, position)
-	if isCompletingAChain {
+
+	// There are two cases (TBC):
+	// User writing a symbol:
+	//		user expects either
+	//		- autocomplete to suggest loadable symbol names. Including module names!
+	//		- help him with autocompleting a module path they are currently writing
+	// User completing a chain of calls:
+	//		user expects to autocomplete with member/methods of previous children.
+
+	if !isCompletingModulePath && isCompletingAChain {
 		// Is writing a symbol child of a parent one.
 		// We need to limit the search to subtypes of parent token
 		// Let's find parent token
@@ -170,12 +211,17 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		}
 	} else {
 		// Find symbols in document
-		moduleSymbols := l.parsedModulesByDocument[doc.URI]
-		scopeSymbols := l.findAllScopeSymbols(&moduleSymbols, position)
+		params := FindSymbolsParams{
+			docId:              doc.URI,
+			scopedToModulePath: hasImplicitModulePath,
+			position:           option.Some(position),
+		}
+		// Search symbols loadable in module located in position
+		scopeSymbols := l.findSymbolsInScope(params)
 
 		for _, storedIdentifier := range scopeSymbols {
 			hasPrefix := strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition.Token)
-			if !filterMembers || (filterMembers && !hasPrefix) {
+			if filterMembers && !hasPrefix {
 				continue
 			}
 
