@@ -28,7 +28,9 @@ You can also build from source:
 
 ## Status
 **Next release**
-- TextDocumentCompletion: Be able to suggest `Interfaces`, `module names`
+- TextDocumentCompletion: 
+  - Improve system.
+  - Be able to suggest `Interfaces`, `module names`
 
 **Current status**  
 ***Index status***

@@ -313,29 +313,53 @@ func TestLanguage_BuildCompletionList_structs(t *testing.T) {
 	t.Run("Should suggest struct members", func(t *testing.T) {
 		expectedKind := protocol.CompletionItemKindField
 		cases := []struct {
-			name     string
-			input    string
-			expected []protocol.CompletionItem
+			name           string
+			source         string
+			cursorPosition symbols.Position
+			expected       []protocol.CompletionItem
 		}{
 			{
 				"suggest all struct members",
-				".",
+				`struct Color { int red; int green; int blue; }
+				struct Square { int width; int height; Color color; }
+				fn void Square.toCircle() {}
+				fn void main() {
+					Square inst;
+					inst.
+				}`,
+				buildPosition(6, 10), // Cursor after `inst.|`
 				[]protocol.CompletionItem{
 					{Label: "color", Kind: &expectedKind},
 					{Label: "height", Kind: &expectedKind},
 					{Label: "width", Kind: &expectedKind},
+					{Label: "toCircle", Kind: cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod)},
 				}},
 
 			{
 				"suggest members starting with `w`",
-				".w",
+				`struct Color { int red; int green; int blue; }
+				struct Square { int width; int height; Color color; }
+				fn void main() {
+					Square inst;
+					inst.w
+				}`,
+				buildPosition(5, 11), // Cursor after `inst.w|`
 				[]protocol.CompletionItem{
 					{Label: "width", Kind: &expectedKind},
 				}},
 
 			{
 				"suggest members of Color",
-				".color.", []protocol.CompletionItem{
+				`
+				struct Color { int red; int green; int blue; }
+				struct Square { int width; int height; Color color; }
+				fn uint Color.toHex() {}
+				fn void main() {
+					Square inst;
+					inst.color.
+				}`,
+				buildPosition(7, 16), // Cursor after `inst.color.|`
+				[]protocol.CompletionItem{
 					{Label: "blue", Kind: &expectedKind},
 					{Label: "green", Kind: &expectedKind},
 					{Label: "red", Kind: &expectedKind},
@@ -343,7 +367,29 @@ func TestLanguage_BuildCompletionList_structs(t *testing.T) {
 
 			{
 				"suggest members of Color starting with `r`",
-				".color.r",
+				`
+				struct Color { int red; int green; int blue; }
+				struct Square { int width; int height; Color color; }
+				fn uint Color.toHex() {}
+				fn void main() {
+					Square inst;
+					inst.color.r
+				}`,
+				buildPosition(7, 17), // Cursor after `inst.color.r|`
+				[]protocol.CompletionItem{
+					{Label: "red", Kind: &expectedKind},
+				}},
+			{
+				"suggest methods of Color starting with `t`",
+				`
+				struct Color { int red; int green; int blue; }
+				struct Square { int width; int height; Color color; }
+				fn uint Color.toHex() {}
+				fn void main() {
+					Square inst;
+					inst.color.t
+				}`,
+				buildPosition(7, 17), // Cursor after `inst.color.r|`
 				[]protocol.CompletionItem{
 					{Label: "red", Kind: &expectedKind},
 				}},
@@ -351,18 +397,11 @@ func TestLanguage_BuildCompletionList_structs(t *testing.T) {
 
 		for _, tt := range cases {
 			t.Run(tt.name, func(t *testing.T) {
-				state.registerDoc("test.c3",
-					`
-				struct Color { int red; int green; int blue; }
-				struct Square { int width; int height; Color color; }
-				fn void main() {
-					Square inst;
-					inst`+tt.input+`}`,
-				)
+				state.registerDoc("test.c3", tt.source)
 				doc := state.GetDoc("test.c3")
-				position := buildPosition(6, 9+uint(len(tt.input))) // Cursor after `<input>|`
+				//position := buildPosition(7, 9+uint(len(tt.source))) // Cursor after `<input>|`
 
-				completionList := state.language.BuildCompletionList(&doc, position)
+				completionList := state.language.BuildCompletionList(&doc, tt.cursorPosition)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
