@@ -136,7 +136,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		// Probably, theres no symbol at cursor!
 		filterMembers = false
 	}
-	l.logger.Debug(fmt.Sprintf("building completion list: %s", symbolInPosition.Token))
+	l.logger.Debug(fmt.Sprintf("building completion list: \"%s\"", symbolInPosition.Token)) //TODO warp %s en "
 
 	// Check if module path is being written/exists
 	isCompletingModulePath, possibleModulePath := isCompletingAModulePath(doc, position)
