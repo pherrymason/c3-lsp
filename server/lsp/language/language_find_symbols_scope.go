@@ -33,7 +33,9 @@ func (l *Language) findSymbolsInScope(params FindSymbolsParams) []symbols.Indexa
 		currentContextModules = append(currentContextModules, params.scopedToModulePath.Get())
 	}
 
+	// -------------------------------------
 	// Modules where we can extract symbols
+	// -------------------------------------
 	modulesToLook := l.implicitImportedParsedModules(
 		currentContextModules,
 		option.None[string](),

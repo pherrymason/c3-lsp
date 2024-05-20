@@ -12,6 +12,13 @@ func Lsp_NewRangeFromRange(idxRange symbols.Range) protocol.Range {
 	}
 }
 
+func NewLSPRange(startLine uint32, startCharacter uint32, endLine uint32, endCharacter uint32) protocol.Range {
+	return protocol.Range{
+		Start: protocol.Position{Line: startLine, Character: startCharacter},
+		End:   protocol.Position{Line: endLine, Character: endCharacter},
+	}
+}
+
 func Lsp_NewPosition(line uint, char uint) protocol.Position {
 	return protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(char)}
 }

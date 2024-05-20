@@ -2,6 +2,7 @@ package symbols
 
 import (
 	sitter "github.com/smacker/go-tree-sitter"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 type Range struct {
@@ -56,6 +57,13 @@ func (r Range) IsAfter(crange Range) bool {
 	}
 
 	return false
+}
+
+func (r Range) ToLSP() protocol.Range {
+	return protocol.Range{
+		Start: protocol.Position{Line: uint32(r.Start.Line), Character: uint32(r.Start.Character)},
+		End:   protocol.Position{Line: uint32(r.End.Line), Character: uint32(r.End.Character)},
+	}
 }
 
 func NewRange(startLine uint, startChar uint, endLine uint, endChar uint) Range {

@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/pherrymason/c3-lsp/cast"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	sp "github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
@@ -121,6 +122,7 @@ func extractExplicitModulePath(possibleModulePath string) option.Option[symbols.
 	return option.None[symbols.ModulePath]()
 }
 
+// Returns: []CompletionItem | CompletionList | nil
 func (l *Language) BuildCompletionList(doc *document.Document, position symbols.Position) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 
@@ -225,18 +227,37 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 				continue
 			}
 
-			tempKind := storedIdentifier.GetKind()
+			if storedIdentifier.GetKind() == protocol.CompletionItemKindModule {
+				fullSymbolAtCursor, _ := doc.SymbolBeforeCursor(
+					symbols.Position{
+						Line:      uint(position.Line),
+						Character: uint(position.Character) - 1,
+					})
+				fullSymbolAtCursor.TokenRange.End.Character += 1
 
-			items = append(items, protocol.CompletionItem{
-				Label: storedIdentifier.GetName(),
-				Kind:  &tempKind,
-			})
+				items = append(items, protocol.CompletionItem{
+					Label:  storedIdentifier.GetName(),
+					Kind:   cast.CompletionItemKindPtr(storedIdentifier.GetKind()),
+					Detail: cast.StrPtr("Module"),
+					TextEdit: protocol.TextEdit{
+						NewText: storedIdentifier.GetName(),
+						Range:   fullSymbolAtCursor.TokenRange.ToLSP(),
+					},
+				})
+			} else {
+				items = append(items, protocol.CompletionItem{
+					Label: storedIdentifier.GetName(),
+					Kind:  cast.CompletionItemKindPtr(storedIdentifier.GetKind()),
+				})
+			}
 		}
 	}
 
 	slices.SortFunc(items, func(a, b protocol.CompletionItem) int {
 		return cmp.Compare(a.Label, b.Label)
 	})
+
+	// remove from modules, the portion that is already written
 
 	return items
 }

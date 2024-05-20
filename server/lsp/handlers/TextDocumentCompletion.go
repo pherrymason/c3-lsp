@@ -7,6 +7,7 @@ import (
 )
 
 // Support "Completion"
+// Returns: []CompletionItem | CompletionList | nil
 func (h *Handlers) TextDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
 	doc, ok := h.documents.Get(params.TextDocumentPositionParams.TextDocument.URI)
 	if !ok {

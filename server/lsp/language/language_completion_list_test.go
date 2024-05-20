@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/pherrymason/c3-lsp/cast"
 	"github.com/pherrymason/c3-lsp/lsp/document"
+	protocol_utils "github.com/pherrymason/c3-lsp/lsp/protocol"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 	"github.com/stretchr/testify/assert"
@@ -571,7 +573,7 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 				[]protocol.CompletionItem{
 					CreateCompletionItem("app", protocol.CompletionItemKindModule),
 				},
-				false,
+				true,
 			},
 			{
 				`
@@ -582,7 +584,18 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 				app::`,
 				buildPosition(6, 9), // Cursor at `a|`
 				[]protocol.CompletionItem{
-					CreateCompletionItem("app::foo", protocol.CompletionItemKindModule),
+					protocol.CompletionItem{
+						Label:  "app::foo",
+						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
+						Detail: cast.StrPtr("Module"),
+						TextEdit: protocol.TextEdit{
+							NewText: "app::foo",
+							Range: protocol.Range{
+								Start: protocol.Position{Line: 5, Character: 4},
+								End:   protocol.Position{Line: 5, Character: 9},
+							},
+						},
+					},
 					CreateCompletionItem("version", protocol.CompletionItemKindVariable),
 				},
 				false,
@@ -629,9 +642,33 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 				`,
 				buildPosition(4, 5), // Cursor at `a|`
 				[]protocol.CompletionItem{
-					CreateCompletionItem("app", protocol.CompletionItemKindModule),
-					CreateCompletionItem("app::window", protocol.CompletionItemKindModule),
-					CreateCompletionItem("app::window::errors", protocol.CompletionItemKindModule),
+					protocol.CompletionItem{
+						Label:  "app",
+						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
+						Detail: cast.StrPtr("Module"),
+						TextEdit: protocol.TextEdit{
+							NewText: "app",
+							Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
+						},
+					},
+					protocol.CompletionItem{
+						Label:  "app::window",
+						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
+						Detail: cast.StrPtr("Module"),
+						TextEdit: protocol.TextEdit{
+							NewText: "app::window",
+							Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
+						},
+					},
+					protocol.CompletionItem{
+						Label:  "app::window::errors",
+						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
+						Detail: cast.StrPtr("Module"),
+						TextEdit: protocol.TextEdit{
+							NewText: "app::window::errors",
+							Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
+						},
+					},
 				},
 				false,
 			},
@@ -644,9 +681,33 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 				app::`,
 				buildPosition(6, 9), // Cursor at `a|`
 				[]protocol.CompletionItem{
-					CreateCompletionItem("app::foo", protocol.CompletionItemKindModule),
-					CreateCompletionItem("app::window", protocol.CompletionItemKindModule),
-					CreateCompletionItem("app::window::errors", protocol.CompletionItemKindModule),
+					protocol.CompletionItem{
+						Label:  "app::foo",
+						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
+						Detail: cast.StrPtr("Module"),
+						TextEdit: protocol.TextEdit{
+							NewText: "app::foo",
+							Range:   protocol_utils.NewLSPRange(5, 4, 5, 9),
+						},
+					},
+					protocol.CompletionItem{
+						Label:  "app::window",
+						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
+						Detail: cast.StrPtr("Module"),
+						TextEdit: protocol.TextEdit{
+							NewText: "app::window",
+							Range:   protocol_utils.NewLSPRange(5, 4, 5, 9),
+						},
+					},
+					protocol.CompletionItem{
+						Label:  "app::window::errors",
+						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
+						Detail: cast.StrPtr("Module"),
+						TextEdit: protocol.TextEdit{
+							NewText: "app::window::errors",
+							Range:   protocol_utils.NewLSPRange(5, 4, 5, 9),
+						},
+					},
 					CreateCompletionItem("version", protocol.CompletionItemKindVariable),
 				},
 				false,

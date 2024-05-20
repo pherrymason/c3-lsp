@@ -35,9 +35,40 @@ func (d *Document) symbolInIndex2(index int) option.Option[Token] {
 	return option.Some(NewToken(d.Content[start:end+1], posRange))
 }
 
+// Retrieves symbol present in current cursor position
+// Details: It will grab only the symbol until the next `.` or `:`
+// If you want to grab full chain of symbols present un current cursor, use FullSymbolInPosition
 func (d *Document) SymbolInPosition(position symbols.Position) (Token, error) {
 	index := position.IndexIn(d.Content)
 	return d.symbolInIndex(index)
+}
+
+// Retrieves text from previous space until cursor position.
+func (d *Document) SymbolBeforeCursor(position symbols.Position) (Token, error) {
+	index := uint(position.IndexIn(d.Content))
+
+	if rune(d.Content[index]) == rune(' ') {
+		return Token{}, errors.New("No symbol at position")
+	}
+
+	start := uint(0)
+	for i := index; i >= 0; i-- {
+		r := rune(d.Content[i])
+		//fmt.Printf("%c\n", r)
+		if utils.IsSpaceOrNewline(r) {
+			// First invalid character found, that means previous iteration contained first character of symbol
+			start = i + 1
+			break
+		}
+	}
+
+	diff := index - start
+
+	theRange := symbols.NewRange(
+		position.Line, position.Character-diff,
+		position.Line, position.Character,
+	)
+	return NewToken(d.Content[start:index], theRange), nil
 }
 
 func (d *Document) ParentSymbolInPosition(position symbols.Position) (Token, error) {
@@ -74,8 +105,15 @@ func (d *Document) ParentSymbolInPosition(position symbols.Position) (Token, err
 	return Token{}, errors.New("No previous symbol found")
 }
 
+const SymbolUntilSpace = 0     // Get symbol until previous space
+const SymbolUntilSeparator = 1 // Get symbol until previous ./:
+
+// Retrieves symbol
+// Two modes: SymbolUntilSpace | SymbolUntilSeparator
 func (d *Document) symbolInIndex(index int) (Token, error) {
-	start, end, err := d.getSymbolRangeIndexesAtIndex(index)
+	var start, end int
+	var err error
+	start, end, err = d.getSymbolRangeIndexesAtIndex(index)
 
 	if err != nil {
 		// Why is this logic here??
@@ -134,6 +172,44 @@ func (d *Document) getSymbolRangeIndexesAtIndex(index int) (int, int, error) {
 	for i := index; i >= 0; i-- {
 		r := rune(d.Content[i])
 		if !utils.IsAZ09_(r) {
+			// First invalid character found, that means previous iteration contained first character of symbol
+			symbolStart = i + 1
+			break
+		}
+	}
+
+	symbolEnd := len(d.Content) - 1
+	for i := index; i < len(d.Content); i++ {
+		r := rune(d.Content[i])
+		if !utils.IsAZ09_(r) {
+			// First invalid character found, that means previous iteration contained last character of symbol
+			symbolEnd = i - 1
+			break
+		}
+	}
+
+	if symbolStart > len(d.Content) {
+		return 0, 0, errors.New("wordStart out of bounds")
+	} else if symbolEnd > len(d.Content) {
+		return 0, 0, errors.New("wordEnd out of bounds")
+	} else if symbolStart > symbolEnd {
+		return 0, 0, errors.New("wordStart > wordEnd!")
+	}
+
+	return symbolStart, symbolEnd, nil
+}
+
+// Returns start and end index of symbol present at index.
+// It will search backwards until a space is found
+func (d *Document) getFullSymbolRangeIndexesAtIndex(index int) (int, int, error) {
+	if !utils.IsAZ09_(rune(d.Content[index])) {
+		return 0, 0, errors.New("No symbol at position")
+	}
+
+	symbolStart := 0
+	for i := index; i >= 0; i-- {
+		r := rune(d.Content[i])
+		if r == rune(' ') {
 			// First invalid character found, that means previous iteration contained first character of symbol
 			symbolStart = i + 1
 			break
