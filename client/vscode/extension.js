@@ -3,17 +3,29 @@ const { window, workspace, commands, ExtensionContext, Uri } = require('vscode')
 const { LanguageClient } = require('vscode-languageclient');
 
 let client = null;
+const config = workspace.getConfiguration('c3lspclient.lsp');
 
 module.exports = {
   activate: function (context) {
-    const executable = '/Volumes/Development/raul/c3/go-lsp/server/c3-lsp';
+    const enabled = config.get('enable');
+    if (!enabled) {
+        return;
+    }
+
+    const executable = config.get('path');
+    let args = [];
+    if (config.get('sendCrashReports')) {
+      args.push('--sendCrashReports');
+    }
+
     const serverOptions = {
       run: {
         command: executable,
+        options: { execArgv: args }
       },
       debug: {
         command:executable,
-        options: { execArgv: ['--nolazy', '--inspect=6009'] }
+        options: { execArgv: ['--nolazy', '--inspect=6009', ...args] }
       }
     }
 

@@ -1,23 +1,67 @@
 {
-  "name": "c3-lsp",
-  "displayName": "c3-lsp",
+  "name": "c3-lsp-client",
+  "displayName": "C3 Language Server client",
+  "description": "Language Server client for C3. Download C3 server from https://github.com/pherrymason/c3-lsp",
   "version": "0.0.1",
+  "publisher": "rferras",
   "engines": {
     "vscode": "^1.40.0"
   },
   "activationEvents": [
     "onLanguage:c3"
   ],
-  "contributes": {
-      "languages": [
-        {
-          "id": "c3",
-          "extensions": [".c3"]
-        }
-      ]
+  "categories": [
+    "Programming Languages"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pherrymason/c3-lsp.git"
   },
-  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "c3",
+        "extensions": [
+          ".c3"
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "Language Server",
+      "properties": {
+        "c3lspclient.lsp.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enables the language server"
+        },
+        "c3lspclient.lsp.path": {
+          "type": "string",
+          "default": null,
+          "markdownDescription": "The path to **c3-lsp** binary"
+        },
+        "c3lspclient.lsp.debug": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enables debug information logging"
+        },
+        "c3lspclient.lsp.sendCrashReports": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Sends crash reports to server to help fixing bugs."
+        }
+      }
+    }
+  },
+  "main": "./dist/extension.js",
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.3"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --minify",
+    "esbuild-base": "esbuild ./extension.js --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "esbuild": "npm run esbuild-base -- --sourcemap"
   }
 }

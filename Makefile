@@ -38,3 +38,9 @@ build-all:
 
 test:
 	cd server && go test ./...
+
+
+## VS Code extension
+build-vscode:
+	cd client/vscode && npm run vscode:prepublish
+	cd client/vscode && vsce package
