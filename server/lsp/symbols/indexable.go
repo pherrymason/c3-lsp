@@ -1,6 +1,8 @@
 package symbols
 
 import (
+	"fmt"
+
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -22,7 +24,7 @@ const (
 
 type Indexable interface {
 	GetName() string
-	//GetType() SymbolType
+	GetFQN() string // Get Full Qualified Name
 	GetKind() protocol.CompletionItemKind
 	GetDocumentURI() string
 	GetIdRange() Range
@@ -56,6 +58,10 @@ type BaseIndexable struct {
 
 func (b BaseIndexable) GetName() string {
 	return b.name
+}
+
+func (b BaseIndexable) GetFQN() string {
+	return fmt.Sprintf("%s::%s", b.module.GetName(), b.GetName())
 }
 
 func (b BaseIndexable) GetKind() protocol.CompletionItemKind {

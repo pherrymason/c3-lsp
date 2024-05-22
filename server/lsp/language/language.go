@@ -16,23 +16,30 @@ import (
 
 // Language will be the center of knowledge of everything parsed.
 type Language struct {
-	index                   IndexStore
+	indexByFQN              IndexStore
 	parsedModulesByDocument map[protocol.DocumentUri]parser.ParsedModules
 	logger                  commonlog.Logger
 }
 
 func NewLanguage(logger commonlog.Logger) Language {
 	return Language{
-		index:                   NewIndexStore(),
+		indexByFQN:              NewIndexStore(),
 		parsedModulesByDocument: make(map[protocol.DocumentUri]parser.ParsedModules),
 		logger:                  logger,
 	}
 }
 
 func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
-	parsedSymbols := parser.ParseSymbols(doc)
+	parsedModules := parser.ParseSymbols(doc)
 
-	l.parsedModulesByDocument[parsedSymbols.DocId()] = parsedSymbols
+	// Register in the index, the root elements
+	for _, module := range parsedModules.Modules() {
+		for _, fun := range module.ChildrenFunctions {
+			l.indexByFQN.RegisterSymbol(fun)
+		}
+	}
+
+	l.parsedModulesByDocument[parsedModules.DocId()] = parsedModules
 }
 
 func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position symbols.Position) option.Option[symbols.Indexable] {

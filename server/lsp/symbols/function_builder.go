@@ -6,28 +6,6 @@ type FunctionBuilder struct {
 	function Function
 }
 
-func NewFunctionBuilderARoot(module string, docId string) *FunctionBuilder {
-	f := &FunctionBuilder{
-		function: Function{
-			fType:     ModuleScope,
-			Variables: make(map[string]*Variable),
-			//Defs:              make(map[string]Def),
-			//Enums:             make(map[string]Enum),
-			//Structs:           make(map[string]Struct),
-			//ChildrenFunctions: make([]Function, 0),
-			BaseIndexable: BaseIndexable{
-				moduleString: module,
-				module:       NewModulePathFromString(module),
-				documentURI:  docId,
-			},
-		},
-	}
-
-	f.WithDocumentRange(0, 0, 0, 1000)
-
-	return f
-}
-
 func NewFunctionBuilder(name string, returnType string, module string, docId string) *FunctionBuilder {
 	return &FunctionBuilder{
 		function: Function{

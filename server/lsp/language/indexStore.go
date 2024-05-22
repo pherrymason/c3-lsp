@@ -1,17 +1,24 @@
 package language
 
-import idx "github.com/pherrymason/c3-lsp/lsp/symbols"
+import (
+	trie "github.com/pherrymason/c3-lsp/lsp/symbol_trie"
+	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
+)
 
 type IndexStore struct {
-	symbols []idx.Indexable
+	store *trie.Trie
 }
 
 func NewIndexStore() IndexStore {
 	return IndexStore{
-		symbols: make([]idx.Indexable, 0),
+		store: trie.NewTrie(),
 	}
 }
 
 func (i *IndexStore) RegisterSymbol(symbol idx.Indexable) {
-	i.symbols = append(i.symbols, symbol)
+	i.store.Insert(symbol)
+}
+
+func (i *IndexStore) SearchByFQN(query string) []idx.Indexable {
+	return i.store.Search(query)
 }

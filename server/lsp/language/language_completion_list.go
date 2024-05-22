@@ -159,6 +159,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		// Is writing a symbol child of a parent one.
 		// We need to limit the search to subtypes of parent token
 		// Let's find parent token
+
 		searchParams := sp.BuildSearchBySymbolUnderCursor(
 			doc,
 			l.parsedModulesByDocument[doc.URI],
@@ -188,6 +189,21 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			}
 			// TODO get struct methods
 			// Current way of storing struct methods makes this kind of difficult.
+			var methods []symbols.Indexable
+			var query string
+			if !filterMembers {
+				query = strukt.GetFQN() + "."
+			} else {
+				query = strukt.GetFQN() + "." + symbolInPosition.Token + "*"
+			}
+			methods = l.indexByFQN.SearchByFQN(query)
+			for _, idx := range methods {
+				kind := idx.GetKind()
+				items = append(items, protocol.CompletionItem{
+					Label: idx.GetName(),
+					Kind:  &kind,
+				})
+			}
 
 		case *symbols.Enum:
 			enum := prevIndexable.(*symbols.Enum)
@@ -212,7 +228,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			}
 		}
 	} else {
-		// Find symbols in document
+		// Find all symbols in module
 		params := FindSymbolsParams{
 			docId:              doc.URI,
 			scopedToModulePath: hasImplicitModulePath,
@@ -254,10 +270,8 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 	}
 
 	slices.SortFunc(items, func(a, b protocol.CompletionItem) int {
-		return cmp.Compare(a.Label, b.Label)
+		return cmp.Compare(strings.ToLower(a.Label), strings.ToLower(b.Label))
 	})
-
-	// remove from modules, the portion that is already written
 
 	return items
 }

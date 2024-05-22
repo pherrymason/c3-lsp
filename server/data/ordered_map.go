@@ -1,4 +1,4 @@
-package ordered_map
+package data
 
 type OrderedMap[T any] struct {
 	keys   []string
@@ -22,6 +22,10 @@ func (om *OrderedMap[T]) Set(key string, value T) {
 func (om *OrderedMap[T]) Get(key string) (T, bool) {
 	value, exists := om.values[key]
 	return value, exists
+}
+func (om *OrderedMap[T]) Has(key string) bool {
+	_, exists := om.values[key]
+	return exists
 }
 
 func (om *OrderedMap[T]) Keys() []string {

@@ -9,8 +9,9 @@ import (
 type FunctionType int
 
 const (
-	ModuleScope = iota
-	UserDefined
+	UserDefined = iota
+	Method
+	Macro
 )
 
 type Function struct {
@@ -24,20 +25,16 @@ type Function struct {
 	BaseIndexable
 }
 
-func NewModuleScopeFunction(module string, docId string, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(ModuleScope, "", "main", module, nil, module, docId, Range{}, docRange, kind)
-}
-
 func NewFunction(name string, returnType string, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
 	return newFunctionType(UserDefined, "", name, returnType, argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
 }
 
 func NewTypeFunction(typeIdentifier string, name string, returnType string, argumentIds []string, module string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
-	return newFunctionType(UserDefined, typeIdentifier, name, returnType, argumentIds, module, docId, idRange, docRange, kind)
+	return newFunctionType(Method, typeIdentifier, name, returnType, argumentIds, module, docId, idRange, docRange, kind)
 }
 
 func NewMacro(name string, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
-	return newFunctionType(UserDefined, "", name, "", argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
+	return newFunctionType(Macro, "", name, "", argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
 }
 
 func newFunctionType(fType FunctionType, typeIdentifier string, name string, returnType string, argumentIds []string, module string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
@@ -81,6 +78,20 @@ func (f Function) GetFullName() string {
 	}
 
 	return f.typeIdentifier + "." + f.name
+}
+
+func (f Function) GetFQN() string {
+	return fmt.Sprintf("%s::%s", f.module.GetName(), f.GetName())
+}
+
+func (f Function) GetKind() protocol.CompletionItemKind {
+	switch f.fType {
+	case Method:
+		return protocol.CompletionItemKindMethod
+
+	default:
+		return protocol.CompletionItemKindFunction
+	}
 }
 
 func (f Function) GetReturnType() string {

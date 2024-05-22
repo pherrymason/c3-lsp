@@ -1,9 +1,9 @@
 package parser
 
 import (
+	"github.com/pherrymason/c3-lsp/data"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/ordered_map"
 )
 
 type ParsedModulesInterface interface {
@@ -12,13 +12,13 @@ type ParsedModulesInterface interface {
 
 type ParsedModules struct {
 	docId   string
-	modules ordered_map.OrderedMap[*idx.Module]
+	modules data.OrderedMap[*idx.Module]
 }
 
 func NewParsedModules(docId string) ParsedModules {
 	return ParsedModules{
 		docId:   docId,
-		modules: *ordered_map.NewOrderedMap[*idx.Module](),
+		modules: *data.NewOrderedMap[*idx.Module](),
 	}
 }
 

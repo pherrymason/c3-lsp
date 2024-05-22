@@ -23,7 +23,7 @@ func main() {
 		return
 	}
 
-	if options.allowReporting {
+	if options.sendCrashReports {
 		err := sentry.Init(sentry.ClientOptions{
 			Dsn:     "https://76f9fe6a1d3e2be7c9083891a644b0a3@o124652.ingest.us.sentry.io/4507278372110336",
 			Release: fmt.Sprintf("c3.lsp@%s+%s", version, commitHash),
@@ -47,24 +47,24 @@ func main() {
 }
 
 type Options struct {
-	showHelp       bool
-	logFilePath    string
-	allowReporting bool
+	showHelp         bool
+	logFilePath      string
+	sendCrashReports bool
 }
 
 func cmdLineArguments() Options {
 	var showHelp = flag.Bool("help", false, "Shows this help")
 
-	var allowReporting = flag.Bool("allowReporting", false, "Automatically reports crashes to server.")
+	var sendCrashReports = flag.Bool("sendCrashReports", false, "Automatically reports crashes to server.")
 
 	var logFilePath = flag.String("log-path", "./lsp.log", "Enables logs and sets its filepath")
 
 	flag.Parse()
 
 	return Options{
-		showHelp:       *showHelp,
-		logFilePath:    *logFilePath,
-		allowReporting: *allowReporting,
+		showHelp:         *showHelp,
+		logFilePath:      *logFilePath,
+		sendCrashReports: *sendCrashReports,
 	}
 }
 
