@@ -305,118 +305,166 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 	})
 }
 
-func TestLanguage_BuildCompletionList_structs(t *testing.T) {
+func TestLanguage_BuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
+	commonlog.Configure(2, nil)
+	logger := commonlog.GetLogger("C3-LSP.parser")
+	expectedKind := protocol.CompletionItemKindField
+
+	source := `struct Color { int red; int green; int blue; }
+	struct Square { int width; int height; Color color; }
+	fn void Square.toCircle() {}
+	fn void main() {
+		Square inst;
+		inst.
+	}`
+	position := buildPosition(6, 7) // Cursor after `inst.|`
+
+	state := NewTestState(logger)
+	state.registerDoc("test.c3", source)
+	doc := state.GetDoc("test.c3")
+
+	completionList := state.language.BuildCompletionList(&doc, position)
+
+	assert.Equal(t, 4, len(completionList))
+	assert.Equal(t, []protocol.CompletionItem{
+		{Label: "color", Kind: &expectedKind},
+		{Label: "height", Kind: &expectedKind},
+		{
+			Label: "Square.toCircle",
+			Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod),
+			TextEdit: protocol.TextEdit{
+				NewText: "toCircle",
+				Range:   protocol_utils.NewLSPRange(5, 7, 5, 7),
+			},
+		},
+		{Label: "width", Kind: &expectedKind},
+	}, completionList)
+}
+
+func TestLanguage_BuildCompletionList_struct_suggest_members_starting_with_prefix(t *testing.T) {
+	commonlog.Configure(2, nil)
+	logger := commonlog.GetLogger("C3-LSP.parser")
+	expectedKind := protocol.CompletionItemKindField
+
+	source := `struct Color { int red; int green; int blue; }
+	struct Square { int width; int height; Color color; }
+	fn void main() {
+		Square inst;
+		inst.w
+	}`
+	position := buildPosition(5, 8) // Cursor after `inst.|`
+
+	state := NewTestState(logger)
+	state.registerDoc("test.c3", source)
+	doc := state.GetDoc("test.c3")
+
+	completionList := state.language.BuildCompletionList(&doc, position)
+
+	assert.Equal(t, 1, len(completionList))
+	assert.Equal(t, []protocol.CompletionItem{
+		{Label: "width", Kind: &expectedKind},
+	},
+		completionList)
+}
+
+func TestLanguage_BuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
+	commonlog.Configure(2, nil)
+	logger := commonlog.GetLogger("C3-LSP.parser")
+	expectedKind := protocol.CompletionItemKindField
+
+	source := `
+	struct Color { int red; int green; int blue; }
+	struct Square { int width; int height; Color color; }
+	fn uint Color.toHex() {}
+	fn void main() {
+		Square inst;
+		inst.color.
+	}`
+	position := buildPosition(7, 13) // Cursor after `inst.|`
+
+	state := NewTestState(logger)
+	state.registerDoc("test.c3", source)
+	doc := state.GetDoc("test.c3")
+
+	completionList := state.language.BuildCompletionList(&doc, position)
+
+	assert.Equal(t, 4, len(completionList))
+	assert.Equal(t, []protocol.CompletionItem{
+		{Label: "blue", Kind: &expectedKind},
+		{
+			Label: "Color.toHex",
+			Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod),
+			TextEdit: protocol.TextEdit{
+				NewText: "toHex",
+				Range:   protocol_utils.NewLSPRange(6, 13, 6, 13),
+			},
+		},
+		{Label: "green", Kind: &expectedKind},
+		{Label: "red", Kind: &expectedKind},
+	},
+		completionList)
+}
+
+func TestLanguage_BuildCompletionList_struct_suggest_members_with_prefix_of_substruct(t *testing.T) {
+	commonlog.Configure(2, nil)
+	logger := commonlog.GetLogger("C3-LSP.parser")
+	expectedKind := protocol.CompletionItemKindField
+
+	source := `
+	struct Color { int red; int green; int blue; }
+	struct Square { int width; int height; Color color; }
+	fn uint Color.toHex() {}
+	fn void main() {
+		Square inst;
+		inst.color.r
+	}`
+	position := buildPosition(7, 14) // Cursor after `inst.|`
+
+	state := NewTestState(logger)
+	state.registerDoc("test.c3", source)
+	doc := state.GetDoc("test.c3")
+
+	completionList := state.language.BuildCompletionList(&doc, position)
+
+	assert.Equal(t, 1, len(completionList))
+	assert.Equal(t, []protocol.CompletionItem{
+		{Label: "red", Kind: &expectedKind},
+	},
+		completionList)
+}
+
+func TestLanguage_BuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
 
-	t.Run("Should suggest struct members", func(t *testing.T) {
-		expectedKind := protocol.CompletionItemKindField
-		cases := []struct {
-			name           string
-			source         string
-			cursorPosition symbols.Position
-			expected       []protocol.CompletionItem
-			skip           bool
-		}{
-			{
-				"suggest all struct members",
-				`struct Color { int red; int green; int blue; }
-				struct Square { int width; int height; Color color; }
-				fn void Square.toCircle() {}
-				fn void main() {
-					Square inst;
-					inst.
-				}`,
-				buildPosition(6, 10), // Cursor after `inst.|`
-				[]protocol.CompletionItem{
-					{Label: "color", Kind: &expectedKind},
-					{Label: "height", Kind: &expectedKind},
-					{Label: "Square.toCircle", Kind: cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod)},
-					{Label: "width", Kind: &expectedKind},
-				},
-				false},
+	source := `
+	struct Color { int red; int green; int blue; }
+	struct Square { int width; int height; Color color; }
+	fn uint Color.toHex() {}
+	fn void main() {
+		Square inst;
+		inst.color.t
+	}`
+	position := buildPosition(7, 14) // Cursor after `inst.|`
 
-			{
-				"suggest members starting with `w`",
-				`struct Color { int red; int green; int blue; }
-				struct Square { int width; int height; Color color; }
-				fn void main() {
-					Square inst;
-					inst.w
-				}`,
-				buildPosition(5, 11), // Cursor after `inst.w|`
-				[]protocol.CompletionItem{
-					{Label: "width", Kind: &expectedKind},
-				},
-				false},
+	state := NewTestState(logger)
+	state.registerDoc("test.c3", source)
+	doc := state.GetDoc("test.c3")
 
-			{
-				"suggest members of Color",
-				`
-				struct Color { int red; int green; int blue; }
-				struct Square { int width; int height; Color color; }
-				fn uint Color.toHex() {}
-				fn void main() {
-					Square inst;
-					inst.color.
-				}`,
-				buildPosition(7, 16), // Cursor after `inst.color.|`
-				[]protocol.CompletionItem{
-					{Label: "blue", Kind: &expectedKind},
-					{Label: "Color.toHex", Kind: cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod)},
-					{Label: "green", Kind: &expectedKind},
-					{Label: "red", Kind: &expectedKind},
-				},
-				false},
-			{
-				"suggest members of Color starting with `r`",
-				`
-				struct Color { int red; int green; int blue; }
-				struct Square { int width; int height; Color color; }
-				fn uint Color.toHex() {}
-				fn void main() {
-					Square inst;
-					inst.color.r
-				}`,
-				buildPosition(7, 17), // Cursor after `inst.color.r|`
-				[]protocol.CompletionItem{
-					{Label: "red", Kind: &expectedKind},
-				},
-				false},
-			{
-				"suggest methods of Color starting with `t`",
-				`
-				struct Color { int red; int green; int blue; }
-				struct Square { int width; int height; Color color; }
-				fn uint Color.toHex() {}
-				fn void main() {
-					Square inst;
-					inst.color.t
-				}`,
-				buildPosition(7, 17), // Cursor after `inst.color.t|`
-				[]protocol.CompletionItem{
-					{Label: "Color.toHex", Kind: cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod)},
-				},
-				false},
-		}
+	completionList := state.language.BuildCompletionList(&doc, position)
 
-		for _, tt := range cases {
-			t.Run(tt.name, func(t *testing.T) {
-				if tt.skip {
-					t.Skip()
-				}
-				state := NewTestState(logger)
-				state.registerDoc("test.c3", tt.source)
-				doc := state.GetDoc("test.c3")
-				//position := buildPosition(7, 9+uint(len(tt.source))) // Cursor after `<input>|`
-
-				completionList := state.language.BuildCompletionList(&doc, tt.cursorPosition)
-
-				assert.Equal(t, len(tt.expected), len(completionList))
-				assert.Equal(t, tt.expected, completionList)
-			})
-		}
-	})
+	assert.Equal(t, 1, len(completionList))
+	assert.Equal(t, []protocol.CompletionItem{
+		{
+			Label: "Color.toHex",
+			Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod),
+			TextEdit: protocol.TextEdit{
+				NewText: "toHex",
+				Range:   protocol_utils.NewLSPRange(6, 13, 6, 14),
+			},
+		},
+	},
+		completionList)
 }
 
 func TestLanguage_BuildCompletionList_enums(t *testing.T) {

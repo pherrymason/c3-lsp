@@ -47,7 +47,8 @@ func (d *Document) SymbolInPosition(position symbols.Position) (Token, error) {
 func (d *Document) SymbolBeforeCursor(position symbols.Position) (Token, error) {
 	index := uint(position.IndexIn(d.Content))
 
-	if rune(d.Content[index]) == rune(' ') {
+	currentChar := rune(d.Content[index])
+	if currentChar == rune(' ') || currentChar == rune('.') {
 		return Token{}, errors.New("No symbol at position")
 	}
 
@@ -55,7 +56,7 @@ func (d *Document) SymbolBeforeCursor(position symbols.Position) (Token, error) 
 	for i := index; i >= 0; i-- {
 		r := rune(d.Content[i])
 		//fmt.Printf("%c\n", r)
-		if utils.IsSpaceOrNewline(r) {
+		if utils.IsSpaceOrNewline(r) || rune('.') == r {
 			// First invalid character found, that means previous iteration contained first character of symbol
 			start = i + 1
 			break

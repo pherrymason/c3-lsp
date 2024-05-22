@@ -8,6 +8,7 @@ import (
 
 	"github.com/pherrymason/c3-lsp/cast"
 	"github.com/pherrymason/c3-lsp/lsp/document"
+	protocol_utils "github.com/pherrymason/c3-lsp/lsp/protocol"
 	sp "github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
@@ -196,12 +197,36 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			} else {
 				query = strukt.GetFQN() + "." + symbolInPosition.Token + "*"
 			}
+
+			fullSymbolAtCursor, err := doc.SymbolBeforeCursor(
+				symbols.Position{
+					Line:      uint(position.Line),
+					Character: uint(position.Character) - 1,
+				})
+			fullSymbolAtCursor.TokenRange.End.Character += 1
+			var replacementRange protocol.Range
+			if err == nil {
+				replacementRange = fullSymbolAtCursor.TokenRange.ToLSP()
+			} else {
+				replacementRange = protocol_utils.NewLSPRange(
+					uint32(position.Line),
+					uint32(position.Character),
+					uint32(position.Line),
+					uint32(position.Character),
+				)
+			}
+
 			methods = l.indexByFQN.SearchByFQN(query)
 			for _, idx := range methods {
+				fn, _ := idx.(*symbols.Function)
 				kind := idx.GetKind()
 				items = append(items, protocol.CompletionItem{
-					Label: idx.GetName(),
+					Label: fn.GetName(),
 					Kind:  &kind,
+					TextEdit: protocol.TextEdit{
+						NewText: fn.GetMethodName(),
+						Range:   replacementRange,
+					},
 				})
 			}
 

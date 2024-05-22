@@ -72,6 +72,10 @@ func (f Function) GetName() string {
 	return f.typeIdentifier + "." + f.name
 }
 
+func (f Function) GetMethodName() string {
+	return f.name
+}
+
 func (f Function) GetFullName() string {
 	if f.typeIdentifier == "" {
 		return f.GetName()
