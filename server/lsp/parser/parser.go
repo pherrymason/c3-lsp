@@ -181,11 +181,13 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 		}
 	}
 
-	moduleSymbol.SetEndPosition(
-		idx.NewPositionFromTreeSitterPoint(
-			doc.ContextSyntaxTree.RootNode().EndPoint(),
-		),
-	)
+	if moduleSymbol != nil {
+		moduleSymbol.SetEndPosition(
+			idx.NewPositionFromTreeSitterPoint(
+				doc.ContextSyntaxTree.RootNode().EndPoint(),
+			),
+		)
+	}
 
 	resolveStructSubtypes(&parsedModules, subtyptingToResolve)
 

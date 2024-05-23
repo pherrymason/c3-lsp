@@ -14,6 +14,15 @@ func createParser() Parser {
 	return NewParser(logger)
 }
 
+func TestParses_empty_document(t *testing.T) {
+	doc := document.NewDocument("empty", "")
+	parser := createParser()
+
+	symbols := parser.ParseSymbols(&doc)
+
+	assert.Equal(t, 0, len(symbols.modules.Keys()))
+}
+
 func TestParses_TypedEnums(t *testing.T) {
 	docId := "doc"
 	source := `enum Colors:int { RED, BLUE, GREEN };`
