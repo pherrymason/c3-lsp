@@ -2,3 +2,4 @@
 .gitignore
 **/*.map
 **/.eslintrc.json
+node_modules
