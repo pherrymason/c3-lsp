@@ -1,15 +1,7 @@
-A one-step alternative to [the Yeoman VSCode extension
-generator](https://www.npmjs.com/package/generator-code).
+## Visual Code Studio LSP Client
+Simple extension to use c3-lsp server
 
-## Step 1
-```sh
-git clone git@github.com:reergymerej/standalone-vscode-ext.git your-extension
-```
-
-You're ready to rock sans bells and whistles.
-
-* * *
-
-This sample is published as part of the [corresponding article](https://www.toptal.com/javascript/language-server-protocol-tutorial) on the Toptal Engineering Blog.
-
-Visit [https://www.toptal.com/blog](https://www.toptal.com/blog) and subscribe to our newsletter to read great posts!
+### Configuration
+- *Enable*: `c3lspclient.lsp.enable` Enables or disables the connection with the Language server.
+- *Binary path*: `c3lspclient.lsp.path` The path to the **c3-lsp** binary. Mandatory or extension will fail to start.
+- *Send crash reports*: `c3lspclient.lsp.sendCrashReports` Enables sending crash reports to a server. Will help debug possible bugs. Disabled by default.

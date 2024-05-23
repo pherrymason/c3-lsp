@@ -22,8 +22,11 @@ You can also build from source:
 
 - Download and install golang: https://go.dev/
 - Clone this repo
-- Run `make build`: This will create `c3-lsp` at `server/bin` folder.
+- Run `make build`: This will create `c3-lsp` in `server/bin` folder.
 
+## IDE extensions
+There's a simple vscode extension available for download here: [download vix](https://github.com/pherrymason/c3-lsp/releases/download/latest/c3-lsp-client-0.0.1.vsix)
+Be sure to configure it with the path of the lsp server binary.
 
 
 ## Status
