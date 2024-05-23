@@ -1,12 +1,12 @@
 package symbols
 
 type ModuleBuilder struct {
-	module Module
+	module *Module
 }
 
 func NewModuleBuilder(moduleName string, docId string) *ModuleBuilder {
 	m := &ModuleBuilder{
-		module: Module{
+		module: &Module{
 			BaseIndexable: BaseIndexable{
 				name:        moduleName,
 				module:      NewModulePathFromString(moduleName),
@@ -18,6 +18,6 @@ func NewModuleBuilder(moduleName string, docId string) *ModuleBuilder {
 	return m
 }
 
-func (mb ModuleBuilder) Build() Module {
+func (mb ModuleBuilder) Build() *Module {
 	return mb.module
 }

@@ -13,6 +13,10 @@ build-parser:
 	cp assets/tree-sitter-c3/src/parser.c server/lsp/cst/parser.c
 	cp assets/tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
 
+index-c3-std:
+	cd server/stdlib_indexer && go run main.go blurp.go
+	cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
+
 build:
 	go build -C server -o bin/c3-lsp
 

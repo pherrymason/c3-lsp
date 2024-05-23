@@ -36,6 +36,6 @@ func (d *DefBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd u
 	return d
 }
 
-func (d *DefBuilder) Build() Def {
-	return d.def
+func (d *DefBuilder) Build() *Def {
+	return &d.def
 }

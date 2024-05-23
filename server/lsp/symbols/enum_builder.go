@@ -68,6 +68,6 @@ func (eb *EnumeratorBuilder) WithIdentifierRange(lineStart uint, CharStart uint,
 	return eb
 }
 
-func (eb *EnumeratorBuilder) Build() Enumerator {
-	return eb.enumerator
+func (eb *EnumeratorBuilder) Build() *Enumerator {
+	return &eb.enumerator
 }

@@ -2,5 +2,6 @@
 .DS_Store
 .idea
 *.log
+assets
 tree-sitter-c3
 server/bin

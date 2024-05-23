@@ -33,6 +33,6 @@ func (b *StructBuilder) ImplementsInterface(interfaceName string) *StructBuilder
 	return b
 }
 
-func (b *StructBuilder) Build() Struct {
-	return b.strukt
+func (b *StructBuilder) Build() *Struct {
+	return &b.strukt
 }

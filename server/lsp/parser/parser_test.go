@@ -244,16 +244,16 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		Build()
 
 	module := symbols.Get(mod)
-	assert.Equal(t, &expectedDefKilo, module.Defs["Kilo"])
+	assert.Equal(t, expectedDefKilo, module.Defs["Kilo"])
 	assert.Same(t, module.Children()[0], module.Defs["Kilo"])
 
-	assert.Equal(t, &expectedDefKiloPtr, module.Defs["KiloPtr"])
+	assert.Equal(t, expectedDefKiloPtr, module.Defs["KiloPtr"])
 	assert.Same(t, module.Children()[1], module.Defs["KiloPtr"])
 
-	assert.Equal(t, &expectedDefFunction, module.Defs["MyFunction"])
+	assert.Equal(t, expectedDefFunction, module.Defs["MyFunction"])
 	assert.Same(t, module.Children()[2], module.Defs["MyFunction"])
 
-	assert.Equal(t, &expectedDefTypeWithGenerics, module.Defs["MyMap"])
+	assert.Equal(t, expectedDefTypeWithGenerics, module.Defs["MyMap"])
 	assert.Same(t, module.Children()[3], module.Defs["MyMap"])
 }
 

@@ -25,6 +25,10 @@ func NewDef(name string, resolvesTo string, module string, docId string, idRange
 	}
 }
 
+func (d Def) GetResolvesTo() string {
+	return d.resolvesTo
+}
+
 func (d Def) GetHoverInfo() string {
 	return fmt.Sprintf("def %s = %s", d.name, d.resolvesTo)
 }

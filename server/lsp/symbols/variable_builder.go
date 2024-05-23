@@ -32,6 +32,6 @@ func (vb *VariableBuilder) WithDocumentRange(lineStart uint, CharStart uint, lin
 	return vb
 }
 
-func (vb *VariableBuilder) Build() Variable {
-	return vb.variable
+func (vb *VariableBuilder) Build() *Variable {
+	return &vb.variable
 }

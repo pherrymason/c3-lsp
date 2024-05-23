@@ -28,11 +28,11 @@ func TestTrie(t *testing.T) {
 	fun4 := symbols.NewFunctionBuilder("tearPot", "void", "app", "doc").WithTypeIdentifier("structName").Build()
 	funa := symbols.NewFunctionBuilder("anotherMethod1", "void", "app", "doc").WithTypeIdentifier("anotherStruct").Build()
 
-	trie.Insert(&strukt)
-	trie.Insert(&fun2)
-	trie.Insert(&fun3)
-	trie.Insert(&fun4)
-	trie.Insert(&funa)
+	trie.Insert(strukt)
+	trie.Insert(fun2)
+	trie.Insert(fun3)
+	trie.Insert(fun4)
+	trie.Insert(funa)
 
 	t.Run("Exact search", func(t *testing.T) {
 		exactSearch := trie.Search("app::structName")
@@ -70,10 +70,10 @@ func TestTrie_with_empty_nodes(t *testing.T) {
 	funa := symbols.NewFunctionBuilder("anotherMethod1", "void", "app", "doc").WithTypeIdentifier("anotherStruct").Build()
 
 	//trie.Insert(&strukt)
-	trie.Insert(&fun2)
-	trie.Insert(&fun3)
-	trie.Insert(&fun4)
-	trie.Insert(&funa)
+	trie.Insert(fun2)
+	trie.Insert(fun3)
+	trie.Insert(fun4)
+	trie.Insert(funa)
 
 	t.Run("Exact search", func(t *testing.T) {
 		exactSearch := trie.Search("app::structName")

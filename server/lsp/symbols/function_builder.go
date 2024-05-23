@@ -29,6 +29,11 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 	}
 }
 
+func (fb *FunctionBuilder) IsMacro() *FunctionBuilder {
+	fb.function.fType = Macro
+	return fb
+}
+
 func (fb *FunctionBuilder) WithTypeIdentifier(typeIdentifier string) *FunctionBuilder {
 	fb.function.typeIdentifier = typeIdentifier
 	return fb
@@ -54,6 +59,6 @@ func (fb *FunctionBuilder) WithDocumentRange(lineStart uint, CharStart uint, lin
 	return fb
 }
 
-func (fb *FunctionBuilder) Build() Function {
-	return fb.function
+func (fb *FunctionBuilder) Build() *Function {
+	return &fb.function
 }

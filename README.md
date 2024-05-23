@@ -57,6 +57,7 @@ Be sure to configure it with the path of the lsp server binary.
 - [~] defines
 - [x] Interfaces
 - [~] [Macros](https://c3-lang.org/references/docs/macros/)
+    - [ ] return type
 - [x] imports
 - [x] modules
 - [x] multiple modules per file

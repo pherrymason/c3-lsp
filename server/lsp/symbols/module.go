@@ -46,9 +46,11 @@ func NewModule(name string, docId string, idRange Range, docRange Range) *Module
 	}
 }
 
-func (m *Module) AddVariable(variable *Variable) {
+func (m *Module) AddVariable(variable *Variable) *Module {
 	m.Variables[variable.name] = variable
 	m.Insert(variable)
+
+	return m
 }
 
 func (m *Module) AddVariables(variables []*Variable) {
@@ -58,39 +60,53 @@ func (m *Module) AddVariables(variables []*Variable) {
 	}
 }
 
-func (m *Module) AddEnum(enum *Enum) {
+func (m *Module) AddEnum(enum *Enum) *Module {
 	m.Enums[enum.name] = enum
 	m.Insert(enum)
+
+	return m
 }
 
-func (m *Module) AddFault(fault *Fault) {
+func (m *Module) AddFault(fault *Fault) *Module {
 	m.Faults[fault.name] = fault
 	m.Insert(fault)
+
+	return m
 }
 
-func (m *Module) AddFunction(fun *Function) {
+func (m *Module) AddFunction(fun *Function) *Module {
 	m.ChildrenFunctions = append(m.ChildrenFunctions, fun)
 	m.InsertNestedScope(fun)
+
+	return m
 }
 
-func (m *Module) AddInterface(_interface *Interface) {
+func (m *Module) AddInterface(_interface *Interface) *Module {
 	m.Interfaces[_interface.name] = _interface
 	m.Insert(_interface)
+
+	return m
 }
 
-func (m *Module) AddStruct(s *Struct) {
+func (m *Module) AddStruct(s *Struct) *Module {
 	m.Structs[s.name] = s
 	m.Insert(s)
+
+	return m
 }
 
-func (m *Module) AddBitstruct(b *Bitstruct) {
+func (m *Module) AddBitstruct(b *Bitstruct) *Module {
 	m.Bitstructs[b.name] = b
 	m.Insert(b)
+
+	return m
 }
 
-func (m *Module) AddDef(def *Def) {
+func (m *Module) AddDef(def *Def) *Module {
 	m.Defs[def.GetName()] = def
 	m.Insert(def)
+
+	return m
 }
 
 func (m *Module) AddImports(imports []string) {
