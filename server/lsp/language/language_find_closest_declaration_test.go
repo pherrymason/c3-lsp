@@ -179,8 +179,8 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 			symbol := language.findClosestSymbolDeclaration(searchParams, debugger)
 
 			assert.True(t, symbol.IsNone(), fmt.Sprintf("\"%s\" Symbol should not be found", searchParams.Symbol()))
-			assert.Equal(t, 1, len(logger.tracker["debug"]))
-			assert.Equal(t, "| Ignore because C3 keyword", logger.tracker["debug"][0])
+			assert.Equal(t, 2, len(logger.tracker["debug"]))
+			assert.Equal(t, "| Ignore because C3 keyword", logger.tracker["debug"][1])
 		})
 	}
 }

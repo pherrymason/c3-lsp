@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -29,7 +27,7 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
-		fmt.Println("Node type:", n.Type(), ":: ", n.Content(sourceCode))
+		//fmt.Println("Node type:", n.Type(), ":: ", n.Content(sourceCode))
 		switch n.Type() {
 		case "generic_parameters", "generic_module_parameters":
 			for g := 0; g < int(n.ChildCount()); g++ {
