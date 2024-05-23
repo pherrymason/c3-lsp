@@ -837,28 +837,31 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 
 func TestLanguage_BuildCompletionList_interfaces(t *testing.T) {
 	state := NewTestState()
-	state.registerDoc(
-		"app.c3",
-		`interface EmulatorConsole
+
+	t.Run("should complete interface name", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`interface EmulatorConsole
 		{
 			fn void run();
 		}
 		struct Emu (Emul
 		`)
-	doc := state.GetDoc("app.c3")
-	completionList := state.language.BuildCompletionList(&doc, buildPosition(5, 18))
+		doc := state.GetDoc("app.c3")
+		completionList := state.language.BuildCompletionList(&doc, buildPosition(5, 18))
 
-	assert.Equal(t, 1, len(completionList), "Different items to suggest")
-	assert.Equal(
-		t,
-		[]protocol.CompletionItem{
-			protocol.CompletionItem{
-				Label: "EmulatorConsole",
-				Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindInterface),
+		assert.Equal(t, 1, len(completionList), "Different items to suggest")
+		assert.Equal(
+			t,
+			[]protocol.CompletionItem{
+				protocol.CompletionItem{
+					Label: "EmulatorConsole",
+					Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindInterface),
+				},
 			},
-		},
-		completionList,
-	)
+			completionList,
+		)
+	})
 }
 
 func CreateCompletionItem(label string, kind protocol.CompletionItemKind) protocol.CompletionItem {
