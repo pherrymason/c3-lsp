@@ -25,15 +25,13 @@ You can also build from source:
 - Run `make build`: This will create `c3-lsp` in `server/bin` folder.
 
 ## IDE extensions
-There's a simple vscode extension available for download here: [download vix](https://github.com/pherrymason/c3-lsp/releases/download/latest/c3-lsp-client-0.0.1.vsix)
+There's a simple vscode extension available for download here: [download vix](https://github.com/pherrymason/c3-lsp/releases/download/latest/c3-lsp-client-0.0.1.vsix)  
 Be sure to configure it with the path of the lsp server binary.
 
 
 ## Status
 **Next release**
-- TextDocumentCompletion: 
-  - Improve system.
-  - Be able to suggest `Interfaces`, `module names`
+- Include stdlib symbol information.
 
 **Current status**  
 ***Index status***
