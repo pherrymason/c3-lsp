@@ -31,7 +31,7 @@ func NewLanguage(logger commonlog.Logger) Language {
 
 func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
 
-	l.logger.Debug(fmt.Sprint("Parsing ", doc.URI))
+	//l.logger.Debug(fmt.Sprint("Parsing ", doc.URI))
 	parsedModules := parser.ParseSymbols(doc)
 
 	// Register in the index, the root elements
