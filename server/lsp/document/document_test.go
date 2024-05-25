@@ -11,7 +11,7 @@ import (
 
 func TestDocument_GetSymbolRangeAtIndex_does_not_find_symbol(t *testing.T) {
 	doc := NewDocument("x", "a document")
-	_, _, error := doc.getSymbolRangeIndexesAtIndex(1)
+	_, _, error := doc.getWordIndexLimits(1)
 
 	assert.Equal(t, errors.New("No symbol at position"), error)
 }
@@ -31,9 +31,9 @@ func TestWordInIndex(t *testing.T) {
 	doc := NewDocument("x", source)
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			word, _ := doc.symbolInIndex(tt.position)
+			word, _ := doc.symbolInIndexDeprecated(tt.position)
 
-			assert.Equal(t, tt.expected, word.Token)
+			assert.Equal(t, tt.expected, word.Text())
 		})
 	}
 }
@@ -87,7 +87,7 @@ func TestDocument_ParentSymbolInPosition(t *testing.T) {
 			doc := NewDocument("x", tt.source)
 			parentSymbol, err := doc.ParentSymbolInPosition(tt.position)
 
-			assert.Equal(t, tt.expected, parentSymbol.Token)
+			assert.Equal(t, tt.expected, parentSymbol.Text())
 			if tt.expected != "" && err != nil {
 				t.Fatalf(fmt.Sprint(err))
 			}

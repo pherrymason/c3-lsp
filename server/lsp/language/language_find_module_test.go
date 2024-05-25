@@ -243,3 +243,38 @@ func TestResolve_generic_module_parameters(t *testing.T) {
 	assert.Equal(t, idx.NewRange(0, 24, 0, 29), genericParameter.GetIdRange())
 	assert.Equal(t, idx.NewRange(0, 24, 0, 29), genericParameter.GetDocumentRange())
 }
+
+func TestLanguage_findClosestSymbolDeclaration_should_find_right_module(t *testing.T) {
+	state := NewTestState()
+
+	state.registerDoc(
+		"app.c3",
+		`import mystd::io;
+		io::printf("Hello world");;
+		`,
+	)
+	state.registerDoc(
+		"io.c3",
+		`module mystd::io;
+		fn void printf(*char input) {}
+		`,
+	)
+	state.registerDoc(
+		"trap.c3",
+		`module io;
+		fn void printf(*char input) {}
+		`,
+	)
+
+	position := buildPosition(1, 15) // Cursor at m|ain();
+	doc := state.docs["app.c3"]
+	searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
+
+	symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+	assert.False(t, symbolOption.IsNone(), "Element not found")
+
+	mod := symbolOption.Get().(*idx.Module)
+	assert.Equal(t, "mystd::io", mod.GetName())
+	//assert.Equal(t, idx.FunctionType(idx.UserDefined), mod.FunctionType())
+}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pherrymason/c3-lsp/cast"
 	"github.com/pherrymason/c3-lsp/lsp/document"
+	"github.com/pherrymason/c3-lsp/lsp/document/sourcecode"
 	protocol_utils "github.com/pherrymason/c3-lsp/lsp/protocol"
 	sp "github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
@@ -23,12 +24,12 @@ func isCompletingAModulePath(doc *document.Document, cursorPosition symbols.Posi
 		position = cursorPosition.RewindCharacter()
 	}
 
-	index := position.IndexIn(doc.Content)
+	index := position.IndexIn(doc.SourceCode.Text)
 
 	// Read backwards until a separator character is found.
 	startIndex := index
 	for i := index; i >= 0; i-- {
-		r := rune(doc.Content[i])
+		r := rune(doc.SourceCode.Text[i])
 		//fmt.Printf("%c\n", r)
 		if utils.IsAZ09_(r) || r == '.' || r == ':' {
 			startIndex = i
@@ -36,7 +37,7 @@ func isCompletingAModulePath(doc *document.Document, cursorPosition symbols.Posi
 			break
 		}
 	}
-	sentence := doc.Content[startIndex : index+1]
+	sentence := doc.SourceCode.Text[startIndex : index+1]
 	// fmt.Println("sentence: ", sentence)
 
 	containsModulePathSeparator := strings.Contains(sentence, ":")
@@ -54,12 +55,12 @@ func isCompletingAChain(doc *document.Document, cursorPosition symbols.Position)
 		position = cursorPosition.RewindCharacter()
 	}
 
-	index := position.IndexIn(doc.Content)
+	index := position.IndexIn(doc.SourceCode.Text)
 
 	// Read backwards until a separator character is found.
 	startIndex := index
 	for i := index; i >= 0; i-- {
-		r := rune(doc.Content[i])
+		r := rune(doc.SourceCode.Text[i])
 		//fmt.Printf("%c\n", r)
 		if utils.IsAZ09_(r) || r == '.' || r == ':' {
 			startIndex = i
@@ -67,7 +68,7 @@ func isCompletingAChain(doc *document.Document, cursorPosition symbols.Position)
 			break
 		}
 	}
-	sentence := doc.Content[startIndex : index+1]
+	sentence := doc.SourceCode.Text[startIndex : index+1]
 	//fmt.Println("sentence: ", sentence)
 	var previousPosition symbols.Position
 
@@ -127,26 +128,38 @@ func extractExplicitModulePath(possibleModulePath string) option.Option[symbols.
 func (l *Language) BuildCompletionList(doc *document.Document, position symbols.Position) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 
-	filterMembers := true
-	symbolInPosition, error := doc.SymbolInPosition(
+	filterMembers := true /*
+			symbolInPosition, error := doc.SymbolInPositionDeprecated(
+				symbols.Position{
+					Line:      uint(position.Line),
+					Character: uint(position.Character - 1),
+				})
+				if error != nil {
+			// Probably, theres no symbol at cursor!
+			filterMembers = false
+		}
+	*/
+	symbolInPosition := doc.SourceCode.SymbolInPosition(
 		symbols.Position{
 			Line:      uint(position.Line),
 			Character: uint(position.Character - 1),
 		})
-	if error != nil {
+	if symbolInPosition.IsSeparator() {
 		// Probably, theres no symbol at cursor!
 		filterMembers = false
 	}
-	l.logger.Debug(fmt.Sprintf("building completion list: \"%s\"", symbolInPosition.Token)) //TODO warp %s en "
+	l.logger.Debug(fmt.Sprintf("building completion list: \"%s\"", symbolInPosition.Text())) //TODO warp %s en "
 
 	// Check if module path is being written/exists
 	isCompletingModulePath, possibleModulePath := isCompletingAModulePath(doc, position)
 
-	hasImplicitModulePath := option.None[symbols.ModulePath]()
+	hasExplicitModulePath := option.None[symbols.ModulePath]()
 	if isCompletingModulePath {
-		hasImplicitModulePath = extractExplicitModulePath(possibleModulePath)
+		hasExplicitModulePath = extractExplicitModulePath(possibleModulePath)
 	}
-	isCompletingAChain, prevPosition := isCompletingAChain(doc, position)
+
+	//isCompletingAChain, prevPosition := isCompletingAChain(doc, position)
+	isCompletingAChain := symbolInPosition.HasAccessPath()
 
 	// There are two cases (TBC):
 	// User writing a symbol:
@@ -164,7 +177,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		searchParams := sp.BuildSearchBySymbolUnderCursor(
 			doc,
 			l.parsedModulesByDocument[doc.URI],
-			prevPosition,
+			symbolInPosition.PrevAccessPath().TextRange().End.RewindCharacter(),
 		)
 
 		//	searchParams.scopeMode = AnyPosition
@@ -181,7 +194,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			strukt := prevIndexable.(*symbols.Struct)
 
 			for _, member := range strukt.GetMembers() {
-				if !filterMembers || strings.HasPrefix(member.GetName(), symbolInPosition.Token) {
+				if !filterMembers || strings.HasPrefix(member.GetName(), symbolInPosition.Text()) {
 					items = append(items, protocol.CompletionItem{
 						Label: member.GetName(),
 						Kind:  &member.Kind,
@@ -195,27 +208,33 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			if !filterMembers {
 				query = strukt.GetFQN() + "."
 			} else {
-				query = strukt.GetFQN() + "." + symbolInPosition.Token + "*"
+				query = strukt.GetFQN() + "." + symbolInPosition.Text() + "*"
 			}
 
-			fullSymbolAtCursor, err := doc.SymbolBeforeCursor(
-				symbols.Position{
-					Line:      uint(position.Line),
-					Character: uint(position.Character) - 1,
-				})
-			fullSymbolAtCursor.TokenRange.End.Character += 1
-			var replacementRange protocol.Range
-			if err == nil {
-				replacementRange = fullSymbolAtCursor.TokenRange.ToLSP()
-			} else {
-				replacementRange = protocol_utils.NewLSPRange(
-					uint32(position.Line),
-					uint32(position.Character),
-					uint32(position.Line),
-					uint32(position.Character),
-				)
-			}
-
+			/*
+				fullSymbolAtCursor, err := doc.SymbolBeforeCursor(
+					symbols.Position{
+						Line:      uint(position.Line),
+						Character: uint(position.Character) - 1,
+					})
+				fullSymbolAtCursor.AdvanceEndCharacter()
+				var replacementRange protocol.Range
+				if err == nil {
+					replacementRange = fullSymbolAtCursor.TextRange().ToLSP()
+				} else {
+					replacementRange = protocol_utils.NewLSPRange(
+						uint32(position.Line),
+						uint32(position.Character),
+						uint32(position.Line),
+						uint32(position.Character),
+					)
+				}*/
+			replacementRange := protocol_utils.NewLSPRange(
+				uint32(symbolInPosition.PrevAccessPath().TextRange().Start.Line),
+				uint32(symbolInPosition.PrevAccessPath().TextRange().End.Character+1),
+				uint32(symbolInPosition.PrevAccessPath().TextRange().Start.Line),
+				uint32(symbolInPosition.PrevAccessPath().TextRange().End.Character+2),
+			)
 			methods = l.indexByFQN.SearchByFQN(query)
 			for _, idx := range methods {
 				fn, _ := idx.(*symbols.Function)
@@ -233,7 +252,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		case *symbols.Enum:
 			enum := prevIndexable.(*symbols.Enum)
 			for _, enumerator := range enum.GetEnumerators() {
-				if !filterMembers || strings.HasPrefix(enumerator.GetName(), symbolInPosition.Token) {
+				if !filterMembers || strings.HasPrefix(enumerator.GetName(), symbolInPosition.Text()) {
 					items = append(items, protocol.CompletionItem{
 						Label: enumerator.GetName(),
 						Kind:  &enumerator.Kind,
@@ -244,7 +263,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		case *symbols.Fault:
 			fault := prevIndexable.(*symbols.Fault)
 			for _, constant := range fault.GetConstants() {
-				if !filterMembers || strings.HasPrefix(constant.GetName(), symbolInPosition.Token) {
+				if !filterMembers || strings.HasPrefix(constant.GetName(), symbolInPosition.Text()) {
 					items = append(items, protocol.CompletionItem{
 						Label: constant.GetName(),
 						Kind:  &constant.Kind,
@@ -256,25 +275,26 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		// Find all symbols in module
 		params := FindSymbolsParams{
 			docId:              doc.URI,
-			scopedToModulePath: hasImplicitModulePath,
+			scopedToModulePath: hasExplicitModulePath,
 			position:           option.Some(position),
 		}
 		// Search symbols loadable in module located in position
 		scopeSymbols := l.findSymbolsInScope(params)
 
 		for _, storedIdentifier := range scopeSymbols {
-			hasPrefix := strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition.Token)
+			hasPrefix := strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition.Text())
 			if filterMembers && !hasPrefix {
 				continue
 			}
 
 			if storedIdentifier.GetKind() == protocol.CompletionItemKindModule {
-				fullSymbolAtCursor, _ := doc.SymbolBeforeCursor(
+				/*fullSymbolAtCursor, _ := doc.SymbolBeforeCursor(
 					symbols.Position{
 						Line:      uint(position.Line),
 						Character: uint(position.Character) - 1,
 					})
-				fullSymbolAtCursor.TokenRange.End.Character += 1
+				fullSymbolAtCursor.AdvanceEndCharacter()*/
+				editRange := symbolInPosition.FullTextRange().ToLSP()
 
 				items = append(items, protocol.CompletionItem{
 					Label:  storedIdentifier.GetName(),
@@ -282,7 +302,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 					Detail: cast.StrPtr("Module"),
 					TextEdit: protocol.TextEdit{
 						NewText: storedIdentifier.GetName(),
-						Range:   fullSymbolAtCursor.TokenRange.ToLSP(),
+						Range:   editRange,
 					},
 				})
 			} else {
@@ -311,14 +331,14 @@ func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDeb
 
 	_, isStructMember := prevIndexable.(*symbols.StructMember)
 	if isStructMember {
-		var token document.Token
+		var token sourcecode.Word
 		switch prevIndexable.(type) {
 		case *symbols.StructMember:
 			structMember, _ := prevIndexable.(*symbols.StructMember)
-			token = document.NewToken(structMember.GetType().GetName(), prevIndexable.GetIdRange())
+			token = sourcecode.NewWord(structMember.GetType().GetName(), prevIndexable.GetIdRange())
 		}
 		levelSearchParams := sp.NewSearchParamsBuilder().
-			WithSymbol(token.Token).
+			WithSymbol(token.Text()).
 			WithDocId(prevIndexable.GetDocumentURI()).
 			Build()
 

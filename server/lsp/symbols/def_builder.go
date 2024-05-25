@@ -26,6 +26,11 @@ func (d *DefBuilder) WithResolvesTo(resolvesTo string) *DefBuilder {
 	return d
 }
 
+func (d *DefBuilder) WithoutSourceCode() *DefBuilder {
+	d.def.BaseIndexable.hasSourceCode = false
+	return d
+}
+
 func (d *DefBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *DefBuilder {
 	d.def.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return d

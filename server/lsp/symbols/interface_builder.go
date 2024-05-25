@@ -26,6 +26,11 @@ func NewInterfaceBuilder(name string, module string, docId string) *InterfaceBui
 	return f
 }
 
+func (ib *InterfaceBuilder) WithoutSourceCode() *InterfaceBuilder {
+	ib._interface.BaseIndexable.hasSourceCode = false
+	return ib
+}
+
 func (ib *InterfaceBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *InterfaceBuilder {
 	ib._interface.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return ib

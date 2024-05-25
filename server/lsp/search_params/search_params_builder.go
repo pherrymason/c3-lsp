@@ -26,12 +26,12 @@ func (b *SearchParamsBuilder) WithSymbolRange(posRange symbols.Range) *SearchPar
 }
 
 func (b *SearchParamsBuilder) WithModule(moduleName string) *SearchParamsBuilder {
-	b.params.symbolModulePath = symbols.NewModulePathFromString(moduleName)
+	b.params.contextModulePath = symbols.NewModulePathFromString(moduleName)
 	return b
 }
 
 func (b *SearchParamsBuilder) WithSymbolModule(modulePath symbols.ModulePath) *SearchParamsBuilder {
-	b.params.symbolModulePath = modulePath
+	b.params.contextModulePath = modulePath
 	return b
 }
 

@@ -13,10 +13,6 @@ func NewFunctionBuilder(name string, returnType string, module string, docId str
 			returnType:  returnType,
 			argumentIds: nil,
 			Variables:   make(map[string]*Variable),
-			//Defs:              make(map[string]Def),
-			//Enums:             make(map[string]Enum),
-			//Structs:           make(map[string]Struct),
-			//ChildrenFunctions: make([]Function, 0),
 			BaseIndexable: NewBaseIndexable(
 				name,
 				module,
@@ -59,6 +55,10 @@ func (fb *FunctionBuilder) WithDocumentRange(lineStart uint, CharStart uint, lin
 	return fb
 }
 
+func (fb *FunctionBuilder) WithoutSourceCode() *FunctionBuilder {
+	fb.function.BaseIndexable.hasSourceCode = false
+	return fb
+}
 func (fb *FunctionBuilder) Build() *Function {
 	return &fb.function
 }

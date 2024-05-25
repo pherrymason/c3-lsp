@@ -34,6 +34,7 @@ type Indexable interface {
 	IsSubModuleOf(parentModule ModulePath) bool
 
 	GetHoverInfo() string
+	HasSourceCode() bool // This will return false for that code that is not accesible either because it belongs to the stdlib, or inside a .c3lib library. This results in disabling "Go to definition" / "Go to declaration" on these symbols
 
 	Children() []Indexable
 	NestedScopes() []Indexable
@@ -45,15 +46,16 @@ type Indexable interface {
 type IndexableCollection []Indexable
 
 type BaseIndexable struct {
-	name         string
-	moduleString string
-	module       ModulePath
-	documentURI  string
-	idRange      Range
-	docRange     Range
-	Kind         protocol.CompletionItemKind
-	children     []Indexable
-	nestedScopes []Indexable
+	name          string
+	moduleString  string
+	module        ModulePath
+	documentURI   string
+	hasSourceCode bool
+	idRange       Range
+	docRange      Range
+	Kind          protocol.CompletionItemKind
+	children      []Indexable
+	nestedScopes  []Indexable
 }
 
 func (b BaseIndexable) GetName() string {
@@ -96,6 +98,10 @@ func (b BaseIndexable) GetIdRange() Range {
 	return b.idRange
 }
 
+func (b BaseIndexable) HasSourceCode() bool {
+	return b.hasSourceCode
+}
+
 func (b BaseIndexable) Children() []Indexable {
 	return b.children
 }
@@ -118,12 +124,13 @@ func (b *BaseIndexable) InsertNestedScope(symbol Indexable) {
 
 func NewBaseIndexable(name string, module string, docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
 	return BaseIndexable{
-		name:         name,
-		module:       NewModulePathFromString(module),
-		moduleString: module,
-		documentURI:  docId,
-		idRange:      idRange,
-		docRange:     docRange,
-		Kind:         kind,
+		name:          name,
+		module:        NewModulePathFromString(module),
+		moduleString:  module,
+		documentURI:   docId,
+		idRange:       idRange,
+		docRange:      docRange,
+		Kind:          kind,
+		hasSourceCode: true,
 	}
 }

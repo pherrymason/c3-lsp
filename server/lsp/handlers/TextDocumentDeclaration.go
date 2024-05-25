@@ -21,9 +21,13 @@ func (h *Handlers) TextDocumentDeclaration(context *glsp.Context, params *protoc
 		return nil, nil
 	}
 
-	indexable := identifierOption.Get()
+	symbol := identifierOption.Get()
+	if !symbol.HasSourceCode() {
+		return nil, nil
+	}
+
 	return protocol.Location{
-		URI:   indexable.GetDocumentURI(),
-		Range: _prot.Lsp_NewRangeFromRange(indexable.GetIdRange()),
+		URI:   symbol.GetDocumentURI(),
+		Range: _prot.Lsp_NewRangeFromRange(symbol.GetIdRange()),
 	}, nil
 }

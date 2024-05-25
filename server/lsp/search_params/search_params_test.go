@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	d "github.com/pherrymason/c3-lsp/lsp/document"
+	"github.com/pherrymason/c3-lsp/lsp/document/sourcecode"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 	"github.com/stretchr/testify/assert"
@@ -21,31 +22,32 @@ type MockParsedModules struct {
 func (m *MockParsedModules) SetModuleForPosition(moduleName string) {
 	m.expectedModule = moduleName
 }
-func (m MockParsedModules) FindModuleInCursorPosition(cursorPosition idx.Position) string {
+func (m MockParsedModules) FindContextModuleInCursorPosition(cursorPosition idx.Position) string {
 	return m.expectedModule
 }
 
 // ------------------
 
-func TestSearchParams_NewSearchParamsFromPosition_finds_symbol_at_cursor_position(t *testing.T) {
+func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_symbol_at_cursor_position(t *testing.T) {
 	sourceCode := "module system; int emu;"
 	doc := d.NewDocument("filename", sourceCode)
 	parsedModules := MockParsedModules{}
 	parsedModules.SetModuleForPosition("system")
 
+	// position at int e|mu
 	sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, buildPosition(1, 20))
 
-	assert.Equal(t, "emu", sp.symbol)
+	assert.Equal(t, "emu", sp.word.Text())
 	assert.Equal(t, idx.NewRange(0, 19, 0, 22), sp.symbolRange)
 	assert.Equal(t, option.Some("filename"), sp.docId)
-	assert.Equal(t, "system", sp.symbolModulePath.GetName())
+	assert.Equal(t, "system", sp.contextModulePath.GetName())
 	assert.Equal(t, true, sp.continueOnModules)
 	assert.Equal(t, 0, len(sp.parentAccessPath))
 	assert.Equal(t, make(TrackedModules), sp.trackedModules)
-	assert.Equal(t, false, sp.moduleSpecified)
+	assert.Equal(t, false, sp.word.HasModulePath())
 }
 
-func TestSearchParams_NewSearchParamsFromPosition_finds_all_parent_symbols(t *testing.T) {
+func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_all_parent_symbols(t *testing.T) {
 	sourceCode := `// This blank line is intended.
 system.cpu.init();`
 	doc := d.NewDocument("filename", sourceCode)
@@ -58,39 +60,48 @@ system.cpu.init();`
 	assert.Equal(t, "init", sp.symbol)
 	assert.Equal(t, idx.NewRange(1, 11, 1, 15), sp.symbolRange)
 	assert.Equal(t, option.Some("filename"), sp.docId)
-	assert.Equal(t, "system", sp.symbolModulePath.GetName())
+	assert.Equal(t, "system", sp.contextModulePath.GetName())
 	assert.Equal(t, true, sp.continueOnModules)
-	assert.Equal(t, []d.Token{
-		d.NewToken("system", idx.NewRange(1, 0, 1, 6)),
-		d.NewToken("cpu", idx.NewRange(1, 7, 1, 10)),
+	assert.Equal(t, []sourcecode.Word{
+		sourcecode.NewWord("system", idx.NewRange(1, 0, 1, 6)),
+		sourcecode.NewWord("cpu", idx.NewRange(1, 7, 1, 10)),
 	}, sp.parentAccessPath)
 	assert.Equal(t, make(TrackedModules), sp.trackedModules)
-	assert.Equal(t, false, sp.moduleSpecified)
+	assert.Equal(t, false, sp.word.HasModulePath())
 }
 
-func TestSearchParams_NewSearchParamsFromPosition_finds_full_module_path(t *testing.T) {
+func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_full_module_path(t *testing.T) {
 	cases := []struct {
-		source              string
-		position            idx.Position
-		expectedModule      idx.ModulePath
-		expectedSymbol      string
-		expectedSymbolRange idx.Range
+		source   string
+		position idx.Position
+		//expectedContextModule idx.ModulePath
+		expectedSymbol       string
+		expectedSymbolRange  idx.Range
+		expectedSymbolModule option.Option[string]
 	}{
 		{
 			`// This blank line is intended.
 			system::cpu::value;`,
-			buildPosition(2, 17),
-			idx.NewModulePath([]string{"system", "cpu"}),
+			buildPosition(2, 17), // Cursor position cpu::v|alue
 			"value",
 			idx.NewRange(1, 16, 1, 21),
+			option.Some("system::cpu"),
 		},
 		{
 			`// This blank line is intended.
-mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
-			buildPosition(2, 25),
-			idx.NewModulePath([]string{"foo", "bar"}),
+			mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
+			buildPosition(2, 28), // Cursor position foo::bar::D|EFAULT_BAR_COLOR
 			"DEFAULT_BAR_COLOR",
-			idx.NewRange(1, 24, 1, 41),
+			idx.NewRange(1, 27, 1, 44),
+			option.Some("foo::bar"),
+		},
+		{
+			`// This blank line is intended.
+			mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
+			buildPosition(2, 26), // Cursor position foo::bar:|:DEFAULT_BAR_COLOR
+			":",
+			idx.NewRange(1, 26, 1, 27),
+			option.Some("foo::bar"),
 		},
 	}
 
@@ -105,11 +116,9 @@ mybar.color = foo::bar::DEFAULT_BAR_COLOR;`,
 			assert.Equal(t, tt.expectedSymbol, sp.symbol)
 			assert.Equal(t, tt.expectedSymbolRange, sp.symbolRange)
 			assert.Equal(t, option.Some("filename"), sp.docId)
-			//assert.Equal(t, "system", sp.symbolModulePath.GetName())
-			assert.Equal(t, true, sp.moduleSpecified)
+			assert.Equal(t, "system", sp.contextModulePath.GetName())
+			assert.Equal(t, true, sp.HasModuleSpecified())
 			assert.Equal(t, 0, len(sp.parentAccessPath))
-			assert.Equal(t, tt.expectedModule, sp.symbolModulePath)
-
 		})
 	}
 }

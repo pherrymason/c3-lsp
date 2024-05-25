@@ -7,7 +7,7 @@ import (
 )
 
 type ParsedModulesInterface interface {
-	FindModuleInCursorPosition(cursorPosition idx.Position) string
+	FindContextModuleInCursorPosition(cursorPosition idx.Position) string
 }
 
 type ParsedModules struct {
@@ -92,7 +92,7 @@ func (ps ParsedModules) Modules() []*idx.Module {
 	return ps.modules.Values()
 }
 
-func (ps ParsedModules) FindModuleInCursorPosition(position idx.Position) string {
+func (ps ParsedModules) FindContextModuleInCursorPosition(position idx.Position) string {
 	closerPreviousRange := idx.NewRange(0, 0, 0, 0)
 	priorModule := ""
 	for _, module := range ps.modules.Values() {

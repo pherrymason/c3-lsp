@@ -18,6 +18,11 @@ func NewModuleBuilder(moduleName string, docId string) *ModuleBuilder {
 	return m
 }
 
+func (mb *ModuleBuilder) WithoutSourceCode() *ModuleBuilder {
+	mb.module.BaseIndexable.hasSourceCode = false
+	return mb
+}
+
 func (mb ModuleBuilder) Build() *Module {
 	return mb.module
 }

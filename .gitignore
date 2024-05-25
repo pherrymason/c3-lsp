@@ -4,4 +4,5 @@
 *.log
 assets
 tree-sitter-c3
+parser/target
 server/bin

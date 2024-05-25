@@ -12,8 +12,13 @@ func NewStructBuilder(name string, module string, docId string) *StructBuilder {
 	}
 }
 
-func (b *StructBuilder) WithStructMember(name string, baseType string, idRange Range, module string, docId string) *StructBuilder {
-	member := NewStructMember(name, baseType, option.None[[2]uint](), module, docId, idRange)
+func (sb *StructBuilder) WithoutSourceCode() *StructBuilder {
+	sb.strukt.BaseIndexable.hasSourceCode = false
+	return sb
+}
+
+func (b *StructBuilder) WithStructMember(name string, baseType string, module string, docId string) *StructBuilder {
+	member := NewStructMember(name, baseType, option.None[[2]uint](), module, docId, NewRange(0, 0, 0, 0))
 	b.strukt.members = append(b.strukt.members, &member)
 	return b
 }

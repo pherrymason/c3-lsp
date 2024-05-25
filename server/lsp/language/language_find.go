@@ -58,7 +58,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		return NewSearchResultEmpty(searchParams.TrackTraversedModules())
 	}
 
-	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s: %s", searchParams.DocId(), searchParams.Module(), searchParams.Symbol()), debugger)
+	l.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s: %s", searchParams.DocId(), searchParams.ContextModule(), searchParams.Symbol()), debugger)
 
 	// Check if there's parent contextual information in searchParams
 	if searchParams.HasAccessPath() {
@@ -100,7 +100,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 			}
 
 			for _, scope := range parsedModules.Modules() {
-				if scope.GetModule().IsImplicitlyImported(searchParams.ModulePath()) {
+				if scope.GetModule().IsImplicitlyImported(searchParams.ContextModulePath()) {
 					collectionParsedModules = append(collectionParsedModules, parsedModules)
 					break
 				}
@@ -112,7 +112,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	var imports []string
 	importsAdded := make(map[string]bool)
 	for _, parsedModules := range collectionParsedModules {
-		for _, scopedTree := range parsedModules.GetLoadableModules(searchParams.ModulePath()) {
+		for _, scopedTree := range parsedModules.GetLoadableModules(searchParams.ContextModulePath()) {
 			l.debug(fmt.Sprintf("Checking module \"%s\"", scopedTree.GetModuleString()), debugger)
 			// Go through every element defined in scopedTree
 			identifier, _ := findDeepFirst(
@@ -141,7 +141,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	if searchParams.ContinueOnModules() {
 		sb := search_params.NewSearchParamsBuilder().
 			WithSymbol(searchParams.Symbol()).
-			WithSymbolModule(searchParams.ModulePath()).
+			WithSymbolModule(searchParams.ContextModulePath()).
 			WithExcludedDocs(searchParams.DocId()).
 			WithScopeMode(search_params.InModuleRoot) // Document this
 		searchInSameModule := sb.Build()
@@ -153,25 +153,30 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	}
 
 	// Try to find element in one of the imported modules
-	if docIdOption.IsSome() && len(imports) > 0 {
-		for i := 0; i < len(imports); i++ {
-			searchResult.TrackTraversedModule(imports[i])
-			if !searchParams.TrackTraversedModule(imports[i]) {
-				continue
-			}
+	if docIdOption.IsSome() {
+		for _, parsedModules := range collectionParsedModules {
+			for _, mod := range parsedModules.Modules() {
+				for i := 0; i < len(mod.Imports); i++ {
+					searchResult.TrackTraversedModule(mod.Imports[i])
+					if !searchParams.TrackTraversedModule(mod.Imports[i]) {
+						continue
+					}
 
-			module := imports[i]
-			sp := search_params.NewSearchParamsBuilder().
-				WithSymbol(searchParams.Symbol()).
-				WithSymbolModule(symbols.NewModulePathFromString(module)).
-				WithTrackedModules(trackedModules).
-				WithScopeMode(search_params.InModuleRoot). // Document this
-				Build()
+					module := mod.Imports[i]
+					sp := search_params.NewSearchParamsBuilder().
+						WithSymbol(searchParams.Symbol()).
+						WithSymbolModule(symbols.NewModulePathFromString(module)).
+						WithTrackedModules(trackedModules).
+						WithScopeMode(search_params.InModuleRoot). // Document this
+						Build()
 
-			l.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\": %s", module, searchParams.Symbol()), debugger)
-			symbol := l.findSymbolDeclarationInModule(sp, debugger.goIn())
-			if symbol.IsSome() {
-				return symbol
+					l.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\": %s", module, searchParams.Symbol()), debugger)
+					symbol := l.findSymbolDeclarationInModule(sp, debugger.goIn())
+					if symbol.IsSome() {
+						return symbol
+					}
+
+				}
 			}
 		}
 	}
@@ -194,7 +199,7 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
 
 	for docId, modulesByDoc := range l.parsedModulesByDocument {
-		for _, scope := range modulesByDoc.GetLoadableModules(searchParams.ModulePath()) {
+		for _, scope := range modulesByDoc.GetLoadableModules(searchParams.ContextModulePath()) {
 			searchResult.TrackTraversedModule(scope.GetModuleString())
 
 			//if scope.GetModuleString() != expectedModule { // TODO Ignore current doc we are comming from
@@ -228,10 +233,17 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 func (l Language) findModuleNameInTraversedModules(searchParams search_params.SearchParams, traversedModules map[string]bool) []*symbols.Module {
 	matches := []*symbols.Module{}
 
+	// full module name
+	moduleName := searchParams.ContextModulePath().GetName() + "::" + searchParams.Symbol()
+
 	for _, parsedModulesByDoc := range l.parsedModulesByDocument {
 		for _, module := range parsedModulesByDoc.Modules() {
-			if module.GetName() == searchParams.Symbol() {
-				matches = append(matches, module)
+
+			if module.GetName() == moduleName {
+				_, ok := traversedModules[moduleName]
+				if ok {
+					matches = append(matches, module)
+				}
 			}
 		}
 	}

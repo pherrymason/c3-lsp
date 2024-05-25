@@ -72,7 +72,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 		qc := sitter.NewQueryCursor()
 		qc.Exec(q, doc.ContextSyntaxTree.RootNode())*/
 	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
-	sourceCode := []byte(doc.Content)
+	sourceCode := []byte(doc.SourceCode.Text)
 	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
 	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
 	//parsed := fmt.Sprint(doc.URI, " ", doc.ContextSyntaxTree.RootNode())

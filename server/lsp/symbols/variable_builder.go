@@ -22,6 +22,11 @@ func NewVariableBuilder(name string, variableType string, module string, docId s
 	}
 }
 
+func (vb *VariableBuilder) WithoutSourceCode() *VariableBuilder {
+	vb.variable.BaseIndexable.hasSourceCode = false
+	return vb
+}
+
 func (vb *VariableBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *VariableBuilder {
 	vb.variable.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return vb

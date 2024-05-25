@@ -334,7 +334,7 @@ func TestLanguage_BuildCompletionList_struct_suggest_all_its_members(t *testing.
 			Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod),
 			TextEdit: protocol.TextEdit{
 				NewText: "toCircle",
-				Range:   protocol_utils.NewLSPRange(5, 7, 5, 7),
+				Range:   protocol_utils.NewLSPRange(5, 7, 5, 8),
 			},
 		},
 		{Label: "width", Kind: &expectedKind},
@@ -396,7 +396,7 @@ func TestLanguage_BuildCompletionList_struct_suggest_members_of_substruct(t *tes
 			Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod),
 			TextEdit: protocol.TextEdit{
 				NewText: "toHex",
-				Range:   protocol_utils.NewLSPRange(6, 13, 6, 13),
+				Range:   protocol_utils.NewLSPRange(6, 13, 6, 14),
 			},
 		},
 		{Label: "green", Kind: &expectedKind},
@@ -676,7 +676,7 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 					},
 				},
 				},
-				false,
+				true,
 			},
 			{
 				`

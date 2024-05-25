@@ -21,6 +21,11 @@ func NewFaultBuilder(name string, baseType string, module string, docId string) 
 	}
 }
 
+func (eb *FaultBuilder) WithoutSourceCode() *FaultBuilder {
+	eb.fault.BaseIndexable.hasSourceCode = false
+	return eb
+}
+
 func (eb *FaultBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultBuilder {
 	eb.fault.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
@@ -56,6 +61,11 @@ func NewFaultConstantBuilder(name string, docId string) *FaultConstantBuilder {
 			},
 		},
 	}
+}
+
+func (eb *FaultConstantBuilder) WithoutSourceCode() *FaultConstantBuilder {
+	eb.faultConstant.BaseIndexable.hasSourceCode = false
+	return eb
 }
 
 func (eb *FaultConstantBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultConstantBuilder {

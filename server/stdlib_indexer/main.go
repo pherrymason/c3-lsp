@@ -76,7 +76,9 @@ func generateCode(modules []*s.Module, c3Version string) {
 			Call(
 				jen.Lit(mod.GetName()),
 				jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-			).Dot("Build").Call()
+			).
+			Dot("WithoutSourceCode").Call().
+			Dot("Build").Call()
 
 		for _, variable := range mod.Variables {
 			// Generate variable
@@ -118,7 +120,9 @@ func generateCode(modules []*s.Module, c3Version string) {
 				funDef.Dot("IsMacro").Call()
 			}
 
-			funDef.Dot("Build").Call()
+			funDef.
+				Dot("WithoutSourceCode").Call().
+				Dot("Build").Call()
 
 			modDefinition.
 				Dot("AddFunction").Call(funDef)

@@ -33,19 +33,14 @@ func Generate_struct(strukt *s.Struct, module *s.Module) jen.Code {
 			Call(
 				jen.Lit(member.GetName()),
 				jen.Lit(member.GetType().GetName()),
-
-				jen.Qual(PackageName+"symbols", "NewRange").Call(
-					jen.Lit(0),
-					jen.Lit(0),
-					jen.Lit(0),
-					jen.Lit(0),
-				),
 				jen.Lit(module.GetName()),
 				jen.Lit(module.GetDocumentURI()),
 			)
 	}
 
-	def.Dot("Build").Call()
+	def.
+		Dot("WithoutSourceCode").Call().
+		Dot("Build").Call()
 
 	return def
 }
@@ -62,6 +57,7 @@ func Generate_definition(def *s.Def, module *s.Module) jen.Code {
 		Call(
 			jen.Lit(def.GetResolvesTo()),
 		).
+		Dot("WithoutSourceCode").Call().
 		Dot("Build").Call()
 
 	return defDef

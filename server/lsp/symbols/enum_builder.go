@@ -22,6 +22,11 @@ func NewEnumBuilder(name string, baseType string, module string, docId string) *
 	}
 }
 
+func (d *EnumBuilder) WithoutSourceCode() *EnumBuilder {
+	d.enum.BaseIndexable.hasSourceCode = false
+	return d
+}
+
 func (eb *EnumBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumBuilder {
 	eb.enum.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
@@ -61,6 +66,11 @@ func NewEnumeratorBuilder(name string, docId string) *EnumeratorBuilder {
 			),
 		},
 	}
+}
+
+func (eb *EnumeratorBuilder) WithoutSourceCode() *EnumeratorBuilder {
+	eb.enumerator.BaseIndexable.hasSourceCode = false
+	return eb
 }
 
 func (eb *EnumeratorBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumeratorBuilder {
