@@ -8,6 +8,50 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func Test_SourceCode_SymbolInPosition_finds_symbol(t *testing.T) {
+	cases := []struct {
+		source        string
+		expSymbol     string
+		expAccessPath []string
+		expModulePath []string
+	}{
+		{"hola", "hola", []string{}, []string{}},
+		{"hola.adios", "adios", []string{"hola"}, []string{}},
+		{"hola.adios.w", "w", []string{"hola", "adios"}, []string{}},
+		{"hola().adios.w", "w", []string{"hola", "adios"}, []string{}},
+		{"hola.adios.", ".", []string{"hola", "adios"}, []string{}},
+		{"mod::hola", "hola", []string{}, []string{"mod"}},
+		{"mod::hola.adios", "adios", []string{"hola"}, []string{"mod"}},
+		{"mod::hola.adios.w", "w", []string{"hola", "adios"}, []string{"mod"}},
+		{"mod::hola.adios.", ".", []string{"hola", "adios"}, []string{"mod"}},
+		{"mod::mod2::hola.adios.", ".", []string{"hola", "adios"}, []string{"mod", "mod2"}},
+	}
+
+	for _, tt := range cases {
+		t.Run(fmt.Sprintf("Test %s", tt.source), func(t *testing.T) {
+			sc := NewSourceCode(tt.source)
+
+			// position at e|mu
+			pos := uint(len(tt.source) - 1)
+			result := sc.SymbolInPosition(symbols.NewPosition(0, pos))
+
+			assert.Equal(t, tt.expSymbol, result.Text())
+
+			list := []string{}
+			for _, m := range result.parentAccessPath {
+				list = append(list, m.Text())
+			}
+			assert.Equal(t, tt.expAccessPath, list)
+
+			list = []string{}
+			for _, m := range result.ModulePath() {
+				list = append(list, m.Text())
+			}
+			assert.Equal(t, tt.expModulePath, list)
+		})
+	}
+}
+
 func Test_SourceCode_SymbolInPosition_finds_simple_symbol(t *testing.T) {
 	text := "int emu;"
 
@@ -31,6 +75,25 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_with_access_path(t *testing.T
 
 	assert.Equal(t, "init", result.text)
 	assert.Equal(t, symbols.NewRange(1, 12, 1, 16), result.textRange)
+
+	assert.Equal(t, "system", result.parentAccessPath[0].text)
+	assert.Equal(t, symbols.NewRange(1, 1, 1, 7), result.parentAccessPath[0].textRange)
+
+	assert.Equal(t, "cpu", result.parentAccessPath[1].text)
+	assert.Equal(t, symbols.NewRange(1, 8, 1, 11), result.parentAccessPath[1].textRange)
+}
+
+func Test_SourceCode_SymbolInPosition_finds_symbol_with_access_path_and_method_call(t *testing.T) {
+	text := `// This blank line is intended.
+	system.cpu().init;`
+
+	sc := NewSourceCode(text)
+
+	// position at i|nit
+	result := sc.SymbolInPosition(symbols.NewPosition(1, 15))
+
+	assert.Equal(t, "init", result.text)
+	assert.Equal(t, symbols.NewRange(1, 14, 1, 18), result.textRange)
 
 	assert.Equal(t, "system", result.parentAccessPath[0].text)
 	assert.Equal(t, symbols.NewRange(1, 1, 1, 7), result.parentAccessPath[0].textRange)

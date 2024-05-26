@@ -1,6 +1,7 @@
 package sourcecode
 
 import (
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -25,8 +26,80 @@ func NewSourceCode(text string) SourceCode {
 // Tries to find the symbol under cursor position
 func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position) Word {
 	index := cursorPosition.IndexIn(s.Text)
+	pattern := `^[a-zA-Z0-9_]+$`
+	re, _ := regexp.Compile(pattern)
 
-	limitsOpt := s.getWordIndexLimits(index)
+	baseFound := false
+	gettingAccess := false
+	gettingModule := false
+
+	wb := NewWordBuilderE()
+	var accessPath []Word
+	var modulePath []Word
+
+	for {
+		if index < 0 {
+			break
+		}
+
+		limitsOpt := s.getWordIndexLimits(index, true)
+		if limitsOpt.IsNone() {
+			panic("error")
+		}
+
+		limits := limitsOpt.Get()
+		symbol := s.Text[limits.start : limits.end+1]
+		posRange := symbols.Range{
+			Start: s.indexToPosition(limits.start),
+			End:   s.indexToPosition(limits.end + 1),
+		}
+
+		if re.MatchString(symbol) {
+			if gettingAccess {
+				accessPath = append([]Word{{
+					text:      symbol,
+					textRange: posRange,
+				}}, accessPath...)
+			} else if gettingModule {
+				modulePath = append([]Word{{
+					text:      symbol,
+					textRange: posRange,
+				}}, modulePath...)
+			} else {
+				wb.WithText(symbol, posRange)
+				baseFound = true
+			}
+			index = limits.start - 1
+		} else {
+			if !baseFound {
+				wb.WithText(symbol, posRange)
+				baseFound = true
+			}
+
+			if symbol == "." {
+				gettingAccess = true
+			} else if symbol == ":" {
+				gettingAccess = false
+				gettingModule = true
+			} else if symbol == "(" || symbol == ")" {
+
+			} else {
+				// End
+				break
+			}
+			index--
+		}
+	}
+	wb.WithAccessPath(accessPath).WithModule(modulePath)
+
+	return wb.Build()
+}
+
+// Tries to find the symbol under cursor position
+func (s SourceCode) SymbolInPosition2(cursorPosition symbols.Position) Word {
+	index := cursorPosition.IndexIn(s.Text)
+
+	limitsOpt := s.getWordIndexLimits(index, false)
 
 	var start, end int
 	isPreviousCharacterDot := false
@@ -59,6 +132,7 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position) Word {
 
 	// Try to get accessPath if exists
 	if start > 0 && isPreviousCharacterDot {
+		//accessPath := s.extractAccessPath(posRange.Start)
 		var accessPath []Word
 		startIndex := start
 		for i := start; i >= 0; i-- {
@@ -178,13 +252,17 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position) Word {
 
 // Returns start and end index of symbol present in index.
 // If no symbol is found in index, error will be returned
-func (s SourceCode) getWordIndexLimits(index int) option.Option[symbolLimits] {
+func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Option[symbolLimits] {
 	if index >= len(s.Text) {
 		return option.None[symbolLimits]()
 	}
 
 	if !utils.IsAZ09_(rune(s.Text[index])) {
-		return option.None[symbolLimits]()
+		if returnAnyway {
+			return option.Some(symbolLimits{index, index})
+		} else {
+			return option.None[symbolLimits]()
+		}
 		//return 0, 0, errors.New("No symbol at position")
 	}
 
@@ -269,3 +347,28 @@ func (s SourceCode) modulePathAtIndex(index int) option.Option[string] {
 
 	return option.Some(s.Text[symbolStart:index])
 }
+
+/*
+func (s *SourceCode) symbolAtIndex(index int) (Word, error) {
+	var start, end int
+	var err error
+	//start, end, err = s.getWordIndexLimits(index)
+	limitsOpt := s.getWordIndexLimits(index, true)
+
+	if err != nil {
+		// Why is this logic here??
+		// This causes problems, index+1 might be out of bounds!
+		posRange := symbols.Range{
+			Start: s.indexToPosition(index),
+			End:   s.indexToPosition(index + 1),
+		}
+		return NewWord(s.Text[index:index+1], posRange), err
+	}
+
+	posRange := symbols.Range{
+		Start: s.indexToPosition(start),
+		End:   s.indexToPosition(end + 1),
+	}
+	return NewWord(s.Text[start:end+1], posRange), nil
+}
+*/

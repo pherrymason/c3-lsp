@@ -54,6 +54,15 @@ func (w Word) FullTextRange() symbols.Range {
 	return symbols.NewRange(startLine, startCharacter, w.textRange.End.Line, w.textRange.End.Character)
 }
 
+func (w Word) GetFullAccessPath() []Word {
+	tokens := append(
+		w.parentAccessPath,
+		NewWord(w.text, w.textRange),
+	)
+
+	return tokens
+}
+
 func (w Word) ModulePath() []Word {
 	return w.modulePath
 }
@@ -90,6 +99,18 @@ func NewWordBuilder(text string, textRange symbols.Range) *WordBuilder {
 			textRange: textRange,
 		},
 	}
+}
+func NewWordBuilderE() *WordBuilder {
+	return &WordBuilder{
+		word: Word{},
+	}
+}
+
+func (wb *WordBuilder) WithText(text string, textRange symbols.Range) *WordBuilder {
+	wb.word.text = text
+	wb.word.textRange = textRange
+
+	return wb
 }
 
 func (wb *WordBuilder) WithModule(modulePath []Word) *WordBuilder {

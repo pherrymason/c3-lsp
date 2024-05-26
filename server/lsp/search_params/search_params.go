@@ -48,11 +48,17 @@ type SearchParams struct {
 }
 
 func (s SearchParams) Symbol() string {
-	return s.symbol
+	//return s.symbol
+	return s.word.Text()
+}
+
+func (s SearchParams) SymbolW() sourcecode.Word {
+	return s.word
 }
 
 func (s SearchParams) SymbolPosition() symbols.Position {
-	return s.symbolRange.Start
+	return s.word.TextRange().Start
+	//return s.symbolRange.Start
 }
 
 func (s SearchParams) ContextModule() string {
@@ -104,10 +110,14 @@ func (s SearchParams) ScopeMode() ScopeMode {
 }
 
 func (s SearchParams) GetFullAccessPath() []sourcecode.Word {
+	//tete := s.word.GetFullAccessPath()
+
 	tokens := append(
 		s.parentAccessPath,
 		sourcecode.NewWord(s.symbol, s.symbolRange),
 	)
+
+	//fmt.Println(tete)
 
 	return tokens
 }
@@ -139,8 +149,8 @@ func BuildSearchBySymbolUnderCursor(doc *document.Document, docParsedModules par
 
 	sp := SearchParams{
 		word:        symbolInPosition,
-		symbol:      symbolInPosition.Text(),
-		symbolRange: symbolInPosition.TextRange(),
+		symbol:      symbolInPosition.Text(),      // Deprecated
+		symbolRange: symbolInPosition.TextRange(), // Deprecated
 
 		docId:             option.Some(doc.URI),
 		contextModulePath: symbols.NewModulePathFromString(docParsedModules.FindContextModuleInCursorPosition(cursorPosition)),
@@ -180,6 +190,7 @@ func findParentSymbols(doc *document.Document, cursorPosition symbols.Position) 
 			Character: uint(i),
 		}
 		parentSymbol, err := doc.SymbolInPositionDeprecated(positionStart)
+		//fmt.Printf("Symbol at %d:%s\n", i, parentSymbol.Text())
 		if err != nil {
 			// No symbol found, check was is in parentSymbol anyway
 			if parentSymbol.Text() == "." {

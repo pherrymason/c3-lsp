@@ -338,7 +338,10 @@ func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDeb
 			token = sourcecode.NewWord(structMember.GetType().GetName(), prevIndexable.GetIdRange())
 		}
 		levelSearchParams := sp.NewSearchParamsBuilder().
-			WithSymbol(token.Text()).
+			//WithSymbol(token.Text()).
+			WithSymbolWord(
+				sourcecode.NewWord(token.Text(), token.TextRange()),
+			).
 			WithDocId(prevIndexable.GetDocumentURI()).
 			Build()
 

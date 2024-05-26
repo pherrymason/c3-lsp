@@ -1,6 +1,7 @@
 package search_params
 
 import (
+	"github.com/pherrymason/c3-lsp/lsp/document/sourcecode"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/pherrymason/c3-lsp/option"
 )
@@ -15,22 +16,19 @@ func NewSearchParamsBuilder() *SearchParamsBuilder {
 	}
 }
 
-func (b *SearchParamsBuilder) WithSymbol(param1 string) *SearchParamsBuilder {
-	b.params.symbol = param1
+func (b *SearchParamsBuilder) WithSymbolWord(word sourcecode.Word) *SearchParamsBuilder {
+	b.params.word = word
+	b.params.symbol = word.Text()
+	b.params.symbolRange = word.TextRange()
 	return b
 }
 
-func (b *SearchParamsBuilder) WithSymbolRange(posRange symbols.Range) *SearchParamsBuilder {
-	b.params.symbolRange = posRange
-	return b
-}
-
-func (b *SearchParamsBuilder) WithModule(moduleName string) *SearchParamsBuilder {
+func (b *SearchParamsBuilder) WithContextModuleName(moduleName string) *SearchParamsBuilder {
 	b.params.contextModulePath = symbols.NewModulePathFromString(moduleName)
 	return b
 }
 
-func (b *SearchParamsBuilder) WithSymbolModule(modulePath symbols.ModulePath) *SearchParamsBuilder {
+func (b *SearchParamsBuilder) WithContextModule(modulePath symbols.ModulePath) *SearchParamsBuilder {
 	b.params.contextModulePath = modulePath
 	return b
 }

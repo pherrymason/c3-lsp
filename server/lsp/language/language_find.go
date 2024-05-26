@@ -69,7 +69,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		}
 	}
 
-	/* NO LONGER NEEDED??
+	/* NO LONGER NEEDED?? Was this an optimization?
 	if searchParams.HasModuleSpecified() {
 		symbol := l._findSymbolDeclarationInModule(searchParams, debugger.goIn())
 		if symbol != nil {
@@ -140,8 +140,9 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 
 	if searchParams.ContinueOnModules() {
 		sb := search_params.NewSearchParamsBuilder().
-			WithSymbol(searchParams.Symbol()).
-			WithSymbolModule(searchParams.ContextModulePath()).
+			//WithSymbol(searchParams.Symbol()).
+			WithSymbolWord(searchParams.SymbolW()).
+			WithContextModule(searchParams.ContextModulePath()).
 			WithExcludedDocs(searchParams.DocId()).
 			WithScopeMode(search_params.InModuleRoot) // Document this
 		searchInSameModule := sb.Build()
@@ -152,7 +153,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		}
 	}
 
-	// Try to find element in one of the imported modules
+	// SEARCH IN IMPORTED MODULES
 	if docIdOption.IsSome() {
 		for _, parsedModules := range collectionParsedModules {
 			for _, mod := range parsedModules.Modules() {
@@ -164,8 +165,9 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 
 					module := mod.Imports[i]
 					sp := search_params.NewSearchParamsBuilder().
-						WithSymbol(searchParams.Symbol()).
-						WithSymbolModule(symbols.NewModulePathFromString(module)).
+						//WithSymbol(searchParams.Symbol()).
+						WithSymbolWord(searchParams.SymbolW()).
+						WithContextModule(symbols.NewModulePathFromString(module)).
 						WithTrackedModules(trackedModules).
 						WithScopeMode(search_params.InModuleRoot). // Document this
 						Build()
@@ -175,13 +177,12 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 					if symbol.IsSome() {
 						return symbol
 					}
-
 				}
 			}
 		}
 	}
 
-	// Last resort, check if any module is compatible with the string being searched
+	// Last resort, check if any loadable module is compatible with the string being searched
 	if debugger.depth == 0 && searchResult.IsNone() {
 		moduleMatches := l.findModuleNameInTraversedModules(searchParams, searchResult.traversedModules)
 
@@ -212,7 +213,7 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 			l.debug(fmt.Sprintf("findSymbolDeclarationInModule: search symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
 
 			sp := search_params.NewSearchParamsBuilder().
-				WithSymbol(searchParams.Symbol()).
+				WithSymbolWord(searchParams.SymbolW()).
 				WithDocId(docId).
 				WithScopeMode(search_params.InModuleRoot).
 				WithTrackedModules(searchParams.TrackedModules()).

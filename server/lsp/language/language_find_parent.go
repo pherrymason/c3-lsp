@@ -14,10 +14,9 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 	docId := searchParams.DocId()
 	iterSearch := search_params.NewSearchParamsBuilder().
-		WithSymbol(accessPath[0].Text()).
-		WithSymbolRange(accessPath[0].TextRange()).
+		WithSymbolWord(accessPath[0]).
 		WithDocId(docId.Get()).
-		WithModule(searchParams.ContextModule()).
+		WithContextModuleName(searchParams.ContextModule()).
 		WithScopeMode(search_params.InScope).
 		Build()
 
@@ -89,10 +88,9 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 				// Search in methods
 				methodSymbol := sourcecode.NewWord(strukt.GetName()+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
 				iterSearch = search_params.NewSearchParamsBuilder().
-					WithSymbol(methodSymbol.Text()).
-					WithSymbolRange(methodSymbol.TextRange()).
+					WithSymbolWord(methodSymbol).
 					WithDocId(docId.Get()).
-					WithModule(searchParams.ContextModule()).
+					WithContextModuleName(searchParams.ContextModule()).
 					Build()
 				result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
 				if result.IsNone() {
@@ -142,10 +140,9 @@ func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, d
 	}
 
 	iterSearch := search_params.NewSearchParamsBuilder().
-		WithSymbol(symbol.Text()).
-		WithSymbolRange(symbol.TextRange()).
+		WithSymbolWord(symbol).
 		WithDocId(docId).
-		WithModule(moduleName).
+		WithContextModuleName(moduleName).
 		Build()
 
 	found := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
