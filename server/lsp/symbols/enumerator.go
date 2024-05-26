@@ -13,7 +13,7 @@ type Enumerator struct {
 }
 
 func NewEnumerator(name string, value string, associatedValues []Variable, module string, idRange Range, docId string) *Enumerator {
-	return &Enumerator{
+	enumerator := &Enumerator{
 		value:            value,
 		associatedValues: associatedValues,
 		BaseIndexable: NewBaseIndexable(
@@ -25,6 +25,12 @@ func NewEnumerator(name string, value string, associatedValues []Variable, modul
 			protocol.CompletionItemKindEnumMember,
 		),
 	}
+
+	for _, av := range associatedValues {
+		enumerator.InsertNestedScope(&av)
+	}
+
+	return enumerator
 }
 
 func (e Enumerator) GetAssociatedValues() []Variable {
