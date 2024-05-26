@@ -50,8 +50,8 @@ func TestParses_TypedEnums(t *testing.T) {
 		scope := symbols.Get("doc")
 		enum := scope.Enums["Colors"]
 
-		assert.Equal(t, idx.NewRange(0, 0, 0, 36), enum.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(0, 5, 0, 11), enum.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, idx.NewRange(1, 1, 1, 37), enum.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(1, 6, 1, 12), enum.GetIdRange(), "Wrong identifier range")
 	})
 
 	t.Run("finds defined enumerators", func(t *testing.T) {
@@ -60,17 +60,17 @@ func TestParses_TypedEnums(t *testing.T) {
 		enum := symbols.Get("doc").Enums["Colors"]
 		e := enum.GetEnumerator("RED")
 		assert.Equal(t, "RED", e.GetName())
-		assert.Equal(t, idx.NewRange(0, 18, 0, 21), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(1, 19, 1, 22), e.GetIdRange())
 		assert.Same(t, enum.Children()[0], e)
 
 		e = enum.GetEnumerator("BLUE")
 		assert.Equal(t, "BLUE", e.GetName())
-		assert.Equal(t, idx.NewRange(0, 23, 0, 27), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(1, 24, 1, 28), e.GetIdRange())
 		assert.Same(t, enum.Children()[1], e)
 
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
-		assert.Equal(t, idx.NewRange(0, 29, 0, 34), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(1, 30, 1, 35), e.GetIdRange())
 		assert.Same(t, enum.Children()[2], e)
 	})
 
