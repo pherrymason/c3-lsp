@@ -37,12 +37,35 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 
 	baseType := ""
 	var enumerators []*idx.Enumerator
+	var associatedParameters []idx.Variable
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		switch n.Type() {
 		case "enum_spec":
 			baseType = n.Child(1).Content(sourceCode)
+			// Check if has enum_param_list
+			if n.ChildCount() >= 3 {
+				// Try to get enum_param_list
+				param_list := n.Child(2)
+				for p := 0; p < int(param_list.ChildCount()); p++ {
+					paramNode := param_list.Child(p)
+					if paramNode.Type() == "enum_param_declaration" {
+						fmt.Println(paramNode.Type(), paramNode.Content(sourceCode))
+						associatedParameters = append(
+							associatedParameters,
+							idx.NewVariable(
+								paramNode.Child(1).Content(sourceCode),
+								idx.NewTypeFromString(paramNode.Child(0).Content(sourceCode)),
+								moduleName,
+								docId,
+								idx.NewRangeFromTreeSitterPositions(paramNode.Child(0).StartPoint(), paramNode.Child(0).EndPoint()),
+								idx.NewRangeFromTreeSitterPositions(paramNode.StartPoint(), paramNode.EndPoint()),
+							),
+						)
+					}
+				}
+			}
 
 		case "enum_body":
 			for i := 0; i < int(n.ChildCount()); i++ {
@@ -53,6 +76,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 					enumerator := idx.NewEnumerator(
 						name.Content(sourceCode),
 						"",
+						associatedParameters,
 						moduleName,
 						idx.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
 						docId,

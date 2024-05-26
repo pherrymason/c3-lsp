@@ -7,13 +7,15 @@ import (
 )
 
 type Enumerator struct {
-	value string
+	value            string
+	associatedValues []Variable
 	BaseIndexable
 }
 
-func NewEnumerator(name string, value string, module string, idRange Range, docId string) *Enumerator {
+func NewEnumerator(name string, value string, associatedValues []Variable, module string, idRange Range, docId string) *Enumerator {
 	return &Enumerator{
-		value: value,
+		value:            value,
+		associatedValues: associatedValues,
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
@@ -23,6 +25,10 @@ func NewEnumerator(name string, value string, module string, idRange Range, docI
 			protocol.CompletionItemKindEnumMember,
 		),
 	}
+}
+
+func (e Enumerator) GetAssociatedValues() []Variable {
+	return e.associatedValues
 }
 
 func (e Enumerator) GetHoverInfo() string {

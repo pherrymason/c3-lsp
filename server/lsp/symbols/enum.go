@@ -32,7 +32,7 @@ func (e Enum) GetType() string {
 }
 
 func (e *Enum) RegisterEnumerator(name string, value string, posRange Range) {
-	enumerator := NewEnumerator(name, value, "", posRange, e.documentURI)
+	enumerator := NewEnumerator(name, value, []Variable{}, "", posRange, e.documentURI)
 	e.enumerators = append(e.enumerators, enumerator)
 	e.Insert(enumerator)
 }
