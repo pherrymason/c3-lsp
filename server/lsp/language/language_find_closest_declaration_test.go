@@ -9,7 +9,6 @@ import (
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
-	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
@@ -166,6 +165,7 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 
 	doc = document.NewDocument("z", "module bar;import foo;")
 	language.RefreshDocumentIdentifiers(&doc, &parser)
+	language.debugEnabled = true
 
 	for _, tt := range cases {
 		t.Run(tt.source, func(t *testing.T) {
@@ -173,12 +173,9 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 			doc := document.NewDocument("y", "module foo;"+tt.source)
 			language.RefreshDocumentIdentifiers(&doc, &parser)
 			position := buildPosition(1, 12) // Cursor at BA|R_WEIGHT
-			searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
+			symbol := language.FindSymbolDeclarationInWorkspace(&doc, position)
 
-			debugger := NewFindDebugger(true)
-			symbol := language.findClosestSymbolDeclaration(searchParams, debugger)
-
-			assert.True(t, symbol.IsNone(), fmt.Sprintf("\"%s\" Symbol should not be found", searchParams.Symbol()))
+			assert.True(t, symbol.IsNone(), fmt.Sprintf("\"%s\" Symbol should not be found", tt.source))
 			assert.Equal(t, 1, len(logger.tracker["debug"]))
 			assert.Equal(t, "| Ignore because C3 keyword", logger.tracker["debug"][0])
 		})
@@ -199,9 +196,8 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		doc := state.docs["app.c3"]
 		position := buildPosition(3, 18) // Cursor at `n|umber`
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -221,9 +217,8 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		doc := state.docs["number.c3"]
 		position := buildPosition(2, 9) // Cursor at `n|umber`
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -243,9 +238,8 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		)
 		doc := state.docs["app.c3"]
 		position := buildPosition(3, 5) // Cursor at `e|mulator`
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -265,9 +259,8 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		)
 		doc := state.docs["app.c3"]
 		position := buildPosition(3, 9) // Cursor a|mbiguousVariable
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -286,9 +279,8 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 		)
 		position := buildPosition(2, 5) // Cursor at `t|ick = tick + 3;`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.True(t, symbolOption.IsSome(), "Element not found")
 
@@ -315,9 +307,8 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 
 		position := buildPosition(5, 5) // Cursor at `E|mu emulator`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -338,9 +329,8 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		)
 		position := buildPosition(4, 7) // Cursor at `fn E|mu main() {`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -361,9 +351,8 @@ func TestLanguage_findClosestSymbolDeclaration_structs(t *testing.T) {
 		)
 		position := buildPosition(5, 15) // Cursor is at struct Emu (E|mulatorConsole) {
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_interface, ok := symbolOption.Get().(*idx.Interface)
@@ -387,9 +376,8 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		)
 		position := buildPosition(3, 19)
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 
@@ -408,9 +396,8 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		)
 		position := buildPosition(3, 5) // Cursor is at `W|indowStatus status;`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 
@@ -429,9 +416,8 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		)
 		position := buildPosition(4, 27) // Cursor is at `status = WindowStatus.B|ACKGROUND`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.Enumerator)
@@ -450,9 +436,8 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		)
 		position := buildPosition(4, 13) // Cursor is at `status = B|ACKGROUND`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.Enumerator)
@@ -479,9 +464,8 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		)
 		position := buildPosition(3, 5) // Cursor at `W|indowError error =`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Fault not found")
 
@@ -500,9 +484,8 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		)
 		position := buildPosition(4, 5) // Cursor at `e|rror = UNEXPECTED_ERROR``
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Fault not found")
 
@@ -521,9 +504,8 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		)
 		position := buildPosition(4, 13) // Cursor at `error = U|NEXPECTED_ERROR;`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.FaultConstant)
@@ -545,9 +527,8 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 		)
 		position := buildPosition(2, 4) // Cursor at `K|ilo value = 3`
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		assert.Equal(t, "Kilo", symbolOption.Get().GetName())
@@ -568,9 +549,8 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 		)
 		position := buildPosition(4, 5) // Cursor at r|un(3);
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 
@@ -589,9 +569,8 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 		)
 		position := buildPosition(4, 20) // Cursor at m|ain();
 		doc := state.docs["app.c3"]
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 

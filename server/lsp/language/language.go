@@ -19,6 +19,7 @@ type Language struct {
 	indexByFQN              IndexStore
 	parsedModulesByDocument map[protocol.DocumentUri]parser.ParsedModules
 	logger                  commonlog.Logger
+	debugEnabled            bool
 }
 
 func NewLanguage(logger commonlog.Logger) Language {
@@ -26,6 +27,7 @@ func NewLanguage(logger commonlog.Logger) Language {
 		indexByFQN:              NewIndexStore(),
 		parsedModulesByDocument: make(map[protocol.DocumentUri]parser.ParsedModules),
 		logger:                  logger,
+		debugEnabled:            false,
 	}
 }
 
@@ -56,7 +58,7 @@ func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, posi
 		return option.None[symbols.Indexable]()
 	}*/
 
-	searchResult := l.findClosestSymbolDeclaration(searchParams, FindDebugger{depth: 0})
+	searchResult := l.findClosestSymbolDeclaration(searchParams, FindDebugger{enabled: l.debugEnabled, depth: 0})
 
 	return searchResult.result
 }
@@ -102,7 +104,7 @@ func (l *Language) FindHoverInformation(doc *document.Document, params *protocol
 }
 
 func (l *Language) debug(message string, debugger FindDebugger) {
-	if !debugger.enabled {
+	if !l.debugEnabled {
 		return
 	}
 
