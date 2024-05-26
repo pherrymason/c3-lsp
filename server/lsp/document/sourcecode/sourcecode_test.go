@@ -52,6 +52,18 @@ func Test_SourceCode_SymbolInPosition_finds_symbol(t *testing.T) {
 	}
 }
 
+func Test_SourceCode_SymbolInPosition_finds_simple_symbol_trap_with_parenthesis(t *testing.T) {
+	text := "something(value);"
+
+	sc := NewSourceCode(text)
+
+	// position at e|mu
+	result := sc.SymbolInPosition(symbols.NewPosition(0, 11))
+
+	expectedWord := NewWord("value", symbols.NewRange(0, 10, 0, 15))
+	assert.Equal(t, expectedWord, result)
+}
+
 func Test_SourceCode_SymbolInPosition_finds_simple_symbol(t *testing.T) {
 	text := "int emu;"
 

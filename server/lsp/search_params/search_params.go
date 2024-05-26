@@ -122,6 +122,10 @@ func (s SearchParams) GetFullAccessPath() []sourcecode.Word {
 	return tokens
 }
 
+func (s SearchParams) GetFullQualifiedName() string {
+	return s.word.GetFullQualifiedName()
+}
+
 func (s *SearchParams) TrackTraversedModule(module string) bool {
 	mt, ok := s.trackedModules[module]
 	trackValue := LockStatusReady

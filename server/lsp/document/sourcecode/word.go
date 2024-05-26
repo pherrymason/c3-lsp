@@ -1,6 +1,8 @@
 package sourcecode
 
 import (
+	"strings"
+
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
 )
 
@@ -61,6 +63,20 @@ func (w Word) GetFullAccessPath() []Word {
 	)
 
 	return tokens
+}
+
+func (w Word) GetFullQualifiedName() string {
+	modulePaths := []string{}
+	for _, m := range w.ModulePath() {
+		modulePaths = append(modulePaths, m.text)
+	}
+
+	if len(modulePaths) > 0 {
+		modulePaths = append(modulePaths, w.text)
+		return strings.Join(modulePaths, "::")
+	}
+
+	return w.text
 }
 
 func (w Word) ModulePath() []Word {

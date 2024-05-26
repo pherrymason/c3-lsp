@@ -266,7 +266,7 @@ func TestLanguage_findClosestSymbolDeclaration_should_find_right_module(t *testi
 		`,
 	)
 
-	position := buildPosition(1, 15) // Cursor at m|ain();
+	position := buildPosition(1, 15) // Cursor at mystd::i|o;
 	doc := state.docs["app.c3"]
 	searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 

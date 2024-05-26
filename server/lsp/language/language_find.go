@@ -235,7 +235,11 @@ func (l Language) findModuleNameInTraversedModules(searchParams search_params.Se
 	matches := []*symbols.Module{}
 
 	// full module name
-	moduleName := searchParams.ContextModulePath().GetName() + "::" + searchParams.Symbol()
+	if searchParams.HasAccessPath() {
+		return matches
+	}
+
+	moduleName := searchParams.GetFullQualifiedName()
 
 	for _, parsedModulesByDoc := range l.parsedModulesByDocument {
 		for _, module := range parsedModulesByDoc.Modules() {

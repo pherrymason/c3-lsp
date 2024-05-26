@@ -81,7 +81,7 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position) Word {
 			} else if symbol == ":" {
 				gettingAccess = false
 				gettingModule = true
-			} else if symbol == "(" || symbol == ")" {
+			} else if gettingAccess && (symbol == "(" || symbol == ")") {
 
 			} else {
 				// End
