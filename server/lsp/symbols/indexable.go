@@ -122,6 +122,10 @@ func (b *BaseIndexable) InsertNestedScope(symbol Indexable) {
 	b.nestedScopes = append(b.nestedScopes, symbol)
 }
 
+func (b BaseIndexable) formatSource(source string) string {
+	return fmt.Sprintf("```c3\n%s```", source)
+}
+
 func NewBaseIndexable(name string, module string, docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
 	return BaseIndexable{
 		name:          name,

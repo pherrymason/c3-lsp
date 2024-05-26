@@ -30,9 +30,9 @@ func (h *Handlers) TextDocumentHover(context *glsp.Context, params *protocol.Hov
 	// hovering on functions: display function signature
 	// hovering on members: same as variable
 	hover := protocol.Hover{
-		Contents: protocol.MarkupContent{
-			Kind:  protocol.MarkupKindMarkdown,
-			Value: foundSymbol.GetHoverInfo(),
+		Contents: protocol.MarkedStringStruct{
+			Language: "c3",
+			Value:    foundSymbol.GetHoverInfo(),
 		},
 	}
 

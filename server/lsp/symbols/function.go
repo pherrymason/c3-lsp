@@ -2,6 +2,7 @@ package symbols
 
 import (
 	"fmt"
+	"strings"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -131,9 +132,13 @@ func (f *Function) SetEndPosition(position Position) {
 }
 
 func (f Function) GetHoverInfo() string {
-	if f.typeIdentifier == "" {
-		return fmt.Sprintf("%s %s()", f.GetReturnType(), f.GetName())
+
+	args := []string{}
+	for _, arg := range f.argumentIds {
+		args = append(args, f.Variables[arg].Type.name+" "+f.Variables[arg].name)
 	}
 
-	return fmt.Sprintf("%s %s.%s()", f.GetReturnType(), f.typeIdentifier, f.GetName())
+	source := fmt.Sprintf("%s %s(%s)", f.GetReturnType(), f.GetFullName(), strings.Join(args, ", "))
+
+	return source
 }

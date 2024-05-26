@@ -75,13 +75,15 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 		)
 	}
 
+	var variables []*idx.Variable
 	if node.ChildByFieldName("body") != nil {
-		variables := p.FindVariableDeclarations(node, moduleName, docId, sourceCode)
-		for _, variable := range arguments {
-			variables = append(variables, variable)
-		}
-		symbol.AddVariables(variables)
+		variables = p.FindVariableDeclarations(node, moduleName, docId, sourceCode)
 	}
+
+	for _, variable := range arguments {
+		variables = append(variables, variable)
+	}
+	symbol.AddVariables(variables)
 
 	return symbol
 }
