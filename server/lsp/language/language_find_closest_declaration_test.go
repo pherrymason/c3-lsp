@@ -578,4 +578,25 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 		assert.Equal(t, "main", fun.GetName())
 		assert.Equal(t, idx.FunctionType(idx.UserDefined), fun.FunctionType())
 	})
+
+	t.Run("Should find function definition without body", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fn void init_window(int width, int height, char* title) @extern("InitWindow");
+			
+			init_window(200, 200, "hello");
+			`,
+		)
+
+		position := buildPosition(3, 4) // Cursor at i|nit_window(200, 200, "hello")
+		doc := state.docs["app.c3"]
+
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "init_window", fun.GetName())
+		assert.Equal(t, idx.FunctionType(idx.UserDefined), fun.FunctionType())
+	})
 }

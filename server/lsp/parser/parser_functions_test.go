@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestExtractSymbols_Functions(t *testing.T) {
+func TestExtractSymbols_Functions_Definitions(t *testing.T) {
 	source := `fn void test() {
 		return 1;
 	}`
@@ -25,6 +25,24 @@ func TestExtractSymbols_Functions(t *testing.T) {
 		assert.Equal(t, "void", fn.Get().GetReturnType(), "Return type")
 		assert.Equal(t, idx.NewRange(0, 8, 0, 12), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 2, 2), fn.Get().GetDocumentRange())
+	})
+}
+
+func TestExtractSymbols_Functions_Declaration(t *testing.T) {
+	source := `fn void init_window(int width, int height, char* title) @extern("InitWindow");`
+	docId := "docId"
+	doc := document.NewDocument(docId, source)
+	parser := createParser()
+
+	t.Run("Finds function", func(t *testing.T) {
+		symbols := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("init_window")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "void", fn.Get().GetReturnType(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 8, 0, 19), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 0, 78), fn.Get().GetDocumentRange())
 	})
 }
 

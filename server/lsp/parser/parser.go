@@ -16,7 +16,8 @@ const ConstantDeclaration = `(const_declaration) @const_decl`
 const LocalVarDeclaration = `(func_definition
 	body: (macro_func_body (compound_stmt (declaration_stmt) @local) )
  )`
-const FunctionDeclarationQuery = `(func_definition) @function_dec`
+const FunctionDefinitionQuery = `(func_definition) @function_def`
+const FunctionDeclarationQuery = `(func_declaration) @function_dec`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
 const FaultDeclaration = `(fault_declaration) @fault_doc`
 const StructDeclaration = `(struct_declaration) @struct_dec`
@@ -54,6 +55,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 (source_file ` + GlobalVarDeclaration + `)
 (source_file ` + LocalVarDeclaration + `)
 (source_file ` + ConstantDeclaration + `)
+(source_file ` + FunctionDefinitionQuery + `)
 (source_file ` + FunctionDeclarationQuery + `)
 (source_file ` + DefineDeclaration + `)
 (source_file ` + StructDeclaration + `)
@@ -126,7 +128,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				variables := p.globalVariableDeclarationNodeToVariable(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
 				moduleSymbol.AddVariables(variables)
 
-			case "func_definition":
+			case "func_definition", "func_declaration":
 				function := p.nodeToFunction(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
 				moduleSymbol.AddFunction(&function)
 
