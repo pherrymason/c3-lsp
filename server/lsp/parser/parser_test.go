@@ -25,7 +25,11 @@ func TestParses_empty_document(t *testing.T) {
 
 func TestParses_TypedEnums(t *testing.T) {
 	docId := "doc"
-	source := `enum Colors:int { RED, BLUE, GREEN };`
+	source := `
+	enum Colors:int { RED, BLUE, GREEN }
+	fn bool Colors.hasRed(Colors color) 
+	{}
+	`
 	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
@@ -68,6 +72,13 @@ func TestParses_TypedEnums(t *testing.T) {
 		assert.Equal(t, "GREEN", e.GetName())
 		assert.Equal(t, idx.NewRange(0, 29, 0, 34), e.GetIdRange())
 		assert.Same(t, enum.Children()[2], e)
+	})
+
+	t.Run("finds enum method", func(t *testing.T) {
+		symbols := parser.ParseSymbols(&doc)
+
+		f := symbols.Get("doc").GetChildrenFunctionByName("Colors.hasRed")
+		assert.True(t, f.IsSome())
 	})
 }
 

@@ -446,7 +446,26 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 	})
 
 	t.Run("Should find enum method definition", func(t *testing.T) {
-		t.Skip()
+		state.registerDoc(
+			"app.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			fn bool WindowStatus.isOpen(){}
+			
+			fn void main() {
+				WindowStatus val = OPEN;
+				val.isOpen();
+			}
+			`,
+		)
+		position := buildPosition(6, 10) // Cursor is at `e.is|Open()`
+		doc := state.docs["app.c3"]
+
+		symbolOption := state.language.FindSymbolDeclarationInWorkspace(&doc, position)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "WindowStatus.isOpen", symbolOption.Get().GetName())
 	})
 }
 

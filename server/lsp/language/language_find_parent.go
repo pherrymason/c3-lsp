@@ -52,13 +52,33 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 			_enum := elm.(*idx.Enum)
 			enumerators := _enum.GetEnumerators()
 			searchingSymbol := state.GetNextSymbol()
+			foundMember := false
 			for i := 0; i < len(enumerators); i++ {
 				if enumerators[i].GetName() == searchingSymbol.Text() {
 					elm = enumerators[i]
 					state.Advance()
+					foundMember = true
 					break
 				}
 			}
+			if !foundMember {
+				// Search in methods
+				methodSymbol := sourcecode.NewWord(_enum.GetName()+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
+				iterSearch = search_params.NewSearchParamsBuilder().
+					WithSymbolWord(methodSymbol).
+					WithDocId(docId.Get()).
+					WithContextModuleName(searchParams.ContextModule()).
+					WithScopeMode(search_params.InModuleRoot).
+					Build()
+				result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
+				if result.IsNone() {
+					return NewSearchResultEmpty(trackedModules)
+				}
+
+				elm = result.Get()
+				state.Advance()
+			}
+
 		case *idx.Fault:
 			_enum := elm.(*idx.Fault)
 			constants := _enum.GetConstants()

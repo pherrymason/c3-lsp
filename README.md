@@ -39,7 +39,7 @@ Be sure to configure it with the path of the lsp server binary.
 - [x] Function return type
     - [x] Enums + Enumerators
     - [x] base type 
-    - [ ] enum methods
+    - [x] enum methods
 - [x] [Faults](https://c3-lang.org/references/docs/types/#faults)
 - [x] Structs
     - [x] Struct members
