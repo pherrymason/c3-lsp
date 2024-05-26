@@ -39,6 +39,10 @@ func (w Word) TextRange() symbols.Range {
 	return w.textRange
 }
 
+func (w Word) AccessPath() []Word {
+	return w.parentAccessPath
+}
+
 func (w Word) FullTextRange() symbols.Range {
 	var startLine, startCharacter uint
 	if len(w.modulePath) > 0 {

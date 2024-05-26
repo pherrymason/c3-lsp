@@ -41,7 +41,6 @@ type SearchParams struct {
 
 	// __ vv Here collected info abot symbol vv __
 	contextModulePath symbols.ModulePath // Calculated module path where symbol is located
-	parentAccessPath  []sourcecode.Word  // if symbol belongs to a parent hierarchy call, here will lie parent symbols
 
 	// Tracking values used by search functions
 	trackedModules TrackedModules // Here we register what modules have been already inspected in this search. Helps avoiding infinite loops
@@ -94,7 +93,7 @@ func (s SearchParams) ContinueOnModules() bool {
 }
 
 func (s SearchParams) HasAccessPath() bool {
-	return len(s.parentAccessPath) > 0
+	return s.word.HasAccessPath()
 }
 
 func (s SearchParams) HasModuleSpecified() bool {
@@ -110,16 +109,7 @@ func (s SearchParams) ScopeMode() ScopeMode {
 }
 
 func (s SearchParams) GetFullAccessPath() []sourcecode.Word {
-	//tete := s.word.GetFullAccessPath()
-
-	tokens := append(
-		s.parentAccessPath,
-		sourcecode.NewWord(s.symbol, s.symbolRange),
-	)
-
-	//fmt.Println(tete)
-
-	return tokens
+	return s.word.GetFullAccessPath()
 }
 
 func (s SearchParams) GetFullQualifiedName() string {
@@ -169,63 +159,16 @@ func BuildSearchBySymbolUnderCursor(doc *document.Document, docParsedModules par
 		return sp
 	}
 
-	_, parentAccessPath := findParentSymbols(doc, cursorPosition)
+	//_, parentAccessPath := findParentSymbols(doc, cursorPosition)
 	//if symbolModulePath.IsEmpty() == false {
 	//sp.moduleSpecified = true
 	//sp.contextModulePath = symbolModulePath
 	//}
-	sp.parentAccessPath = parentAccessPath
+	//sp.parentAccessPath = parentAccessPath
 
 	// TODO if sp.modulePath.IsEmpty() === false, mean that sp.module should be sp.moduelPath.String()
 
 	return sp
-}
-
-func findParentSymbols(doc *document.Document, cursorPosition symbols.Position) (symbols.ModulePath, []sourcecode.Word) {
-	var modulePath symbols.ModulePath
-	var parentAccessPath []sourcecode.Word
-	positionStart, _ := doc.GetSymbolPositionAtPosition(cursorPosition)
-	// Iterate backwards from the cursor position to find all parent symbols
-	iterating_module_path := false
-
-	for i := int(positionStart.Character - 1); i >= 0; i-- {
-		positionStart = symbols.Position{
-			Line:      uint(cursorPosition.Line),
-			Character: uint(i),
-		}
-		parentSymbol, err := doc.SymbolInPositionDeprecated(positionStart)
-		//fmt.Printf("Symbol at %d:%s\n", i, parentSymbol.Text())
-		if err != nil {
-			// No symbol found, check was is in parentSymbol anyway
-			if parentSymbol.Text() == "." {
-
-			} else if parentSymbol.Text() == ":" {
-				iterating_module_path = true
-			} else if parentSymbol.Text() == " " {
-				break
-			}
-			continue
-		}
-
-		if iterating_module_path {
-			modulePath.AddPath(parentSymbol.Text())
-			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart)
-			i = int(positionStart.Character)
-		} else {
-			positionStart, _ := doc.GetSymbolPositionAtPosition(positionStart)
-			parentAccessPath = append([]sourcecode.Word{
-				parentSymbol,
-			}, parentAccessPath...)
-
-			if doc.HasPointInFrontSymbol(positionStart) {
-				i = int(positionStart.Character) - 1
-			} else {
-				break
-			}
-		}
-	}
-
-	return modulePath, parentAccessPath
 }
 
 func BuildSearchBySymbolAtModule(symbol string, symbolModule string) SearchParams {

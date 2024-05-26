@@ -42,7 +42,7 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_symbol_at_cursor_posi
 	assert.Equal(t, option.Some("filename"), sp.docId)
 	assert.Equal(t, "system", sp.contextModulePath.GetName())
 	assert.Equal(t, true, sp.continueOnModules)
-	assert.Equal(t, 0, len(sp.parentAccessPath))
+	assert.Equal(t, 0, len(sp.word.AccessPath()))
 	assert.Equal(t, make(TrackedModules), sp.trackedModules)
 	assert.Equal(t, false, sp.word.HasModulePath())
 }
@@ -65,7 +65,7 @@ system.cpu.init();`
 	assert.Equal(t, []sourcecode.Word{
 		sourcecode.NewWord("system", idx.NewRange(1, 0, 1, 6)),
 		sourcecode.NewWord("cpu", idx.NewRange(1, 7, 1, 10)),
-	}, sp.parentAccessPath)
+	}, sp.word.AccessPath())
 	assert.Equal(t, make(TrackedModules), sp.trackedModules)
 	assert.Equal(t, false, sp.word.HasModulePath())
 }
@@ -118,7 +118,7 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_full_module_path(t *t
 			assert.Equal(t, option.Some("filename"), sp.docId)
 			assert.Equal(t, "system", sp.contextModulePath.GetName())
 			assert.Equal(t, true, sp.HasModuleSpecified())
-			assert.Equal(t, 0, len(sp.parentAccessPath))
+			assert.Equal(t, false, sp.word.HasAccessPath())
 		})
 	}
 }

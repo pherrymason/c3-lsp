@@ -23,6 +23,13 @@ func (b *SearchParamsBuilder) WithSymbolWord(word sourcecode.Word) *SearchParams
 	return b
 }
 
+func (b *SearchParamsBuilder) WithText(text string, textRange symbols.Range) *SearchParamsBuilder {
+	b.params.word = sourcecode.NewWord(text, textRange)
+	b.params.symbol = text
+	b.params.symbolRange = textRange
+	return b
+}
+
 func (b *SearchParamsBuilder) WithContextModuleName(moduleName string) *SearchParamsBuilder {
 	b.params.contextModulePath = symbols.NewModulePathFromString(moduleName)
 	return b

@@ -141,7 +141,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	if searchParams.ContinueOnModules() {
 		sb := search_params.NewSearchParamsBuilder().
 			//WithSymbol(searchParams.Symbol()).
-			WithSymbolWord(searchParams.SymbolW()).
+			WithText(searchParams.SymbolW().Text(), searchParams.SymbolW().TextRange()).
 			WithContextModule(searchParams.ContextModulePath()).
 			WithExcludedDocs(searchParams.DocId()).
 			WithScopeMode(search_params.InModuleRoot) // Document this
@@ -165,7 +165,6 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 
 					module := mod.Imports[i]
 					sp := search_params.NewSearchParamsBuilder().
-						//WithSymbol(searchParams.Symbol()).
 						WithSymbolWord(searchParams.SymbolW()).
 						WithContextModule(symbols.NewModulePathFromString(module)).
 						WithTrackedModules(trackedModules).

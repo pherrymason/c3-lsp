@@ -42,7 +42,7 @@ func (h *Handlers) indexWorkspace() {
 	//s.server.Log.Debug(fmt.Sprint("Workspace FILES:", len(files), files))
 
 	for _, filePath := range files {
-		//s.server.Log.Debug(fmt.Sprint("Parsing ", filePath))
+		//h.language.Debug(fmt.Sprint("Parsing ", filePath))
 
 		content, _ := os.ReadFile(filePath)
 		doc := document.NewDocumentFromString(filePath, string(content))
