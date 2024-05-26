@@ -29,10 +29,6 @@ There's a simple vscode extension available for download here: [download vix](ht
 Be sure to configure it with the path of the lsp server binary.
 
 
-## Status
-**Next release**
-- Include stdlib symbol information.
-
 **Current status**  
 ***Index status***
 - [ ] Attributes
