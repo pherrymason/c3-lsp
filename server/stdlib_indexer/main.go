@@ -99,6 +99,12 @@ func generateCode(modules []*s.Module, c3Version string) {
 				Dot("AddDef").Call(defDef)
 		}
 
+		for _, enum := range mod.Enums {
+			enumDef := Generate_enum(enum, mod)
+			modDefinition.
+				Dot("AddEnum").Call(enumDef)
+		}
+
 		for _, fun := range mod.ChildrenFunctions {
 			// Generate functions
 			funDef := jen.

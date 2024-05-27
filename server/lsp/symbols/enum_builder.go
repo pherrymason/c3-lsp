@@ -43,8 +43,8 @@ func (eb *EnumBuilder) WithEnumerator(enumerator *Enumerator) *EnumBuilder {
 	return eb
 }
 
-func (eb *EnumBuilder) Build() Enum {
-	return eb.enum
+func (eb *EnumBuilder) Build() *Enum {
+	return &eb.enum
 }
 
 // EnumeratorBuilder
@@ -75,6 +75,12 @@ func (eb *EnumeratorBuilder) WithoutSourceCode() *EnumeratorBuilder {
 
 func (eb *EnumeratorBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumeratorBuilder {
 	eb.enumerator.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	return eb
+}
+
+func (eb *EnumeratorBuilder) WithAssociativeValues(associativeValues []Variable) *EnumeratorBuilder {
+	eb.enumerator.associatedValues = associativeValues
+
 	return eb
 }
 
