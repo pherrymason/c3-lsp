@@ -23,8 +23,8 @@ func SupportedVersions() []Version {
 			stdLibSymbols: stdlib.Load_vdummy_stdlib,
 		},
 		Version{
-			Number:        "0.5.2",
-			stdLibSymbols: stdlib.Load_v056_stdlib,
+			Number:        "0.5.5",
+			stdLibSymbols: stdlib.Load_v055_stdlib,
 		},
 	}
 }

@@ -68,10 +68,16 @@ func generateCode(modules []*s.Module, c3Version string) {
 	f := jen.NewFile("stdlib")
 	versionIdentifier := "v" + strings.ReplaceAll(c3Version, ".", "")
 
-	var stmts []jen.Code
+	stmts := []jen.Code{}
+	stmts = append(stmts,
+		jen.Id("parsedModules").Op(":=").Qual(PackageName+"parser", "NewParsedModules").Call(jen.Lit("_stdlib")),
+		//jen.Var().Id("modules").Index().Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
+		jen.Var().Id("module").Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
+	)
+
 	for _, mod := range modules {
 
-		modDefinition := jen.
+		modDefinition := jen.Id("module").Op("=").
 			Qual(PackageName+"symbols", "NewModuleBuilder").
 			Call(
 				jen.Lit(mod.GetName()),
@@ -92,6 +98,11 @@ func generateCode(modules []*s.Module, c3Version string) {
 			modDefinition.
 				Dot("AddStruct").Call(structDef)
 		}
+		for _, bitstruct := range mod.Bitstructs {
+			bitstructDef := Generate_bitstruct(bitstruct, mod)
+			modDefinition.
+				Dot("AddBitstruct").Call(bitstructDef)
+		}
 
 		for _, def := range mod.Defs {
 			defDef := Generate_definition(def, mod)
@@ -103,6 +114,12 @@ func generateCode(modules []*s.Module, c3Version string) {
 			enumDef := Generate_enum(enum, mod)
 			modDefinition.
 				Dot("AddEnum").Call(enumDef)
+		}
+
+		for _, fault := range mod.Faults {
+			enumDef := Generate_fault(fault, mod)
+			modDefinition.
+				Dot("AddFault").Call(enumDef)
 		}
 
 		for _, fun := range mod.ChildrenFunctions {
@@ -139,15 +156,19 @@ func generateCode(modules []*s.Module, c3Version string) {
 			jen.Line(),
 			jen.Comment("Define module "+mod.GetName()),
 			modDefinition,
+			jen.Id("parsedModules").Dot("RegisterModule").Call(jen.Id("module")),
 		)
 	}
 
+	stmts = append(stmts, jen.Return(jen.Add(jen.Op("&")).Id("parsedModules")))
+
 	f.Func().
-		Id("load_" + versionIdentifier + "_stdlib").
+		Id("Load_"+versionIdentifier+"_stdlib").
 		Params().
+		Add(jen.Op("*")).Qual(PackageName+"parser", "ParsedModules").
 		Block(stmts...)
 
-	err := f.Save("stdlib/" + versionIdentifier + ".go")
+	err := f.Save("../lsp/language/stdlib/" + versionIdentifier + ".go")
 	if err != nil {
 		log.Fatal(err)
 	}

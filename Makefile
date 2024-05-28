@@ -14,8 +14,13 @@ build-parser:
 	cp assets/tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
 
 index-c3-std:
-	cd server/stdlib_indexer && go run main.go blurp.go
-	cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
+ifndef VERSION
+	$(error VERSION is not set. Usage: make index-c3-std VERSION=x.y.z)
+endif
+	cd assets/c3c && git fetch --all && git reset --hard origin/master && git checkout tags/v$(VERSION) 
+	cd server/stdlib_indexer && go run main.go blurp.go --$(VERSION)
+
+# cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
 
 build:
 	go build -C server -o bin/c3-lsp
