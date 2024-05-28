@@ -13,7 +13,7 @@ import (
 
 func TestLanguage_FindHoverInformation(t *testing.T) {
 
-	language := NewLanguage(commonlog.MockLogger{})
+	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
 	parser := createParser()
 
 	doc := document.NewDocument("x", `
@@ -48,7 +48,7 @@ func TestLanguage_FindHoverInformation(t *testing.T) {
 
 func TestLanguage_FindHoverInformationFromDifferentFile(t *testing.T) {
 	t.Skip()
-	language := NewLanguage(commonlog.MockLogger{})
+	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
 	parser := createParser()
 	docId := "x"
 	doc := document.NewDocument(docId, `

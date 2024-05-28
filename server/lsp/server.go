@@ -44,7 +44,7 @@ func NewServer(opts ServerOpts) *Server {
 
 	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3Version)
 
-	language := l.NewLanguage(logger, option.Some(requestedLanguageVersion))
+	language := l.NewLanguage(logger, option.Some(requestedLanguageVersion.Number))
 	parser := p.NewParser(logger)
 	handlers := handlers.NewHandlers(documents, &language, &parser)
 
@@ -115,7 +115,7 @@ func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
 	return nil
 }
 
-func checkRequestedLanguageVersion(version option.Option[string]) string {
+func checkRequestedLanguageVersion(version option.Option[string]) language.Version {
 	supportedVersions := language.SupportedVersions()
 
 	if version.IsNone() {
@@ -123,7 +123,7 @@ func checkRequestedLanguageVersion(version option.Option[string]) string {
 	}
 
 	for _, sVersion := range supportedVersions {
-		compare := semver.Compare(sVersion, version.Get())
+		compare := semver.Compare(sVersion.Number, version.Get())
 		if compare == 0 {
 			return sVersion
 		}

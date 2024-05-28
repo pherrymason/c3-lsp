@@ -469,7 +469,7 @@ func TestLanguage_BuildCompletionList_struct_suggest_method_with_prefix_of_subst
 
 func TestLanguage_BuildCompletionList_enums(t *testing.T) {
 	parser := createParser()
-	language := NewLanguage(commonlog.MockLogger{})
+	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
 
 	t.Run("Should suggest Enum type", func(t *testing.T) {
 		source := `
@@ -560,7 +560,7 @@ func TestLanguage_BuildCompletionList_enums(t *testing.T) {
 
 func TestLanguage_BuildCompletionList_faults(t *testing.T) {
 	parser := createParser()
-	language := NewLanguage(commonlog.MockLogger{})
+	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
 
 	t.Run("Should suggest Fault type", func(t *testing.T) {
 		source := `
@@ -650,7 +650,7 @@ func TestLanguage_BuildCompletionList_faults(t *testing.T) {
 
 func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 	parser := createParser()
-	language := NewLanguage(commonlog.MockLogger{})
+	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
 
 	t.Run("Should suggest module names present in same document", func(t *testing.T) {
 		cases := []struct {

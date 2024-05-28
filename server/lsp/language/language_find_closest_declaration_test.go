@@ -10,6 +10,7 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/option"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
 )
@@ -47,7 +48,7 @@ func NewTestState(loggers ...commonlog.Logger) TestState {
 		logger = loggers[0]
 	}
 
-	l := NewLanguage(logger)
+	l := NewLanguage(logger, option.Some("dummy"))
 
 	s := TestState{
 		language: l,
@@ -112,7 +113,7 @@ func createParser() p.Parser {
 
 func initTestEnv() (*Language, map[string]document.Document) {
 	parser := createParser()
-	language := NewLanguage(commonlog.MockLogger{})
+	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
 
 	documents := installDocuments(&language, &parser)
 
@@ -159,7 +160,7 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 	logger := &MockLogger{
 		tracker: make(map[string][]string),
 	}
-	language := NewLanguage(logger)
+	language := NewLanguage(logger, option.Some("dummy"))
 	doc := document.NewDocument("x", "module foo;")
 	language.RefreshDocumentIdentifiers(&doc, &parser)
 

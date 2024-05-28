@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/pherrymason/c3-lsp/lsp/document"
-	"github.com/pherrymason/c3-lsp/lsp/language/stdlib"
 	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
@@ -20,33 +19,16 @@ type Language struct {
 	indexByFQN              IndexStore
 	parsedModulesByDocument map[protocol.DocumentUri]parser.ParsedModules
 	logger                  commonlog.Logger
-	languageVersion         string
+	languageVersion         Version
 	debugEnabled            bool
 }
 
-func SupportedVersions() []Version {
-	return []Version{
-		Version{
-			number:        "0.5.2",
-			stdLibSymbols: stdlib.Load_v056_stdlib,
-		},
-	}
-}
-
 func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string]) Language {
-	var version string
-	if languageVersion.IsNone() {
-		versions := SupportedVersions()
-		version = versions[len(versions)-1].number
-	} else {
-		version = languageVersion.Get()
-	}
-
 	return Language{
 		indexByFQN:              NewIndexStore(),
 		parsedModulesByDocument: make(map[protocol.DocumentUri]parser.ParsedModules),
 		logger:                  logger,
-		languageVersion:         version,
+		languageVersion:         GetVersion(languageVersion),
 		debugEnabled:            false,
 	}
 }

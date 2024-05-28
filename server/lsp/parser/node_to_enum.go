@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"fmt"
+
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 )
