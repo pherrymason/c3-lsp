@@ -42,8 +42,8 @@ func (eb *FaultBuilder) WithConstant(constant *FaultConstant) *FaultBuilder {
 	return eb
 }
 
-func (eb *FaultBuilder) Build() Fault {
-	return eb.fault
+func (eb *FaultBuilder) Build() *Fault {
+	return &eb.fault
 }
 
 // FaultConstantBuilder
@@ -73,6 +73,6 @@ func (eb *FaultConstantBuilder) WithIdentifierRange(lineStart uint, CharStart ui
 	return eb
 }
 
-func (eb *FaultConstantBuilder) Build() FaultConstant {
-	return eb.faultConstant
+func (eb *FaultConstantBuilder) Build() *FaultConstant {
+	return &eb.faultConstant
 }

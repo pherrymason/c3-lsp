@@ -6,14 +6,17 @@ import (
 	"github.com/pherrymason/c3-lsp/fs"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/handlers"
+	"github.com/pherrymason/c3-lsp/lsp/language"
 	l "github.com/pherrymason/c3-lsp/lsp/language"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
+	"github.com/pherrymason/c3-lsp/option"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	_ "github.com/tliron/commonlog/simple"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	glspserv "github.com/tliron/glsp/server"
+	"golang.org/x/mod/semver"
 )
 
 type Server struct {
@@ -24,6 +27,7 @@ type Server struct {
 type ServerOpts struct {
 	Name        string
 	Version     string
+	C3Version   option.Option[string]
 	LogFilepath string
 	FS          fs.FileStorage
 }
@@ -37,7 +41,10 @@ func NewServer(opts ServerOpts) *Server {
 	glspServer := glspserv.NewServer(&handler, opts.Name, true)
 
 	documents := document.NewDocumentStore(opts.FS, &glspServer.Log)
-	language := l.NewLanguage(logger)
+
+	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3Version)
+
+	language := l.NewLanguage(logger, option.Some(requestedLanguageVersion))
 	parser := p.NewParser(logger)
 	handlers := handlers.NewHandlers(documents, &language, &parser)
 
@@ -83,6 +90,8 @@ func NewServer(opts ServerOpts) *Server {
 
 // Run starts the Language Server in stdio mode.
 func (s *Server) Run() error {
+	// Check version
+
 	return errors.Wrap(s.server.RunStdio(), "lsp")
 }
 
@@ -104,4 +113,21 @@ func shutdown(context *glsp.Context) error {
 func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
 	protocol.SetTraceValue(params.Value)
 	return nil
+}
+
+func checkRequestedLanguageVersion(version option.Option[string]) string {
+	supportedVersions := language.SupportedVersions()
+
+	if version.IsNone() {
+		return supportedVersions[len(supportedVersions)-1]
+	}
+
+	for _, sVersion := range supportedVersions {
+		compare := semver.Compare(sVersion, version.Get())
+		if compare == 0 {
+			return sVersion
+		}
+	}
+
+	panic("c3 language not supported")
 }

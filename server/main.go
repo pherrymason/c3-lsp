@@ -8,6 +8,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/pherrymason/c3-lsp/lsp"
+	"github.com/pherrymason/c3-lsp/option"
 	flag "github.com/spf13/pflag"
 )
 
@@ -38,9 +39,15 @@ func main() {
 		sentry.CaptureMessage("It works!")
 	}
 
+	c3Version := option.None[string]()
+	if options.c3Version != "" {
+		c3Version = option.Some(options.c3Version)
+	}
+
 	server := lsp.NewServer(lsp.ServerOpts{
 		Name:        appName,
 		Version:     version,
+		C3Version:   c3Version,
 		LogFilepath: options.logFilePath,
 	})
 	server.Run()
@@ -48,6 +55,7 @@ func main() {
 
 type Options struct {
 	showHelp         bool
+	c3Version        string
 	logFilePath      string
 	sendCrashReports bool
 }
@@ -59,10 +67,13 @@ func cmdLineArguments() Options {
 
 	var logFilePath = flag.String("log-path", "./lsp.log", "Enables logs and sets its filepath")
 
+	var c3Version = flag.String("lang-version", "", "Specify C3 language version.")
+
 	flag.Parse()
 
 	return Options{
 		showHelp:         *showHelp,
+		c3Version:        *c3Version,
 		logFilePath:      *logFilePath,
 		sendCrashReports: *sendCrashReports,
 	}

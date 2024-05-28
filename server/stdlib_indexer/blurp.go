@@ -45,6 +45,33 @@ func Generate_struct(strukt *s.Struct, module *s.Module) jen.Code {
 	return def
 }
 
+func Generate_bitstruct(bitstruct *s.Bitstruct, module *s.Module) jen.Code {
+	def := jen.
+		Qual(PackageName+"symbols", "NewBitstructBuilder").
+		Call(
+			jen.Lit(bitstruct.GetName()),
+			jen.Lit(bitstruct.Type().GetName()),
+			jen.Lit(module.GetName()),
+			jen.Lit(buildStdDocId(module.GetDocumentURI())),
+		)
+
+	for _, member := range bitstruct.Members() {
+		def.Dot("WithStructMember").
+			Call(
+				jen.Lit(member.GetName()),
+				jen.Lit(member.GetType().GetName()),
+				jen.Lit(module.GetName()),
+				jen.Lit(module.GetDocumentURI()),
+			)
+	}
+
+	def.
+		Dot("WithoutSourceCode").Call().
+		Dot("Build").Call()
+
+	return def
+}
+
 func Generate_definition(def *s.Def, module *s.Module) jen.Code {
 	defDef := jen.
 		Qual(PackageName+"symbols", "NewDefBuilder").
@@ -80,7 +107,7 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 			for _, asv := range enumerator.GetAssociatedValues() {
 				assvalues = append(
 					assvalues,
-					jen.Qual(PackageName+"symbols", "NewVariableBuilder").
+					jen.Add(jen.Op("*")).Qual(PackageName+"symbols", "NewVariableBuilder").
 						Call(
 							jen.Lit(asv.GetName()),
 							jen.Lit(asv.GetType().GetName()),
@@ -91,7 +118,7 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 				)
 			}
 		}
-		associativeValues := jen.Index().Qual(PackageName+"symbol", "Variable").Values(assvalues...)
+		associativeValues := jen.Index().Qual(PackageName+"symbols", "Variable").Values(assvalues...)
 
 		enumDef.
 			Dot("WithEnumerator").
@@ -109,4 +136,33 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 	enumDef.Dot("Build").Call()
 
 	return enumDef
+}
+
+func Generate_fault(fault *s.Fault, module *s.Module) jen.Code {
+	// NewEnumBuilder(name string, baseType string, module string, docId string)
+	faultDef := jen.
+		Qual(PackageName+"symbols", "NewFaultBuilder").
+		Call(
+			jen.Lit(fault.GetName()),
+			jen.Lit(fault.GetType()),
+			jen.Lit(module.GetName()),
+			jen.Lit(module.GetDocumentURI()),
+		)
+
+	for _, enumerator := range fault.GetConstants() {
+		faultDef.
+			Dot("WithConstant").
+			Call(
+				jen.Qual(PackageName+"symbols", "NewFaultConstantBuilder").
+					Call(
+						jen.Lit(enumerator.GetName()),
+						jen.Lit(enumerator.GetDocumentURI()),
+					).
+					Dot("Build").Call(),
+			)
+	}
+
+	faultDef.Dot("Build").Call()
+
+	return faultDef
 }

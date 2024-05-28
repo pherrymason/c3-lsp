@@ -12,6 +12,8 @@ require (
 	github.com/tliron/glsp v0.2.2
 )
 
+require golang.org/x/mod v0.17.0 // indirect
+
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/dave/jennifer v1.7.0
