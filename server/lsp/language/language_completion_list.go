@@ -139,11 +139,14 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			filterMembers = false
 		}
 	*/
+	unitModules := l.parsedModulesByDocument[doc.URI]
 	symbolInPosition := doc.SourceCode.SymbolInPosition(
 		symbols.Position{
 			Line:      uint(position.Line),
 			Character: uint(position.Character - 1),
-		})
+		},
+		&unitModules,
+	)
 	if symbolInPosition.IsSeparator() {
 		// Probably, theres no symbol at cursor!
 		filterMembers = false

@@ -3,9 +3,9 @@ package language
 import (
 	"fmt"
 
-	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
 	"github.com/pherrymason/c3-lsp/option"
 )
 
@@ -83,7 +83,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	// Important, when depth ==0 we really need to transmit to only search into root from here, even if we go multiple levels deep.
 
 	docIdOption := searchParams.DocId()
-	var collectionParsedModules []parser.ParsedModules
+	var collectionParsedModules []unit_modules.UnitModules
 	if docIdOption.IsSome() {
 		docId := docIdOption.Get()
 		parsedModules, found := l.parsedModulesByDocument[docId]

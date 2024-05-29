@@ -3,8 +3,8 @@ package search_params
 import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/document/sourcecode"
-	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
 	"github.com/pherrymason/c3-lsp/option"
 )
 
@@ -135,8 +135,8 @@ func (s SearchParams) TrackTraversedModules() map[string]int {
 
 // Creates a SearchParam to search by symbol located at a given position in document.
 // This calculates the module cursor is located.
-func BuildSearchBySymbolUnderCursor(doc *document.Document, docParsedModules parser.ParsedModulesInterface, cursorPosition symbols.Position) SearchParams {
-	symbolInPosition := doc.SourceCode.SymbolInPosition(cursorPosition)
+func BuildSearchBySymbolUnderCursor(doc *document.Document, docParsedModules unit_modules.UnitModules, cursorPosition symbols.Position) SearchParams {
+	symbolInPosition := doc.SourceCode.SymbolInPosition(cursorPosition, &docParsedModules)
 	/*if symbolInPosition.IsNone() {
 		panic("Could not find symbol in cursor")
 	}*/

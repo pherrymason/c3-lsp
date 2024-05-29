@@ -12,8 +12,11 @@ type Word struct {
 	textRange symbols.Range
 
 	//
-	parentAccessPath []Word
-	modulePath       []Word // Specified module path
+	parentAccessPath   []Word
+	modulePath         []Word   // Specified module path
+	resolvedModulePath []string // Real full module path. This is to support cases like
+	// import std::io; io::printf();
+	// Where only the last part of the module path is used in the document.
 }
 
 func NewWord(text string, positionRange symbols.Range) Word {
@@ -135,6 +138,12 @@ func (wb *WordBuilder) WithText(text string, textRange symbols.Range) *WordBuild
 
 func (wb *WordBuilder) WithModule(modulePath []Word) *WordBuilder {
 	wb.word.modulePath = modulePath
+
+	return wb
+}
+
+func (wb *WordBuilder) WithResolvedModulePath(modulePath string) *WordBuilder {
+	wb.word.resolvedModulePath = strings.Split(modulePath, "::")
 
 	return wb
 }

@@ -20,7 +20,7 @@ func TestParses_empty_document(t *testing.T) {
 
 	symbols := parser.ParseSymbols(&doc)
 
-	assert.Equal(t, 0, len(symbols.modules.Keys()))
+	assert.Equal(t, 0, len(symbols.ModuleIds()))
 }
 
 func TestParses_TypedEnums(t *testing.T) {
@@ -416,4 +416,45 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 	symbols := parser.ParseSymbols(&doc)
 
 	assert.Equal(t, []string{"some", "other", "foo::bar::final", "another", "another2"}, symbols.Get("foo").Imports)
+}
+
+func TestExtractSymbols_module_with_generics(t *testing.T) {
+
+	//module std::atomic::types(<Type>);
+	source := `module foo_test(<Type1, Type2>);
+		struct Foo
+		{
+			Type1 a;
+		}
+		fn Type2 test(Type2 b, Foo *foo)
+		{
+			return foo.a + b;
+		}
+		
+		module foo::another::deep(<Type>);
+		int bar = 0;`
+
+	doc := document.NewDocument("docid", source)
+	parser := createParser()
+	symbols := parser.ParseSymbols(&doc)
+
+	module := symbols.Get("foo_test")
+	assert.Equal(t, "foo_test", module.GetName())
+
+	// Generic parameter was found
+	generic, ok := module.GenericParameters["Type1"]
+	assert.True(t, ok)
+	assert.Equal(t, "Type1", generic.GetName())
+	assert.Equal(t, idx.NewRange(0, 17, 0, 22), generic.GetIdRange())
+	assert.Equal(t, idx.NewRange(0, 17, 0, 22), generic.GetDocumentRange())
+
+	// Generic parameter was found
+	generic, ok = module.GenericParameters["Type2"]
+	assert.True(t, ok)
+	assert.Equal(t, "Type2", generic.GetName())
+	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetIdRange())
+	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetDocumentRange())
+
+	module = symbols.Get("foo::another::deep")
+	assert.Equal(t, "foo::another::deep", module.GetName())
 }

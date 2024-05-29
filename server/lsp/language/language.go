@@ -8,6 +8,7 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
 	"github.com/pherrymason/c3-lsp/option"
 	"github.com/tliron/commonlog"
@@ -17,20 +18,26 @@ import (
 // Language will be the center of knowledge of everything parsed.
 type Language struct {
 	indexByFQN              IndexStore
-	parsedModulesByDocument map[protocol.DocumentUri]parser.ParsedModules
+	parsedModulesByDocument map[protocol.DocumentUri]unit_modules.UnitModules
 	logger                  commonlog.Logger
 	languageVersion         Version
 	debugEnabled            bool
 }
 
 func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string]) Language {
-	return Language{
+	language := Language{
 		indexByFQN:              NewIndexStore(),
-		parsedModulesByDocument: make(map[protocol.DocumentUri]parser.ParsedModules),
+		parsedModulesByDocument: make(map[protocol.DocumentUri]unit_modules.UnitModules),
 		logger:                  logger,
 		languageVersion:         GetVersion(languageVersion),
-		debugEnabled:            false,
+		debugEnabled:            true,
 	}
+
+	// Install stdlib symbols
+	stdlibModules := language.languageVersion.stdLibSymbols()
+	language.parsedModulesByDocument["_stdlib"] = stdlibModules
+
+	return language
 }
 
 func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {

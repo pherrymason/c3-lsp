@@ -7,6 +7,7 @@ import (
 	d "github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/document/sourcecode"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
 	"github.com/pherrymason/c3-lsp/option"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,24 +16,13 @@ func buildPosition(line uint, character uint) idx.Position {
 	return idx.Position{Line: line - 1, Character: character}
 }
 
-type MockParsedModules struct {
-	expectedModule string
-}
-
-func (m *MockParsedModules) SetModuleForPosition(moduleName string) {
-	m.expectedModule = moduleName
-}
-func (m MockParsedModules) FindContextModuleInCursorPosition(cursorPosition idx.Position) string {
-	return m.expectedModule
-}
-
 // ------------------
 
 func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_symbol_at_cursor_position(t *testing.T) {
 	sourceCode := "module system; int emu;"
 	doc := d.NewDocument("filename", sourceCode)
-	parsedModules := MockParsedModules{}
-	parsedModules.SetModuleForPosition("system")
+	parsedModules := unit_modules.NewParsedModules("filename")
+	parsedModules.RegisterModule(idx.NewModule("system", "filename", idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 0, 23)))
 
 	// position at int e|mu
 	sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, buildPosition(1, 20))
@@ -51,8 +41,8 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_all_parent_symbols(t 
 	sourceCode := `// This blank line is intended.
 system.cpu.init();`
 	doc := d.NewDocument("filename", sourceCode)
-	parsedModules := &MockParsedModules{}
-	parsedModules.SetModuleForPosition("system")
+	parsedModules := unit_modules.NewParsedModules("filename")
+	parsedModules.RegisterModule(idx.NewModule("system", "filename", idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 1, 18)))
 
 	// Cursor at "i|init"
 	sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, buildPosition(2, 12))
@@ -108,8 +98,8 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_full_module_path(t *t
 	for i, tt := range cases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
 			doc := d.NewDocument("filename", tt.source)
-			parsedModules := &MockParsedModules{}
-			parsedModules.SetModuleForPosition("system")
+			parsedModules := unit_modules.NewParsedModules("filename")
+			parsedModules.RegisterModule(idx.NewModule("system", "filename", idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 10, 30)))
 
 			sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, tt.position)
 

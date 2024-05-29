@@ -1,8 +1,10 @@
 package stdlib
 
-import parser "github.com/pherrymason/c3-lsp/lsp/parser"
+import (
+	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+)
 
-func Load_vdummy_stdlib() *parser.ParsedModules {
-	parsedModules := parser.NewParsedModules("_stdlib")
-	return &parsedModules
+func Load_vdummy_stdlib() unit_modules.UnitModules {
+	parsedModules := unit_modules.NewParsedModules("_stdlib")
+	return parsedModules
 }

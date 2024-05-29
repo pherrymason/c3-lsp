@@ -70,7 +70,7 @@ func generateCode(modules []*s.Module, c3Version string) {
 
 	stmts := []jen.Code{}
 	stmts = append(stmts,
-		jen.Id("parsedModules").Op(":=").Qual(PackageName+"parser", "NewParsedModules").Call(jen.Lit("_stdlib")),
+		jen.Id("parsedModules").Op(":=").Qual(PackageName+"unit_modules", "NewParsedModules").Call(jen.Lit("_stdlib")),
 		//jen.Var().Id("modules").Index().Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
 		jen.Var().Id("module").Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
 	)
@@ -165,7 +165,7 @@ func generateCode(modules []*s.Module, c3Version string) {
 	f.Func().
 		Id("Load_"+versionIdentifier+"_stdlib").
 		Params().
-		Add(jen.Op("*")).Qual(PackageName+"parser", "ParsedModules").
+		Add(jen.Op("*")).Qual(PackageName+"unit_modules", "UnitModules").
 		Block(stmts...)
 
 	err := f.Save("../lsp/language/stdlib/" + versionIdentifier + ".go")

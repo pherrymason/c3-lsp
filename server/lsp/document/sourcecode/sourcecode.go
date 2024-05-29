@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
 	"github.com/pherrymason/c3-lsp/option"
 )
@@ -24,7 +25,7 @@ func NewSourceCode(text string) SourceCode {
 }
 
 // Tries to find the symbol under cursor position
-func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position) Word {
+func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules *unit_modules.UnitModules) Word {
 	index := cursorPosition.IndexIn(s.Text)
 	pattern := `^[a-zA-Z0-9_]+$`
 	re, _ := regexp.Compile(pattern)
@@ -92,7 +93,34 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position) Word {
 	}
 	wb.WithAccessPath(accessPath).WithModule(modulePath)
 
+	wb = tryToResolveFullModulePaths(wb, docModules, cursorPosition)
+
 	return wb.Build()
+}
+
+func tryToResolveFullModulePaths(wb *WordBuilder, unitModules *unit_modules.UnitModules, cursorPosition symbols.Position) *WordBuilder {
+	if len(wb.word.modulePath) == 0 {
+		return wb
+	}
+
+	paths := []string{}
+	for _, m := range wb.word.modulePath {
+		paths = append(paths, m.text)
+	}
+	moduleName := strings.Join(paths, "::")
+
+	// Search if any of the imported modules matches this possible partial module path
+	moduleInPosition := unitModules.FindContextModuleInCursorPosition(cursorPosition)
+	if moduleInPosition != "" {
+		module := unitModules.Get(moduleInPosition)
+		for _, importedModule := range module.Imports {
+			if strings.HasSuffix(importedModule, "::"+moduleName) {
+				wb.WithResolvedModulePath(importedModule)
+			}
+		}
+	}
+
+	return wb
 }
 
 // Tries to find the symbol under cursor position

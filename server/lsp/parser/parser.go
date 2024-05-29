@@ -4,6 +4,7 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/cst"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/tliron/commonlog"
 )
@@ -45,8 +46,8 @@ func NewParser(logger commonlog.Logger) Parser {
 	}
 }
 
-func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
-	parsedModules := NewParsedModules(doc.URI)
+func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
+	parsedModules := unit_modules.NewParsedModules(doc.URI)
 	//fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
 	query := `[
@@ -102,7 +103,12 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				}*/
 
 			if nodeType != "module" {
-				moduleSymbol = parsedModules.GetOrInitModule(lastModuleName, doc, anonymousModuleName)
+				moduleSymbol = parsedModules.GetOrInitModule(
+					lastModuleName,
+					doc.URI,
+					doc.ContextSyntaxTree.RootNode(),
+					anonymousModuleName,
+				)
 			}
 
 			switch nodeType {
@@ -110,7 +116,12 @@ func (p *Parser) ParseSymbols(doc *document.Document) ParsedModules {
 				anonymousModuleName = false
 				moduleName, generics := p.nodeToModule(doc, c.Node, sourceCode)
 				lastModuleName = moduleName
-				moduleSymbol = parsedModules.GetOrInitModule(lastModuleName, doc, false)
+				moduleSymbol = parsedModules.GetOrInitModule(
+					lastModuleName,
+					doc.URI,
+					doc.ContextSyntaxTree.RootNode(),
+					false,
+				)
 				moduleSymbol.SetGenericParameters(generics)
 
 				start := c.Node.StartPoint()
@@ -227,7 +238,7 @@ func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, 
 	return variables
 }
 
-func resolveStructSubtypes(parsedModules *ParsedModules, subtyping []StructWithSubtyping) {
+func resolveStructSubtypes(parsedModules *unit_modules.UnitModules, subtyping []StructWithSubtyping) {
 	for _, struktWithSubtyping := range subtyping {
 		for _, inlinedMemberName := range struktWithSubtyping.members {
 
