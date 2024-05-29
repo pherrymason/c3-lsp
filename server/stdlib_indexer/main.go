@@ -124,28 +124,7 @@ func generateCode(modules []*s.Module, c3Version string) {
 
 		for _, fun := range mod.ChildrenFunctions {
 			// Generate functions
-			funDef := jen.
-				Qual(PackageName+"symbols", "NewFunctionBuilder").
-				Call(
-					jen.Lit(fun.GetFullName()),
-					jen.Lit(fun.GetReturnType()),
-					jen.Lit(mod.GetName()),
-					jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-				)
-
-			for _, arg := range fun.ArgumentIds() {
-				variable := fun.Variables[arg]
-				varDef := Generate_variable(variable, mod)
-				funDef.Dot("WithArgument").Call(varDef)
-			}
-
-			if fun.FunctionType() == s.Macro {
-				funDef.Dot("IsMacro").Call()
-			}
-
-			funDef.
-				Dot("WithoutSourceCode").Call().
-				Dot("Build").Call()
+			funDef := Generate_function(fun, mod)
 
 			modDefinition.
 				Dot("AddFunction").Call(funDef)
@@ -160,12 +139,12 @@ func generateCode(modules []*s.Module, c3Version string) {
 		)
 	}
 
-	stmts = append(stmts, jen.Return(jen.Add(jen.Op("&")).Id("parsedModules")))
+	stmts = append(stmts, jen.Return(jen. /*.Add(jen.Op("&"))*/ Id("parsedModules")))
 
 	f.Func().
 		Id("Load_"+versionIdentifier+"_stdlib").
 		Params().
-		Add(jen.Op("*")).Qual(PackageName+"unit_modules", "UnitModules").
+		/*Add(jen.Op("*")).*/ Qual(PackageName+"unit_modules", "UnitModules").
 		Block(stmts...)
 
 	err := f.Save("../lsp/language/stdlib/" + versionIdentifier + ".go")

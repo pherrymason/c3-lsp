@@ -40,7 +40,7 @@ func (fb *FunctionBuilder) WithArgument(variable *Variable) *FunctionBuilder {
 		fb.function.argumentIds = []string{}
 	}
 	fb.function.argumentIds = append(fb.function.argumentIds, variable.GetName())
-	fb.function.Variables[variable.GetName()] = variable
+	fb.function.AddVariable(variable)
 
 	return fb
 }

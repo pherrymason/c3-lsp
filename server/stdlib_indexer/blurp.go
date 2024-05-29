@@ -166,3 +166,30 @@ func Generate_fault(fault *s.Fault, module *s.Module) jen.Code {
 
 	return faultDef
 }
+
+func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
+	funDef := jen.
+		Qual(PackageName+"symbols", "NewFunctionBuilder").
+		Call(
+			jen.Lit(fun.GetFullName()),
+			jen.Lit(fun.GetReturnType()),
+			jen.Lit(mod.GetName()),
+			jen.Lit(buildStdDocId(mod.GetDocumentURI())),
+		)
+
+	for _, arg := range fun.ArgumentIds() {
+		variable := fun.Variables[arg]
+		varDef := Generate_variable(variable, mod)
+		funDef.Dot("WithArgument").Call(varDef)
+	}
+
+	if fun.FunctionType() == s.Macro {
+		funDef.Dot("IsMacro").Call()
+	}
+
+	funDef.
+		Dot("WithoutSourceCode").Call().
+		Dot("Build").Call()
+
+	return funDef
+}
