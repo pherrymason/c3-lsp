@@ -76,6 +76,9 @@ func generateCode(modules []*s.Module, c3Version string) {
 	)
 
 	for _, mod := range modules {
+		if mod.IsPrivate() {
+			continue
+		}
 
 		modDefinition := jen.Id("module").Op("=").
 			Qual(PackageName+"symbols", "NewModuleBuilder").

@@ -52,6 +52,20 @@ func (ps *UnitModules) GetOrInitModule(moduleName string, docId string, rootNode
 
 	return module
 }
+func (ps *UnitModules) UpdateOrInitModule(module *idx.Module, rootNode *sitter.Node) *idx.Module {
+	moduleName := module.GetName()
+
+	existingModule, exists := ps.modules.Get(moduleName)
+	if !exists {
+		ps.modules.Set(module.GetName(), module)
+	} else {
+		// Update stored module
+		existingModule.SetAttributes(module.GetAttributes())
+		existingModule.SetGenericParameters(module.GenericParameters)
+	}
+
+	return module
+}
 
 func (ps *UnitModules) RegisterModule(symbol *idx.Module) {
 	ps.modules.Set(symbol.GetModule().GetName(), symbol)

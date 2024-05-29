@@ -19,11 +19,12 @@ import (
 
 ),
 */
-func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceCode []byte) (string, map[string]*symbols.GenericParameter) {
+func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceCode []byte) (*symbols.Module, string, map[string]*symbols.GenericParameter) {
 
 	moduleName := node.ChildByFieldName("path").Content(sourceCode)
 
 	generic_parameters := make(map[string]*symbols.GenericParameter)
+	attributes := []string{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -45,10 +46,25 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 					generic_parameters[genericName] = param
 				}
 			}
+		case "attributes":
+			for a := 0; a < int(n.ChildCount()); a++ {
+				gn := n.Child(a)
+				//fmt.Println("Attr Node type:", gn.Type(), ":: ", gn.Content(sourceCode))
+				attributes = append(attributes, gn.Content(sourceCode))
+			}
 		}
 	}
 
-	return moduleName, generic_parameters
+	name := node.ChildByFieldName("path")
+	module := symbols.NewModule(
+		moduleName,
+		doc.URI,
+		symbols.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
+		symbols.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
+	)
+	module.SetAttributes(attributes)
+
+	return module, moduleName, generic_parameters
 }
 
 /*

@@ -400,6 +400,18 @@ func TestExtractSymbols_find_module(t *testing.T) {
 		assert.Equal(t, "foo2", module.GetName(), "module name is wrong")
 		assert.Equal(t, idx.NewRange(4, 1, 5, 15), module.GetDocumentRange(), "Wrong range for foo2 module")
 	})
+
+	t.Run("finds named module with attributes", func(t *testing.T) {
+		source := `module std::core @if(env::DARWIN) @private;`
+
+		doc := document.NewDocument("filename.c3", source)
+		parser := createParser()
+		symbols := parser.ParseSymbols(&doc)
+		module := symbols.Get("std::core")
+
+		assert.Equal(t, "std::core", module.GetName(), "module name is wrong")
+		assert.Equal(t, true, module.IsPrivate(), "module should be marked as private")
+	})
 }
 
 func TestExtractSymbols_find_imports(t *testing.T) {

@@ -114,15 +114,12 @@ func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
 			switch nodeType {
 			case "module":
 				anonymousModuleName = false
-				moduleName, generics := p.nodeToModule(doc, c.Node, sourceCode)
-				lastModuleName = moduleName
-				moduleSymbol = parsedModules.GetOrInitModule(
-					lastModuleName,
-					doc.URI,
+				module, _, _ := p.nodeToModule(doc, c.Node, sourceCode)
+				lastModuleName = module.GetName()
+				moduleSymbol = parsedModules.UpdateOrInitModule(
+					module,
 					doc.ContextSyntaxTree.RootNode(),
-					false,
 				)
-				moduleSymbol.SetGenericParameters(generics)
 
 				start := c.Node.StartPoint()
 				moduleSymbol.

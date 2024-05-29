@@ -54,8 +54,10 @@ type BaseIndexable struct {
 	idRange       Range
 	docRange      Range
 	Kind          protocol.CompletionItemKind
-	children      []Indexable
-	nestedScopes  []Indexable
+	attributes    []string
+
+	children     []Indexable
+	nestedScopes []Indexable
 }
 
 func (b BaseIndexable) GetName() string {
@@ -102,6 +104,23 @@ func (b BaseIndexable) HasSourceCode() bool {
 	return b.hasSourceCode
 }
 
+func (b BaseIndexable) IsPrivate() bool {
+	for _, attr := range b.attributes {
+		if attr == "@private" {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *BaseIndexable) GetAttributes() []string {
+	return b.attributes
+}
+
+func (b *BaseIndexable) SetAttributes(attributes []string) {
+	b.attributes = attributes
+}
+
 func (b BaseIndexable) Children() []Indexable {
 	return b.children
 }
@@ -136,5 +155,6 @@ func NewBaseIndexable(name string, module string, docId protocol.DocumentUri, id
 		docRange:      docRange,
 		Kind:          kind,
 		hasSourceCode: true,
+		attributes:    []string{},
 	}
 }
