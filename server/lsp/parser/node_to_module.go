@@ -63,6 +63,7 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 		symbols.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
 	)
 	module.SetAttributes(attributes)
+	module.SetGenericParameters(generic_parameters)
 
 	return module, moduleName, generic_parameters
 }
