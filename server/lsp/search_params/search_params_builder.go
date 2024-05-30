@@ -51,6 +51,11 @@ func (b *SearchParamsBuilder) WithDocId(docId string) *SearchParamsBuilder {
 	return b
 }
 
+func (b *SearchParamsBuilder) WithoutDoc() *SearchParamsBuilder {
+	b.params.docId = option.None[string]()
+	return b
+}
+
 func (b *SearchParamsBuilder) WithExcludedDocs(excludedDocId option.Option[string]) *SearchParamsBuilder {
 	b.params.excludedDocId = excludedDocId
 
@@ -60,6 +65,11 @@ func (b *SearchParamsBuilder) WithExcludedDocs(excludedDocId option.Option[strin
 func (b *SearchParamsBuilder) WithScopeMode(scopeMode ScopeMode) *SearchParamsBuilder {
 	b.params.scopeMode = scopeMode
 
+	return b
+}
+
+func (b *SearchParamsBuilder) WithoutContinueOnModules() *SearchParamsBuilder {
+	b.params.continueOnModules = false
 	return b
 }
 

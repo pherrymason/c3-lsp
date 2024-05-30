@@ -99,11 +99,36 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_or_submodules(t *testing.
 	})
 
 	t.Run("resolve variable from implicit sub module", func(t *testing.T) {
-		position := buildPosition(7, 21) // Cursor at BA|R_WEIGHT
-		doc := documents["module_foo.c3"]
+		state := NewTestState()
+		state.registerDoc("module_foo.c3",
+			`module foo;
+
+		int value = 1;
+		
+		fn void shapes() {
+			Bar mybar;
+			mybar.weight = BAR_WEIGHT;
+			mybar.color = foo::bar::DEFAULT_BAR_COLOR;
+			Circle mycircle;
+		}`)
+		state.registerDoc(
+			"module_foo_bar.c3",
+			`module foo::bar;
+
+		const int BAR_WEIGHT = 1;
+		const int DEFAULT_BAR_COLOR = 0;
+		struct Bar {
+			int width;
+			int weight;
+			int color;
+		}`)
+
+		position := buildPosition(7, 20) // Cursor at BA|R_WEIGHT
+		doc := state.docs["module_foo.c3"]
+
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, language.parsedModulesByDocument[doc.URI], position)
 
-		symbolOption := language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()

@@ -49,7 +49,26 @@ func NewTestState(loggers ...commonlog.Logger) TestState {
 		logger = loggers[0]
 	}
 
-	l := NewLanguage(logger, option.Some("0.5.5"))
+	l := NewLanguage(logger, option.Some("dummy"))
+
+	s := TestState{
+		language: l,
+		docs:     make(map[string]document.Document, 0),
+		parser:   p.NewParser(logger),
+	}
+	return s
+}
+
+func NewTestStateWithStdLibVersion(version string, loggers ...commonlog.Logger) TestState {
+	var logger commonlog.Logger
+
+	if len(loggers) == 0 {
+		logger = commonlog.MockLogger{}
+	} else {
+		logger = loggers[0]
+	}
+
+	l := NewLanguage(logger, option.Some(version))
 
 	s := TestState{
 		language: l,

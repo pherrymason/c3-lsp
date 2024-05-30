@@ -26,7 +26,6 @@ func (l *Language) findModuleInPosition(docId string, position symbols.Position)
 }
 
 func (l *Language) implicitImportedParsedModules(acceptedModulePaths []symbols.ModulePath, excludeDocId option.Option[string]) []*symbols.Module {
-	//var collectionParsedModules []*parser.ParsedModules
 	var collectionModules []*symbols.Module
 	for docId, parsedModules := range l.parsedModulesByDocument {
 		if excludeDocId.IsSome() && excludeDocId.Get() == docId {
@@ -77,7 +76,6 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		}
 
 		return nil
-
 	}*/
 
 	// Important, when depth ==0 we really need to transmit to only search into root from here, even if we go multiple levels deep.
@@ -92,6 +90,19 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		}
 
 		collectionParsedModules = append(collectionParsedModules, parsedModules)
+
+		for oDocId, parsedModules := range l.parsedModulesByDocument {
+			if docId == oDocId {
+				continue
+			}
+			for _, scope := range parsedModules.Modules() {
+				if scope.GetModule().GetName() == searchParams.ContextModulePath().GetName() {
+					collectionParsedModules = append(collectionParsedModules, parsedModules)
+				} else if scope.GetModule().IsImplicitlyImported(searchParams.ContextModulePath()) {
+					collectionParsedModules = append(collectionParsedModules, parsedModules)
+				}
+			}
+		}
 	} else {
 		// Doc id not specified, search by module. Collect scope belonging to same module as searchParams.module
 		for docId, parsedModules := range l.parsedModulesByDocument {
@@ -111,9 +122,20 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	trackedModules := searchParams.TrackTraversedModules()
 	var imports []string
 	importsAdded := make(map[string]bool)
+	contextModulePath := searchParams.ContextModulePath()
 	for _, parsedModules := range collectionParsedModules {
-		for _, scopedTree := range parsedModules.GetLoadableModules(searchParams.ContextModulePath()) {
+		for _, scopedTree := range parsedModules.GetLoadableModules(contextModulePath) {
 			l.debug(fmt.Sprintf("Checking module \"%s\"", scopedTree.GetModuleString()), debugger)
+			scopeMode := searchParams.ScopeMode()
+			if scopeMode == search_params.InScope {
+				docOpt := searchParams.DocId()
+				if docOpt.IsSome() {
+					if docOpt.Get() != scopedTree.GetDocumentURI() {
+						scopeMode = search_params.InModuleRoot
+					}
+				}
+			}
+
 			// Go through every element defined in scopedTree
 			identifier, _ := findDeepFirst(
 				searchParams.Symbol(),
@@ -121,7 +143,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 				scopedTree,
 				0,
 				searchParams.IsLimitSearchInScope(),
-				searchParams.ScopeMode(),
+				scopeMode,
 			)
 
 			if identifier != nil {
@@ -137,21 +159,24 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 			}
 		}
 	}
+	/*
+		if searchParams.ContinueOnModules() {
+			// SEARCH ON SAME ContextModulePath, but other files
+			// This search should not go through imported modules in those other files
+			sb := search_params.NewSearchParamsBuilder().
+				WithText(searchParams.SymbolW().Text(), searchParams.SymbolW().TextRange()).
+				WithContextModule(searchParams.ContextModulePath()).
+				WithoutDoc().
+				WithExcludedDocs(searchParams.DocId()).
+				WithoutContinueOnModules().
+				WithScopeMode(search_params.InModuleRoot) // Document this
+			searchInSameModule := sb.Build()
 
-	if searchParams.ContinueOnModules() {
-		sb := search_params.NewSearchParamsBuilder().
-			//WithSymbol(searchParams.Symbol()).
-			WithText(searchParams.SymbolW().Text(), searchParams.SymbolW().TextRange()).
-			WithContextModule(searchParams.ContextModulePath()).
-			WithExcludedDocs(searchParams.DocId()).
-			WithScopeMode(search_params.InModuleRoot) // Document this
-		searchInSameModule := sb.Build()
-
-		found := l.findClosestSymbolDeclaration(searchInSameModule, debugger.goIn())
-		if found.IsSome() {
-			return found
-		}
-	}
+			found := l.findClosestSymbolDeclaration(searchInSameModule, debugger.goIn())
+			if found.IsSome() {
+				return found
+			}
+		}*/
 
 	// SEARCH IN IMPORTED MODULES
 	if docIdOption.IsSome() {
