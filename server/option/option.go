@@ -15,12 +15,11 @@ func None[T any]() Option[T] {
 	return Option[T]{isFull: false}
 }
 
-func (s *Option[T]) Get() T {
+func (s Option[T]) Get() T {
 	if s.isFull {
 		return s.value
 	} else {
 		panic("cannot get from None type")
-
 	}
 }
 

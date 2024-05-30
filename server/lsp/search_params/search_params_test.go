@@ -28,10 +28,10 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_symbol_at_cursor_posi
 	sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, buildPosition(1, 20))
 
 	assert.Equal(t, "emu", sp.word.Text())
-	assert.Equal(t, idx.NewRange(0, 19, 0, 22), sp.symbolRange)
-	assert.Equal(t, option.Some("filename"), sp.docId)
-	assert.Equal(t, "system", sp.contextModulePath.GetName())
-	assert.Equal(t, true, sp.continueOnModules)
+	assert.Equal(t, idx.NewRange(0, 19, 0, 22), sp.word.TextRange())
+	assert.Equal(t, option.Some("filename"), sp.limitToDocId)
+	assert.Equal(t, "system", sp.moduleInCursor.GetName())
+
 	assert.Equal(t, 0, len(sp.word.AccessPath()))
 	assert.Equal(t, make(TrackedModules), sp.trackedModules)
 	assert.Equal(t, false, sp.word.HasModulePath())
@@ -47,11 +47,11 @@ system.cpu.init();`
 	// Cursor at "i|init"
 	sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, buildPosition(2, 12))
 
-	assert.Equal(t, "init", sp.symbol)
-	assert.Equal(t, idx.NewRange(1, 11, 1, 15), sp.symbolRange)
-	assert.Equal(t, option.Some("filename"), sp.docId)
-	assert.Equal(t, "system", sp.contextModulePath.GetName())
-	assert.Equal(t, true, sp.continueOnModules)
+	assert.Equal(t, "init", sp.Symbol())
+	assert.Equal(t, idx.NewRange(1, 11, 1, 15), sp.word.TextRange())
+	assert.Equal(t, option.Some("filename"), sp.limitToDocId)
+	assert.Equal(t, "system", sp.moduleInCursor.GetName())
+
 	assert.Equal(t, []sourcecode.Word{
 		sourcecode.NewWord("system", idx.NewRange(1, 0, 1, 6)),
 		sourcecode.NewWord("cpu", idx.NewRange(1, 7, 1, 10)),
@@ -103,10 +103,10 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_full_module_path(t *t
 
 			sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, tt.position)
 
-			assert.Equal(t, tt.expectedSymbol, sp.symbol)
-			assert.Equal(t, tt.expectedSymbolRange, sp.symbolRange)
-			assert.Equal(t, option.Some("filename"), sp.docId)
-			assert.Equal(t, "system", sp.contextModulePath.GetName())
+			assert.Equal(t, tt.expectedSymbol, sp.Symbol())
+			assert.Equal(t, tt.expectedSymbolRange, sp.word.TextRange())
+			assert.Equal(t, option.Some("filename"), sp.limitToDocId)
+			assert.Equal(t, "system", sp.moduleInCursor.GetName())
 			assert.Equal(t, true, sp.HasModuleSpecified())
 			assert.Equal(t, false, sp.word.HasAccessPath())
 		})

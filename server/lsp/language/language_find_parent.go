@@ -16,7 +16,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 	iterSearch := search_params.NewSearchParamsBuilder().
 		WithSymbolWord(accessPath[0]).
 		WithDocId(docId.Get()).
-		WithContextModuleName(searchParams.ContextModule()).
+		WithContextModuleName(searchParams.ModuleInCursor()).
 		WithScopeMode(search_params.InScope).
 		Build()
 
@@ -36,7 +36,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 		for {
 			if !isInspectable(elm) {
-				elm = l.resolve(elm, docId.Get(), searchParams.ContextModule(), debugger)
+				elm = l.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), debugger)
 			} else {
 				break
 			}
@@ -67,7 +67,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 				iterSearch = search_params.NewSearchParamsBuilder().
 					WithSymbolWord(methodSymbol).
 					WithDocId(docId.Get()).
-					WithContextModuleName(searchParams.ContextModule()).
+					WithContextModuleName(searchParams.ModuleInCursor()).
 					WithScopeMode(search_params.InModuleRoot).
 					Build()
 				result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
@@ -110,7 +110,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 				iterSearch = search_params.NewSearchParamsBuilder().
 					WithSymbolWord(methodSymbol).
 					WithDocId(docId.Get()).
-					WithContextModuleName(searchParams.ContextModule()).
+					WithContextModuleName(searchParams.ModuleInCursor()).
 					WithScopeMode(search_params.InModuleRoot).
 					Build()
 				result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())

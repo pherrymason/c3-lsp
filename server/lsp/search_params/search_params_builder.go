@@ -18,25 +18,21 @@ func NewSearchParamsBuilder() *SearchParamsBuilder {
 
 func (b *SearchParamsBuilder) WithSymbolWord(word sourcecode.Word) *SearchParamsBuilder {
 	b.params.word = word
-	b.params.symbol = word.Text()
-	b.params.symbolRange = word.TextRange()
 	return b
 }
 
 func (b *SearchParamsBuilder) WithText(text string, textRange symbols.Range) *SearchParamsBuilder {
 	b.params.word = sourcecode.NewWord(text, textRange)
-	b.params.symbol = text
-	b.params.symbolRange = textRange
 	return b
 }
 
 func (b *SearchParamsBuilder) WithContextModuleName(moduleName string) *SearchParamsBuilder {
-	b.params.contextModulePath = symbols.NewModulePathFromString(moduleName)
+	b.params.moduleInCursor = symbols.NewModulePathFromString(moduleName)
 	return b
 }
 
 func (b *SearchParamsBuilder) WithContextModule(modulePath symbols.ModulePath) *SearchParamsBuilder {
-	b.params.contextModulePath = modulePath
+	b.params.moduleInCursor = modulePath
 	return b
 }
 
@@ -46,13 +42,13 @@ func (b *SearchParamsBuilder) WithTrackedModules(trackedModules TrackedModules) 
 }
 
 func (b *SearchParamsBuilder) WithDocId(docId string) *SearchParamsBuilder {
-	b.params.docId = option.Some(docId)
+	b.params.limitToDocId = option.Some(docId)
 
 	return b
 }
 
 func (b *SearchParamsBuilder) WithoutDoc() *SearchParamsBuilder {
-	b.params.docId = option.None[string]()
+	b.params.limitToDocId = option.None[string]()
 	return b
 }
 
@@ -68,14 +64,18 @@ func (b *SearchParamsBuilder) WithScopeMode(scopeMode ScopeMode) *SearchParamsBu
 	return b
 }
 
-func (b *SearchParamsBuilder) WithoutContinueOnModules() *SearchParamsBuilder {
-	b.params.continueOnModules = false
+func (b *SearchParamsBuilder) LimitedToModule(modulePath []string) *SearchParamsBuilder {
+	b.params.limitToModule = option.Some(symbols.NewModulePath(modulePath))
+
 	return b
 }
 
-// Otros métodos withXXX según sea necesario
+func (b *SearchParamsBuilder) LimitedToModulePath(modulePath symbols.ModulePath) *SearchParamsBuilder {
+	b.params.limitToModule = option.Some(modulePath)
 
-// Método para construir el objeto final
+	return b
+}
+
 func (b *SearchParamsBuilder) Build() SearchParams {
 
 	if b.params.trackedModules == nil {

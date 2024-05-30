@@ -68,28 +68,53 @@ func generateCode(modules []*s.Module, c3Version string) {
 	f := jen.NewFile("stdlib")
 	versionIdentifier := "v" + strings.ReplaceAll(c3Version, ".", "")
 
-	stmts := []jen.Code{}
-	stmts = append(stmts,
-		jen.Id("parsedModules").Op(":=").Qual(PackageName+"unit_modules", "NewParsedModules").Call(jen.Lit("_stdlib")),
-		//jen.Var().Id("modules").Index().Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
-		jen.Var().Id("module").Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
-	)
+	dict := jen.Dict{}
 
+	uniqueModuleNames := map[string]bool{}
 	for _, mod := range modules {
 		if mod.IsPrivate() {
 			continue
 		}
 
-		modDefinition := jen.Id("module").Op("=").
-			Qual(PackageName+"symbols", "NewModuleBuilder").
-			Call(
-				jen.Lit(mod.GetName()),
-				jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-			).
-			Dot("WithoutSourceCode").Call().
-			Dot("Build").Call()
+		_, ok := uniqueModuleNames[mod.GetName()]
+		if !ok {
+			uniqueModuleNames[mod.GetName()] = true
+
+			dict[jen.Lit(mod.GetName())] =
+				jen.
+					Qual(PackageName+"symbols", "NewModuleBuilder").
+					Call(
+						jen.Lit(mod.GetName()),
+						jen.Lit(""),
+					).
+					Dot("WithoutSourceCode").Call().
+					Dot("Build").Call()
+
+		}
+	}
+
+	stmts := []jen.Code{
+		jen.Id("moduleCollection").Op(":=").Map(jen.String()).Add(jen.Op("*")).Qual(PackageName+"symbols", "Module").Values(dict),
+		jen.Id("parsedModules").Op(":=").Qual(PackageName+"unit_modules", "NewParsedModules").Call(jen.Lit("_stdlib")),
+		jen.For(
+			jen.Id("_").Op(",").Id("mod").Op(":=").Range().
+				Id("moduleCollection"),
+		).Block(
+			//jen.Qual("fmt", "Println").Call(jen.Id("i")),
+			jen.Id("parsedModules").Dot("RegisterModule").Call(jen.Id("mod")),
+		),
+		jen.Var().Id("module").Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
+	}
+
+	for _, mod := range modules {
+		if mod.IsPrivate() {
+			continue
+		}
+		modDefinition := jen.Id("module")
+		somethingAdded := false
 
 		for _, variable := range mod.Variables {
+			somethingAdded = true
 			// Generate variable
 			varDef := Generate_variable(variable, mod)
 			modDefinition.
@@ -97,35 +122,41 @@ func generateCode(modules []*s.Module, c3Version string) {
 		}
 
 		for _, strukt := range mod.Structs {
+			somethingAdded = true
 			structDef := Generate_struct(strukt, mod)
 			modDefinition.
 				Dot("AddStruct").Call(structDef)
 		}
 		for _, bitstruct := range mod.Bitstructs {
+			somethingAdded = true
 			bitstructDef := Generate_bitstruct(bitstruct, mod)
 			modDefinition.
 				Dot("AddBitstruct").Call(bitstructDef)
 		}
 
 		for _, def := range mod.Defs {
+			somethingAdded = true
 			defDef := Generate_definition(def, mod)
 			modDefinition.
 				Dot("AddDef").Call(defDef)
 		}
 
 		for _, enum := range mod.Enums {
+			somethingAdded = true
 			enumDef := Generate_enum(enum, mod)
 			modDefinition.
 				Dot("AddEnum").Call(enumDef)
 		}
 
 		for _, fault := range mod.Faults {
+			somethingAdded = true
 			enumDef := Generate_fault(fault, mod)
 			modDefinition.
 				Dot("AddFault").Call(enumDef)
 		}
 
 		for _, fun := range mod.ChildrenFunctions {
+			somethingAdded = true
 			// Generate functions
 			funDef := Generate_function(fun, mod)
 
@@ -133,21 +164,24 @@ func generateCode(modules []*s.Module, c3Version string) {
 				Dot("AddFunction").Call(funDef)
 		}
 
-		stmts = append(
-			stmts,
-			jen.Line(),
-			jen.Comment("Define module "+mod.GetName()),
-			modDefinition,
-			jen.Id("parsedModules").Dot("RegisterModule").Call(jen.Id("module")),
-		)
+		if somethingAdded {
+			stmts = append(
+				stmts,
+				jen.Line(),
+				jen.Comment("Define module "+mod.GetName()),
+				jen.Id("module").Op("=").
+					Id("moduleCollection").Index(jen.Lit(mod.GetName())),
+				modDefinition,
+			)
+		}
 	}
 
-	stmts = append(stmts, jen.Return(jen. /*.Add(jen.Op("&"))*/ Id("parsedModules")))
+	stmts = append(stmts, jen.Return(jen.Id("parsedModules")))
 
 	f.Func().
 		Id("Load_"+versionIdentifier+"_stdlib").
 		Params().
-		/*Add(jen.Op("*")).*/ Qual(PackageName+"unit_modules", "UnitModules").
+		Qual(PackageName+"unit_modules", "UnitModules").
 		Block(stmts...)
 
 	err := f.Save("../lsp/language/stdlib/" + versionIdentifier + ".go")

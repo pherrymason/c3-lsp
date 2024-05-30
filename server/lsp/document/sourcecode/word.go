@@ -90,6 +90,10 @@ func (w Word) ModulePath() []Word {
 	return w.modulePath
 }
 
+func (w Word) ResolvedModulePath() []string {
+	return w.resolvedModulePath
+}
+
 func (w Word) HasModulePath() bool {
 	return len(w.modulePath) > 0
 }
