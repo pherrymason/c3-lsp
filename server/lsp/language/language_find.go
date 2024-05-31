@@ -228,7 +228,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	}
 
 	// Last resort, check if any loadable module is compatible with the string being searched
-	if debugger.depth == 0 && searchResult.IsNone() {
+	if /*debugger.depth == 0 &&*/ searchResult.IsNone() {
 		moduleMatches := l.findModuleNameInTraversedModules(searchParams, searchResult.traversedModules)
 
 		if len(moduleMatches) > 0 {

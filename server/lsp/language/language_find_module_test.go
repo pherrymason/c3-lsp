@@ -291,13 +291,13 @@ func TestLanguage_findClosestSymbolDeclaration_should_find_right_module(t *testi
 		`,
 	)
 
-	position := buildPosition(1, 15) // Cursor at mystd::i|o;
+	position := buildPosition(1, 15) // Cursor at import mystd::i|o;
 	doc := state.docs["app.c3"]
 	searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.language.parsedModulesByDocument[doc.URI], position)
 
 	symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
 
-	assert.False(t, symbolOption.IsNone(), "Element not found")
+	assert.True(t, symbolOption.IsSome(), "Element not found")
 
 	mod := symbolOption.Get().(*idx.Module)
 	assert.Equal(t, "mystd::io", mod.GetName())
