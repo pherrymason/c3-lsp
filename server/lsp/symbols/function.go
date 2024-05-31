@@ -44,15 +44,14 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 		returnType:     returnType,
 		argumentIds:    argumentIds,
 		typeIdentifier: typeIdentifier,
-		BaseIndexable: BaseIndexable{
-			name:         name,
-			moduleString: module,
-			module:       NewModulePathFromString(module),
-			documentURI:  docId,
-			idRange:      identifierRangePosition,
-			docRange:     docRange,
-			Kind:         kind,
-		},
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			identifierRangePosition,
+			docRange,
+			kind,
+		),
 		Variables: make(map[string]*Variable),
 	}
 }
