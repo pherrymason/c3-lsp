@@ -30,7 +30,7 @@ func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string])
 		parsedModulesByDocument: make(map[protocol.DocumentUri]unit_modules.UnitModules),
 		logger:                  logger,
 		languageVersion:         GetVersion(languageVersion),
-		debugEnabled:            true,
+		debugEnabled:            false,
 	}
 
 	// Install stdlib symbols

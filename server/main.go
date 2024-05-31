@@ -26,8 +26,10 @@ func main() {
 
 	if options.sendCrashReports {
 		err := sentry.Init(sentry.ClientOptions{
-			Dsn:     "https://76f9fe6a1d3e2be7c9083891a644b0a3@o124652.ingest.us.sentry.io/4507278372110336",
-			Release: fmt.Sprintf("c3.lsp@%s+%s", version, commitHash),
+			Dsn:              "https://76f9fe6a1d3e2be7c9083891a644b0a3@o124652.ingest.us.sentry.io/4507278372110336",
+			Release:          fmt.Sprintf("c3.lsp@%s+%s", version, commitHash),
+			Debug:            false,
+			AttachStacktrace: true,
 		})
 		if err != nil {
 			log.Fatalf("sentry.Init: %s", err)
@@ -35,8 +37,7 @@ func main() {
 
 		// Flush buffered events before the program terminates.
 		defer sentry.Flush(2 * time.Second)
-
-		sentry.CaptureMessage("It works!")
+		defer sentry.Recover()
 	}
 
 	c3Version := option.None[string]()
@@ -45,10 +46,11 @@ func main() {
 	}
 
 	server := lsp.NewServer(lsp.ServerOpts{
-		Name:        appName,
-		Version:     version,
-		C3Version:   c3Version,
-		LogFilepath: options.logFilePath,
+		Name:             appName,
+		Version:          version,
+		C3Version:        c3Version,
+		LogFilepath:      options.logFilePath,
+		SendCrashReports: options.sendCrashReports,
 	})
 	server.Run()
 }

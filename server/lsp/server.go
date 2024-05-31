@@ -25,17 +25,25 @@ type Server struct {
 
 // ServerOpts holds the options to create a new Server.
 type ServerOpts struct {
-	Name        string
-	Version     string
-	C3Version   option.Option[string]
-	LogFilepath string
-	FS          fs.FileStorage
+	Name             string
+	Version          string
+	C3Version        option.Option[string]
+	LogFilepath      string
+	FS               fs.FileStorage
+	logger           commonlog.Logger
+	SendCrashReports bool
 }
 
 func NewServer(opts ServerOpts) *Server {
 	// This increases logging verbosity (optional)
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", opts.Name))
+
+	if opts.SendCrashReports {
+		logger.Debug("Sending crash reports")
+	} else {
+		logger.Debug("No crash reports")
+	}
 
 	handler := protocol.Handler{}
 	glspServer := glspserv.NewServer(&handler, opts.Name, true)
@@ -48,7 +56,24 @@ func NewServer(opts ServerOpts) *Server {
 	parser := p.NewParser(logger)
 	handlers := handlers.NewHandlers(documents, &language, &parser)
 
-	handler.Initialized = initialized
+	handler.Initialized = func(context *glsp.Context, params *protocol.InitializedParams) error {
+		/*
+			context.Notify(protocol.ServerWorkspaceWorkspaceFolders, protocol.PublishDiagnosticsParams{
+				URI:         doc.URI,
+				Diagnostics: diagnostics,
+			})*/
+		/*sendCrashStatus := "disabled"
+		if opts.SendCrashReports {
+			sendCrashStatus = "enabled"
+		}
+
+		context.Notify(protocol.ServerWindowShowMessage, protocol.ShowMessageParams{
+			Type:    protocol.MessageTypeInfo,
+			Message: fmt.Sprintf("SendCrash: %s", sendCrashStatus),
+		})
+		*/
+		return nil
+	}
 	handler.Shutdown = shutdown
 	handler.SetTrace = setTrace
 
@@ -90,19 +115,7 @@ func NewServer(opts ServerOpts) *Server {
 
 // Run starts the Language Server in stdio mode.
 func (s *Server) Run() error {
-	// Check version
-
 	return errors.Wrap(s.server.RunStdio(), "lsp")
-}
-
-func initialized(context *glsp.Context, params *protocol.InitializedParams) error {
-	/*
-		context.Notify(protocol.ServerWorkspaceWorkspaceFolders, protocol.PublishDiagnosticsParams{
-			URI:         doc.URI,
-			Diagnostics: diagnostics,
-		})*/
-
-	return nil
 }
 
 func shutdown(context *glsp.Context) error {
