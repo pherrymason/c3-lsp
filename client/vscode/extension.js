@@ -21,11 +21,12 @@ module.exports = {
     const serverOptions = {
       run: {
         command: executable,
-        options: { execArgv: args }
+        args: args,
       },
       debug: {
         command:executable,
-        options: { execArgv: ['--nolazy', '--inspect=6009', ...args] }
+        args: args,
+        options: { execArgv: ['--nolazy', '--inspect=6009'] }
       }
     }
 
