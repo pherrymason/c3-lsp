@@ -11,6 +11,7 @@ Using tree-sitter grammar rules from https://github.com/cbuttner/tree-sitter-c3.
 - [x] **Go to declaration.**
 - [x] **Go to definition.** 
 - [x] **Hover** Displays information about symbol under cursor.
+- [x] **Stdlib** Offers symbol information of stdlib (0.5.5)
 
 ## Installation
 Precompiled binaries for the following operating systems are available:
@@ -31,7 +32,7 @@ Be sure to configure it with the path of the lsp server binary.
 
 **Current status**  
 ***Index status***
-- [ ] Attributes
+- [~] Attributes (Module privacy)
 - [x] Variables & type
 - [x] [Global constants]()
 - [x] Functions
@@ -69,10 +70,9 @@ Be sure to configure it with the path of the lsp server binary.
   - [x] Find symbol present in same module, but different file
   - [x] Find symbol in imported module
   - [x] Find symbol in implicit parent module.
-  - [ ] Find symbol in stdlib
+  - [x] Find symbol in stdlib
 - [~] TextDocumentCompletion:
     - Struct methods are not suggested until first letter is written.
-    - Completion of symbols defined in stdlib.
 
 ## Useful links:
 - LSP specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
