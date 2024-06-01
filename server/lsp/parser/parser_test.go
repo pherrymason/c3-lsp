@@ -279,6 +279,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	def KiloPtr = Kilo*;
 	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
 	def MyMap = HashMap(<String, Feature>);
+	def Camera = raylib::Camera;
 	`
 	// TODO: Missing def different definition examples. See parser.nodeToDef
 	mod := "mod"
@@ -286,18 +287,27 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	parser := createParser()
 
 	symbols := parser.ParseSymbols(&doc)
+	module := symbols.Get(mod)
 
 	expectedDefKilo := idx.NewDefBuilder("Kilo", mod, "x").
-		WithResolvesTo("int").
+		WithResolvesToType(
+			idx.NewType(true, "int", 0, "mod"),
+		).
 		WithIdentifierRange(1, 5, 1, 9).
 		WithDocumentRange(1, 1, 1, 16).
 		Build()
+	assert.Equal(t, expectedDefKilo, module.Defs["Kilo"])
+	assert.Same(t, module.Children()[0], module.Defs["Kilo"])
 
 	expectedDefKiloPtr := idx.NewDefBuilder("KiloPtr", mod, "x").
-		WithResolvesTo("Kilo*").
+		WithResolvesToType(
+			idx.NewType(false, "Kilo", 1, "mod"),
+		).
 		WithIdentifierRange(2, 5, 2, 12).
 		WithDocumentRange(2, 1, 2, 21).
 		Build()
+	assert.Equal(t, expectedDefKiloPtr, module.Defs["KiloPtr"])
+	assert.Same(t, module.Children()[1], module.Defs["KiloPtr"])
 
 	expectedDefFunction := idx.NewDefBuilder("MyFunction", mod, "x").
 		WithResolvesTo("fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)").
@@ -305,24 +315,30 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithDocumentRange(3, 1, 3, 74).
 		Build()
 
+	assert.Equal(t, expectedDefFunction, module.Defs["MyFunction"])
+	assert.Same(t, module.Children()[2], module.Defs["MyFunction"])
+
 	expectedDefTypeWithGenerics := idx.NewDefBuilder("MyMap", mod, "x").
-		WithResolvesTo("HashMap(<String, Feature>)").
+		WithResolvesToType(
+			idx.NewType(false, "HashMap(<String, Feature>)", 0, "mod"),
+		).
 		WithIdentifierRange(4, 5, 4, 10).
 		WithDocumentRange(4, 1, 4, 40).
 		Build()
 
-	module := symbols.Get(mod)
-	assert.Equal(t, expectedDefKilo, module.Defs["Kilo"])
-	assert.Same(t, module.Children()[0], module.Defs["Kilo"])
-
-	assert.Equal(t, expectedDefKiloPtr, module.Defs["KiloPtr"])
-	assert.Same(t, module.Children()[1], module.Defs["KiloPtr"])
-
-	assert.Equal(t, expectedDefFunction, module.Defs["MyFunction"])
-	assert.Same(t, module.Children()[2], module.Defs["MyFunction"])
-
 	assert.Equal(t, expectedDefTypeWithGenerics, module.Defs["MyMap"])
 	assert.Same(t, module.Children()[3], module.Defs["MyMap"])
+
+	expectedDefTypeWithModulePath := idx.NewDefBuilder("Camera", mod, "x").
+		WithResolvesToType(
+			idx.NewType(false, "Camera", 0, "raylib"),
+		).
+		WithIdentifierRange(5, 5, 5, 11).
+		WithDocumentRange(5, 1, 5, 29).
+		Build()
+
+	assert.Equal(t, expectedDefTypeWithModulePath, module.Defs["Camera"])
+	assert.Same(t, module.Children()[4], module.Defs["Camera"])
 }
 
 func TestExtractSymbols_find_macro(t *testing.T) {

@@ -6,8 +6,10 @@ import (
 )
 
 type Type struct {
-	name    string
-	pointer int
+	baseTypeLanguage bool // Is a base type of the language
+	name             string
+	pointer          int
+	module           string
 }
 
 func (t Type) GetName() string {
@@ -27,5 +29,14 @@ func NewTypeFromString(_type string) Type {
 	return Type{
 		name:    baseType,
 		pointer: pointerCount,
+	}
+}
+
+func NewType(baseTypeLanguage bool, baseType string, pointerCount int, modulePath string) Type {
+	return Type{
+		baseTypeLanguage: baseTypeLanguage,
+		name:             baseType,
+		pointer:          pointerCount,
+		module:           modulePath,
 	}
 }

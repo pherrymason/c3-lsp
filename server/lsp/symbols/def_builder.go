@@ -1,6 +1,9 @@
 package symbols
 
-import protocol "github.com/tliron/glsp/protocol_3_16"
+import (
+	"github.com/pherrymason/c3-lsp/option"
+	protocol "github.com/tliron/glsp/protocol_3_16"
+)
 
 type DefBuilder struct {
 	def Def
@@ -21,8 +24,18 @@ func NewDefBuilder(name string, module string, docId string) *DefBuilder {
 	}
 }
 
+func (d *DefBuilder) WithName(name string) *DefBuilder {
+	d.def.name = name
+	return d
+}
+
 func (d *DefBuilder) WithResolvesTo(resolvesTo string) *DefBuilder {
 	d.def.resolvesTo = resolvesTo
+	return d
+}
+
+func (d *DefBuilder) WithResolvesToType(resolvesTo Type) *DefBuilder {
+	d.def.resolvesToType = option.Some(resolvesTo)
 	return d
 }
 
