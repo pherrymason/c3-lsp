@@ -11,7 +11,7 @@ type Bitstruct struct {
 
 func NewBitstruct(name string, backingType string, interfaces []string, members []*StructMember, module string, docId string, idRange Range, docRange Range) Bitstruct {
 	bitstruct := Bitstruct{
-		backingType: NewTypeFromString(backingType),
+		backingType: NewTypeFromString(backingType, module),
 		members:     members,
 		implements:  interfaces,
 		BaseIndexable: NewBaseIndexable(

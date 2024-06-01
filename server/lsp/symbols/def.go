@@ -50,3 +50,11 @@ func (d Def) GetResolvesTo() string {
 func (d Def) GetHoverInfo() string {
 	return fmt.Sprintf("def %s = %s", d.name, d.resolvesTo)
 }
+
+func (d Def) ResolvesToType() bool {
+	return d.resolvesToType.IsSome()
+}
+
+func (d Def) ResolvedType() Type {
+	return d.resolvesToType.Get()
+}

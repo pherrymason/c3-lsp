@@ -151,7 +151,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 
 	variable := idx.NewVariable(
 		identifier,
-		idx.NewTypeFromString(argType),
+		idx.NewTypeFromString(argType, moduleName),
 		moduleName,
 		docId,
 		idRange,

@@ -124,7 +124,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 			for y := 0; y < len(identifiers); y++ {
 				structMember := idx.NewStructMember(
 					identifiers[y],
-					fieldType,
+					fieldType, // TODO <--- this type parsing is too simple
 					option.None[[2]uint](),
 					moduleName,
 					docId,

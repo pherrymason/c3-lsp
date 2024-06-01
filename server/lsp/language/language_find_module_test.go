@@ -136,6 +136,41 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_or_submodules(t *testing.
 		assert.Equal(t, "module_foo_bar.c3", symbol.GetDocumentURI())
 		assert.Equal(t, "foo::bar", symbol.GetModuleString())
 	})
+
+	// This test is testing both accessPath and module path
+	t.Run("resolve struct member from implicit sub module", func(t *testing.T) {
+		state := NewTestState()
+		state.registerDoc("raylib.c3",
+			`struct Camera3D {
+			int target;
+		}
+		def Camera = Camera3D;`)
+		state.registerDoc(
+			"structs.c3",
+			`module structs;
+			import raylib;
+			struct Widget {
+				int count;
+				raylib::Camera3D camera;
+			}
+			
+			Widget view = {};
+			view.camera.target = 3;
+			`,
+		)
+		position := buildPosition(9, 16) // Cursor at `view.camera.t|arget = 3;`
+		doc := state.GetDoc("structs.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.GetParsedModules(doc.URI), position)
+
+		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Symbol not found")
+		symbol := symbolOption.Get()
+
+		variable := symbol.(*idx.StructMember)
+		assert.Equal(t, "target", symbol.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
 }
 
 func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T) {

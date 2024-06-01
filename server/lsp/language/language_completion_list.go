@@ -204,8 +204,8 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 					})
 				}
 			}
-			// TODO get struct methods
-			// Current way of storing struct methods makes this kind of difficult.
+
+			// Search in struct methods
 			var methods []symbols.Indexable
 			var query string
 			if !filterMembers {
@@ -214,24 +214,6 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 				query = strukt.GetFQN() + "." + symbolInPosition.Text() + "*"
 			}
 
-			/*
-				fullSymbolAtCursor, err := doc.SymbolBeforeCursor(
-					symbols.Position{
-						Line:      uint(position.Line),
-						Character: uint(position.Character) - 1,
-					})
-				fullSymbolAtCursor.AdvanceEndCharacter()
-				var replacementRange protocol.Range
-				if err == nil {
-					replacementRange = fullSymbolAtCursor.TextRange().ToLSP()
-				} else {
-					replacementRange = protocol_utils.NewLSPRange(
-						uint32(position.Line),
-						uint32(position.Character),
-						uint32(position.Line),
-						uint32(position.Character),
-					)
-				}*/
 			replacementRange := protocol_utils.NewLSPRange(
 				uint32(symbolInPosition.PrevAccessPath().TextRange().Start.Line),
 				uint32(symbolInPosition.PrevAccessPath().TextRange().End.Character+1),

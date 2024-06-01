@@ -110,7 +110,7 @@ func (s StructMember) GetHoverInfo() string {
 
 func NewStructMember(name string, fieldType string, bitRanges option.Option[[2]uint], module string, docId string, idRange Range) StructMember {
 	return StructMember{
-		baseType: NewTypeFromString(fieldType),
+		baseType: NewTypeFromString(fieldType, module),
 		bitRange: bitRanges,
 		BaseIndexable: NewBaseIndexable(
 			name,
@@ -125,7 +125,7 @@ func NewStructMember(name string, fieldType string, bitRanges option.Option[[2]u
 
 func NewInlineSubtype(name string, fieldType string, module string, docId string, idRange Range) StructMember {
 	return StructMember{
-		baseType:             NewTypeFromString(fieldType),
+		baseType:             NewTypeFromString(fieldType, module),
 		bitRange:             option.None[[2]uint](),
 		inlinePendingResolve: true,
 		BaseIndexable: NewBaseIndexable(

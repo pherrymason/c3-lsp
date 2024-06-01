@@ -48,6 +48,25 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 		// Here we can look inside elm
 		switch elm.(type) {
+		case *idx.Def:
+			// Translate to the real symbol
+			def := elm.(*idx.Def)
+			var query string
+			if def.ResolvesToType() {
+				query = def.ResolvedType().GetFullQualifiedName()
+			} else {
+				// ??? This was first version of this search
+				query = def.GetModuleString() + "::" + def.GetResolvesTo()
+			}
+
+			symbols := l.indexByFQN.SearchByFQN(query)
+			if len(symbols) > 0 {
+				elm = symbols[0]
+				// Do not advance state, we need to look inside
+			} else {
+				panic("Stumbled on an unresolvable def.")
+			}
+
 		case *idx.Enumerator:
 			enumerator := elm.(*idx.Enumerator)
 			assocValues := enumerator.GetAssociatedValues()
@@ -59,6 +78,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					break
 				}
 			}
+
 		case *idx.Enum:
 			_enum := elm.(*idx.Enum)
 			enumerators := _enum.GetEnumerators()
@@ -165,7 +185,13 @@ func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, d
 		symbol = sourcecode.NewWord(variable.GetType().GetName(), variable.GetIdRange())
 	case *idx.StructMember:
 		sm, _ := elm.(*idx.StructMember)
-		symbol = sourcecode.NewWord(sm.GetType().GetName(), sm.GetIdRange())
+		// Here sm.GetType() can contain module path! Search will fail
+		symbol := l.indexByFQN.SearchByFQN(sm.GetType().GetFullQualifiedName())
+		if len(symbol) > 0 {
+			return symbol[0]
+		}
+		//symbol = sourcecode.NewWord(sm.GetType().GetName(), sm.GetIdRange())
+
 	case *idx.Function:
 		fun, _ := elm.(*idx.Function)
 		symbol = sourcecode.NewWord(fun.GetReturnType(), fun.GetIdRange())

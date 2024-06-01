@@ -50,6 +50,21 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 		for _, fun := range module.ChildrenFunctions {
 			l.indexByFQN.RegisterSymbol(fun)
 		}
+		for _, variable := range module.Variables {
+			l.indexByFQN.RegisterSymbol(variable)
+		}
+		for _, enum := range module.Enums {
+			l.indexByFQN.RegisterSymbol(enum)
+		}
+		for _, fault := range module.Faults {
+			l.indexByFQN.RegisterSymbol(fault)
+		}
+		for _, strukt := range module.Structs {
+			l.indexByFQN.RegisterSymbol(strukt)
+		}
+		for _, def := range module.Defs {
+			l.indexByFQN.RegisterSymbol(def)
+		}
 	}
 
 	l.parsedModulesByDocument[parsedModules.DocId()] = parsedModules
@@ -63,24 +78,12 @@ func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, posi
 		position,
 	)
 
-	/*if err != nil {
-		return option.None[symbols.Indexable]()
-	}*/
-
 	searchResult := l.findClosestSymbolDeclaration(searchParams, FindDebugger{enabled: l.debugEnabled, depth: 0})
 
 	return searchResult.result
 }
 
 func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) option.Option[protocol.Hover] {
-
-	//module := l.findModuleInPosition(doc.URI, params.Position)
-	//fmt.Println(module)
-
-	/*search, err := NewSearchParamsFromPosition(doc, symbols.NewPositionFromLSPPosition(params.Position))
-	if err != nil {
-		return protocol.Hover{}, err
-	}*/
 	search := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
 		l.parsedModulesByDocument[doc.URI],

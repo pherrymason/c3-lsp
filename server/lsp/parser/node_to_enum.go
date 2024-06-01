@@ -58,7 +58,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 							associatedParameters,
 							idx.NewVariable(
 								paramNode.Child(1).Content(sourceCode),
-								idx.NewTypeFromString(paramNode.Child(0).Content(sourceCode)),
+								idx.NewTypeFromString(paramNode.Child(0).Content(sourceCode), moduleName),
 								moduleName,
 								docId,
 								idx.NewRangeFromTreeSitterPositions(paramNode.Child(0).StartPoint(), paramNode.Child(0).EndPoint()),

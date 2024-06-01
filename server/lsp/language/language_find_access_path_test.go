@@ -128,6 +128,38 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		assert.Equal(t, "Cpu", variable.GetType())
 	})
 
+	t.Run("Should find same struct member declaration, when struct is behind a def and cursor is already in member declaration", func(t *testing.T) {
+		state.registerDoc(
+			"structs.c3",
+			`
+			struct Camera3D {
+				int target;
+			}
+			def Camera = Camera3D; 
+			
+			struct Widget {
+				int count;
+				Camera camera;
+			}
+			
+			Widget view = {};
+			view.camera.target = 3;
+			`,
+		)
+		position := buildPosition(13, 16) // Cursor at `view.camera.t|arget = 3;`
+		doc := state.GetDoc("structs.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, state.GetParsedModules(doc.URI), position)
+
+		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Symbol not found")
+		symbol := symbolOption.Get()
+
+		variable := symbol.(*idx.StructMember)
+		assert.Equal(t, "target", symbol.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
 	t.Run("Should find struct method", func(t *testing.T) {
 		state.registerDoc(
 			"structs.c3",

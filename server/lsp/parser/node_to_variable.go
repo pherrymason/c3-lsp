@@ -23,7 +23,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 		case "ident":
 			variable := idx.NewVariable(
 				n.Content(sourceCode),
-				idx.NewTypeFromString(typeNodeContent),
+				idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
 				moduleName,
 				docId,
 				idx.NewRangeFromTreeSitterPositions(
@@ -45,7 +45,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 			sub := n.Child(1)
 			variable := idx.NewVariable(
 				sub.Content(sourceCode),
-				idx.NewTypeFromString(typeNodeContent),
+				idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
 				moduleName,
 				docId,
 				idx.NewRangeFromTreeSitterPositions(
@@ -84,7 +84,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.
 
 			variable := idx.NewVariable(
 				identifier.Content(sourceCode),
-				idx.NewTypeFromString(typeNodeContent),
+				idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
 				moduleName,
 				docId,
 				idx.NewRangeFromTreeSitterPositions(
@@ -134,7 +134,7 @@ func (p *Parser) nodeToConstant(node *sitter.Node, moduleName string, docId stri
 
 	constant = idx.NewConstant(
 		idNode.Content(sourceCode),
-		idx.NewTypeFromString(typeNodeContent),
+		idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
 		moduleName,
 		docId,
 		idx.NewRangeFromTreeSitterPositions(

@@ -16,19 +16,28 @@ func (t Type) GetName() string {
 	return t.name
 }
 
+func (t Type) GetFullQualifiedName() string {
+	if t.baseTypeLanguage {
+		return t.name
+	}
+
+	return t.module + "::" + t.name
+}
+
 func (t Type) String() string {
 	pointerStr := strings.Repeat("*", t.pointer)
 
 	return fmt.Sprintf("%s%s", t.name, pointerStr)
 }
 
-func NewTypeFromString(_type string) Type {
+func NewTypeFromString(_type string, modulePath string) Type {
 	pointerCount := strings.Count(_type, "*")
 	baseType := strings.TrimSuffix(_type, "*")
 
 	return Type{
 		name:    baseType,
 		pointer: pointerCount,
+		module:  modulePath,
 	}
 }
 

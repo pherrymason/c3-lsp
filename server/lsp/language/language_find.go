@@ -63,9 +63,9 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	if searchParams.HasAccessPath() {
 		// Going from here, search should not limit to root search
 		symbolResult := l.findInParentSymbols(searchParams, debugger)
-		if symbolResult.IsSome() {
-			return symbolResult
-		}
+		//if symbolResult.IsSome() {
+		return symbolResult
+		//}
 	}
 
 	if searchParams.LimitsSearchInModule() {
