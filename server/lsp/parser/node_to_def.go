@@ -26,8 +26,6 @@ define_declaration: $ => seq(
 	),
 */
 func (p *Parser) nodeToDef(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Def {
-	//definition := ""
-	//var identifierNode *sitter.Node
 	//fmt.Println(node)
 	defBuilder := idx.NewDefBuilder("", moduleName, docId).
 		WithDocumentRange(
@@ -41,7 +39,6 @@ func (p *Parser) nodeToDef(node *sitter.Node, moduleName string, docId string, s
 		n := node.Child(i)
 		switch n.Type() {
 		case "type_ident", "define_ident":
-			//identifierNode = n
 			defBuilder.WithName(n.Content(sourceCode)).
 				WithIdentifierRange(
 					uint(n.StartPoint().Row),

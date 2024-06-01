@@ -48,6 +48,17 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 		// Here we can look inside elm
 		switch elm.(type) {
+		case *idx.Enumerator:
+			enumerator := elm.(*idx.Enumerator)
+			assocValues := enumerator.GetAssociatedValues()
+			searchingSymbol := state.GetNextSymbol()
+			for i := 0; i < len(assocValues); i++ {
+				if assocValues[i].GetName() == searchingSymbol.Text() {
+					elm = &assocValues[i]
+					state.Advance()
+					break
+				}
+			}
 		case *idx.Enum:
 			_enum := elm.(*idx.Enum)
 			enumerators := _enum.GetEnumerators()
