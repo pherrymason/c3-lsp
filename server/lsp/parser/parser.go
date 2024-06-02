@@ -32,7 +32,7 @@ const ImportDeclaration = `(import_declaration) @import_dec`
 const ModuleQuery = `(source_file ` + ModuleDeclaration + `)`
 
 type Parser struct {
-	Logger commonlog.Logger
+	logger commonlog.Logger
 }
 
 type StructWithSubtyping struct {
@@ -42,7 +42,7 @@ type StructWithSubtyping struct {
 
 func NewParser(logger commonlog.Logger) Parser {
 	return Parser{
-		Logger: logger,
+		logger: logger,
 	}
 }
 
@@ -80,7 +80,6 @@ func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
 	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
 	//parsed := fmt.Sprint(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
 	//fmt.Println(parsed)
-	//p.Logger.Debug(parsed)
 	var moduleSymbol *idx.Module
 	anonymousModuleName := true
 	lastModuleName := ""

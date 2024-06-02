@@ -17,5 +17,6 @@ func NewHandlers(documents *document.DocumentStore,
 	return Handlers{
 		documents: documents,
 		language:  language,
+		parser:    parser,
 	}
 }
