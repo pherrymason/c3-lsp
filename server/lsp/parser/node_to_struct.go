@@ -33,15 +33,16 @@ struct_member_declaration: $ => choice(
 	  seq('inline', field('type', $.type), optional($.ident), optional($.attributes), ';'),
 	),
 */
-func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string, sourceCode []byte) (idx.Struct, []string) {
+func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string, sourceCode []byte) (idx.Struct, []idx.Type) {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
 	isUnion := false
-	membersNeedingSubtypingResolve := []string{}
+	membersNeedingSubtypingResolve := []idx.Type{}
+	//fmt.Println(node)
 
-	for i := uint32(0); i < node.ChildCount(); i++ {
-		child := node.Child(int(i))
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
 		switch child.Type() {
 		case "union":
 			isUnion = true
@@ -63,8 +64,9 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 	structFields := make([]*idx.StructMember, 0)
 	inlinedSubTyping := []string{}
 
-	for i := uint32(0); i < bodyNode.ChildCount(); i++ {
-		memberNode := bodyNode.Child(int(i))
+	// Search Struct members
+	for i := 0; i < int(bodyNode.ChildCount()); i++ {
+		memberNode := bodyNode.Child(i)
 		isInline := false
 
 		//fmt.Println("body child:", memberNode.Type())
@@ -72,7 +74,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 			continue
 		}
 
-		var fieldType string
+		var fieldType idx.Type
 		var identifiers []string
 		var identifier string
 		var identifiersRange []idx.Range
@@ -86,18 +88,21 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 			),
 		*/
 
-		for x := uint32(0); x < memberNode.ChildCount(); x++ {
-			n := memberNode.Child(int(x))
+		for x := 0; x < int(memberNode.ChildCount()); x++ {
+			n := memberNode.Child(x)
 			//fmt.Println("child:", n.Type(), "::", memberNode.Content(sourceCode))
 			switch n.Type() {
 			case "type":
-				fieldType = n.Content(sourceCode)
+				fieldType = p.typeNodeToType(n, moduleName, sourceCode)
+				//fmt.Println(fieldType, n.Content(sourceCode))
+
+				//fieldType = n.Content(sourceCode)
 				if isInline {
 					identifier = "dummy-subtyping"
 				}
 			case "identifier_list":
-				for j := uint32(0); j < n.ChildCount(); j++ {
-					identifiers = append(identifiers, n.Child(int(j)).Content(sourceCode))
+				for j := 0; j < int(n.ChildCount()); j++ {
+					identifiers = append(identifiers, n.Child(j).Content(sourceCode))
 					identifiersRange = append(identifiersRange,
 						idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
 					)
@@ -105,8 +110,8 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string
 			case "attributes":
 				// TODO
 			case "bitstruct_body":
-				bitStructs := p.nodeToBitStructMembers(n, moduleName, docId, sourceCode)
-				structFields = append(structFields, bitStructs...)
+				bitStructsMembers := p.nodeToBitStructMembers(n, moduleName, docId, sourceCode)
+				structFields = append(structFields, bitStructsMembers...)
 			case "inline":
 				isInline = true
 				//fmt.Println("inline!: ", n.Content(sourceCode))

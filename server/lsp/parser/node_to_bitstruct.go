@@ -12,7 +12,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId str
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
-	bakedType := ""
+	var bakedType idx.Type
 	structFields := []*idx.StructMember{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -31,7 +31,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId str
 		case "attributes":
 			// TODO attributes
 		case "type":
-			bakedType = child.Child(0).Content(sourceCode)
+			bakedType = p.typeNodeToType(child, moduleName, sourceCode)
 		case "bitstruct_body":
 			structFields = p.nodeToBitStructMembers(child, moduleName, docId, sourceCode)
 		}
@@ -54,10 +54,25 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId str
 func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.StructMember {
 
 	structFields := []*idx.StructMember{}
-	for j := int(0); j < int(node.ChildCount()); j++ {
-		bdefnode := node.Child(j)
+	// node = bitstruct_body
+	for i := 0; i < int(node.ChildCount()); i++ {
+		bdefnode := node.Child(i)
 		bType := bdefnode.Type()
 		if bType == "bitstruct_def" {
+			var memberType idx.Type
+			var identity string
+			for x := 0; x < int(bdefnode.ChildCount()); x++ {
+				xNode := bdefnode.Child(x)
+				//fmt.Println(xNode.Type())
+				switch xNode.Type() {
+				case "base_type":
+					// Note: here we consciously pass bdefnode because typeNodeToType expects a child node of base_type. If we send xNode it will not find it.
+					memberType = p.typeNodeToType(bdefnode, moduleName, sourceCode)
+				case "ident":
+					identity = xNode.Content(sourceCode)
+				}
+			}
+
 			bitRanges := [2]uint{}
 			lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
 			bitRanges[0] = uint(lowBit)
@@ -68,13 +83,12 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, do
 			}
 
 			member := idx.NewStructMember(
-				bdefnode.Child(1).Content(sourceCode),
-				bdefnode.Child(0).Content(sourceCode),
+				identity,
+				memberType,
 				option.Some(bitRanges),
 				moduleName,
 				docId,
 				idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
-				//idx.NewRangeFromTreeSitterPositions(child.StartPoint(), child.EndPoint()),
 			)
 			structFields = append(structFields, &member)
 		} else if bType == "_bitstruct_simple_defs" {

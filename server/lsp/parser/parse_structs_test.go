@@ -16,6 +16,7 @@ module x;
 struct MyStruct (MyInterface, MySecondInterface) {
 	int data;
 	char key;
+	raylib::Camera camera;
 }
 
 fn void MyStruct.init(&self)
@@ -36,7 +37,7 @@ fn void MyStruct.init(&self)
 		assert.Same(t, symbols.Get("x").Children()[0], found)
 		assert.Equal(t, "MyStruct", found.GetName())
 		assert.False(t, found.IsUnion())
-		assert.Equal(t, idx.NewRange(2, 0, 5, 1), found.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(2, 0, 6, 1), found.GetDocumentRange())
 		assert.Equal(t, idx.NewRange(2, 7, 2, 15), found.GetIdRange())
 	})
 
@@ -59,6 +60,17 @@ fn void MyStruct.init(&self)
 		assert.Equal(t, "docId", member.GetDocumentURI())
 		assert.Equal(t, "x", member.GetModuleString())
 		assert.Same(t, found.Children()[1], member)
+
+		// Last member contains implicit module path. This should be reflected in its parsed Type
+		member = found.GetMembers()[2]
+		assert.Equal(t, "camera", member.GetName())
+		assert.Equal(t, "Camera", member.GetType().GetName())
+		assert.Equal(t, "raylib::Camera", member.GetType().GetFullQualifiedName())
+
+		assert.Equal(t, idx.NewRange(5, 16, 5, 22), member.GetIdRange())
+		assert.Equal(t, "docId", member.GetDocumentURI())
+		assert.Equal(t, "x", member.GetModuleString())
+		assert.Same(t, found.Children()[2], member)
 	})
 
 	t.Run("finds struct implementing interface", func(t *testing.T) {

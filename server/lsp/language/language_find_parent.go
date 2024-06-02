@@ -185,12 +185,10 @@ func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, d
 		symbol = sourcecode.NewWord(variable.GetType().GetName(), variable.GetIdRange())
 	case *idx.StructMember:
 		sm, _ := elm.(*idx.StructMember)
-		// Here sm.GetType() can contain module path! Search will fail
 		symbol := l.indexByFQN.SearchByFQN(sm.GetType().GetFullQualifiedName())
 		if len(symbol) > 0 {
 			return symbol[0]
 		}
-		//symbol = sourcecode.NewWord(sm.GetType().GetName(), sm.GetIdRange())
 
 	case *idx.Function:
 		fun, _ := elm.(*idx.Function)

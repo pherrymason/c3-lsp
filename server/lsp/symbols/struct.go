@@ -108,9 +108,9 @@ func (s StructMember) GetHoverInfo() string {
 	return fmt.Sprintf("%s %s", s.baseType, s.name)
 }
 
-func NewStructMember(name string, fieldType string, bitRanges option.Option[[2]uint], module string, docId string, idRange Range) StructMember {
+func NewStructMember(name string, fieldType Type, bitRanges option.Option[[2]uint], module string, docId string, idRange Range) StructMember {
 	return StructMember{
-		baseType: NewTypeFromString(fieldType, module),
+		baseType: fieldType,
 		bitRange: bitRanges,
 		BaseIndexable: NewBaseIndexable(
 			name,
@@ -123,9 +123,9 @@ func NewStructMember(name string, fieldType string, bitRanges option.Option[[2]u
 	}
 }
 
-func NewInlineSubtype(name string, fieldType string, module string, docId string, idRange Range) StructMember {
+func NewInlineSubtype(name string, fieldType Type, module string, docId string, idRange Range) StructMember {
 	return StructMember{
-		baseType:             NewTypeFromString(fieldType, module),
+		baseType:             fieldType,
 		bitRange:             option.None[[2]uint](),
 		inlinePendingResolve: true,
 		BaseIndexable: NewBaseIndexable(

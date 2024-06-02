@@ -37,7 +37,7 @@ type Parser struct {
 
 type StructWithSubtyping struct {
 	strukt  *idx.Struct
-	members []string
+	members []idx.Type
 }
 
 func NewParser(logger commonlog.Logger) Parser {
@@ -242,8 +242,8 @@ func resolveStructSubtypes(parsedModules *unit_modules.UnitModules, subtyping []
 			for _, module := range parsedModules.Modules() {
 				// Search
 				for _, strukt := range module.Structs {
-					if strukt.GetName() == inlinedMemberName {
-						struktWithSubtyping.strukt.InheritMembersFrom(inlinedMemberName, strukt)
+					if strukt.GetName() == inlinedMemberName.GetName() {
+						struktWithSubtyping.strukt.InheritMembersFrom(inlinedMemberName.GetName(), strukt)
 					}
 				}
 			}
