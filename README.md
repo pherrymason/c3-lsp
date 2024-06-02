@@ -27,7 +27,7 @@ Project is written in Golang, so in theory it could be built to any OS supported
 Simply run `c3-lsp` to start the server.  
 It supports the following options:
 - **help:** Display accepted options.
-- **sendCrashReports:** If enabled (disabled by default) will send crash reports to Sentry so bugs can be debugged easily.
+- **send-reports:** If enabled (disabled by default) will send __crash__ reports to Sentry so bugs can be debugged easily.
 - **lang-version:** Use it to specify a specific c3 language version. By default `c3-lsp` will select the last version supported.
 
 

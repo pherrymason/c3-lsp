@@ -15,7 +15,7 @@ module.exports = {
     const executable = config.get('path');
     let args = [];
     if (config.get('sendCrashReports')) {
-      args.push('--sendCrashReports');
+      args.push('--send-crash-reports');
     }
 
     const serverOptions = {

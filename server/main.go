@@ -65,7 +65,7 @@ type Options struct {
 func cmdLineArguments() Options {
 	var showHelp = flag.Bool("help", false, "Shows this help")
 
-	var sendCrashReports = flag.Bool("sendCrashReports", false, "Automatically reports crashes to server.")
+	var sendCrashReports = flag.Bool("send-crash-reports", false, "Automatically reports crashes to server.")
 
 	var logFilePath = flag.String("log-path", "./lsp.log", "Enables logs and sets its filepath")
 
