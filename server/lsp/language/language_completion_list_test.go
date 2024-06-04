@@ -845,7 +845,7 @@ func TestLanguage_BuildCompletionList_interfaces(t *testing.T) {
 		{
 			fn void run();
 		}
-		struct Emu (Emul
+		struct Emu (Emul){}
 		`)
 		doc := state.GetDoc("app.c3")
 		completionList := state.language.BuildCompletionList(&doc, buildPosition(5, 18))

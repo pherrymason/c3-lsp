@@ -3,7 +3,11 @@ init:
 	$(MAKE) build-parser
 
 clone-tree-sitter:
-	[ ! -d "tree-sitter-c3" ] && git clone git@github.com:cbuttner/tree-sitter-c3.git assets/tree-sitter-c3 || true
+#	[ ! -d "tree-sitter-c3" ] && git clone git@github.com:cbuttner/tree-sitter-c3.git assets/tree-sitter-c3 || true
+	[ ! -d "tree-sitter-c3" ] && git clone git@github.com:pherrymason/tree-sitter-c3.git assets/tree-sitter-c3 || true
+
+treesitter-playground:
+	cd assets/tree-sitter-c3 && tree-sitter build-wasm && tree-sitter playground
 
 build-parser:
 	cd assets/tree-sitter-c3 && tree-sitter generate

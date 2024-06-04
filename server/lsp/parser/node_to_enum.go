@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -53,7 +51,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, 
 				for p := 0; p < int(param_list.ChildCount()); p++ {
 					paramNode := param_list.Child(p)
 					if paramNode.Type() == "enum_param_declaration" {
-						fmt.Println(paramNode.Type(), paramNode.Content(sourceCode))
+						//fmt.Println(paramNode.Type(), paramNode.Content(sourceCode))
 						associatedParameters = append(
 							associatedParameters,
 							idx.NewVariable(

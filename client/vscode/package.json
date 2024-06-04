@@ -2,7 +2,7 @@
   "name": "c3-lsp-client",
   "displayName": "C3 Language Server client",
   "description": "Language Server client for C3. Download C3 server from https://github.com/pherrymason/c3-lsp",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "rferras",
   "engines": {
     "vscode": "^1.40.0"
