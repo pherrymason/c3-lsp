@@ -19,6 +19,10 @@ func (i *IndexStore) RegisterSymbol(symbol idx.Indexable) {
 	i.store.Insert(symbol)
 }
 
+func (i *IndexStore) ClearByTag(tag string) {
+	i.store.ClearByTag(tag)
+}
+
 func (i *IndexStore) SearchByFQN(query string) []idx.Indexable {
 	return i.store.Search(query)
 }

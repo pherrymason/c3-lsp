@@ -44,6 +44,7 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 
 	//l.logger.Debug(fmt.Sprint("Parsing ", doc.URI))
 	parsedModules := parser.ParseSymbols(doc)
+	l.indexByFQN.ClearByTag(doc.URI)
 
 	// Register in the index, the root elements
 	for _, module := range parsedModules.Modules() {

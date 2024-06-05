@@ -16,6 +16,35 @@ func NewTrie() *Trie {
 	}
 }
 
+func (t *Trie) ClearByTag(tag string) {
+	clearByTagHelper(t.root, tag)
+}
+
+func clearByTagHelper(node *TrieNode, docId string) bool {
+	if node == nil {
+		return false
+	}
+
+	// Recursively clear children
+	for key, child := range node.children {
+		if clearByTagHelper(child, docId) {
+			delete(node.children, key)
+		}
+	}
+
+	// Clear this node if it matches the tag
+	if node.symbol != nil && node.symbol.GetDocumentURI() == docId {
+		node.symbol = nil
+	}
+
+	// If node has children, just clear the symbol
+	if node.symbol == nil && len(node.children) == 0 {
+		return true
+	}
+
+	return false
+}
+
 func (t *Trie) Insert(symbol symbols.Indexable) {
 	node := t.root
 	fqn := symbol.GetFQN()
@@ -28,6 +57,7 @@ func (t *Trie) Insert(symbol symbols.Indexable) {
 	}
 	node.symbol = symbol
 }
+
 func splitFQN(fqn string) []string {
 	return strings.FieldsFunc(fqn, func(r rune) bool {
 		return r == ':' || r == '.'

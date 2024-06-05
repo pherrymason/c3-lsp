@@ -99,3 +99,28 @@ func TestTrie_with_empty_nodes(t *testing.T) {
 		assert.Equal(t, "app::structName.tearPot", prefixSearch[0].GetFQN())
 	})
 }
+
+func TestTrie_clearing_by_tag(t *testing.T) {
+	trie := NewTrie()
+	docId := "doc"
+
+	fun := symbols.NewFunctionBuilder("method1", "void", "app", docId).WithTypeIdentifier("structName").Build()
+	trie.Insert(fun)
+
+	trie.ClearByTag(docId)
+	assert.Equal(t, 0, len(trie.root.children))
+}
+
+func TestTrie_clearing_by_tag_should_keep_nodes_with_children(t *testing.T) {
+	trie := NewTrie()
+
+	fun := symbols.NewFunctionBuilder("method1", "void", "app", "doc").WithTypeIdentifier("structName").Build()
+	trie.Insert(fun)
+
+	fun2 := symbols.NewFunctionBuilder("method2", "void", "app", "different-doc").WithTypeIdentifier("structName").Build()
+	trie.Insert(fun2)
+
+	trie.ClearByTag("different-doc")
+	assert.Equal(t, 1, len(trie.Search("app::structName::method1")))
+	assert.Equal(t, 0, len(trie.Search("app::structName::method2")))
+}
