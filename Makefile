@@ -16,6 +16,7 @@ build-parser:
 	cp -r assets/tree-sitter-c3/src/tree_sitter server/lsp/cst
 	cp assets/tree-sitter-c3/src/parser.c server/lsp/cst/parser.c
 	cp assets/tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
+	cp assets/tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
 
 index-c3-std:
 ifndef VERSION
