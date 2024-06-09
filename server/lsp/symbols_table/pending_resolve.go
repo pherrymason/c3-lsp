@@ -100,3 +100,15 @@ func (p *PendingToResolve) AddStructMemberTypes(strukt *symbols.Struct, contextM
 		}
 	}
 }
+
+func (p *PendingToResolve) AddFunctionTypes(function *symbols.Function, contextModule *symbols.Module) {
+	if !function.GetReturnType().IsBaseTypeLanguage() {
+		p.typesByModule[contextModule.GetName()] = append(
+			p.typesByModule[contextModule.GetName()],
+			PendingTypeContext{
+				vType:         function.GetReturnType(),
+				contextModule: contextModule,
+			},
+		)
+	}
+}

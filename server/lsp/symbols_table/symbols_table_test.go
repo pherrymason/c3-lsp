@@ -133,4 +133,36 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		assert.Equal(t, "yy::Ref", module.Structs["CustomStruct"].GetMembers()[0].GetType().GetFullQualifiedName())
 	})
 
+	t.Run("resolves function return type defined in different file & module should resolve", func(t *testing.T) {
+		docId := "aDocId"
+		mod := "xx"
+		symbolsTable := NewSymbolsTable()
+
+		um := NewParsedModules(docId)
+		module := symbols.NewModuleBuilder(mod, docId).Build()
+		module.AddFunction(
+			symbols.NewFunctionBuilder("foo", symbols.NewTypeFromString("Ref", mod), mod, docId).
+				Build(),
+		)
+		module.AddImports([]string{"yy"})
+
+		um.modules.Set(mod, module)
+		pendingToResolve := NewPendingToResolve()
+		pendingToResolve.AddFunctionTypes(module.ChildrenFunctions[0], module)
+		symbolsTable.Register(um, pendingToResolve)
+
+		docBId := "aDocBId"
+		modB := "yy"
+		umB := NewParsedModules(docBId)
+		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
+		moduleB.AddDef(
+			symbols.NewDefBuilder("Ref", modB, docBId).Build(),
+		)
+		umB.modules.Set(mod, moduleB)
+		symbolsTable.Register(umB, NewPendingToResolve())
+
+		assert.Equal(t, true, symbolsTable.pendingToResolve.GetTypesByModule(mod)[0].solved)
+		assert.Equal(t, "yy::Ref", module.ChildrenFunctions[0].GetReturnType().GetFullQualifiedName())
+	})
+
 }

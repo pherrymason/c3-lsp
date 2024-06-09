@@ -135,6 +135,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 			case "func_definition", "func_declaration":
 				function := p.nodeToFunction(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
 				moduleSymbol.AddFunction(&function)
+				pendingToResolve.AddFunctionTypes(&function, moduleSymbol)
 
 			case "enum_declaration":
 				enum := p.nodeToEnum(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)

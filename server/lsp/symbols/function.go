@@ -98,8 +98,8 @@ func (f Function) GetKind() protocol.CompletionItemKind {
 	}
 }
 
-func (f Function) GetReturnType() Type {
-	return f.returnType
+func (f *Function) GetReturnType() *Type {
+	return &f.returnType
 }
 
 func (f Function) ArgumentIds() []string {
