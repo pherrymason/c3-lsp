@@ -57,7 +57,7 @@ func (st *SymbolsTable) resolveTypes() {
 				continue
 			}
 
-			st.tryToSolveType(typesContext[x], moduleName)
+			st.tryToSolveType(&typesContext[x], moduleName)
 		}
 	}
 
@@ -65,14 +65,15 @@ func (st *SymbolsTable) resolveTypes() {
 	st.expendStructSubtypes()
 }
 
-func (st *SymbolsTable) tryToSolveType(typeContext PendingTypeContext, moduleName string) {
+func (st *SymbolsTable) tryToSolveType(typeContext *PendingTypeContext, moduleName string) {
 	if len(typeContext.contextModule.Imports) > 0 {
 		// Check inside imported modules
 		for _, imported := range typeContext.contextModule.Imports {
+			mpath := symbols.NewModulePathFromString(imported)
 
+			// Loop through project modules searching for `imported`
 			for _, parsedModules := range st.parsedModulesByDocument {
 
-				mpath := symbols.NewModulePathFromString(imported)
 				if !parsedModules.HasExplicitlyImportedModules(mpath) {
 					continue
 				}
@@ -92,6 +93,7 @@ func (st *SymbolsTable) tryToSolveType(typeContext PendingTypeContext, moduleNam
 		if moduleOption.IsSome() {
 			// Found in same file! Fix it
 			typeContext.vType.SetModule(moduleOption.Get())
+			typeContext.Solve()
 		}
 	}
 }

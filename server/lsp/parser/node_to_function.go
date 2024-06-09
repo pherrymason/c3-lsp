@@ -83,9 +83,8 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 		variables = p.FindVariableDeclarations(node, moduleName, docId, sourceCode)
 	}
 
-	for _, variable := range arguments {
-		variables = append(variables, variable)
-	}
+	variables = append(variables, arguments...)
+
 	symbol.AddVariables(variables)
 
 	return symbol
@@ -131,27 +130,6 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 			}
 		}
 	}
-
-	/*
-		if argNode.ChildCount() == 2 {
-			if argNode.Child(0).Type() == "identifier" {
-				// argument without type
-				idNode := argNode.Child(0)
-				identifier = idNode.Content(sourceCode)
-				idRange = idx.NewRangeFromSitterPositions(idNode.StartPoint(), idNode.EndPoint())
-			} else {
-				// first node is type
-				argType = argNode.Child(0).Content(sourceCode)
-
-				idNode := argNode.Child(1)
-				identifier = idNode.Content(sourceCode)
-				idRange = idx.NewRangeFromSitterPositions(idNode.StartPoint(), idNode.EndPoint())
-			}
-		} else if argNode.ChildCount() == 1 {
-			idNode := argNode.Child(0)
-			identifier = idNode.Content(sourceCode)
-			idRange = idx.NewRangeFromSitterPositions(idNode.StartPoint(), idNode.EndPoint())
-		}*/
 
 	variable := idx.NewVariable(
 		identifier,
