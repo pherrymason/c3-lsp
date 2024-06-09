@@ -39,7 +39,7 @@ func NewConstant(name string, variableType Type, module string, docId string, id
 	}
 }
 
-func (v Variable) GetType() *Type {
+func (v *Variable) GetType() *Type {
 	return &v.Type
 }
 

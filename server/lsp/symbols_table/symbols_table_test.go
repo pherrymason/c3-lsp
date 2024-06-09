@@ -133,7 +133,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		assert.Equal(t, "yy::Ref", module.Structs["CustomStruct"].GetMembers()[0].GetType().GetFullQualifiedName())
 	})
 
-	t.Run("resolves function return type defined in different file & module should resolve", func(t *testing.T) {
+	t.Run("resolves function return and argument types defined in different file & module should resolve", func(t *testing.T) {
 		docId := "aDocId"
 		mod := "xx"
 		symbolsTable := NewSymbolsTable()
@@ -142,6 +142,9 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddFunction(
 			symbols.NewFunctionBuilder("foo", symbols.NewTypeFromString("Ref", mod), mod, docId).
+				WithArgument(
+					symbols.NewVariableBuilder("zoo", "Ref", mod, docId).Build(),
+				).
 				Build(),
 		)
 		module.AddImports([]string{"yy"})
@@ -163,6 +166,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 
 		assert.Equal(t, true, symbolsTable.pendingToResolve.GetTypesByModule(mod)[0].solved)
 		assert.Equal(t, "yy::Ref", module.ChildrenFunctions[0].GetReturnType().GetFullQualifiedName())
+		assert.Equal(t, "yy::Ref", module.ChildrenFunctions[0].GetArguments()[0].GetType().GetFullQualifiedName())
 	})
 
 }

@@ -106,6 +106,15 @@ func (f Function) ArgumentIds() []string {
 	return f.argumentIds
 }
 
+func (f *Function) GetArguments() []*Variable {
+	arguments := []*Variable{}
+	for _, arg := range f.ArgumentIds() {
+		arguments = append(arguments, f.Variables[arg])
+	}
+
+	return arguments
+}
+
 func (f *Function) AddVariables(variables []*Variable) {
 	for _, variable := range variables {
 		f.Variables[variable.name] = variable

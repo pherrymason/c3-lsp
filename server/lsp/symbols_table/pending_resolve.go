@@ -111,4 +111,17 @@ func (p *PendingToResolve) AddFunctionTypes(function *symbols.Function, contextM
 			},
 		)
 	}
+
+	for _, arg := range function.ArgumentIds() {
+		variable := function.Variables[arg]
+		if !variable.GetType().IsBaseTypeLanguage() {
+			p.typesByModule[contextModule.GetName()] = append(
+				p.typesByModule[contextModule.GetName()],
+				PendingTypeContext{
+					vType:         variable.GetType(),
+					contextModule: contextModule,
+				},
+			)
+		}
+	}
 }
