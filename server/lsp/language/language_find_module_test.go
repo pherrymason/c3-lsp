@@ -200,6 +200,33 @@ func TestLanguage_findClosestSymbolDeclaration_should_find_types_referenced_impl
 		assert.Equal(t, "color", symbol.GetName())
 		assert.Equal(t, "external::Color", symbol.GetType().GetFullQualifiedName(), "Color module was not properly infered.")
 	})
+
+	t.Run("resolves struct member type even when reference was registered later", func(t *testing.T) {
+		state := NewTestState()
+		state.registerDoc(
+			"main.c3",
+			`module main;
+			import external;
+			struct MyStruct {
+				Color color;
+			}`,
+		)
+		state.registerDoc(
+			"external.c3",
+			`module external;
+			def Color = int;`,
+		)
+		position := buildPosition(4, 11) // Cursor at Color c|olor;
+		doc := state.GetDoc("main.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+
+		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Symbol not found")
+		symbol := symbolOption.Get().(*idx.StructMember)
+		assert.Equal(t, "color", symbol.GetName())
+		assert.Equal(t, "external::Color", symbol.GetType().GetFullQualifiedName(), "Color module was not properly infered.")
+	})
 }
 
 func TestLanguage_findClosestSymbolDeclaration_in_imported_modules(t *testing.T) {

@@ -42,7 +42,7 @@ func (st *SymbolsTable) GetByDoc(docId string) *UnitModules {
 	return &value
 }
 
-func (st SymbolsTable) ByDoc() map[protocol.DocumentUri]UnitModules {
+func (st SymbolsTable) All() map[protocol.DocumentUri]UnitModules {
 	return st.parsedModulesByDocument
 }
 
@@ -82,7 +82,6 @@ func (st *SymbolsTable) tryToSolveType(typeContext PendingTypeContext, moduleNam
 					// Found in same file! Fix it
 					typeContext.vType.SetModule(moduleOption.Get())
 					typeContext.Solve()
-					//st.pendingToResolve.SolveType(moduleName, x)
 				}
 
 			}
@@ -93,13 +92,11 @@ func (st *SymbolsTable) tryToSolveType(typeContext PendingTypeContext, moduleNam
 		if moduleOption.IsSome() {
 			// Found in same file! Fix it
 			typeContext.vType.SetModule(moduleOption.Get())
-			//st.pendingToResolve.SolveType(moduleName, x)
 		}
 	}
 }
 
 func (st *SymbolsTable) findTypeInModules(vType *symbols.Type) option.Option[string] {
-
 	for _, parsedModules := range st.parsedModulesByDocument {
 		for _, module := range parsedModules.Modules() {
 			for _, x := range module.Children() {

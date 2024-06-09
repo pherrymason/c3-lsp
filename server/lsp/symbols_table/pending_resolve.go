@@ -53,7 +53,7 @@ func (p *PendingToResolve) AddStructSubtype(strukt *symbols.Struct, types []symb
 func (p *PendingToResolve) AddStructSubtype2(strukt *symbols.Struct) {
 	inlineMembers := []symbols.Type{}
 	for _, member := range strukt.GetMembers() {
-		if member.IsInlinePendingToResolve() {
+		if member.IsInlinePendingToResolve() && !member.IsExpandedInline() {
 			inlineMembers = append(inlineMembers, *member.GetType())
 		}
 	}

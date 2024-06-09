@@ -10,7 +10,7 @@ import (
 )
 
 func (l *Language) findModuleInPosition(docId string, position symbols.Position) string {
-	for id, modulesByDoc := range l.symbolsTable.ByDoc() {
+	for id, modulesByDoc := range l.symbolsTable.All() {
 		if id == docId {
 			continue
 		}
@@ -27,7 +27,7 @@ func (l *Language) findModuleInPosition(docId string, position symbols.Position)
 
 func (l *Language) implicitImportedParsedModules(acceptedModulePaths []symbols.ModulePath, excludeDocId option.Option[string]) []*symbols.Module {
 	var collectionModules []*symbols.Module
-	for docId, parsedModules := range l.symbolsTable.ByDoc() {
+	for docId, parsedModules := range l.symbolsTable.All() {
 		if excludeDocId.IsSome() && excludeDocId.Get() == docId {
 			continue
 		}
@@ -97,7 +97,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 
 		collectionParsedModules = append(collectionParsedModules, *parsedModules)
 
-		for oDocId, parsedModules := range l.symbolsTable.ByDoc() {
+		for oDocId, parsedModules := range l.symbolsTable.All() {
 			if docId == oDocId {
 				continue
 			}
@@ -117,7 +117,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		}
 
 		// Doc id not specified, search by module. Collect scope belonging to same module as searchParams.module
-		for docId, parsedModules := range l.symbolsTable.ByDoc() {
+		for docId, parsedModules := range l.symbolsTable.All() {
 			if searchParams.ShouldExcludeDocId(docId) {
 				continue
 			}
@@ -244,7 +244,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 func (l *Language) findSymbolDeclarationInModule(searchParams search_params.SearchParams, moduleToSearch symbols.ModulePath, debugger FindDebugger) SearchResult {
 	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
 
-	for docId, modulesByDoc := range l.symbolsTable.ByDoc() {
+	for docId, modulesByDoc := range l.symbolsTable.All() {
 		//for _, scope := range modulesByDoc.GetLoadableModules(searchParams.ModulePathInCursor()) {
 		for _, scope := range modulesByDoc.GetLoadableModules(moduleToSearch) {
 			searchResult.TrackTraversedModule(scope.GetModuleString())
@@ -287,7 +287,7 @@ func (l Language) findModuleNameInTraversedModules(searchParams search_params.Se
 
 	moduleName := searchParams.GetFullQualifiedName()
 
-	for _, parsedModulesByDoc := range l.symbolsTable.ByDoc() {
+	for _, parsedModulesByDoc := range l.symbolsTable.All() {
 		for _, module := range parsedModulesByDoc.Modules() {
 
 			if module.GetName() == moduleName {
