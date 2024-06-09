@@ -114,19 +114,20 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, moduleName string, docId string, sourceCode []byte) *idx.Variable {
 	var identifier string = ""
 	var idRange idx.Range
-	var argType string = ""
+	var argType idx.Type
 
 	for i := uint32(0); i < argNode.ChildCount(); i++ {
 		n := argNode.Child(int(i))
 
 		switch n.Type() {
 		case "type":
-			argType = n.Content(sourceCode)
+			argType = p.typeNodeToType(n, moduleName, sourceCode)
 		case "ident":
 			identifier = n.Content(sourceCode)
 			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
+			// When detecting a self, the type is the Struct type
 			if identifier == "self" && methodIdentifier != "" {
-				argType = methodIdentifier
+				argType = idx.NewTypeFromString(methodIdentifier, moduleName)
 			}
 		}
 	}
@@ -154,7 +155,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 
 	variable := idx.NewVariable(
 		identifier,
-		idx.NewTypeFromString(argType, moduleName),
+		argType,
 		moduleName,
 		docId,
 		idRange,
