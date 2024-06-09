@@ -138,15 +138,17 @@ func GetCanonicalPath(path string) string {
 
 func ScanForC3(basePath string) ([]string, error) {
 	var files []string
-	extension := "c3"
+	extensions := []string{"c3", "c3i"}
 
 	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if !info.IsDir() && filepath.Ext(path) == "."+extension {
-			files = append(files, path)
+		for _, ext := range extensions {
+			if !info.IsDir() && filepath.Ext(path) == "."+ext {
+				files = append(files, path)
+			}
 		}
 
 		return nil
