@@ -4,7 +4,7 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/cst"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/tliron/commonlog"
 )
@@ -33,21 +33,23 @@ const ModuleQuery = `(source_file ` + ModuleDeclaration + `)`
 
 type Parser struct {
 	logger commonlog.Logger
-}
-
-type StructWithSubtyping struct {
-	strukt  *idx.Struct
-	members []idx.Type
+	//pendingToResolve symbols_table.PendingToResolve
 }
 
 func NewParser(logger commonlog.Logger) Parser {
 	return Parser{
 		logger: logger,
+		//pendingToResolve: symbols_table.NewPendingToResolve(),
 	}
 }
 
-func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
-	parsedModules := unit_modules.NewParsedModules(doc.URI)
+func (p *Parser) ClearProject() {
+	// p.pendingToResolve = symbols_table.NewPendingToResolve()
+}
+
+func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules, symbols_table.PendingToResolve) {
+	parsedModules := symbols_table.NewParsedModules(doc.URI)
+	pendingToResolve := symbols_table.NewPendingToResolve()
 	//fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
 	query := `[
@@ -83,7 +85,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
 	var moduleSymbol *idx.Module
 	anonymousModuleName := true
 	lastModuleName := ""
-	subtyptingToResolve := []StructWithSubtyping{}
+	//subtyptingToResolve := []StructWithSubtyping{}
 
 	for {
 		m, ok := qc.NextMatch()
@@ -99,7 +101,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
 				if c.Node.HasError() {
 					fmt.Printf("Node has error!\n")
 					fmt.Printf(nodeType)
-				}*/
+				}
+			*/
 
 			if nodeType != "module" {
 				moduleSymbol = parsedModules.GetOrInitModule(
@@ -132,8 +135,10 @@ func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
 				moduleSymbol.AddImports(imports)
 
 			case "global_declaration":
-				variables := p.globalVariableDeclarationNodeToVariable(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleName := moduleSymbol.GetModuleString()
+				variables := p.globalVariableDeclarationNodeToVariable(c.Node, moduleName, doc.URI, sourceCode)
 				moduleSymbol.AddVariables(variables)
+				pendingToResolve.AddVariableType(variables, moduleSymbol)
 
 			case "func_definition", "func_declaration":
 				function := p.nodeToFunction(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
@@ -144,13 +149,13 @@ func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
 				moduleSymbol.AddEnum(&enum)
 
 			case "struct_declaration":
-				_struct, membersNeedingSubtypingResolve := p.nodeToStruct(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
-				moduleSymbol.AddStruct(&_struct)
+				strukt, membersNeedingSubtypingResolve := p.nodeToStruct(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
+				moduleSymbol.AddStruct(&strukt)
 				if len(membersNeedingSubtypingResolve) > 0 {
-					subtyptingToResolve = append(subtyptingToResolve,
-						StructWithSubtyping{strukt: &_struct, members: membersNeedingSubtypingResolve},
-					)
+					pendingToResolve.AddStructSubtype(&strukt, membersNeedingSubtypingResolve)
 				}
+
+				pendingToResolve.AddStructMemberTypes(&strukt, moduleSymbol)
 
 			case "bitstruct_declaration":
 				bitstruct := p.nodeToBitStruct(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
@@ -198,9 +203,10 @@ func (p *Parser) ParseSymbols(doc *document.Document) unit_modules.UnitModules {
 		)
 	}
 
-	resolveStructSubtypes(&parsedModules, subtyptingToResolve)
+	// Try to resolve as many types as possible
+	//p.resolveTypes(&parsedModules)
 
-	return parsedModules
+	return parsedModules, pendingToResolve
 }
 
 func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.Variable {
@@ -224,28 +230,10 @@ func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, 
 				found[content] = true
 				funcVariables := p.localVariableDeclarationNodeToVariable(c.Node, moduleName, docId, sourceCode)
 
-				for _, variable := range funcVariables {
-					variables = append(variables, variable)
-				}
+				variables = append(variables, funcVariables...)
 			}
 		}
 	}
 
 	return variables
-}
-
-func resolveStructSubtypes(parsedModules *unit_modules.UnitModules, subtyping []StructWithSubtyping) {
-	for _, struktWithSubtyping := range subtyping {
-		for _, inlinedMemberName := range struktWithSubtyping.members {
-
-			for _, module := range parsedModules.Modules() {
-				// Search
-				for _, strukt := range module.Structs {
-					if strukt.GetName() == inlinedMemberName.GetName() {
-						struktWithSubtyping.strukt.InheritMembersFrom(inlinedMemberName.GetName(), strukt)
-					}
-				}
-			}
-		}
-	}
 }

@@ -17,7 +17,7 @@ func TestExtractSymbols_Functions_Definitions(t *testing.T) {
 	parser := createParser()
 
 	t.Run("Finds function", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
@@ -35,7 +35,7 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 	parser := createParser()
 
 	t.Run("Finds function", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("init_window")
 		assert.True(t, fn.IsSome(), "Function was not found")
@@ -55,7 +55,7 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 	parser := createParser()
 
 	t.Run("Finds function", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
@@ -66,7 +66,7 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 	})
 
 	t.Run("Finds function arguments", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
@@ -100,7 +100,7 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 	parser := createParser()
 
 	t.Run("Finds method", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.method")
 		assert.True(t, fn.IsSome(), "Method was not found")
@@ -111,7 +111,7 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 	})
 
 	t.Run("Finds method arguments", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.method")
 		assert.True(t, fn.IsSome(), "Method was not found")
@@ -138,7 +138,7 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 		docId := "docId"
 		doc := document.NewDocument(docId, source)
 		parser := createParser()
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.method")
 		assert.True(t, fn.IsSome(), "Method was not found")

@@ -16,12 +16,20 @@ func (t Type) GetName() string {
 	return t.name
 }
 
+func (t Type) IsBaseTypeLanguage() bool {
+	return t.baseTypeLanguage
+}
+
 func (t Type) GetFullQualifiedName() string {
 	if t.baseTypeLanguage {
 		return t.name
 	}
 
 	return t.module + "::" + t.name
+}
+
+func (t *Type) SetModule(module string) {
+	t.module = module
 }
 
 func (t Type) String() string {

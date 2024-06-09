@@ -7,7 +7,7 @@ import (
 	d "github.com/pherrymason/c3-lsp/lsp/document"
 	"github.com/pherrymason/c3-lsp/lsp/document/sourcecode"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 	"github.com/pherrymason/c3-lsp/option"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,7 +21,7 @@ func buildPosition(line uint, character uint) idx.Position {
 func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_symbol_at_cursor_position(t *testing.T) {
 	sourceCode := "module system; int emu;"
 	doc := d.NewDocument("filename", sourceCode)
-	parsedModules := unit_modules.NewParsedModules("filename")
+	parsedModules := symbols_table.NewParsedModules("filename")
 	parsedModules.RegisterModule(idx.NewModule("system", "filename", idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 0, 23)))
 
 	// position at int e|mu
@@ -41,7 +41,7 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_all_parent_symbols(t 
 	sourceCode := `// This blank line is intended.
 system.cpu.init();`
 	doc := d.NewDocument("filename", sourceCode)
-	parsedModules := unit_modules.NewParsedModules("filename")
+	parsedModules := symbols_table.NewParsedModules("filename")
 	parsedModules.RegisterModule(idx.NewModule("system", "filename", idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 1, 18)))
 
 	// Cursor at "i|init"
@@ -98,7 +98,7 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_full_module_path(t *t
 	for i, tt := range cases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
 			doc := d.NewDocument("filename", tt.source)
-			parsedModules := unit_modules.NewParsedModules("filename")
+			parsedModules := symbols_table.NewParsedModules("filename")
 			parsedModules.RegisterModule(idx.NewModule("system", "filename", idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 10, 30)))
 
 			sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, tt.position)

@@ -18,7 +18,7 @@ func TestParses_empty_document(t *testing.T) {
 	doc := document.NewDocument("empty", "")
 	parser := createParser()
 
-	symbols := parser.ParseSymbols(&doc)
+	symbols, _ := parser.ParseSymbols(&doc)
 
 	assert.Equal(t, 0, len(symbols.ModuleIds()))
 }
@@ -34,7 +34,7 @@ func TestParses_TypedEnums(t *testing.T) {
 	parser := createParser()
 
 	t.Run("finds Colors enum identifier", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		module := symbols.Get("doc")
 
@@ -45,7 +45,7 @@ func TestParses_TypedEnums(t *testing.T) {
 	})
 
 	t.Run("reads ranges for enum", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("doc")
 		enum := scope.Enums["Colors"]
@@ -55,7 +55,7 @@ func TestParses_TypedEnums(t *testing.T) {
 	})
 
 	t.Run("finds defined enumerators", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		enum := symbols.Get("doc").Enums["Colors"]
 		e := enum.GetEnumerator("RED")
@@ -85,7 +85,7 @@ func TestParses_TypedEnums(t *testing.T) {
 		doc := document.NewDocument("ass.c3", source)
 		parser := createParser()
 
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("ass")
 		enum := scope.Enums["State"]
@@ -125,14 +125,14 @@ func TestParses_TypedEnums(t *testing.T) {
 		doc := document.NewDocument("ass.c3", source)
 		parser := createParser()
 
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("ass")
 		assert.NotNil(t, scope.Enums["State"])
 	})
 
 	t.Run("finds enum method", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		f := symbols.Get("doc").GetChildrenFunctionByName("Colors.hasRed")
 		assert.True(t, f.IsSome())
@@ -146,7 +146,7 @@ func TestParses_UnTypedEnums(t *testing.T) {
 	parser := createParser()
 
 	t.Run("finds Colors enum identifier", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("doc")
 
@@ -157,7 +157,7 @@ func TestParses_UnTypedEnums(t *testing.T) {
 	})
 
 	t.Run("reads ranges for enum", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		enum := symbols.Get("doc").Enums["Colors"]
 		assert.Equal(t, idx.NewRange(0, 0, 0, 32), enum.GetDocumentRange(), "Wrong document rage")
@@ -165,7 +165,7 @@ func TestParses_UnTypedEnums(t *testing.T) {
 	})
 
 	t.Run("finds defined enumerators", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		enum := symbols.Get("doc").Enums["Colors"]
 		e := enum.GetEnumerator("RED")
@@ -194,7 +194,7 @@ func TestParse_fault(t *testing.T) {
 	parser := createParser()
 
 	t.Run("finds Fault identifier", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("doc")
 		assert.NotNil(t, scope.Faults["IOResult"])
@@ -204,7 +204,7 @@ func TestParse_fault(t *testing.T) {
 	})
 
 	t.Run("reads ranges for fault", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("doc").Faults["IOResult"]
 		assert.Equal(t, idx.NewRange(0, 0, 4, 2), found.GetDocumentRange(), "Wrong document rage")
@@ -212,7 +212,7 @@ func TestParse_fault(t *testing.T) {
 	})
 
 	t.Run("finds defined fault constants", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		fault := symbols.Get("doc").Faults["IOResult"]
 		e := fault.GetConstant("IO_ERROR")
@@ -239,7 +239,7 @@ func TestParse_interface(t *testing.T) {
 	parser := createParser()
 
 	t.Run("finds interface", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		expected := idx.NewInterfaceBuilder("MyName", module, docId).
 			Build()
@@ -253,7 +253,7 @@ func TestParse_interface(t *testing.T) {
 	})
 
 	t.Run("reads ranges for interface", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("doc").Interfaces["MyName"]
 		assert.Equal(t, idx.NewRange(0, 0, 3, 2), found.GetDocumentRange(), "Wrong document rage")
@@ -261,7 +261,7 @@ func TestParse_interface(t *testing.T) {
 	})
 
 	t.Run("finds defined methods in interface", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		module := symbols.Get("doc")
 		_interface := module.Interfaces["MyName"]
@@ -286,7 +286,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	doc := document.NewDocument("x", source)
 	parser := createParser()
 
-	symbols := parser.ParseSymbols(&doc)
+	symbols, _ := parser.ParseSymbols(&doc)
 	module := symbols.Get(mod)
 
 	expectedDefKilo := idx.NewDefBuilder("Kilo", mod, "x").
@@ -357,7 +357,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 
 	doc := document.NewDocument("docId", source)
 	parser := createParser()
-	symbols := parser.ParseSymbols(&doc)
+	symbols, _ := parser.ParseSymbols(&doc)
 
 	module := symbols.Get("docid")
 	fn := module.GetChildrenFunctionByName("m")
@@ -374,7 +374,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 
 		doc := document.NewDocument("file name.c3", source)
 		parser := createParser()
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 		fn := symbols.Get("file_name")
 
 		assert.Equal(t, "file_name", fn.GetModuleString(), "Function module is wrong")
@@ -388,7 +388,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 
 		doc := document.NewDocument("docId", source)
 		parser := createParser()
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		module := symbols.Get("foo")
 		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
@@ -404,7 +404,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 
 		doc := document.NewDocument("docid", source)
 		parser := createParser()
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		module := symbols.Get("foo")
 		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
@@ -422,7 +422,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 
 		doc := document.NewDocument("filename.c3", source)
 		parser := createParser()
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 		module := symbols.Get("std::core")
 
 		assert.Equal(t, "std::core", module.GetName(), "module name is wrong")
@@ -441,7 +441,7 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 
 	doc := document.NewDocument("docid", source)
 	parser := createParser()
-	symbols := parser.ParseSymbols(&doc)
+	symbols, _ := parser.ParseSymbols(&doc)
 
 	assert.Equal(t, []string{"some", "other", "foo::bar::final", "another", "another2"}, symbols.Get("foo").Imports)
 }
@@ -464,7 +464,7 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 
 	doc := document.NewDocument("docid", source)
 	parser := createParser()
-	symbols := parser.ParseSymbols(&doc)
+	symbols, _ := parser.ParseSymbols(&doc)
 
 	module := symbols.Get("foo_test")
 	assert.Equal(t, "foo_test", module.GetName())

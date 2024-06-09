@@ -2,7 +2,7 @@ package stdlib
 
 import (
 	symbols "github.com/pherrymason/c3-lsp/lsp/symbols"
-	unitmodules "github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	unitmodules "github.com/pherrymason/c3-lsp/lsp/symbols_table"
 )
 
 func Load_v055_stdlib() unitmodules.UnitModules {

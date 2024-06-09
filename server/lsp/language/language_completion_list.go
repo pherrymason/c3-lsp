@@ -139,13 +139,12 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			filterMembers = false
 		}
 	*/
-	unitModules := l.parsedModulesByDocument[doc.URI]
 	symbolInPosition := doc.SourceCode.SymbolInPosition(
 		symbols.Position{
 			Line:      uint(position.Line),
 			Character: uint(position.Character - 1),
 		},
-		&unitModules,
+		l.symbolsTable.GetByDoc(doc.URI),
 	)
 	if symbolInPosition.IsSeparator() {
 		// Probably, theres no symbol at cursor!
@@ -179,7 +178,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 
 		searchParams := sp.BuildSearchBySymbolUnderCursor(
 			doc,
-			l.parsedModulesByDocument[doc.URI],
+			*l.symbolsTable.GetByDoc(doc.URI),
 			symbolInPosition.PrevAccessPath().TextRange().End.RewindCharacter(),
 		)
 

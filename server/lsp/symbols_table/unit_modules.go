@@ -1,4 +1,4 @@
-package unit_modules
+package symbols_table
 
 import (
 	"github.com/pherrymason/c3-lsp/data"
@@ -52,6 +52,7 @@ func (ps *UnitModules) GetOrInitModule(moduleName string, docId string, rootNode
 
 	return module
 }
+
 func (ps *UnitModules) UpdateOrInitModule(module *idx.Module, rootNode *sitter.Node) *idx.Module {
 	moduleName := module.GetName()
 
@@ -96,6 +97,22 @@ func (ps UnitModules) HasImplicitLoadableModules(modulePath idx.ModulePath) bool
 		if scope.GetModule().IsImplicitlyImported(modulePath) {
 			return true
 		}
+	}
+
+	return false
+}
+
+func (ps UnitModules) HasExplicitlyImportedModules(modulePath idx.ModulePath) bool {
+	for _, scope := range ps.Modules() {
+		if modulePath.IsSubModuleOf(scope.GetModule()) {
+			return true
+		}
+
+		/*
+			if scope.GetModule().IsImplicitlyImported(modulePath) {
+				return true
+			}
+		*/
 	}
 
 	return false

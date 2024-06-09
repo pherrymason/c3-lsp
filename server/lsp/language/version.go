@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/pherrymason/c3-lsp/lsp/language/stdlib"
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 	"github.com/pherrymason/c3-lsp/option"
 	"golang.org/x/mod/semver"
 )
 
-type stdLibFunc func() unit_modules.UnitModules
+type stdLibFunc func() symbols_table.UnitModules
 
 type Version struct {
 	Number        string

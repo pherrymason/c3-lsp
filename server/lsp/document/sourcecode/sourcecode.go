@@ -6,7 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
 	"github.com/pherrymason/c3-lsp/option"
 )
@@ -25,7 +25,7 @@ func NewSourceCode(text string) SourceCode {
 }
 
 // Tries to find the symbol under cursor position
-func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules *unit_modules.UnitModules) Word {
+func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules *symbols_table.UnitModules) Word {
 	index := cursorPosition.IndexIn(s.Text)
 	pattern := `^[a-zA-Z0-9_]+$`
 	re, _ := regexp.Compile(pattern)
@@ -98,7 +98,7 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 	return wb.Build()
 }
 
-func tryToResolveFullModulePaths(wb *WordBuilder, unitModules *unit_modules.UnitModules, cursorPosition symbols.Position) *WordBuilder {
+func tryToResolveFullModulePaths(wb *WordBuilder, unitModules *symbols_table.UnitModules, cursorPosition symbols.Position) *WordBuilder {
 	if len(wb.word.modulePath) == 0 {
 		return wb
 	}

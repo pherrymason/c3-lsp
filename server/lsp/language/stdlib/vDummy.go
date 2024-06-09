@@ -1,10 +1,10 @@
 package stdlib
 
 import (
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 )
 
-func Load_vdummy_stdlib() unit_modules.UnitModules {
-	parsedModules := unit_modules.NewParsedModules("_stdlib")
+func Load_vdummy_stdlib() symbols_table.UnitModules {
+	parsedModules := symbols_table.NewParsedModules("_stdlib")
 	return parsedModules
 }

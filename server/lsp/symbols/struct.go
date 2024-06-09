@@ -77,6 +77,7 @@ func (s *Struct) InheritMembersFrom(inlinedMemberName string, otherStruct *Struc
 	for _, member := range s.GetMembers() {
 		if member.GetType().GetName() == inlinedMemberName {
 			member.inlinePendingResolve = false
+			member.expandedInline = true
 		}
 	}
 
@@ -89,6 +90,7 @@ type StructMember struct {
 	baseType             Type
 	bitRange             option.Option[[2]uint]
 	inlinePendingResolve bool
+	expandedInline       bool
 	BaseIndexable
 }
 
@@ -96,8 +98,12 @@ func (m StructMember) IsInlinePendingToResolve() bool {
 	return m.inlinePendingResolve
 }
 
-func (m StructMember) GetType() Type {
-	return m.baseType
+func (m StructMember) IsExpandedInline() bool {
+	return m.expandedInline
+}
+
+func (m *StructMember) GetType() *Type {
+	return &m.baseType
 }
 
 func (m StructMember) GetBitRange() [2]uint {

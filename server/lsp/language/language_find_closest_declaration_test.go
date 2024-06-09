@@ -10,7 +10,6 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
 	"github.com/pherrymason/c3-lsp/option"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
@@ -34,10 +33,6 @@ type TestState struct {
 
 func (t TestState) GetDoc(docId string) document.Document {
 	return t.docs[docId]
-}
-
-func (t TestState) GetParsedModules(docId string) unit_modules.UnitModules {
-	return t.language.parsedModulesByDocument[docId]
 }
 
 func NewTestState(loggers ...commonlog.Logger) TestState {

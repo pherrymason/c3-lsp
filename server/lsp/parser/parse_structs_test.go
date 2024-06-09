@@ -31,7 +31,7 @@ fn void MyStruct.init(&self)
 	parser := createParser()
 
 	t.Run("finds struct", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Structs["MyStruct"]
 		assert.Same(t, symbols.Get("x").Children()[0], found)
@@ -42,7 +42,7 @@ fn void MyStruct.init(&self)
 	})
 
 	t.Run("finds struct members", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Structs["MyStruct"]
 		member := found.GetMembers()[0]
@@ -74,7 +74,7 @@ fn void MyStruct.init(&self)
 	})
 
 	t.Run("finds struct implementing interface", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Structs["MyStruct"]
 		assert.Equal(t, "MyStruct", found.GetName())
@@ -102,7 +102,7 @@ func TestParse_struct_with_anonymous_bitstructs(t *testing.T) {
 	doc := document.NewDocument("docId", source)
 	parser := createParser()
 
-	symbols := parser.ParseSymbols(&doc)
+	symbols, _ := parser.ParseSymbols(&doc)
 
 	found := symbols.Get("x").Structs["Registers"]
 	assert.Equal(t, "Registers", found.GetName())
@@ -142,7 +142,7 @@ func TestParse_struct_with_anonymous_bitstructs(t *testing.T) {
 	}
 }
 
-func TestParse_struct_subtyping_should_resolve(t *testing.T) {
+func TestParse_struct_subtyping_members_should_be_flagged(t *testing.T) {
 	t.Run("should resolve subtyping when substruct is in same file", func(t *testing.T) {
 		source := `module x;
 	struct Person {
@@ -156,7 +156,7 @@ func TestParse_struct_subtyping_should_resolve(t *testing.T) {
 		doc := document.NewDocument("docId", source)
 		parser := createParser()
 
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 		module := symbols.Get("x")
 
 		strukt, ok := module.Structs["ImportantPerson"]
@@ -167,40 +167,8 @@ func TestParse_struct_subtyping_should_resolve(t *testing.T) {
 
 		assert.Equal(t, "person", members[0].GetName())
 		assert.Equal(t, "Person", members[0].GetType().GetName())
-		assert.False(t, members[0].IsInlinePendingToResolve(), "Member should be resolved")
+		assert.True(t, members[0].IsInlinePendingToResolve(), "Member should be flagged to be inlined")
 		assert.Equal(t, idx.NewRange(6, 16, 6, 22), members[0].GetIdRange(), "Identifier range is wrong")
-
-		assert.Equal(t, "age", members[2].GetName())
-		assert.Equal(t, "int", members[2].GetType().GetName())
-		assert.False(t, members[2].IsInlinePendingToResolve(), "Member should be resolved")
-		assert.Equal(t, idx.NewRange(2, 6, 2, 9), members[2].GetIdRange(), "Identifier range is wrong")
-
-		assert.Equal(t, "name", members[3].GetName())
-		assert.Equal(t, "String", members[3].GetType().GetName())
-		assert.False(t, members[3].IsInlinePendingToResolve(), "Member should be resolved")
-		assert.Equal(t, idx.NewRange(3, 9, 3, 13), members[3].GetIdRange(), "Identifier range is wrong")
-	})
-
-	t.Run("should flag pending to resolve subtyping when substruct somewhere", func(t *testing.T) {
-		source := `module x;
-	struct ImportantPerson {
-		inline Person person;
-	}`
-		doc := document.NewDocument("docId", source)
-		parser := createParser()
-
-		symbols := parser.ParseSymbols(&doc)
-		module := symbols.Get("x")
-
-		strukt, ok := module.Structs["ImportantPerson"]
-		assert.True(t, ok)
-
-		// Check ImportantPersons contains Person members
-		members := strukt.GetMembers()
-
-		assert.Equal(t, "person", members[0].GetName())
-		assert.Equal(t, "Person", members[0].GetType().GetName())
-		assert.True(t, members[0].IsInlinePendingToResolve(), "Member should be flagged to be pending to resolve")
 	})
 }
 
@@ -214,7 +182,7 @@ func TestParse_Unions(t *testing.T) {
 	parser := createParser()
 
 	t.Run("parses union", func(t *testing.T) {
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		module := symbols.Get("x")
 		found := module.Structs["MyUnion"]
@@ -239,7 +207,7 @@ func TestParse_bitstructs(t *testing.T) {
 
 	t.Run("parses bitstruct", func(t *testing.T) {
 
-		symbols := parser.ParseSymbols(&doc)
+		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Bitstructs["Test"]
 		assert.Same(t, symbols.Get("x").Children()[0], found)

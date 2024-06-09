@@ -43,6 +43,10 @@ type Indexable interface {
 	InsertNestedScope(symbol Indexable)
 }
 
+type Typeable interface {
+	GetType() *Type
+}
+
 type IndexableCollection []Indexable
 
 type BaseIndexable struct {

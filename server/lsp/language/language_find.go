@@ -5,12 +5,12 @@ import (
 
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 	"github.com/pherrymason/c3-lsp/option"
 )
 
 func (l *Language) findModuleInPosition(docId string, position symbols.Position) string {
-	for id, modulesByDoc := range l.parsedModulesByDocument {
+	for id, modulesByDoc := range l.symbolsTable.ByDoc() {
 		if id == docId {
 			continue
 		}
@@ -27,7 +27,7 @@ func (l *Language) findModuleInPosition(docId string, position symbols.Position)
 
 func (l *Language) implicitImportedParsedModules(acceptedModulePaths []symbols.ModulePath, excludeDocId option.Option[string]) []*symbols.Module {
 	var collectionModules []*symbols.Module
-	for docId, parsedModules := range l.parsedModulesByDocument {
+	for docId, parsedModules := range l.symbolsTable.ByDoc() {
 		if excludeDocId.IsSome() && excludeDocId.Get() == docId {
 			continue
 		}
@@ -86,18 +86,18 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 	// Important, when depth ==0 we really need to transmit to only search into root from here, even if we go multiple levels deep.
 
 	//docIdOption := searchParams.DocId()
-	var collectionParsedModules []unit_modules.UnitModules
+	var collectionParsedModules []symbols_table.UnitModules
 	if searchParams.LimitSearchToDoc() {
 		docIdOption := searchParams.DocId()
 		docId := docIdOption.Get()
-		parsedModules, found := l.parsedModulesByDocument[docId]
-		if !found {
+		parsedModules := l.symbolsTable.GetByDoc(docId)
+		if parsedModules == nil {
 			return searchResult
 		}
 
-		collectionParsedModules = append(collectionParsedModules, parsedModules)
+		collectionParsedModules = append(collectionParsedModules, *parsedModules)
 
-		for oDocId, parsedModules := range l.parsedModulesByDocument {
+		for oDocId, parsedModules := range l.symbolsTable.ByDoc() {
 			if docId == oDocId {
 				continue
 			}
@@ -117,7 +117,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		}
 
 		// Doc id not specified, search by module. Collect scope belonging to same module as searchParams.module
-		for docId, parsedModules := range l.parsedModulesByDocument {
+		for docId, parsedModules := range l.symbolsTable.ByDoc() {
 			if searchParams.ShouldExcludeDocId(docId) {
 				continue
 			}
@@ -244,7 +244,7 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 func (l *Language) findSymbolDeclarationInModule(searchParams search_params.SearchParams, moduleToSearch symbols.ModulePath, debugger FindDebugger) SearchResult {
 	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
 
-	for docId, modulesByDoc := range l.parsedModulesByDocument {
+	for docId, modulesByDoc := range l.symbolsTable.ByDoc() {
 		//for _, scope := range modulesByDoc.GetLoadableModules(searchParams.ModulePathInCursor()) {
 		for _, scope := range modulesByDoc.GetLoadableModules(moduleToSearch) {
 			searchResult.TrackTraversedModule(scope.GetModuleString())
@@ -287,7 +287,7 @@ func (l Language) findModuleNameInTraversedModules(searchParams search_params.Se
 
 	moduleName := searchParams.GetFullQualifiedName()
 
-	for _, parsedModulesByDoc := range l.parsedModulesByDocument {
+	for _, parsedModulesByDoc := range l.symbolsTable.ByDoc() {
 		for _, module := range parsedModulesByDoc.Modules() {
 
 			if module.GetName() == moduleName {

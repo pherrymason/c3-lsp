@@ -30,6 +30,20 @@ func (b *StructBuilder) WithStructMember(name string, baseType string, module st
 	return b
 }
 
+func (b *StructBuilder) WithSubStructMember(name string, baseType string, module string, docId string) *StructBuilder {
+	member := NewStructMember(
+		name,
+		NewTypeFromString(baseType, module),
+		option.None[[2]uint](),
+		module,
+		docId,
+		NewRange(0, 0, 0, 0),
+	)
+	member.inlinePendingResolve = true
+	b.strukt.members = append(b.strukt.members, &member)
+	return b
+}
+
 func (b *StructBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *StructBuilder {
 	b.strukt.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return b

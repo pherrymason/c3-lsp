@@ -1,4 +1,4 @@
-package unit_modules
+package symbols_table
 
 import (
 	"testing"

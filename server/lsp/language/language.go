@@ -8,7 +8,7 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/parser"
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 	"github.com/pherrymason/c3-lsp/lsp/utils"
 	"github.com/pherrymason/c3-lsp/option"
 	"github.com/tliron/commonlog"
@@ -17,25 +17,28 @@ import (
 
 // Language will be the center of knowledge of everything parsed.
 type Language struct {
-	indexByFQN              IndexStore
-	parsedModulesByDocument map[protocol.DocumentUri]unit_modules.UnitModules
-	logger                  commonlog.Logger
-	languageVersion         Version
-	debugEnabled            bool
+	indexByFQN   IndexStore
+	symbolsTable symbols_table.SymbolsTable
+	//parsedModulesByDocument map[protocol.DocumentUri]symbols_table.UnitModules
+	logger          commonlog.Logger
+	languageVersion Version
+	debugEnabled    bool
 }
 
 func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string]) Language {
 	language := Language{
-		indexByFQN:              NewIndexStore(),
-		parsedModulesByDocument: make(map[protocol.DocumentUri]unit_modules.UnitModules),
-		logger:                  logger,
-		languageVersion:         GetVersion(languageVersion),
-		debugEnabled:            false,
+		indexByFQN:   NewIndexStore(),
+		symbolsTable: symbols_table.NewSymbolsTable(),
+		//parsedModulesByDocument: make(map[protocol.DocumentUri]symbols_table.UnitModules),
+		logger:          logger,
+		languageVersion: GetVersion(languageVersion),
+		debugEnabled:    false,
 	}
 
 	// Install stdlib symbols
 	stdlibModules := language.languageVersion.stdLibSymbols()
-	language.parsedModulesByDocument["_stdlib"] = stdlibModules
+	language.symbolsTable.Register(stdlibModules, symbols_table.PendingToResolve{})
+	//language.parsedModulesByDocument["_stdlib"] = stdlibModules
 
 	return language
 }
@@ -43,7 +46,8 @@ func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string])
 func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
 
 	//l.logger.Debug(fmt.Sprint("Parsing ", doc.URI))
-	parsedModules := parser.ParseSymbols(doc)
+	parsedModules, pendingTypes := parser.ParseSymbols(doc)
+	l.symbolsTable.Register(parsedModules, pendingTypes)
 	l.indexByFQN.ClearByTag(doc.URI)
 
 	// Register in the index, the root elements
@@ -68,14 +72,15 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 		}
 	}
 
-	l.parsedModulesByDocument[parsedModules.DocId()] = parsedModules
+	//l.parsedModulesByDocument[parsedModules.DocId()] = parsedModules
 }
 
 func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position symbols.Position) option.Option[symbols.Indexable] {
 
 	searchParams := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
-		l.parsedModulesByDocument[doc.URI],
+		*l.symbolsTable.GetByDoc(doc.URI),
+		//l.parsedModulesByDocument[doc.URI],
 		position,
 	)
 
@@ -85,9 +90,10 @@ func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, posi
 }
 
 func (l *Language) FindHoverInformation(doc *document.Document, params *protocol.HoverParams) option.Option[protocol.Hover] {
+
 	search := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
-		l.parsedModulesByDocument[doc.URI],
+		*l.symbolsTable.GetByDoc(doc.URI),
 		symbols.NewPositionFromLSPPosition(params.Position),
 	)
 

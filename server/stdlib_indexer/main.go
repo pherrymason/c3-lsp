@@ -34,7 +34,7 @@ func main() {
 
 		content, _ := os.ReadFile(filePath)
 		doc := document.NewDocumentFromString(filePath, string(content))
-		parsedModules := parser.ParseSymbols(&doc)
+		parsedModules, _ := parser.ParseSymbols(&doc)
 
 		stdLibModules = append(stdLibModules, parsedModules.Modules()...)
 	}
@@ -95,7 +95,7 @@ func generateCode(modules []*s.Module, c3Version string) {
 
 	stmts := []jen.Code{
 		jen.Id("moduleCollection").Op(":=").Map(jen.String()).Add(jen.Op("*")).Qual(PackageName+"symbols", "Module").Values(dict),
-		jen.Id("parsedModules").Op(":=").Qual(PackageName+"unit_modules", "NewParsedModules").Call(jen.Lit("_stdlib")),
+		jen.Id("parsedModules").Op(":=").Qual(PackageName+"symbols_table", "NewParsedModules").Call(jen.Lit("_stdlib")),
 		jen.For(
 			jen.Id("_").Op(",").Id("mod").Op(":=").Range().
 				Id("moduleCollection"),
@@ -181,7 +181,7 @@ func generateCode(modules []*s.Module, c3Version string) {
 	f.Func().
 		Id("Load_"+versionIdentifier+"_stdlib").
 		Params().
-		Qual(PackageName+"unit_modules", "UnitModules").
+		Qual(PackageName+"symbols_table", "UnitModules").
 		Block(stmts...)
 
 	err := f.Save("../lsp/language/stdlib/" + versionIdentifier + ".go")

@@ -21,7 +21,7 @@ func (l *Language) findSymbolsInScope(params FindSymbolsParams) []symbols.Indexa
 	var currentContextModules []symbols.ModulePath
 	if params.position.IsSome() {
 		// Find current module
-		for _, module := range l.parsedModulesByDocument[params.docId].Modules() {
+		for _, module := range l.symbolsTable.GetByDoc(params.docId).Modules() {
 			if module.GetDocumentRange().HasPosition(params.position.Get()) {
 				currentContextModules = append(currentContextModules, module.GetModule())
 				break

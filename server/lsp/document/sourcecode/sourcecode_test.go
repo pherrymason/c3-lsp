@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
-	"github.com/pherrymason/c3-lsp/lsp/unit_modules"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +31,7 @@ func Test_SourceCode_SymbolInPosition_finds_symbol(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(fmt.Sprintf("Test %s", tt.source), func(t *testing.T) {
 			sc := NewSourceCode(tt.source)
-			unitModule := unit_modules.UnitModules{}
+			unitModule := symbols_table.UnitModules{}
 
 			// position at e|mu
 			pos := uint(len(tt.source) - 1)
@@ -56,7 +56,7 @@ func Test_SourceCode_SymbolInPosition_finds_symbol(t *testing.T) {
 
 func Test_SourceCode_SymbolInPosition_finds_simple_symbol_trap_with_parenthesis(t *testing.T) {
 	text := "something(value);"
-	unitModule := unit_modules.UnitModules{}
+	unitModule := symbols_table.UnitModules{}
 	sc := NewSourceCode(text)
 
 	// position at e|mu
@@ -67,7 +67,7 @@ func Test_SourceCode_SymbolInPosition_finds_simple_symbol_trap_with_parenthesis(
 }
 
 func Test_SourceCode_SymbolInPosition_finds_simple_symbol(t *testing.T) {
-	unitModule := unit_modules.UnitModules{}
+	unitModule := symbols_table.UnitModules{}
 	text := "int emu;"
 	sc := NewSourceCode(text)
 
@@ -79,7 +79,7 @@ func Test_SourceCode_SymbolInPosition_finds_simple_symbol(t *testing.T) {
 }
 
 func Test_SourceCode_SymbolInPosition_finds_symbol_with_access_path(t *testing.T) {
-	unitModule := unit_modules.UnitModules{}
+	unitModule := symbols_table.UnitModules{}
 	text := `// This blank line is intended.
 	system.cpu.init();`
 
@@ -99,7 +99,7 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_with_access_path(t *testing.T
 }
 
 func Test_SourceCode_SymbolInPosition_finds_symbol_with_access_path_and_method_call(t *testing.T) {
-	unitModule := unit_modules.UnitModules{}
+	unitModule := symbols_table.UnitModules{}
 	text := `// This blank line is intended.
 	system.cpu().init;`
 
@@ -119,7 +119,7 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_with_access_path_and_method_c
 }
 
 func Test_SourceCode_SymbolInPosition_finds_symbol_dot_word(t *testing.T) {
-	unitModule := unit_modules.UnitModules{}
+	unitModule := symbols_table.UnitModules{}
 	text := `// This blank line is intended.
 	system.cpu.`
 
@@ -139,7 +139,7 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_dot_word(t *testing.T) {
 }
 
 func Test_SourceCode_SymbolInPosition_finds_symbol_with_single_character_symbol(t *testing.T) {
-	unitModule := unit_modules.UnitModules{}
+	unitModule := symbols_table.UnitModules{}
 	text := `// This blank line is intended.
 	system.cpu.w`
 
@@ -219,7 +219,7 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_with_module_path(t *testing.T
 
 	for i, tt := range cases {
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
-			unitModule := unit_modules.UnitModules{}
+			unitModule := symbols_table.UnitModules{}
 			sc := NewSourceCode(tt.source)
 
 			// position at v|alue
@@ -244,7 +244,7 @@ func Test_SourceCode_SymbolInPosition_should_resolve_full_module_paths(t *testin
 	module := symbols.NewModule("file", "file", symbols.NewRange(0, 0, 0, 0), symbols.NewRange(0, 0, 1, 13))
 	module.AddImports([]string{"std::io"})
 
-	unitModule := unit_modules.NewParsedModules("file")
+	unitModule := symbols_table.NewParsedModules("file")
 	unitModule.RegisterModule(module)
 	source := `import std::io;
 	io::printf()`
