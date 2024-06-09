@@ -2,6 +2,7 @@ package symbols
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pherrymason/c3-lsp/option"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -48,7 +49,20 @@ func (d Def) GetResolvesTo() string {
 }
 
 func (d Def) GetHoverInfo() string {
-	return fmt.Sprintf("def %s = %s", d.name, d.resolvesTo)
+	if d.resolvesToType.IsNone() {
+		return fmt.Sprintf("def %s = %s", d.name, d.resolvesTo)
+	}
+
+	resolvesTo := d.resolvesToType.Get().name
+	if len(d.resolvesToType.Get().genericArguments) > 0 {
+		genericNames := []string{}
+		for _, generic := range d.resolvesToType.Get().genericArguments {
+			genericNames = append(genericNames, generic.String())
+		}
+		resolvesTo += "(<" + strings.Join(genericNames, ", ") + ">)"
+	}
+
+	return fmt.Sprintf("def %s = %s", d.name, resolvesTo)
 }
 
 func (d Def) ResolvesToType() bool {

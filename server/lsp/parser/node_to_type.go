@@ -12,6 +12,7 @@ func (p *Parser) typeNodeToType(node *sitter.Node, moduleName string, sourceCode
 	baseTypeLanguage := false
 	baseType := ""
 	modulePath := moduleName
+	generic_arguments := []symbols.Type{}
 
 	pointerCount := 0
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -29,7 +30,14 @@ func (p *Parser) typeNodeToType(node *sitter.Node, moduleName string, sourceCode
 				case "type_ident":
 					baseType = bn.Content(sourceCode)
 				case "generic_arguments":
-					baseType += bn.Content(sourceCode)
+					//baseType += bn.Content(sourceCode)
+					for g := 0; g < int(bn.ChildCount()); g++ {
+						gn := bn.Child(g)
+						if gn.Type() == "type" {
+							gType := p.typeNodeToType(gn, moduleName, sourceCode)
+							generic_arguments = append(generic_arguments, gType)
+						}
+					}
 
 				case "module_type_ident":
 					//fmt.Println(bn)
@@ -47,5 +55,12 @@ func (p *Parser) typeNodeToType(node *sitter.Node, moduleName string, sourceCode
 		}
 	}
 
-	return symbols.NewType(baseTypeLanguage, baseType, pointerCount, modulePath)
+	var parsedType symbols.Type
+	if len(generic_arguments) == 0 {
+		parsedType = symbols.NewType(baseTypeLanguage, baseType, pointerCount, modulePath)
+	} else {
+		parsedType = symbols.NewTypeWithGeneric(baseTypeLanguage, baseType, pointerCount, generic_arguments, modulePath)
+	}
+
+	return parsedType
 }

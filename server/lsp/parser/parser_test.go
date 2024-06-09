@@ -320,7 +320,14 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefTypeWithGenerics := idx.NewDefBuilder("MyMap", mod, "x").
 		WithResolvesToType(
-			idx.NewType(false, "HashMap(<String, Feature>)", 0, "mod"),
+			idx.NewTypeWithGeneric(
+				false,
+				"HashMap",
+				0,
+				[]idx.Type{
+					idx.NewType(false, "String", 0, "mod"),
+					idx.NewType(false, "Feature", 0, "mod"),
+				}, "mod"),
 		).
 		WithIdentifierRange(4, 5, 4, 10).
 		WithDocumentRange(4, 1, 4, 40).

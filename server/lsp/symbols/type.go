@@ -9,6 +9,7 @@ type Type struct {
 	baseTypeLanguage bool // Is a base type of the language
 	name             string
 	pointer          int
+	genericArguments []Type
 	module           string
 }
 
@@ -54,6 +55,16 @@ func NewType(baseTypeLanguage bool, baseType string, pointerCount int, modulePat
 		baseTypeLanguage: baseTypeLanguage,
 		name:             baseType,
 		pointer:          pointerCount,
+		module:           modulePath,
+	}
+}
+
+func NewTypeWithGeneric(baseTypeLanguage bool, baseType string, pointerCount int, genericArguments []Type, modulePath string) Type {
+	return Type{
+		baseTypeLanguage: baseTypeLanguage,
+		name:             baseType,
+		pointer:          pointerCount,
+		genericArguments: genericArguments,
 		module:           modulePath,
 	}
 }
