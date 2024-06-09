@@ -137,4 +137,6 @@ func (st *SymbolsTable) expendStructSubtypes() {
 			}
 		}
 	}
+
+	st.pendingToResolve.subtyptingToResolve = []StructWithSubtyping{}
 }
