@@ -42,6 +42,8 @@ func TestSymbolsTable_should_expand_substructs(t *testing.T) {
 
 	assert.Equal(t, "b", members[3].GetName())
 	assert.Equal(t, "char", members[3].GetType().GetName())
+
+	assert.Equal(t, 0, len(symbolsTable.pendingToResolve.subtyptingToResolve))
 }
 
 func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
