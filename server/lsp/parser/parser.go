@@ -96,14 +96,6 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 		for _, c := range m.Captures {
 			nodeType := c.Node.Type()
 			nodeEndPoint := idx.NewPositionFromTreeSitterPoint(c.Node.EndPoint())
-			/*
-				fmt.Printf("- %s\n", nodeType)
-				if c.Node.HasError() {
-					fmt.Printf("Node has error!\n")
-					fmt.Printf(nodeType)
-				}
-			*/
-
 			if nodeType != "module" {
 				moduleSymbol = parsedModules.GetOrInitModule(
 					lastModuleName,

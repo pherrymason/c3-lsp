@@ -53,7 +53,9 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 		symbol = idx.NewTypeFunction(
 			typeIdentifier,
 			nameNode.Content(sourceCode),
-			funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
+			p.typeNodeToType(funcHeader.ChildByFieldName("return_type"), moduleName, sourceCode),
+			//funcHeader.ChildByFieldName("return_type").Content(sourceCode),
+			argumentIds,
 			moduleName,
 			docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
@@ -65,7 +67,8 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
 	} else {
 		symbol = idx.NewFunction(
 			nameNode.Content(sourceCode),
-			funcHeader.ChildByFieldName("return_type").Content(sourceCode), argumentIds,
+			p.typeNodeToType(funcHeader.ChildByFieldName("return_type"), moduleName, sourceCode),
+			argumentIds,
 			moduleName,
 			docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),

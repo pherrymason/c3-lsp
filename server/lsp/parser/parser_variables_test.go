@@ -122,3 +122,18 @@ func TestExtractSymbols_find_constants(t *testing.T) {
 	assert.Equal(t, idx.NewRange(0, 0, 0, 23), found.GetDocumentRange())
 	assert.Equal(t, idx.NewRange(0, 10, 0, 17), found.GetIdRange())
 }
+
+func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
+	t.Run("resolves basic type declaration should not flag type as pending to be resolved", func(t *testing.T) {
+		source := `int value = 1;`
+		docId := "x"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, pendingToResolve := parser.ParseSymbols(&doc)
+
+		found := symbols.Get(docId).Variables["value"]
+		assert.NotNil(t, found)
+
+		assert.Equal(t, 0, len(pendingToResolve.GetTypesByModule(docId)), "Basic types should not be registered as pending to resolve.")
+	})
+}

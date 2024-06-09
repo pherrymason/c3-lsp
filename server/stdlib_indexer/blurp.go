@@ -172,7 +172,11 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 		Qual(PackageName+"symbols", "NewFunctionBuilder").
 		Call(
 			jen.Lit(fun.GetFullName()),
-			jen.Lit(fun.GetReturnType()),
+			jen.Qual(PackageName+"symbols", "NewTypeFromString").
+				Call(
+					jen.Lit(fun.GetReturnType().String()),
+					jen.Lit(mod.GetName()),
+				),
 			jen.Lit(mod.GetName()),
 			jen.Lit(buildStdDocId(mod.GetDocumentURI())),
 		)

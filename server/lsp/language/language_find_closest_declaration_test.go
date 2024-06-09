@@ -615,7 +615,7 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "run", fun.GetName())
-		assert.Equal(t, "void", fun.GetReturnType())
+		assert.Equal(t, "void", fun.GetReturnType().GetName())
 	})
 
 	t.Run("Should not confuse function with virtual root scope function", func(t *testing.T) {

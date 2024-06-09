@@ -22,7 +22,7 @@ func TestExtractSymbols_Functions_Definitions(t *testing.T) {
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
-		assert.Equal(t, "void", fn.Get().GetReturnType(), "Return type")
+		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(0, 8, 0, 12), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 2, 2), fn.Get().GetDocumentRange())
 	})
@@ -40,7 +40,7 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		fn := symbols.Get("docid").GetChildrenFunctionByName("init_window")
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
-		assert.Equal(t, "void", fn.Get().GetReturnType(), "Return type")
+		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(0, 8, 0, 19), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 0, 78), fn.Get().GetDocumentRange())
 	})
@@ -60,7 +60,7 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
-		assert.Equal(t, "void", fn.Get().GetReturnType(), "Return type")
+		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(0, 8, 0, 12), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 2, 2), fn.Get().GetDocumentRange())
 	})
@@ -104,7 +104,8 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.method")
 		assert.True(t, fn.IsSome(), "Method was not found")
-		assert.Equal(t, "Object*", fn.Get().GetReturnType(), "Return type")
+		assert.Equal(t, "Object", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, "Object*", fn.Get().GetReturnType().String(), "Return type")
 		assert.Equal(t, "UserStruct.method", fn.Get().GetName())
 		assert.Equal(t, idx.NewRange(0, 22, 0, 28), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 2, 2), fn.Get().GetDocumentRange())
@@ -155,5 +156,20 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 		assert.Equal(t, idx.NewRange(0, 41, 0, 48), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 36, 0, 48), variable.GetDocumentRange())
 
+	})
+}
+
+func TestExtractSymbols_flags_types_as_pending_to_be_resolved(t *testing.T) {
+	t.Run("resolves basic type declaration should not flag type as pending to be resolved", func(t *testing.T) {
+		source := `int value = 1;`
+		docId := "x"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, pendingToResolve := parser.ParseSymbols(&doc)
+
+		found := symbols.Get(docId).Variables["value"]
+		assert.NotNil(t, found)
+
+		assert.Equal(t, 0, len(pendingToResolve.GetTypesByModule(docId)), "Basic types should not be registered as pending to resolve.")
 	})
 }

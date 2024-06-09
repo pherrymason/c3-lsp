@@ -192,7 +192,7 @@ func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, d
 
 	case *idx.Function:
 		fun, _ := elm.(*idx.Function)
-		symbol = sourcecode.NewWord(fun.GetReturnType(), fun.GetIdRange())
+		symbol = sourcecode.NewWord(fun.GetReturnType().GetName(), fun.GetIdRange())
 	}
 
 	iterSearch := search_params.NewSearchParamsBuilder().

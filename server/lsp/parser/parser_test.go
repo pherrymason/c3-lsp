@@ -267,7 +267,7 @@ func TestParse_interface(t *testing.T) {
 		_interface := module.Interfaces["MyName"]
 		m := _interface.GetMethod("method")
 		assert.Equal(t, "method", m.GetName())
-		assert.Equal(t, "String", m.GetReturnType())
+		assert.Equal(t, "String", m.GetReturnType().GetName())
 		assert.Equal(t, idx.NewRange(2, 12, 2, 18), m.GetIdRange())
 		assert.Equal(t, module.Children()[0], _interface)
 	})

@@ -48,7 +48,7 @@ func TestSymbolsTable_should_expand_substructs(t *testing.T) {
 
 func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 
-	t.Run("basic type declaration should not flag type as pending to be resolved", func(t *testing.T) {
+	t.Run("resolves basic type declaration should not flag type as pending to be resolved", func(t *testing.T) {
 		/*source := `int value = 1;`
 		docId := "x"
 		doc := document.NewDocument(docId, source)
