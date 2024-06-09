@@ -192,6 +192,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 		//fmt.Print(prevIndexable.GetName())
 
 		switch prevIndexable.(type) {
+
 		case *symbols.Struct:
 			strukt := prevIndexable.(*symbols.Struct)
 
@@ -313,14 +314,20 @@ func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDeb
 
 	prevIndexable := prevIndexableResult.Get()
 
-	_, isStructMember := prevIndexable.(*symbols.StructMember)
-	if isStructMember {
-		var token sourcecode.Word
-		switch prevIndexable.(type) {
-		case *symbols.StructMember:
-			structMember, _ := prevIndexable.(*symbols.StructMember)
-			token = sourcecode.NewWord(structMember.GetType().GetName(), prevIndexable.GetIdRange())
+	for {
+		if !isInspectable(prevIndexable) {
+			prevIndexable = l.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), debugger)
+		} else {
+			break
 		}
+	}
+
+	switch prevIndexable.(type) {
+	case *symbols.StructMember:
+		var token sourcecode.Word
+		structMember, _ := prevIndexable.(*symbols.StructMember)
+		token = sourcecode.NewWord(structMember.GetType().GetName(), prevIndexable.GetIdRange())
+
 		levelSearchParams := sp.NewSearchParamsBuilder().
 			//WithSymbol(token.Text()).
 			WithSymbolWord(
@@ -330,6 +337,8 @@ func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDeb
 			Build()
 
 		prevIndexableResult = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
+	default:
+		return option.Some(prevIndexable)
 	}
 
 	return prevIndexableResult.result

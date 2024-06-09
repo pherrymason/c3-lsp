@@ -169,4 +169,37 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		assert.Equal(t, "yy::Ref", module.ChildrenFunctions[0].GetArguments()[0].GetType().GetFullQualifiedName())
 	})
 
+	t.Run("resolves definition defined in different file & module should resolve", func(t *testing.T) {
+		docId := "aDocId"
+		mod := "xx"
+		symbolsTable := NewSymbolsTable()
+
+		um := NewParsedModules(docId)
+		module := symbols.NewModuleBuilder(mod, docId).Build()
+		module.AddDef(
+			symbols.NewDefBuilder("foo", mod, docId).
+				WithResolvesToType(symbols.NewTypeFromString("HashMap", mod)).
+				Build(),
+		)
+		module.AddImports([]string{"std::collections::map"})
+
+		um.modules.Set(mod, module)
+		pendingToResolve := NewPendingToResolve()
+		pendingToResolve.AddDefType(module.Defs["foo"], module)
+		symbolsTable.Register(um, pendingToResolve)
+
+		docBId := "aDocBId"
+		modB := "std::collections::map"
+		umB := NewParsedModules(docBId)
+		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
+		moduleB.AddStruct(
+			symbols.NewStructBuilder("HashMap", modB, docBId).Build(),
+		)
+		umB.modules.Set(mod, moduleB)
+		symbolsTable.Register(umB, NewPendingToResolve())
+
+		assert.Equal(t, true, symbolsTable.pendingToResolve.GetTypesByModule(mod)[0].solved)
+		assert.Equal(t, "std::collections::map::HashMap", module.Defs["foo"].ResolvedType().GetFullQualifiedName())
+	})
+
 }

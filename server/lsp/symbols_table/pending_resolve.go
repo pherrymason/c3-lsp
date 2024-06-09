@@ -125,3 +125,21 @@ func (p *PendingToResolve) AddFunctionTypes(function *symbols.Function, contextM
 		}
 	}
 }
+
+func (p *PendingToResolve) AddDefType(def *symbols.Def, contextModule *symbols.Module) {
+	if !def.ResolvesToType() {
+		return
+	}
+
+	if def.ResolvesToType() && def.ResolvedType().IsBaseTypeLanguage() {
+		return
+	}
+
+	p.typesByModule[contextModule.GetName()] = append(
+		p.typesByModule[contextModule.GetName()],
+		PendingTypeContext{
+			vType:         def.ResolvedType(),
+			contextModule: contextModule,
+		},
+	)
+}

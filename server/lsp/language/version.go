@@ -18,11 +18,11 @@ type Version struct {
 
 func SupportedVersions() []Version {
 	return []Version{
-		Version{
+		{
 			Number:        "dummy",
 			stdLibSymbols: stdlib.Load_vdummy_stdlib,
 		},
-		Version{
+		{
 			Number:        "0.5.5",
 			stdLibSymbols: stdlib.Load_v055_stdlib,
 		},

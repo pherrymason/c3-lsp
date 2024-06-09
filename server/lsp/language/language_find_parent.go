@@ -48,25 +48,6 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 		// Here we can look inside elm
 		switch elm.(type) {
-		case *idx.Def:
-			// Translate to the real symbol
-			def := elm.(*idx.Def)
-			var query string
-			if def.ResolvesToType() {
-				query = def.ResolvedType().GetFullQualifiedName()
-			} else {
-				// ??? This was first version of this search
-				query = def.GetModuleString() + "::" + def.GetResolvesTo()
-			}
-
-			symbols := l.indexByFQN.SearchByFQN(query)
-			if len(symbols) > 0 {
-				elm = symbols[0]
-				// Do not advance state, we need to look inside
-			} else {
-				panic("Stumbled on an unresolvable def.")
-			}
-
 		case *idx.Enumerator:
 			enumerator := elm.(*idx.Enumerator)
 			assocValues := enumerator.GetAssociatedValues()
@@ -172,6 +153,8 @@ func isInspectable(elm idx.Indexable) bool {
 		isInspectable = false
 	case *idx.StructMember:
 		isInspectable = false
+	case *idx.Def:
+		isInspectable = false
 	}
 
 	return isInspectable
@@ -193,6 +176,23 @@ func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, d
 	case *idx.Function:
 		fun, _ := elm.(*idx.Function)
 		symbol = sourcecode.NewWord(fun.GetReturnType().GetName(), fun.GetIdRange())
+
+	case *idx.Def:
+		// Translate to the real symbol
+		def := elm.(*idx.Def)
+		var query string
+		if def.ResolvesToType() {
+			query = def.ResolvedType().GetFullQualifiedName()
+		} else {
+			// ??? This was first version of this search
+			query = def.GetModuleString() + "::" + def.GetResolvesTo()
+		}
+
+		symbols := l.indexByFQN.SearchByFQN(query)
+		if len(symbols) > 0 {
+			return symbols[0]
+			// Do not advance state, we need to look inside
+		}
 	}
 
 	iterSearch := search_params.NewSearchParamsBuilder().

@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Index stdlib",
+            "type": "go",
+            "request": "launch",
+            "mode":"debug",
+            "program": "${workspaceRoot}/server/stdlib_indexer",
+        },
+         {
             "name": "Launch",
             "type": "go",
             "request": "launch",

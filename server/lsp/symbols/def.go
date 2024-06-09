@@ -10,14 +10,14 @@ import (
 
 type Def struct {
 	resolvesTo     string
-	resolvesToType option.Option[Type]
+	resolvesToType option.Option[*Type]
 	BaseIndexable
 }
 
 func NewDef(name string, resolvesTo string, module string, docId string, idRange Range, docRange Range) Def {
 	return Def{
 		resolvesTo:     resolvesTo,
-		resolvesToType: option.None[Type](),
+		resolvesToType: option.None[*Type](),
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
@@ -32,7 +32,7 @@ func NewDef(name string, resolvesTo string, module string, docId string, idRange
 func NewDefType(name string, resolvesTo Type, module string, docId string, idRange Range, docRange Range) Def {
 	return Def{
 		resolvesTo:     "",
-		resolvesToType: option.Some(resolvesTo),
+		resolvesToType: option.Some(&resolvesTo),
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
@@ -69,6 +69,6 @@ func (d Def) ResolvesToType() bool {
 	return d.resolvesToType.IsSome()
 }
 
-func (d Def) ResolvedType() Type {
+func (d *Def) ResolvedType() *Type {
 	return d.resolvesToType.Get()
 }

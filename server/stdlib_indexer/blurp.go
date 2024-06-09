@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/dave/jennifer/jen"
+	"github.com/pherrymason/c3-lsp/lsp/symbols"
 	s "github.com/pherrymason/c3-lsp/lsp/symbols"
 )
 
@@ -168,18 +169,36 @@ func Generate_fault(fault *s.Fault, module *s.Module) jen.Code {
 }
 
 func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
-	funDef := jen.
-		Qual(PackageName+"symbols", "NewFunctionBuilder").
-		Call(
-			jen.Lit(fun.GetFullName()),
-			jen.Qual(PackageName+"symbols", "NewTypeFromString").
-				Call(
-					jen.Lit(fun.GetReturnType().String()),
-					jen.Lit(mod.GetName()),
-				),
-			jen.Lit(mod.GetName()),
-			jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-		)
+	var funDef *jen.Statement
+	if fun.FunctionType() == symbols.Method {
+		funDef = jen.
+			Qual(PackageName+"symbols", "NewFunctionBuilder").
+			Call(
+				jen.Lit(fun.GetMethodName()),
+				jen.Qual(PackageName+"symbols", "NewTypeFromString").
+					Call(
+						jen.Lit(fun.GetReturnType().String()),
+						jen.Lit(mod.GetName()),
+					),
+				jen.Lit(mod.GetName()),
+				jen.Lit(buildStdDocId(mod.GetDocumentURI())),
+			).
+			Dot("WithTypeIdentifier").
+			Call(jen.Lit(fun.GetTypeIdentifier()))
+	} else {
+		funDef = jen.
+			Qual(PackageName+"symbols", "NewFunctionBuilder").
+			Call(
+				jen.Lit(fun.GetFullName()),
+				jen.Qual(PackageName+"symbols", "NewTypeFromString").
+					Call(
+						jen.Lit(fun.GetReturnType().String()),
+						jen.Lit(mod.GetName()),
+					),
+				jen.Lit(mod.GetName()),
+				jen.Lit(buildStdDocId(mod.GetDocumentURI())),
+			)
+	}
 
 	for _, arg := range fun.ArgumentIds() {
 		variable := fun.Variables[arg]

@@ -37,6 +37,8 @@ func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string])
 
 	// Install stdlib symbols
 	stdlibModules := language.languageVersion.stdLibSymbols()
+	language.indexParsedSymbols(stdlibModules, stdlibModules.DocId())
+
 	language.symbolsTable.Register(stdlibModules, symbols_table.PendingToResolve{})
 	//language.parsedModulesByDocument["_stdlib"] = stdlibModules
 
@@ -48,7 +50,11 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 	//l.logger.Debug(fmt.Sprint("Parsing ", doc.URI))
 	parsedModules, pendingTypes := parser.ParseSymbols(doc)
 	l.symbolsTable.Register(parsedModules, pendingTypes)
-	l.indexByFQN.ClearByTag(doc.URI)
+	l.indexParsedSymbols(parsedModules, doc.URI)
+}
+
+func (l *Language) indexParsedSymbols(parsedModules symbols_table.UnitModules, docId string) {
+	l.indexByFQN.ClearByTag(docId)
 
 	// Register in the index, the root elements
 	for _, module := range parsedModules.Modules() {
@@ -71,8 +77,6 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 			l.indexByFQN.RegisterSymbol(def)
 		}
 	}
-
-	//l.parsedModulesByDocument[parsedModules.DocId()] = parsedModules
 }
 
 func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, position symbols.Position) option.Option[symbols.Indexable] {

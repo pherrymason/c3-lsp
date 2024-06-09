@@ -157,6 +157,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 			case "define_declaration":
 				def := p.nodeToDef(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)
 				moduleSymbol.AddDef(&def)
+				pendingToResolve.AddDefType(&def, moduleSymbol)
 
 			case "const_declaration":
 				_const := p.nodeToConstant(c.Node, moduleSymbol.GetModuleString(), doc.URI, sourceCode)

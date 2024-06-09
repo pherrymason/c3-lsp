@@ -35,6 +35,36 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		assert.Equal(t, "OPEN", symbolOption.Get().GetName())
 	})
 
+	t.Run("Should find method from std collection", func(t *testing.T) {
+		state := NewTestStateWithStdLibVersion("0.5.5")
+		state.registerDoc(
+			"def.c3",
+			`module core::actions;
+			import std::collections::map;
+
+			def ActionListMap = HashMap(<char*, ActionList>);
+			struct ActionListManager{
+				ActionListMap actionLists;
+			}
+			fn void ActionListManager.addActionList(&self, ActionList actionList) {
+				self.actionLists.set(actionList.getName(), actionList);
+			}`,
+		)
+		position := buildPosition(9, 22) // Cursor at `self.actionLists.s|et(actionList.getName(), actionList);`
+		doc := state.GetDoc("def.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.language.symbolsTable.GetByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "HashMap.set", fun.GetName())
+	})
+
 	t.Run("Should find fault constant definition with path definition", func(t *testing.T) {
 		state.registerDoc(
 			"faults.c3",

@@ -88,6 +88,10 @@ func (f Function) GetFQN() string {
 	return fmt.Sprintf("%s::%s", f.module.GetName(), f.GetName())
 }
 
+func (f Function) GetTypeIdentifier() string {
+	return f.typeIdentifier
+}
+
 func (f Function) GetKind() protocol.CompletionItemKind {
 	switch f.fType {
 	case Method:

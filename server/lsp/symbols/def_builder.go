@@ -35,7 +35,7 @@ func (d *DefBuilder) WithResolvesTo(resolvesTo string) *DefBuilder {
 }
 
 func (d *DefBuilder) WithResolvesToType(resolvesTo Type) *DefBuilder {
-	d.def.resolvesToType = option.Some(resolvesTo)
+	d.def.resolvesToType = option.Some(&resolvesTo)
 	return d
 }
 
