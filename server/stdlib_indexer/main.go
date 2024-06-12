@@ -10,7 +10,7 @@ import (
 	"github.com/pherrymason/c3-lsp/fs"
 	"github.com/pherrymason/c3-lsp/lsp/document"
 	p "github.com/pherrymason/c3-lsp/lsp/parser"
-	s "github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/lsp/symbols_table"
 	"github.com/tliron/commonlog"
 
 	"github.com/dave/jennifer/jen"
@@ -28,19 +28,19 @@ func main() {
 	logger := commonlog.GetLogger("")
 	parser := p.NewParser(logger)
 
-	var stdLibModules []*s.Module
+	symbolsTable := symbols_table.NewSymbolsTable()
 	for _, filePath := range files {
 		//s.server.Log.Debug(fmt.Sprint("Parsing ", filePath))
 
 		content, _ := os.ReadFile(filePath)
 		doc := document.NewDocumentFromString(filePath, string(content))
-		parsedModules, _ := parser.ParseSymbols(&doc)
+		parsedModules, pendingTypes := parser.ParseSymbols(&doc)
 
-		stdLibModules = append(stdLibModules, parsedModules.Modules()...)
+		symbolsTable.Register(parsedModules, pendingTypes)
 	}
 
 	// generate code
-	generateCode(stdLibModules, c3cVersion)
+	generateCode(&symbolsTable, c3cVersion)
 }
 
 func getC3Version(path string) string {
@@ -64,32 +64,34 @@ func buildStdDocId(path string) string {
 	return strings.ReplaceAll(path, "../../assets/c3c/lib/", "c3_stdlib::")
 }
 
-func generateCode(modules []*s.Module, c3Version string) {
+func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 	f := jen.NewFile("stdlib")
 	versionIdentifier := "v" + strings.ReplaceAll(c3Version, ".", "")
 
 	dict := jen.Dict{}
 
 	uniqueModuleNames := map[string]bool{}
-	for _, mod := range modules {
-		if mod.IsPrivate() {
-			continue
-		}
+	for _, ps := range symbolsTable.All() {
+		for _, mod := range ps.Modules() {
+			if mod.IsPrivate() {
+				continue
+			}
 
-		_, ok := uniqueModuleNames[mod.GetName()]
-		if !ok {
-			uniqueModuleNames[mod.GetName()] = true
+			_, ok := uniqueModuleNames[mod.GetName()]
+			if !ok {
+				uniqueModuleNames[mod.GetName()] = true
 
-			dict[jen.Lit(mod.GetName())] =
-				jen.
-					Qual(PackageName+"symbols", "NewModuleBuilder").
-					Call(
-						jen.Lit(mod.GetName()),
-						jen.Lit(""),
-					).
-					Dot("WithoutSourceCode").Call().
-					Dot("Build").Call()
+				dict[jen.Lit(mod.GetName())] =
+					jen.
+						Qual(PackageName+"symbols", "NewModuleBuilder").
+						Call(
+							jen.Lit(mod.GetName()),
+							jen.Lit(""),
+						).
+						Dot("WithoutSourceCode").Call().
+						Dot("Build").Call()
 
+			}
 		}
 	}
 
@@ -106,73 +108,75 @@ func generateCode(modules []*s.Module, c3Version string) {
 		jen.Var().Id("module").Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
 	}
 
-	for _, mod := range modules {
-		if mod.IsPrivate() {
-			continue
-		}
-		modDefinition := jen.Id("module")
-		somethingAdded := false
+	for _, ps := range symbolsTable.All() {
+		for _, mod := range ps.Modules() {
+			if mod.IsPrivate() {
+				continue
+			}
+			modDefinition := jen.Id("module")
+			somethingAdded := false
 
-		for _, variable := range mod.Variables {
-			somethingAdded = true
-			// Generate variable
-			varDef := Generate_variable(variable, mod)
-			modDefinition.
-				Dot("AddVariable").Call(varDef)
-		}
+			for _, variable := range mod.Variables {
+				somethingAdded = true
+				// Generate variable
+				varDef := Generate_variable(variable, mod)
+				modDefinition.
+					Dot("AddVariable").Call(varDef)
+			}
 
-		for _, strukt := range mod.Structs {
-			somethingAdded = true
-			structDef := Generate_struct(strukt, mod)
-			modDefinition.
-				Dot("AddStruct").Call(structDef)
-		}
-		for _, bitstruct := range mod.Bitstructs {
-			somethingAdded = true
-			bitstructDef := Generate_bitstruct(bitstruct, mod)
-			modDefinition.
-				Dot("AddBitstruct").Call(bitstructDef)
-		}
+			for _, strukt := range mod.Structs {
+				somethingAdded = true
+				structDef := Generate_struct(strukt, mod)
+				modDefinition.
+					Dot("AddStruct").Call(structDef)
+			}
+			for _, bitstruct := range mod.Bitstructs {
+				somethingAdded = true
+				bitstructDef := Generate_bitstruct(bitstruct, mod)
+				modDefinition.
+					Dot("AddBitstruct").Call(bitstructDef)
+			}
 
-		for _, def := range mod.Defs {
-			somethingAdded = true
-			defDef := Generate_definition(def, mod)
-			modDefinition.
-				Dot("AddDef").Call(defDef)
-		}
+			for _, def := range mod.Defs {
+				somethingAdded = true
+				defDef := Generate_definition(def, mod)
+				modDefinition.
+					Dot("AddDef").Call(defDef)
+			}
 
-		for _, enum := range mod.Enums {
-			somethingAdded = true
-			enumDef := Generate_enum(enum, mod)
-			modDefinition.
-				Dot("AddEnum").Call(enumDef)
-		}
+			for _, enum := range mod.Enums {
+				somethingAdded = true
+				enumDef := Generate_enum(enum, mod)
+				modDefinition.
+					Dot("AddEnum").Call(enumDef)
+			}
 
-		for _, fault := range mod.Faults {
-			somethingAdded = true
-			enumDef := Generate_fault(fault, mod)
-			modDefinition.
-				Dot("AddFault").Call(enumDef)
-		}
+			for _, fault := range mod.Faults {
+				somethingAdded = true
+				enumDef := Generate_fault(fault, mod)
+				modDefinition.
+					Dot("AddFault").Call(enumDef)
+			}
 
-		for _, fun := range mod.ChildrenFunctions {
-			somethingAdded = true
-			// Generate functions
-			funDef := Generate_function(fun, mod)
+			for _, fun := range mod.ChildrenFunctions {
+				somethingAdded = true
+				// Generate functions
+				funDef := Generate_function(fun, mod)
 
-			modDefinition.
-				Dot("AddFunction").Call(funDef)
-		}
+				modDefinition.
+					Dot("AddFunction").Call(funDef)
+			}
 
-		if somethingAdded {
-			stmts = append(
-				stmts,
-				jen.Line(),
-				jen.Comment("Define module "+mod.GetName()),
-				jen.Id("module").Op("=").
-					Id("moduleCollection").Index(jen.Lit(mod.GetName())),
-				modDefinition,
-			)
+			if somethingAdded {
+				stmts = append(
+					stmts,
+					jen.Line(),
+					jen.Comment("Define module "+mod.GetName()),
+					jen.Id("module").Op("=").
+						Id("moduleCollection").Index(jen.Lit(mod.GetName())),
+					modDefinition,
+				)
+			}
 		}
 	}
 

@@ -9,6 +9,7 @@ type Type struct {
 	baseTypeLanguage bool // Is a base type of the language
 	name             string
 	pointer          int
+	optional         bool
 	genericArguments []Type
 	module           string
 }
@@ -35,8 +36,12 @@ func (t *Type) SetModule(module string) {
 
 func (t Type) String() string {
 	pointerStr := strings.Repeat("*", t.pointer)
+	optionalStr := ""
+	if t.optional {
+		optionalStr = "!"
+	}
 
-	return fmt.Sprintf("%s%s", t.name, pointerStr)
+	return fmt.Sprintf("%s%s%s", t.name, pointerStr, optionalStr)
 }
 
 func NewTypeFromString(_type string, modulePath string) Type {
@@ -55,15 +60,27 @@ func NewType(baseTypeLanguage bool, baseType string, pointerCount int, modulePat
 		baseTypeLanguage: baseTypeLanguage,
 		name:             baseType,
 		pointer:          pointerCount,
+		optional:         false,
 		module:           modulePath,
 	}
 }
 
-func NewTypeWithGeneric(baseTypeLanguage bool, baseType string, pointerCount int, genericArguments []Type, modulePath string) Type {
+func NewOptionalType(baseTypeLanguage bool, baseType string, pointerCount int, modulePath string) Type {
 	return Type{
 		baseTypeLanguage: baseTypeLanguage,
 		name:             baseType,
 		pointer:          pointerCount,
+		optional:         true,
+		module:           modulePath,
+	}
+}
+
+func NewTypeWithGeneric(baseTypeLanguage bool, isOptional bool, baseType string, pointerCount int, genericArguments []Type, modulePath string) Type {
+	return Type{
+		baseTypeLanguage: baseTypeLanguage,
+		name:             baseType,
+		pointer:          pointerCount,
+		optional:         isOptional,
 		genericArguments: genericArguments,
 		module:           modulePath,
 	}

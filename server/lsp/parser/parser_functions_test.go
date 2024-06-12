@@ -28,6 +28,26 @@ func TestExtractSymbols_Functions_Definitions(t *testing.T) {
 	})
 }
 
+func TestExtractSymbols_Functions_returns_optional_type(t *testing.T) {
+	source := `fn usz! test() {
+		return 1;
+	}`
+	docId := "docId"
+	doc := document.NewDocument(docId, source)
+	parser := createParser()
+
+	t.Run("Finds function", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "usz!", fn.Get().GetReturnType().String(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 8, 0, 12), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 2), fn.Get().GetDocumentRange())
+	})
+}
+
 func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 	source := `fn void init_window(int width, int height, char* title) @extern("InitWindow");`
 	docId := "docId"

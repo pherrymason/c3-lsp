@@ -8,11 +8,22 @@ import (
 )
 
 func (p *Parser) typeNodeToType(node *sitter.Node, moduleName string, sourceCode []byte) symbols.Type {
+
+	if node.Type() == "optional_type" {
+		return p.extTypeNodeToType(node.Child(0), true, moduleName, sourceCode)
+	}
+
+	return p.extTypeNodeToType(node, false, moduleName, sourceCode)
+}
+
+func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, moduleName string, sourceCode []byte) symbols.Type {
 	//fmt.Println(node, node.Content(sourceCode))
 	baseTypeLanguage := false
 	baseType := ""
 	modulePath := moduleName
 	generic_arguments := []symbols.Type{}
+
+	//fmt.Println(node.Type(), node.Content(sourceCode), node.ChildCount())
 
 	pointerCount := 0
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -57,9 +68,13 @@ func (p *Parser) typeNodeToType(node *sitter.Node, moduleName string, sourceCode
 
 	var parsedType symbols.Type
 	if len(generic_arguments) == 0 {
-		parsedType = symbols.NewType(baseTypeLanguage, baseType, pointerCount, modulePath)
+		if isOptional {
+			parsedType = symbols.NewOptionalType(baseTypeLanguage, baseType, pointerCount, modulePath)
+		} else {
+			parsedType = symbols.NewType(baseTypeLanguage, baseType, pointerCount, modulePath)
+		}
 	} else {
-		parsedType = symbols.NewTypeWithGeneric(baseTypeLanguage, baseType, pointerCount, generic_arguments, modulePath)
+		parsedType = symbols.NewTypeWithGeneric(baseTypeLanguage, isOptional, baseType, pointerCount, generic_arguments, modulePath)
 	}
 
 	return parsedType

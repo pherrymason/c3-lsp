@@ -322,6 +322,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithResolvesToType(
 			idx.NewTypeWithGeneric(
 				false,
+				false,
 				"HashMap",
 				0,
 				[]idx.Type{
