@@ -2,6 +2,7 @@ package language
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
@@ -75,7 +76,8 @@ func (l *Language) findClosestSymbolDeclaration(searchParams search_params.Searc
 		WithoutDoc().
 		Build()
 		*/
-		searchResult := l.findSymbolDeclarationInModule(searchParams, searchParams.LimitToModule().Get(), debugger.goIn())
+		//searchResult := l.findSymbolDeclarationInModule(searchParams, searchParams.LimitToModule().Get(), debugger.goIn())
+		searchResult := l.strictFindSymbolDeclarationInModule(searchParams, searchParams.LimitToModule().Get(), debugger.goIn())
 		if searchResult.IsSome() {
 			return searchResult
 		}
@@ -274,6 +276,66 @@ func (l *Language) findSymbolDeclarationInModule(searchParams search_params.Sear
 		}
 	}
 
+	return searchResult
+}
+
+func (l *Language) strictFindSymbolDeclarationInModule(searchParams search_params.SearchParams, moduleToSearch symbols.ModulePath, debugger FindDebugger) SearchResult {
+	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
+	results := []struct {
+		identifier symbols.Indexable
+		score      int
+	}{}
+
+	for docId, modulesByDoc := range l.symbolsTable.All() {
+		for _, scope := range modulesByDoc.GetLoadableModules(moduleToSearch) {
+			searchResult.TrackTraversedModule(scope.GetModuleString())
+			if !searchParams.TrackTraversedModule(scope.GetModuleString()) {
+				continue
+			}
+			l.debug(fmt.Sprintf("strictFindSymbolDeclarationInModule: search symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
+
+			identifier, _ := findDeepFirst(
+				searchParams.Symbol(),
+				searchParams.SymbolPosition(),
+				scope,
+				0,
+				searchParams.IsLimitSearchInScope(),
+				search_params.InModuleRoot,
+			)
+
+			if identifier != nil {
+				score := 2
+				if moduleToSearch.GetName() == scope.GetModule().GetName() {
+					score = 100
+				}
+
+				results = append(results, struct {
+					identifier symbols.Indexable
+					score      int
+				}{identifier: identifier, score: score})
+				//searchResult.Set(identifier)
+				//return searchResult
+			}
+		}
+	}
+
+	if len(results) == 0 {
+		if searchResult.IsNone() {
+			moduleMatches := l.findModuleNameInTraversedModules(searchParams, searchResult.traversedModules)
+
+			if len(moduleMatches) > 0 {
+				searchResult.Set(moduleMatches[0])
+			}
+		}
+
+		return searchResult
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].score > results[j].score
+	})
+
+	searchResult.Set(results[0].identifier)
 	return searchResult
 }
 

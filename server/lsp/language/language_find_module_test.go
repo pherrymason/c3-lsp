@@ -6,6 +6,7 @@ import (
 	"github.com/pherrymason/c3-lsp/lsp/search_params"
 	idx "github.com/pherrymason/c3-lsp/lsp/symbols"
 	"github.com/stretchr/testify/assert"
+	"github.com/tliron/commonlog"
 )
 
 func TestLanguage_findClosestSymbolDeclaration_should_find_module(t *testing.T) {
@@ -96,6 +97,44 @@ func TestLanguage_findClosestSymbolDeclaration_in_same_or_submodules(t *testing.
 		assert.Equal(t, "int", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(1, 7, 1, 15), variable.GetIdRange())
 		assert.Equal(t, "b.c3", variable.GetDocumentURI())
+	})
+
+	t.Run("Should find the right element when there is a different element with the same name up anywhere in the same parent module", func(t *testing.T) {
+		state := NewTestState()
+
+		state.registerDoc(
+			"libc.c3",
+			`module std::libc;
+			fn void prinf(char *msg, int args) {}`,
+		)
+		state.registerDoc(
+			"io.c3",
+			`module std::io;
+			fn void printf(char* msg) {}`,
+		)
+		state.registerDoc(
+			"user.c3",
+			`module app;
+			import std::io;
+			fn void main() {
+				printf("blabalbal");
+			}
+			`,
+		)
+
+		doc := state.docs["user.c3"]
+		position := buildPosition(4, 5) // Cursor p|rintf("blabalbal");
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+
+		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Symbol not found")
+		symbol := symbolOption.Get()
+
+		fun := symbol.(*idx.Function)
+		assert.Equal(t, "printf", symbol.GetName())
+		assert.Equal(t, "std::io", fun.GetModuleString())
+		assert.Equal(t, "io.c3", fun.GetDocumentURI())
 	})
 
 	t.Run("resolve variable from implicit sub module", func(t *testing.T) {
@@ -360,24 +399,26 @@ func TestResolve_generic_module_parameters(t *testing.T) {
 	assert.Equal(t, idx.NewRange(0, 24, 0, 29), genericParameter.GetDocumentRange())
 }
 
-func TestLanguage_findClosestSymbolDeclaration_should_find_right_module(t *testing.T) {
-	state := NewTestState()
+func TestLanguage_findClosestSymbolDeclaration_should_find_right_module_when_partial_name_of_module_is_used(t *testing.T) {
+	commonlog.Configure(2, nil)
+	logger := commonlog.GetLogger("C3-LSP.parser")
+	state := NewTestState(logger)
 
 	state.registerDoc(
 		"app.c3",
 		`import mystd::io;
-		io::printf("Hello world");;
-		`,
-	)
-	state.registerDoc(
-		"io.c3",
-		`module mystd::io;
-		fn void printf(*char input) {}
+		io::printf("Hello world");
 		`,
 	)
 	state.registerDoc(
 		"trap.c3",
 		`module io;
+		fn void printf(*char input) {}
+		`,
+	)
+	state.registerDoc(
+		"io.c3",
+		`module mystd::io;
 		fn void printf(*char input) {}
 		`,
 	)

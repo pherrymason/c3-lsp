@@ -24,6 +24,11 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 	capabilities.CompletionProvider = &protocol.CompletionOptions{
 		TriggerCharacters: []string{".", ":"},
 	}
+	capabilities.SignatureHelpProvider = &protocol.SignatureHelpOptions{
+		TriggerCharacters:   []string{"(", ","},
+		RetriggerCharacters: []string{")"},
+	}
+
 	h.documents.RootURI = *params.RootURI
 	h.indexWorkspace()
 

@@ -98,6 +98,30 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 	return wb.Build()
 }
 
+func (s SourceCode) RewindBeforePreviousParenthesis(cursorPosition symbols.Position) option.Option[symbols.Position] {
+
+	parentFound := false
+	for {
+		if cursorPosition.Character == 0 {
+			break
+		}
+
+		cursorPosition.Character -= 1
+		index := cursorPosition.IndexIn(s.Text)
+
+		if parentFound {
+			return option.Some(cursorPosition)
+		}
+
+		if rune(s.Text[index]) == '(' {
+			//fmt.Println("Found at ", cursorPosition.Character)
+			parentFound = true
+		}
+	}
+
+	return option.None[symbols.Position]()
+}
+
 func tryToResolveFullModulePaths(wb *WordBuilder, unitModules *symbols_table.UnitModules, cursorPosition symbols.Position) *WordBuilder {
 	if len(wb.word.modulePath) == 0 {
 		return wb
@@ -123,161 +147,6 @@ func tryToResolveFullModulePaths(wb *WordBuilder, unitModules *symbols_table.Uni
 	return wb
 }
 
-// Tries to find the symbol under cursor position
-func (s SourceCode) SymbolInPosition2(cursorPosition symbols.Position) Word {
-	index := cursorPosition.IndexIn(s.Text)
-
-	limitsOpt := s.getWordIndexLimits(index, false)
-
-	var start, end int
-	isPreviousCharacterDot := false
-	isPreviousCharacterModuleSplit := false
-	if limitsOpt.IsNone() {
-		if s.Text[index] == '.' {
-			start = index
-			end = index + 1
-			isPreviousCharacterDot = true
-		} else if s.Text[index] == ':' {
-			start = index
-			end = index + 1
-			isPreviousCharacterModuleSplit = true
-		} else {
-			panic("No word found in cursor position")
-		}
-	} else {
-		start = limitsOpt.Get().start
-		end = limitsOpt.Get().end + 1
-		isPreviousCharacterDot = s.Text[start-1] == '.'
-		isPreviousCharacterModuleSplit = s.Text[start-1] == ':'
-	}
-
-	posRange := symbols.Range{
-		Start: s.indexToPosition(start),
-		End:   s.indexToPosition(end),
-	}
-
-	wb := NewWordBuilder(s.Text[start:end], posRange)
-
-	// Try to get accessPath if exists
-	if start > 0 && isPreviousCharacterDot {
-		//accessPath := s.extractAccessPath(posRange.Start)
-		var accessPath []Word
-		startIndex := start
-		for i := start; i >= 0; i-- {
-			r := rune(s.Text[i])
-			//fmt.Printf("%c\n", r)
-			if utils.IsAZ09_(r) || r == '.' /*|| r == ':'*/ {
-				startIndex = i
-			} else {
-				break
-			}
-		}
-
-		sentence := s.Text[startIndex:start]
-		tokens := strings.Split(sentence, ".")
-		for _, token := range tokens {
-			if len(token) == 0 {
-				continue
-			}
-
-			endIndex := startIndex + len(token)
-			accessPath = append(
-				accessPath,
-				Word{
-					text: token,
-					textRange: symbols.Range{
-						Start: s.indexToPosition(startIndex),
-						End:   s.indexToPosition(endIndex),
-					},
-				},
-			)
-			startIndex = endIndex + 1 // 1 is to take '.' into account
-		}
-
-		wb.WithAccessPath(accessPath)
-	}
-
-	// Try to get modulePath if exists
-	if start > 0 && isPreviousCharacterModuleSplit {
-		n := start
-		modulePath := []Word{}
-		consume := "colon"
-		colonCount := 0
-		lastColon := start
-		exit := false
-		for {
-			//fmt.Printf("%c\n", s.Text[n])
-			switch consume {
-			case "colon":
-				if s.Text[n] == ':' {
-					colonCount++
-				}
-
-				if colonCount == 2 {
-					consume = "path"
-					colonCount = 0
-					lastColon = n
-				}
-			case "path":
-				r := rune(s.Text[n])
-				if !utils.IsAZ09_(r) {
-					// First invalid character found, that means previous iteration contained first character of symbol
-					modulePath = append([]Word{{
-						text: s.Text[n+1 : lastColon],
-						textRange: symbols.Range{
-							Start: s.indexToPosition(n + 1),
-							End:   s.indexToPosition(lastColon),
-						},
-					}}, modulePath...)
-
-					if r == ':' {
-						consume = "colon"
-						colonCount = 1
-					} else if r != ':' {
-						exit = true
-					}
-				}
-			}
-
-			if exit {
-				break
-			}
-			n--
-		}
-		wb.WithModule(modulePath)
-
-		/*rewindedStart := start
-		skipOnNonModSplit := false
-		colonCount := 0
-		modulePath := []Word{}
-		firstColonConsumed := false
-		for {
-			if s.Text[rewindedStart] == ':' {
-				skipOnNonModSplit = true
-				colonCount++
-			}
-
-			if colonCount == 2 {
-				fmt.Println("New path")
-
-			}
-
-			if s.Text[rewindedStart] != ':' && skipOnNonModSplit {
-				rewindedStart++
-				break
-			}
-			rewindedStart--
-		}
-
-		modulePath := s.modulePathAtIndex(rewindedStart)
-		if modulePath.IsSome() {
-			wb.WithModule(modulePath.Get())
-		}*/
-	}
-
-	return wb.Build()
-}
-
 // Returns start and end index of symbol present in index.
 // If no symbol is found in index, error will be returned
 func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Option[symbolLimits] {
@@ -291,7 +160,6 @@ func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Opti
 		} else {
 			return option.None[symbolLimits]()
 		}
-		//return 0, 0, errors.New("No symbol at position")
 	}
 
 	symbolStart := 0
@@ -375,28 +243,3 @@ func (s SourceCode) modulePathAtIndex(index int) option.Option[string] {
 
 	return option.Some(s.Text[symbolStart:index])
 }
-
-/*
-func (s *SourceCode) symbolAtIndex(index int) (Word, error) {
-	var start, end int
-	var err error
-	//start, end, err = s.getWordIndexLimits(index)
-	limitsOpt := s.getWordIndexLimits(index, true)
-
-	if err != nil {
-		// Why is this logic here??
-		// This causes problems, index+1 might be out of bounds!
-		posRange := symbols.Range{
-			Start: s.indexToPosition(index),
-			End:   s.indexToPosition(index + 1),
-		}
-		return NewWord(s.Text[index:index+1], posRange), err
-	}
-
-	posRange := symbols.Range{
-		Start: s.indexToPosition(start),
-		End:   s.indexToPosition(end + 1),
-	}
-	return NewWord(s.Text[start:end+1], posRange), nil
-}
-*/

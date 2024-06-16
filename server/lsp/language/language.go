@@ -17,9 +17,8 @@ import (
 
 // Language will be the center of knowledge of everything parsed.
 type Language struct {
-	indexByFQN   IndexStore
-	symbolsTable symbols_table.SymbolsTable
-	//parsedModulesByDocument map[protocol.DocumentUri]symbols_table.UnitModules
+	indexByFQN      IndexStore
+	symbolsTable    symbols_table.SymbolsTable
 	logger          commonlog.Logger
 	languageVersion Version
 	debugEnabled    bool
@@ -27,9 +26,8 @@ type Language struct {
 
 func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string]) Language {
 	language := Language{
-		indexByFQN:   NewIndexStore(),
-		symbolsTable: symbols_table.NewSymbolsTable(),
-		//parsedModulesByDocument: make(map[protocol.DocumentUri]symbols_table.UnitModules),
+		indexByFQN:      NewIndexStore(),
+		symbolsTable:    symbols_table.NewSymbolsTable(),
 		logger:          logger,
 		languageVersion: GetVersion(languageVersion),
 		debugEnabled:    false,
@@ -40,7 +38,6 @@ func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string])
 	language.indexParsedSymbols(stdlibModules, stdlibModules.DocId())
 
 	language.symbolsTable.Register(stdlibModules, symbols_table.PendingToResolve{})
-	//language.parsedModulesByDocument["_stdlib"] = stdlibModules
 
 	return language
 }
@@ -84,7 +81,6 @@ func (l *Language) FindSymbolDeclarationInWorkspace(doc *document.Document, posi
 	searchParams := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
 		*l.symbolsTable.GetByDoc(doc.URI),
-		//l.parsedModulesByDocument[doc.URI],
 		position,
 	)
 

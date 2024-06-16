@@ -96,6 +96,7 @@ func NewServer(opts ServerOpts) *Server {
 	handler.TextDocumentDeclaration = handlers.TextDocumentDeclaration
 	handler.TextDocumentDefinition = handlers.TextDocumentDefinition
 	handler.TextDocumentCompletion = handlers.TextDocumentCompletion
+	handler.TextDocumentSignatureHelp = handlers.TextDocumentSignatureHelp
 
 	handler.CompletionItemResolve = func(context *glsp.Context, params *protocol.CompletionItem) (*protocol.CompletionItem, error) {
 		return params, nil
