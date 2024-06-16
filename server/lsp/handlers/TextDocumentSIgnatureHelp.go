@@ -3,7 +3,9 @@ package handlers
 import (
 	"strings"
 
+	"github.com/pherrymason/c3-lsp/lsp/document/sourcecode"
 	"github.com/pherrymason/c3-lsp/lsp/symbols"
+	"github.com/pherrymason/c3-lsp/option"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -48,15 +50,44 @@ func (h *Handlers) TextDocumentSignatureHelp(context *glsp.Context, params *prot
 		)
 	}
 
+	// Count number of commas (,) written from previous `(`
+	activeParameter := countWrittenArguments(posOption.Get(), doc.SourceCode)
+	signature := protocol.SignatureInformation{
+		Label:         function.GetFQN() + "(" + strings.Join(argsToStringify, ", ") + ")",
+		Parameters:    parameters,
+		Documentation: "", // TODO: Parse comments on functions to include them here.
+	}
+	if activeParameter.IsSome() {
+		arg := activeParameter.Get()
+		signature.ActiveParameter = &arg
+	}
+
 	signatureHelp := protocol.SignatureHelp{
-		Signatures: []protocol.SignatureInformation{
-			{
-				Label:         function.GetFQN() + "(" + strings.Join(argsToStringify, ", ") + ")",
-				Parameters:    parameters,
-				Documentation: "Blbalbal bals ldba sdadfa isvaids v",
-			},
-		},
+		Signatures: []protocol.SignatureInformation{signature},
 	}
 
 	return &signatureHelp, nil
+}
+
+func countWrittenArguments(startArgumentsPosition symbols.Position, s sourcecode.SourceCode) option.Option[uint32] {
+	index := startArgumentsPosition.IndexIn(s.Text)
+	commas := uint32(0)
+	length := len(s.Text)
+	for {
+		if index >= length {
+			break
+		}
+
+		if rune(s.Text[index]) == ')' {
+			return option.None[uint32]()
+		}
+
+		if rune(s.Text[index]) == ',' {
+			commas++
+		}
+
+		index++
+	}
+
+	return option.Some(commas)
 }
