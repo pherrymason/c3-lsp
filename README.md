@@ -7,7 +7,7 @@ WIP LSP for [C3 language](https://github.com/c3lang/c3c)
 ## Table of Contents
 
 - [Features](#Features)
-- [Project Goals](#Project Goals)
+- [Project Goals](#project-goals)
 - [Installation](#Installation)
 - [Usage](#Usage)
 - [Clients](#Clients)
