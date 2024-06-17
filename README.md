@@ -19,6 +19,7 @@ Supported Language server features:
 - Go to definition
 - Go to declaration
 - Hover
+- Signature Help
 
 Furthermore, the LSP is able to resolve stdlib symbols information (for supported C3c versions), allowing to use this in completion and hover functionalities.
 
