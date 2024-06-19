@@ -69,3 +69,15 @@ func (s *DocumentStore) Get(pathOrURI string) (*Document, bool) {
 	d, ok := s.documents[path]
 	return d, ok
 }
+
+func (s *DocumentStore) Delete(pathOrURI string) {
+	path, err := s.normalizePath(pathOrURI)
+	s.logger.Debugf("normalized path:%s", path)
+
+	if err != nil {
+		s.logger.Errorf("Could not normalize path: %s", err)
+		return
+	}
+
+	delete(s.documents, path)
+}

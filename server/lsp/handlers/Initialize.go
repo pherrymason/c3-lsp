@@ -28,7 +28,18 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 		TriggerCharacters:   []string{"(", ","},
 		RetriggerCharacters: []string{")"},
 	}
-
+	capabilities.Workspace = &protocol.ServerCapabilitiesWorkspace{
+		FileOperations: &protocol.ServerCapabilitiesWorkspaceFileOperations{
+			DidDelete: &protocol.FileOperationRegistrationOptions{
+				Filters: []protocol.FileOperationFilter{{
+					Pattern: protocol.FileOperationPattern{
+						Glob: "**/*.{c3,c3i}",
+					},
+				},
+				},
+			},
+		},
+	}
 	h.documents.RootURI = *params.RootURI
 	h.indexWorkspace()
 

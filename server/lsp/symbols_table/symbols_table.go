@@ -37,6 +37,10 @@ func (st *SymbolsTable) Register(unitModules UnitModules, pendingToResolve Pendi
 	st.resolveTypes()
 }
 
+func (st *SymbolsTable) DeleteDocument(docId string) {
+	delete(st.parsedModulesByDocument, docId)
+}
+
 func (st *SymbolsTable) GetByDoc(docId string) *UnitModules {
 	value, _ := st.parsedModulesByDocument[docId]
 	return &value

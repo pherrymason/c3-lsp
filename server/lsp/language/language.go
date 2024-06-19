@@ -50,6 +50,11 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 	l.indexParsedSymbols(parsedModules, doc.URI)
 }
 
+func (l *Language) DeleteDocument(docId string) {
+	l.symbolsTable.DeleteDocument(docId)
+	l.indexByFQN.ClearByTag(docId)
+}
+
 func (l *Language) indexParsedSymbols(parsedModules symbols_table.UnitModules, docId string) {
 	l.indexByFQN.ClearByTag(docId)
 
