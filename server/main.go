@@ -12,7 +12,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-const version = "0.0.6a"
+const version = "0.0.6"
 const appName = "C3-LSP"
 
 func main() {
