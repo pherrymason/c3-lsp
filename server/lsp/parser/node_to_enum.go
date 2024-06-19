@@ -32,7 +32,7 @@ import (
 			optional($.attributes),
 		),
 */
-func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Enum {
+func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Enum {
 	// TODO parse attributes
 
 	baseType := ""

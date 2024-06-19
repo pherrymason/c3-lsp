@@ -99,6 +99,7 @@ func NewServer(opts ServerOpts) *Server {
 	handler.TextDocumentSignatureHelp = handlers.TextDocumentSignatureHelp
 	handler.WorkspaceDidChangeWatchedFiles = handlers.WorkspaceDidChangeWatchedFiles
 	handler.WorkspaceDidDeleteFiles = handlers.WorkspaceDidDeleteFiles
+	handler.WorkspaceDidRenameFiles = handlers.WorkspaceDidRenameFiles
 
 	handler.CompletionItemResolve = func(context *glsp.Context, params *protocol.CompletionItem) (*protocol.CompletionItem, error) {
 		return params, nil

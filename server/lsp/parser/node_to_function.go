@@ -20,7 +20,7 @@ import (
 			field('name', $._func_macro_name),
 		),
 */
-func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Function {
+func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Function {
 	var typeIdentifier string
 	funcHeader := node.Child(1)
 	nameNode := funcHeader.ChildByFieldName("name")
@@ -110,7 +110,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId stri
       seq($.ct_ident, '...'),								// 2
     ),
 */
-func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, moduleName string, docId string, sourceCode []byte) *idx.Variable {
+func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, moduleName string, docId *string, sourceCode []byte) *idx.Variable {
 	var identifier string = ""
 	var idRange idx.Range
 	var argType idx.Type
@@ -171,7 +171,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 		  field('name', $._func_macro_name),
 		),
 */
-func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Function {
+func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Function {
 	var typeIdentifier string
 	var nameNode *sitter.Node
 	funcHeader := node.Child(1)

@@ -6,7 +6,7 @@ type FaultBuilder struct {
 	fault Fault
 }
 
-func NewFaultBuilder(name string, baseType string, module string, docId string) *FaultBuilder {
+func NewFaultBuilder(name string, baseType string, module string, docId *string) *FaultBuilder {
 	return &FaultBuilder{
 		fault: Fault{
 			baseType: baseType,
@@ -51,7 +51,7 @@ type FaultConstantBuilder struct {
 	faultConstant FaultConstant
 }
 
-func NewFaultConstantBuilder(name string, docId string) *FaultConstantBuilder {
+func NewFaultConstantBuilder(name string, docId *string) *FaultConstantBuilder {
 	return &FaultConstantBuilder{
 		faultConstant: FaultConstant{
 			BaseIndexable: BaseIndexable{

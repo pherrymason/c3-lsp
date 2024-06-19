@@ -35,8 +35,14 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 					Pattern: protocol.FileOperationPattern{
 						Glob: "**/*.{c3,c3i}",
 					},
-				},
-				},
+				}},
+			},
+			DidRename: &protocol.FileOperationRegistrationOptions{
+				Filters: []protocol.FileOperationFilter{{
+					Pattern: protocol.FileOperationPattern{
+						Glob: "**/*.{c3,c3i}",
+					},
+				}},
 			},
 		},
 	}

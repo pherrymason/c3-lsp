@@ -7,11 +7,11 @@ import (
 )
 
 type UnitModules struct {
-	docId   string
+	docId   *string
 	modules data.OrderedMap[*idx.Module]
 }
 
-func NewParsedModules(docId string) UnitModules {
+func NewParsedModules(docId *string) UnitModules {
 	return UnitModules{
 		docId:   docId,
 		modules: *data.NewOrderedMap[*idx.Module](),
@@ -19,17 +19,17 @@ func NewParsedModules(docId string) UnitModules {
 }
 
 func (ps UnitModules) DocId() string {
-	return ps.docId
+	return *ps.docId
 }
 
 func (ps *UnitModules) ModuleIds() []string {
 	return ps.modules.Keys()
 }
 
-func (ps *UnitModules) GetOrInitModule(moduleName string, docId string, rootNode *sitter.Node, anonymousModuleName bool) *idx.Module {
+func (ps *UnitModules) GetOrInitModule(moduleName string, docId *string, rootNode *sitter.Node, anonymousModuleName bool) *idx.Module {
 	if anonymousModuleName {
 		// Build module name from filename
-		moduleName = idx.NormalizeModuleName(docId)
+		moduleName = idx.NormalizeModuleName(*docId)
 	}
 
 	module, exists := ps.modules.Get(moduleName)

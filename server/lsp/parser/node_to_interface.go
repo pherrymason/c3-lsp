@@ -13,7 +13,7 @@ interface_declaration: $ => seq(
 	  field('body', $.interface_body),
 	),
 */
-func (p *Parser) nodeToInterface(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Interface {
+func (p *Parser) nodeToInterface(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Interface {
 	// TODO parse attributes
 	methods := []*idx.Function{}
 

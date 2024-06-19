@@ -39,7 +39,7 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 					param := symbols.NewGenericParameter(
 						genericName,
 						moduleName,
-						doc.URI,
+						&doc.URI,
 						symbols.NewRangeFromTreeSitterPositions(gn.StartPoint(), gn.EndPoint()),
 						symbols.NewRangeFromTreeSitterPositions(gn.StartPoint(), gn.EndPoint()),
 					)
@@ -58,7 +58,7 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 	name := node.ChildByFieldName("path")
 	module := symbols.NewModule(
 		moduleName,
-		doc.URI,
+		&doc.URI,
 		symbols.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
 		symbols.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
 	)

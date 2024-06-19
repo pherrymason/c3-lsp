@@ -40,6 +40,14 @@ func (st *SymbolsTable) Register(unitModules UnitModules, pendingToResolve Pendi
 func (st *SymbolsTable) DeleteDocument(docId string) {
 	delete(st.parsedModulesByDocument, docId)
 }
+func (st *SymbolsTable) RenameDocument(oldDocId string, newDocId string) {
+	if val, ok := st.parsedModulesByDocument[oldDocId]; ok {
+		// Asignar el valor a la nueva clave
+		st.parsedModulesByDocument[newDocId] = val
+		// Eliminar la clave antigua
+		delete(st.parsedModulesByDocument, oldDocId)
+	}
+}
 
 func (st *SymbolsTable) GetByDoc(docId string) *UnitModules {
 	value, _ := st.parsedModulesByDocument[docId]

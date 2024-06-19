@@ -12,7 +12,7 @@ type Fault struct {
 	BaseIndexable
 }
 
-func NewFault(name string, baseType string, constants []*FaultConstant, module string, docId string, idRange Range, docRange Range) Fault {
+func NewFault(name string, baseType string, constants []*FaultConstant, module string, docId *string, idRange Range, docRange Range) Fault {
 	fault := Fault{
 		baseType:  baseType,
 		constants: constants,

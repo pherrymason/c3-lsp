@@ -43,7 +43,6 @@ func NewLanguage(logger commonlog.Logger, languageVersion option.Option[string])
 }
 
 func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
-
 	//l.logger.Debug(fmt.Sprint("Parsing ", doc.URI))
 	parsedModules, pendingTypes := parser.ParseSymbols(doc)
 	l.symbolsTable.Register(parsedModules, pendingTypes)
@@ -53,6 +52,14 @@ func (l *Language) RefreshDocumentIdentifiers(doc *document.Document, parser *pa
 func (l *Language) DeleteDocument(docId string) {
 	l.symbolsTable.DeleteDocument(docId)
 	l.indexByFQN.ClearByTag(docId)
+}
+
+func (l *Language) RenameDocument(oldDocId string, newDocId string) {
+	l.indexByFQN.ClearByTag(oldDocId)
+	l.symbolsTable.RenameDocument(oldDocId, newDocId)
+
+	x := l.symbolsTable.GetByDoc(newDocId)
+	l.indexParsedSymbols(*x, newDocId)
 }
 
 func (l *Language) indexParsedSymbols(parsedModules symbols_table.UnitModules, docId string) {

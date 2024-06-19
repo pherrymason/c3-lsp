@@ -33,7 +33,7 @@ struct_member_declaration: $ => choice(
 	  seq('inline', field('type', $.type), optional($.ident), optional($.attributes), ';'),
 	),
 */
-func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId string, sourceCode []byte) (idx.Struct, []idx.Type) {
+func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) (idx.Struct, []idx.Type) {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
 	var interfaces []string

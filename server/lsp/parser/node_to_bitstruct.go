@@ -8,7 +8,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Bitstruct {
+func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Bitstruct {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
@@ -51,7 +51,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId str
 	return _struct
 }
 
-func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.StructMember {
+func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) []*idx.StructMember {
 
 	structFields := []*idx.StructMember{}
 	// node = bitstruct_body

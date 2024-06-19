@@ -23,7 +23,7 @@ type Module struct {
 	BaseIndexable
 }
 
-func NewModule(name string, docId string, idRange Range, docRange Range) *Module {
+func NewModule(name string, docId *string, idRange Range, docRange Range) *Module {
 	return &Module{
 		Variables:         make(map[string]*Variable),
 		Enums:             make(map[string]*Enum),

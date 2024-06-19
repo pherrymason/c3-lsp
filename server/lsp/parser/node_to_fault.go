@@ -24,7 +24,7 @@ fault_body: $ => seq(
 
 ),
 */
-func (p *Parser) nodeToFault(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Fault {
+func (p *Parser) nodeToFault(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Fault {
 	// TODO parse attributes
 
 	baseType := "" // TODO Parse type!

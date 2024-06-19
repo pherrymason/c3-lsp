@@ -241,7 +241,7 @@ func TestParse_interface(t *testing.T) {
 	t.Run("finds interface", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		expected := idx.NewInterfaceBuilder("MyName", module, docId).
+		expected := idx.NewInterfaceBuilder("MyName", module, &doc.URI).
 			Build()
 
 		module := symbols.Get("doc")
@@ -289,7 +289,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	symbols, _ := parser.ParseSymbols(&doc)
 	module := symbols.Get(mod)
 
-	expectedDefKilo := idx.NewDefBuilder("Kilo", mod, "x").
+	expectedDefKilo := idx.NewDefBuilder("Kilo", mod, &doc.URI).
 		WithResolvesToType(
 			idx.NewType(true, "int", 0, "mod"),
 		).
@@ -299,7 +299,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	assert.Equal(t, expectedDefKilo, module.Defs["Kilo"])
 	assert.Same(t, module.Children()[0], module.Defs["Kilo"])
 
-	expectedDefKiloPtr := idx.NewDefBuilder("KiloPtr", mod, "x").
+	expectedDefKiloPtr := idx.NewDefBuilder("KiloPtr", mod, &doc.URI).
 		WithResolvesToType(
 			idx.NewType(false, "Kilo", 1, "mod"),
 		).
@@ -309,7 +309,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	assert.Equal(t, expectedDefKiloPtr, module.Defs["KiloPtr"])
 	assert.Same(t, module.Children()[1], module.Defs["KiloPtr"])
 
-	expectedDefFunction := idx.NewDefBuilder("MyFunction", mod, "x").
+	expectedDefFunction := idx.NewDefBuilder("MyFunction", mod, &doc.URI).
 		WithResolvesTo("fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)").
 		WithIdentifierRange(3, 5, 3, 15).
 		WithDocumentRange(3, 1, 3, 74).
@@ -318,7 +318,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	assert.Equal(t, expectedDefFunction, module.Defs["MyFunction"])
 	assert.Same(t, module.Children()[2], module.Defs["MyFunction"])
 
-	expectedDefTypeWithGenerics := idx.NewDefBuilder("MyMap", mod, "x").
+	expectedDefTypeWithGenerics := idx.NewDefBuilder("MyMap", mod, &doc.URI).
 		WithResolvesToType(
 			idx.NewTypeWithGeneric(
 				false,
@@ -337,7 +337,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	assert.Equal(t, expectedDefTypeWithGenerics, module.Defs["MyMap"])
 	assert.Same(t, module.Children()[3], module.Defs["MyMap"])
 
-	expectedDefTypeWithModulePath := idx.NewDefBuilder("Camera", mod, "x").
+	expectedDefTypeWithModulePath := idx.NewDefBuilder("Camera", mod, &doc.URI).
 		WithResolvesToType(
 			idx.NewType(false, "Camera", 0, "raylib"),
 		).

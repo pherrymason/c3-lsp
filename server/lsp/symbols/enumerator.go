@@ -12,7 +12,7 @@ type Enumerator struct {
 	BaseIndexable
 }
 
-func NewEnumerator(name string, value string, associatedValues []Variable, module string, idRange Range, docId string) *Enumerator {
+func NewEnumerator(name string, value string, associatedValues []Variable, module string, idRange Range, docId *string) *Enumerator {
 	enumerator := &Enumerator{
 		value:            value,
 		associatedValues: associatedValues,

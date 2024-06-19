@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pherrymason/c3-lsp/fs"
+	"github.com/pherrymason/c3-lsp/lsp/utils"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
@@ -70,14 +71,18 @@ func (s *DocumentStore) Get(pathOrURI string) (*Document, bool) {
 	return d, ok
 }
 
-func (s *DocumentStore) Delete(pathOrURI string) {
-	path, err := s.normalizePath(pathOrURI)
-	s.logger.Debugf("normalized path:%s", path)
+func (s *DocumentStore) Delete(docId string) {
+	delete(s.documents, docId)
+}
 
-	if err != nil {
-		s.logger.Errorf("Could not normalize path: %s", err)
-		return
+func (s *DocumentStore) Rename(oldDocURI string, newDocURI string) {
+	oldDocId, _ := utils.NormalizePath(oldDocURI)
+	newDocId, _ := utils.NormalizePath(newDocURI)
+
+	if val, ok := s.documents[oldDocId]; ok {
+		val.URI = newDocURI
+		s.documents[newDocId] = val
+		// Eliminar la clave antigua
+		delete(s.documents, oldDocId)
 	}
-
-	delete(s.documents, path)
 }

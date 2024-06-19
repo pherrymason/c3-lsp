@@ -9,7 +9,7 @@ type Bitstruct struct {
 	BaseIndexable
 }
 
-func NewBitstruct(name string, backingType Type, interfaces []string, members []*StructMember, module string, docId string, idRange Range, docRange Range) Bitstruct {
+func NewBitstruct(name string, backingType Type, interfaces []string, members []*StructMember, module string, docId *string, idRange Range, docRange Range) Bitstruct {
 	bitstruct := Bitstruct{
 		backingType: backingType,
 		members:     members,

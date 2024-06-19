@@ -11,7 +11,7 @@ type Interface struct {
 	BaseIndexable
 }
 
-func NewInterface(name string, module string, docId string, idRange Range, docRange Range) Interface {
+func NewInterface(name string, module string, docId *string, idRange Range, docRange Range) Interface {
 	return Interface{
 		methods: make(map[string]*Function, 0),
 		BaseIndexable: NewBaseIndexable(

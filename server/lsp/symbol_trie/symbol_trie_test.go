@@ -20,13 +20,13 @@ func sort(items []symbols.Indexable) []symbols.Indexable {
 
 func TestTrie(t *testing.T) {
 	trie := NewTrie()
+	docId := "doc"
+	strukt := symbols.NewStructBuilder("structName", "app", &docId).Build()
 
-	strukt := symbols.NewStructBuilder("structName", "app", "doc").Build()
-
-	fun2 := symbols.NewFunctionBuilder("method1", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("structName").Build()
-	fun3 := symbols.NewFunctionBuilder("method2", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("structName").Build()
-	fun4 := symbols.NewFunctionBuilder("tearPot", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("structName").Build()
-	funa := symbols.NewFunctionBuilder("anotherMethod1", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("anotherStruct").Build()
+	fun2 := symbols.NewFunctionBuilder("method1", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("structName").Build()
+	fun3 := symbols.NewFunctionBuilder("method2", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("structName").Build()
+	fun4 := symbols.NewFunctionBuilder("tearPot", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("structName").Build()
+	funa := symbols.NewFunctionBuilder("anotherMethod1", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("anotherStruct").Build()
 
 	trie.Insert(strukt)
 	trie.Insert(fun2)
@@ -62,12 +62,12 @@ func TestTrie(t *testing.T) {
 func TestTrie_with_empty_nodes(t *testing.T) {
 	trie := NewTrie()
 
-	//strukt := symbols.NewStructBuilder("structName", "app", "doc").Build()
+	docId := "doc"
 
-	fun2 := symbols.NewFunctionBuilder("method1", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("structName").Build()
-	fun3 := symbols.NewFunctionBuilder("method2", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("structName").Build()
-	fun4 := symbols.NewFunctionBuilder("tearPot", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("structName").Build()
-	funa := symbols.NewFunctionBuilder("anotherMethod1", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("anotherStruct").Build()
+	fun2 := symbols.NewFunctionBuilder("method1", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("structName").Build()
+	fun3 := symbols.NewFunctionBuilder("method2", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("structName").Build()
+	fun4 := symbols.NewFunctionBuilder("tearPot", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("structName").Build()
+	funa := symbols.NewFunctionBuilder("anotherMethod1", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("anotherStruct").Build()
 
 	//trie.Insert(&strukt)
 	trie.Insert(fun2)
@@ -104,7 +104,7 @@ func TestTrie_clearing_by_tag(t *testing.T) {
 	trie := NewTrie()
 	docId := "doc"
 
-	fun := symbols.NewFunctionBuilder("method1", symbols.NewTypeFromString("void", "app"), "app", docId).WithTypeIdentifier("structName").Build()
+	fun := symbols.NewFunctionBuilder("method1", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("structName").Build()
 	trie.Insert(fun)
 
 	trie.ClearByTag(docId)
@@ -114,10 +114,12 @@ func TestTrie_clearing_by_tag(t *testing.T) {
 func TestTrie_clearing_by_tag_should_keep_nodes_with_children(t *testing.T) {
 	trie := NewTrie()
 
-	fun := symbols.NewFunctionBuilder("method1", symbols.NewTypeFromString("void", "app"), "app", "doc").WithTypeIdentifier("structName").Build()
+	docId := "doc"
+	fun := symbols.NewFunctionBuilder("method1", symbols.NewTypeFromString("void", "app"), "app", &docId).WithTypeIdentifier("structName").Build()
 	trie.Insert(fun)
 
-	fun2 := symbols.NewFunctionBuilder("method2", symbols.NewTypeFromString("void", "app"), "app", "different-doc").WithTypeIdentifier("structName").Build()
+	docIdB := "different-doc"
+	fun2 := symbols.NewFunctionBuilder("method2", symbols.NewTypeFromString("void", "app"), "app", &docIdB).WithTypeIdentifier("structName").Build()
 	trie.Insert(fun2)
 
 	trie.ClearByTag("different-doc")

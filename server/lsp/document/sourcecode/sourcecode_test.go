@@ -241,10 +241,11 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_with_module_path(t *testing.T
 func Test_SourceCode_SymbolInPosition_should_resolve_full_module_paths(t *testing.T) {
 
 	// Resolves full name of module, even if sentence uses short name
-	module := symbols.NewModule("file", "file", symbols.NewRange(0, 0, 0, 0), symbols.NewRange(0, 0, 1, 13))
+	docId := "doc"
+	module := symbols.NewModule("file", &docId, symbols.NewRange(0, 0, 0, 0), symbols.NewRange(0, 0, 1, 13))
 	module.AddImports([]string{"std::io"})
 
-	unitModule := symbols_table.NewParsedModules("file")
+	unitModule := symbols_table.NewParsedModules(&docId)
 	unitModule.RegisterModule(module)
 	source := `import std::io;
 	io::printf()`

@@ -5,7 +5,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.Variable {
+func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId *string, sourceCode []byte) []*idx.Variable {
 	var variables []*idx.Variable
 	//var typeNodeContent string
 	var vType idx.Type
@@ -68,7 +68,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 	return variables
 }
 
-func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId string, sourceCode []byte) []*idx.Variable {
+func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId *string, sourceCode []byte) []*idx.Variable {
 	var variables []*idx.Variable
 	//var typeNodeContent string
 	var vType idx.Type
@@ -119,7 +119,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.
 	      ';'
 	    )
 */
-func (p *Parser) nodeToConstant(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Variable {
+func (p *Parser) nodeToConstant(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Variable {
 	var constant idx.Variable
 	var typeNodeContent string
 	var idNode *sitter.Node

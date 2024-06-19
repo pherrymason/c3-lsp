@@ -12,7 +12,7 @@ type Enum struct {
 	BaseIndexable
 }
 
-func NewEnum(name string, baseType string, enumerators []*Enumerator, module string, docId string, idRange Range, docRange Range) Enum {
+func NewEnum(name string, baseType string, enumerators []*Enumerator, module string, docId *string, idRange Range, docRange Range) Enum {
 	return Enum{
 		baseType:    baseType,
 		enumerators: enumerators,

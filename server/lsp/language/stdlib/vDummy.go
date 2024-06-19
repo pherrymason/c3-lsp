@@ -5,6 +5,7 @@ import (
 )
 
 func Load_vdummy_stdlib() symbols_table.UnitModules {
-	parsedModules := symbols_table.NewParsedModules("_stdlib")
+	docId := "_stdlib"
+	parsedModules := symbols_table.NewParsedModules(&docId)
 	return parsedModules
 }

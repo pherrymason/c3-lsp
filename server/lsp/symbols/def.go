@@ -14,7 +14,7 @@ type Def struct {
 	BaseIndexable
 }
 
-func NewDef(name string, resolvesTo string, module string, docId string, idRange Range, docRange Range) Def {
+func NewDef(name string, resolvesTo string, module string, docId *string, idRange Range, docRange Range) Def {
 	return Def{
 		resolvesTo:     resolvesTo,
 		resolvesToType: option.None[*Type](),
@@ -29,7 +29,7 @@ func NewDef(name string, resolvesTo string, module string, docId string, idRange
 	}
 }
 
-func NewDefType(name string, resolvesTo Type, module string, docId string, idRange Range, docRange Range) Def {
+func NewDefType(name string, resolvesTo Type, module string, docId *string, idRange Range, docRange Range) Def {
 	return Def{
 		resolvesTo:     "",
 		resolvesToType: option.Some(&resolvesTo),

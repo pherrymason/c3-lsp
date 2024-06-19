@@ -86,7 +86,7 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 						Qual(PackageName+"symbols", "NewModuleBuilder").
 						Call(
 							jen.Lit(mod.GetName()),
-							jen.Lit(""),
+							jen.Op("&").Id("docId"),
 						).
 						Dot("WithoutSourceCode").Call().
 						Dot("Build").Call()
@@ -96,8 +96,9 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 	}
 
 	stmts := []jen.Code{
+		jen.Id("docId").Op(":=").Lit("_stdlib"),
 		jen.Id("moduleCollection").Op(":=").Map(jen.String()).Add(jen.Op("*")).Qual(PackageName+"symbols", "Module").Values(dict),
-		jen.Id("parsedModules").Op(":=").Qual(PackageName+"symbols_table", "NewParsedModules").Call(jen.Lit("_stdlib")),
+		jen.Id("parsedModules").Op(":=").Qual(PackageName+"symbols_table", "NewParsedModules").Call(jen.Op("&").Id("docId")),
 		jen.For(
 			jen.Id("_").Op(",").Id("mod").Op(":=").Range().
 				Id("moduleCollection"),

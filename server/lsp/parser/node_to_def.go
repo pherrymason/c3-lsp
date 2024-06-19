@@ -23,7 +23,7 @@ define_declaration: $ => seq(
 	  ';'
 	),
 */
-func (p *Parser) nodeToDef(node *sitter.Node, moduleName string, docId string, sourceCode []byte) idx.Def {
+func (p *Parser) nodeToDef(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Def {
 	//fmt.Println(node)
 	defBuilder := idx.NewDefBuilder("", moduleName, docId).
 		WithDocumentRange(

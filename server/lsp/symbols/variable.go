@@ -11,7 +11,7 @@ type Variable struct {
 	BaseIndexable
 }
 
-func NewVariable(name string, variableType Type, module string, docId string, idRange Range, docRange Range) Variable {
+func NewVariable(name string, variableType Type, module string, docId *string, idRange Range, docRange Range) Variable {
 	return Variable{
 		Type: variableType,
 		BaseIndexable: NewBaseIndexable(
@@ -25,7 +25,7 @@ func NewVariable(name string, variableType Type, module string, docId string, id
 	}
 }
 
-func NewConstant(name string, variableType Type, module string, docId string, idRange Range, docRange Range) Variable {
+func NewConstant(name string, variableType Type, module string, docId *string, idRange Range, docRange Range) Variable {
 	return Variable{
 		Type: variableType,
 		BaseIndexable: NewBaseIndexable(

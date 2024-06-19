@@ -6,7 +6,7 @@ type InterfaceBuilder struct {
 	_interface Interface
 }
 
-func NewInterfaceBuilder(name string, module string, docId string) *InterfaceBuilder {
+func NewInterfaceBuilder(name string, module string, docId *string) *InterfaceBuilder {
 	f := &InterfaceBuilder{
 		_interface: Interface{
 			methods: make(map[string]*Function, 0),
