@@ -11,38 +11,38 @@ treesitter-playground:
 
 build-parser:
 	cd assets/tree-sitter-c3 && tree-sitter generate
-	rm -rf server/lsp/cst/tree_sitter
-	rm -f server/lsp/cst/parser.c
-	cp -r assets/tree-sitter-c3/src/tree_sitter server/lsp/cst
-	cp assets/tree-sitter-c3/src/parser.c server/lsp/cst/parser.c
-	cp assets/tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
-	cp assets/tree-sitter-c3/src/scanner.c server/lsp/cst/scanner.c
+	rm -rf server/internal/lsp/cst/tree_sitter
+	rm -f server/internal/lsp/cst/parser.c
+	cp -r assets/tree-sitter-c3/src/tree_sitter server/internal/lsp/cst
+	cp assets/tree-sitter-c3/src/parser.c server/internal/lsp/cst/parser.c
+	cp assets/tree-sitter-c3/src/scanner.c server/internal/lsp/cst/scanner.c
+	cp assets/tree-sitter-c3/src/scanner.c server/internal/lsp/cst/scanner.c
 
 index-c3-std:
 ifndef VERSION
 	$(error VERSION is not set. Usage: make index-c3-std VERSION=x.y.z)
 endif
 	cd assets/c3c && git fetch --all && git reset --hard origin/master && git checkout tags/v$(VERSION) 
-	cd server/stdlib_indexer && go run main.go blurp.go --$(VERSION)
+	cd server/cmd/stdlib_indexer && go run main.go blurp.go --$(VERSION)
 
 # cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
 
 build:
-	go build -C server -o bin/c3-lsp
+	go build -C server/cmd/lsp -o ../../bin/c3-lsp
 
 build-dev:
-	go build -C server -gcflags="all=-N -l" -o bin/c3-lsp
+	go build -C server/cmd/lsp -gcflags="all=-N -l" -o ../../bin/c3-lsp
 
 build-all:
 # Build darwin-amd64
 	echo "Building darwin-amd64"
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C server -o bin/c3-lsp
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3-lsp
 	cd server/bin && zip ./darwin-amd64-c3lsp.zip c3-lsp
 	echo "darwin-amd64 built"
 
 # Build linux
 	echo "Building linux-amd64"
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" go build -C server -o bin/c3-lsp
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" go build -C server/cmd/lsp -o ../../bin/c3-lsp
 	cd server/bin && zip ./linux-amd64-c3lsp.zip c3-lsp
 	echo "linux-amd64 built"
 
