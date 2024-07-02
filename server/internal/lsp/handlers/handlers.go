@@ -1,22 +1,21 @@
 package handlers
 
 import (
-	l "github.com/pherrymason/c3-lsp/internal/lsp/language"
-	"github.com/pherrymason/c3-lsp/pkg/document"
+	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
+	s "github.com/pherrymason/c3-lsp/internal/lsp/search"
 	p "github.com/pherrymason/c3-lsp/pkg/parser"
 )
 
 type Handlers struct {
-	documents *document.DocumentStore
-	language  *l.Language
-	parser    *p.Parser
+	state  *l.ProjectState
+	parser *p.Parser
+	search s.Search
 }
 
-func NewHandlers(documents *document.DocumentStore,
-	language *l.Language, parser *p.Parser) Handlers {
+func NewHandlers(state *l.ProjectState, parser *p.Parser, search s.Search) Handlers {
 	return Handlers{
-		documents: documents,
-		language:  language,
-		parser:    parser,
+		state:  state,
+		parser: parser,
+		search: search,
 	}
 }

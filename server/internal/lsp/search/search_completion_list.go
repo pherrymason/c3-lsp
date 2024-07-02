@@ -1,4 +1,4 @@
-package language
+package search
 
 import (
 	"cmp"
@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	protocol_utils "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
 	sp "github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
@@ -125,7 +126,11 @@ func extractExplicitModulePath(possibleModulePath string) option.Option[symbols.
 }
 
 // Returns: []CompletionItem | CompletionList | nil
-func (l *Language) BuildCompletionList(doc *document.Document, position symbols.Position) []protocol.CompletionItem {
+func (s *Search) BuildCompletionList(
+	docURI string,
+	position symbols.Position,
+	state *l.ProjectState,
+) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 
 	filterMembers := true /*
@@ -139,18 +144,20 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			filterMembers = false
 		}
 	*/
+
+	doc := state.GetDocument(docURI)
 	symbolInPosition := doc.SourceCode.SymbolInPosition(
 		symbols.Position{
 			Line:      uint(position.Line),
 			Character: uint(position.Character - 1),
 		},
-		l.symbolsTable.GetByDoc(doc.URI),
+		state.GetUnitModulesByDoc(doc.URI),
 	)
 	if symbolInPosition.IsSeparator() {
 		// Probably, theres no symbol at cursor!
 		filterMembers = false
 	}
-	l.logger.Debug(fmt.Sprintf("building completion list: \"%s\"", symbolInPosition.Text())) //TODO warp %s en "
+	s.logger.Debug(fmt.Sprintf("building completion list: \"%s\"", symbolInPosition.Text())) //TODO warp %s en "
 
 	// Check if module path is being written/exists
 	isCompletingModulePath, possibleModulePath := isCompletingAModulePath(doc, position)
@@ -178,13 +185,13 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 
 		searchParams := sp.BuildSearchBySymbolUnderCursor(
 			doc,
-			*l.symbolsTable.GetByDoc(doc.URI),
+			*state.GetUnitModulesByDoc(doc.URI),
 			symbolInPosition.PrevAccessPath().TextRange().End.RewindCharacter(),
 		)
 
 		//	searchParams.scopeMode = AnyPosition
 
-		prevIndexableOption := l.findParentType(searchParams, FindDebugger{depth: 0, enabled: true})
+		prevIndexableOption := s.findParentType(searchParams, state, FindDebugger{depth: 0, enabled: true})
 		if prevIndexableOption.IsNone() {
 			return items
 		}
@@ -220,7 +227,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 				uint32(symbolInPosition.PrevAccessPath().TextRange().Start.Line),
 				uint32(symbolInPosition.PrevAccessPath().TextRange().End.Character+2),
 			)
-			methods = l.indexByFQN.SearchByFQN(query)
+			methods = state.SearchByFQN(query)
 			for _, idx := range methods {
 				fn, _ := idx.(*symbols.Function)
 				kind := idx.GetKind()
@@ -264,7 +271,7 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 			position:           option.Some(position),
 		}
 		// Search symbols loadable in module located in position
-		scopeSymbols := l.findSymbolsInScope(params)
+		scopeSymbols := s.findSymbolsInScope(params, state)
 
 		for _, storedIdentifier := range scopeSymbols {
 			hasPrefix := strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition.Text())
@@ -306,8 +313,8 @@ func (l *Language) BuildCompletionList(doc *document.Document, position symbols.
 	return items
 }
 
-func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDebugger) option.Option[symbols.Indexable] {
-	prevIndexableResult := l.findInParentSymbols(searchParams, debugger)
+func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectState, debugger FindDebugger) option.Option[symbols.Indexable] {
+	prevIndexableResult := s.findInParentSymbols(searchParams, state, debugger)
 	if prevIndexableResult.IsNone() {
 		return prevIndexableResult.result
 	}
@@ -316,7 +323,7 @@ func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDeb
 
 	for {
 		if !isInspectable(prevIndexable) {
-			prevIndexable = l.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), debugger)
+			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, debugger)
 		} else {
 			break
 		}
@@ -336,7 +343,7 @@ func (l *Language) findParentType(searchParams sp.SearchParams, debugger FindDeb
 			WithDocId(prevIndexable.GetDocumentURI()).
 			Build()
 
-		prevIndexableResult = l.findClosestSymbolDeclaration(levelSearchParams, debugger.goIn())
+		prevIndexableResult = s.findClosestSymbolDeclaration(levelSearchParams, state, debugger.goIn())
 	default:
 		return option.Some(prevIndexable)
 	}

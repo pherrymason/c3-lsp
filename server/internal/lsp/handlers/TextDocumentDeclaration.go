@@ -9,13 +9,11 @@ import (
 
 // Support "Go to declaration"
 func (h *Handlers) TextDocumentDeclaration(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
-
-	doc, ok := h.documents.Get(params.TextDocument.URI)
-	if !ok {
-		return nil, nil
-	}
-
-	identifierOption := h.language.FindSymbolDeclarationInWorkspace(doc, symbols.NewPositionFromLSPPosition(params.Position))
+	identifierOption := h.search.FindSymbolDeclarationInWorkspace(
+		params.TextDocument.URI,
+		symbols.NewPositionFromLSPPosition(params.Position),
+		h.state,
+	)
 
 	if identifierOption.IsNone() {
 		return nil, nil

@@ -6,13 +6,6 @@ import (
 )
 
 func (h *Handlers) TextDocumentDidChange(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
-	doc, ok := h.documents.Get(params.TextDocument.URI)
-	if !ok {
-		return nil
-	}
-
-	doc.ApplyChanges(params.ContentChanges)
-
-	h.language.RefreshDocumentIdentifiers(doc, h.parser)
+	h.state.UpdateDocument(params.TextDocument.URI, params.ContentChanges, h.parser)
 	return nil
 }

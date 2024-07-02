@@ -1,8 +1,9 @@
-package language
+package search
 
 import (
 	"fmt"
 
+	p "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 )
@@ -15,13 +16,13 @@ type FindSymbolsParams struct {
 
 // Returns all symbols in scope.
 // Detail: StructMembers and Enumerables are inlined
-func (l *Language) findSymbolsInScope(params FindSymbolsParams) []symbols.Indexable {
+func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectState) []symbols.Indexable {
 	var symbolsCollection []symbols.Indexable
 
 	var currentContextModules []symbols.ModulePath
 	if params.position.IsSome() {
 		// Find current module
-		for _, module := range l.symbolsTable.GetByDoc(params.docId).Modules() {
+		for _, module := range state.GetUnitModulesByDoc(params.docId).Modules() {
 			if module.GetDocumentRange().HasPosition(params.position.Get()) {
 				currentContextModules = append(currentContextModules, module.GetModule())
 				break
@@ -36,7 +37,8 @@ func (l *Language) findSymbolsInScope(params FindSymbolsParams) []symbols.Indexa
 	// -------------------------------------
 	// Modules where we can extract symbols
 	// -------------------------------------
-	modulesToLook := l.implicitImportedParsedModules(
+	modulesToLook := s.implicitImportedParsedModules(
+		state,
 		currentContextModules,
 		option.None[string](),
 	)
@@ -78,7 +80,7 @@ func (l *Language) findSymbolsInScope(params FindSymbolsParams) []symbols.Indexa
 				symbolsCollection = append(symbolsCollection, function)
 
 				for _, variable := range function.Variables {
-					l.logger.Debug(fmt.Sprintf("Checking %s variable:", variable.GetName()))
+					s.logger.Debug(fmt.Sprintf("Checking %s variable:", variable.GetName()))
 					declarationPosition := variable.GetIdRange().End
 					if declarationPosition.Line > uint(params.position.Get().Line) ||
 						(declarationPosition.Line == uint(params.position.Get().Line) && declarationPosition.Character > uint(params.position.Get().Character)) {

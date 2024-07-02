@@ -46,7 +46,7 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 			},
 		},
 	}
-	h.documents.RootURI = *params.RootURI
+	h.state.SetProjectRootURI(*params.RootURI)
 	h.indexWorkspace()
 
 	return protocol.InitializeResult{
@@ -59,7 +59,7 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 }
 
 func (h *Handlers) indexWorkspace() {
-	path, _ := fs.UriToPath(h.documents.RootURI)
+	path, _ := fs.UriToPath(h.state.GetProjectRootURI())
 	files, _ := fs.ScanForC3(fs.GetCanonicalPath(path))
 	//s.server.Log.Debug(fmt.Sprint("Workspace FILES:", len(files), files))
 
@@ -68,6 +68,6 @@ func (h *Handlers) indexWorkspace() {
 
 		content, _ := os.ReadFile(filePath)
 		doc := document.NewDocumentFromString(filePath, string(content))
-		h.language.RefreshDocumentIdentifiers(&doc, h.parser)
+		h.state.RefreshDocumentIdentifiers(&doc, h.parser)
 	}
 }

@@ -1,9 +1,9 @@
-package language
+package project_state
 
 import (
 	"fmt"
 
-	"github.com/pherrymason/c3-lsp/internal/lsp/language/stdlib"
+	"github.com/pherrymason/c3-lsp/internal/lsp/stdlib"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols_table"
 	"golang.org/x/mod/semver"

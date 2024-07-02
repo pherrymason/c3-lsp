@@ -4,6 +4,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
 	code "github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -28,6 +29,17 @@ func NewDocument(docId string, sourceCode string) Document {
 
 func NewDocumentFromString(docId string, sourceCode string) Document {
 	return NewDocument(docId, sourceCode)
+}
+
+func NewDocumentFromDocURI(docURI string, sourceCode string, docVersion int32) *Document {
+	normalizedPath, err := utils.NormalizePath(docURI)
+	if err != nil {
+		return nil
+	}
+
+	doc := NewDocumentFromString(normalizedPath, sourceCode)
+
+	return &doc
 }
 
 // ApplyChanges updates the content of the Document from LSP textDocument/didChange events.

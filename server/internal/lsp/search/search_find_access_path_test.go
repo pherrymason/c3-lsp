@@ -1,4 +1,4 @@
-package language
+package search
 
 import (
 	"fmt"
@@ -10,8 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
+func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	state := NewTestState()
+	search := NewSearchWithoutLog()
 
 	t.Run("Should find enumerator with path definition", func(t *testing.T) {
 		state.registerDoc(
@@ -23,11 +24,11 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		doc := state.GetDoc("enums.c3")
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(
 			&doc,
-			*state.language.symbolsTable.GetByDoc(doc.URI),
+			*state.state.GetUnitModulesByDoc(doc.URI),
 			position,
 		)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.Enumerator)
@@ -54,11 +55,11 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		doc := state.GetDoc("def.c3")
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(
 			&doc,
-			*state.language.symbolsTable.GetByDoc(doc.URI),
+			*state.state.GetUnitModulesByDoc(doc.URI),
 			position,
 		)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		fun := symbolOption.Get().(*idx.Function)
@@ -73,9 +74,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		position := buildPosition(2, 36) // Cursor at `WindowError error = WindowError.S|OMETHING_HAPPENED;`
 		doc := state.GetDoc("faults.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.FaultConstant)
@@ -96,9 +97,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		position := buildPosition(7, 13) // Cursor at `emulator.o|n = true`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -124,9 +125,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		position := buildPosition(7, 9) // Cursor at emulator.o|n = true
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -150,9 +151,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		position := buildPosition(12, 8) // Cursor at `Cpu c|pu;`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -182,9 +183,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		position := buildPosition(13, 16) // Cursor at `view.camera.t|arget = 3;`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -210,9 +211,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		// Cursor at `emulator.i|nit();`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), buildPosition(9, 14))
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(9, 14))
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
@@ -234,9 +235,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		// Cursor at `Emu.i|nit(&emulator);`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), buildPosition(9, 9))
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(9, 9))
 
-		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
@@ -254,9 +255,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		// Cursor at `Emu.i|nit();`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), buildPosition(6, 16))
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(6, 16))
 
-		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
@@ -280,9 +281,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		// Cursor at `newEmu().o|n = false;`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), buildPosition(11, 14))
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(11, 14))
 
-		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		variable := resolvedSymbolOption.Get().(*idx.StructMember)
 		assert.Equal(t, "on", variable.GetName())
 		assert.Equal(t, "bool", variable.GetType().GetName())
@@ -307,9 +308,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		// Cursor at `newEmu().i|nit();`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), buildPosition(12, 14))
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(12, 14))
 
-		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
@@ -333,9 +334,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		position := buildPosition(7, 15) // Cursor at `emu.audio.i|nit();``
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
 
-		resolvedSymbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, resolvedSymbolOption.IsNone(), "Struct method not found")
 
@@ -363,9 +364,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		// Cursor at `Audio.i|nit(&emu.audio);`
 		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), buildPosition(7, 11))
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(7, 11))
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Audio.init", fun.GetName())
 		assert.Equal(t, "Audio.init", fun.GetFullName())
@@ -389,9 +390,9 @@ func TestLanguage_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		)
 		doc := state.GetDoc("structs.c3")
 		position := buildPosition(7, 15) // Cursor is at emu.audio.u|nknown
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.language.symbolsTable.GetByDoc(doc.URI), position)
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
 
-		symbolOption := state.language.findClosestSymbolDeclaration(searchParams, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.True(t, symbolOption.IsNone(), "Struct method not found")
 	})

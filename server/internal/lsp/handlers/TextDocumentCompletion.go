@@ -9,11 +9,10 @@ import (
 // Support "Completion"
 // Returns: []CompletionItem | CompletionList | nil
 func (h *Handlers) TextDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
-	doc, ok := h.documents.Get(params.TextDocumentPositionParams.TextDocument.URI)
-	if !ok {
-		return nil, nil
-	}
-	suggestions := h.language.BuildCompletionList(doc, symbols.NewPositionFromLSPPosition(params.Position))
-
+	suggestions := h.search.BuildCompletionList(
+		params.TextDocument.URI,
+		symbols.NewPositionFromLSPPosition(params.Position),
+		h.state,
+	)
 	return suggestions, nil
 }

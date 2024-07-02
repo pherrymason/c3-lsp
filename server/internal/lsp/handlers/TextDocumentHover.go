@@ -8,17 +8,8 @@ import (
 
 // Support "Hover"
 func (h *Handlers) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
-	doc, ok := h.documents.Get(params.TextDocument.URI)
-	if !ok {
-		return nil, nil
-	}
-
-	//server.server.Log.Debug(fmt.Sprint("HOVER requested on ", len(doc.Content), params.Position.IndexIn(doc.Content)))
-	// TODO improve output by setting language
-	// example: {"contents":{"kind":"markdown","value":"```go\nvar server *Server\n```"},"range":{"start":{"line":78,"character":1},"end":{"line":78,"character":7}}}
-
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
-	foundSymbolOption := h.language.FindSymbolDeclarationInWorkspace(doc, pos)
+	foundSymbolOption := h.search.FindSymbolDeclarationInWorkspace(params.TextDocument.URI, pos, h.state)
 	if foundSymbolOption.IsNone() {
 		return nil, nil
 	}

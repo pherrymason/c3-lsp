@@ -1,4 +1,4 @@
-package language
+package project_state
 
 import (
 	"testing"
@@ -13,15 +13,15 @@ import (
 func TestRefreshDocumentIdentifiers_should_clear_cached_stuff_test(t *testing.T) {
 
 	var logger commonlog.Logger
-	l := NewLanguage(logger, option.Some("dummy"))
+	s := NewProjectState(logger, option.Some("dummy"), false)
 	p := parser.NewParser(logger)
 	doc := document.NewDocumentFromString(
 		"doc-id",
 		`module app::something_app;
 		fn void main() {}
 		`)
-	l.RefreshDocumentIdentifiers(&doc, &p)
-	result := l.indexByFQN.SearchByFQN("app::something_app.main")
+	s.RefreshDocumentIdentifiers(&doc, &p)
+	result := s.indexByFQN.SearchByFQN("app::something_app.main")
 	assert.Equal(t, 1, len(result))
 
 	// Force a modification
@@ -30,11 +30,11 @@ func TestRefreshDocumentIdentifiers_should_clear_cached_stuff_test(t *testing.T)
 		`module app::something_new;
 		fn void main() {}
 		`)
-	l.RefreshDocumentIdentifiers(&doc, &p)
+	s.RefreshDocumentIdentifiers(&doc, &p)
 
-	result = l.indexByFQN.SearchByFQN("app::something_app.main")
+	result = s.indexByFQN.SearchByFQN("app::something_app.main")
 	assert.Equal(t, 0, len(result))
 
-	result = l.indexByFQN.SearchByFQN("app::something_new.main")
+	result = s.indexByFQN.SearchByFQN("app::something_new.main")
 	assert.Equal(t, 1, len(result))
 }

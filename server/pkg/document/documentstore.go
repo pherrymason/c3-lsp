@@ -1,12 +1,9 @@
 package document
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/pkg/errors"
-	"github.com/tliron/commonlog"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -15,14 +12,12 @@ type DocumentStore struct {
 	RootURI   string
 	documents map[string]*Document
 	fs        fs.FileStorage
-	logger    commonlog.Logger
 }
 
-func NewDocumentStore(fs fs.FileStorage, logger *commonlog.Logger) *DocumentStore {
+func NewDocumentStore(fs fs.FileStorage) *DocumentStore {
 	return &DocumentStore{
 		documents: map[string]*Document{},
 		fs:        fs,
-		logger:    *logger,
 	}
 }
 
@@ -42,7 +37,7 @@ func (s *DocumentStore) Open(params protocol.DidOpenTextDocumentParams, notify g
 
 	uri := params.TextDocument.URI
 	path, err := s.normalizePath(uri)
-	s.logger.Debug(fmt.Sprintf("Opening %s :: %s", uri, path))
+	//s.logger.Debug(fmt.Sprintf("Opening %s :: %s", uri, path))
 
 	if err != nil {
 		return nil, err
@@ -60,10 +55,10 @@ func (s *DocumentStore) Close(uri protocol.DocumentUri) {
 
 func (s *DocumentStore) Get(pathOrURI string) (*Document, bool) {
 	path, err := s.normalizePath(pathOrURI)
-	s.logger.Debugf("normalized path:%s", path)
+	//s.logger.Debugf("normalized path:%s", path)
 
 	if err != nil {
-		s.logger.Errorf("Could not normalize path: %s", err)
+		//s.logger.Errorf("Could not normalize path: %s", err)
 		return nil, false
 	}
 

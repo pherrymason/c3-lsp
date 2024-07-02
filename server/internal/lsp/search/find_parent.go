@@ -1,12 +1,13 @@
-package language
+package search
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
-	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
+	"github.com/pherrymason/c3-lsp/pkg/symbols"
 )
 
-func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, debugger FindDebugger) SearchResult {
+func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, projState *project_state.ProjectState, debugger FindDebugger) SearchResult {
 	accessPath := searchParams.GetFullAccessPath()
 	state := NewFindParentState(accessPath)
 	trackedModules := searchParams.TrackTraversedModules()
@@ -20,7 +21,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 		WithScopeMode(search_params.InScope).
 		Build()
 
-	result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
+	result := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
 	if result.IsNone() {
 		return result
 	}
@@ -36,7 +37,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 		for {
 			if !isInspectable(elm) {
-				elm = l.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), debugger)
+				elm = s.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), projState, debugger)
 			} else {
 				break
 			}
@@ -48,8 +49,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 
 		// Here we can look inside elm
 		switch elm.(type) {
-		case *idx.Enumerator:
-			enumerator := elm.(*idx.Enumerator)
+		case *symbols.Enumerator:
+			enumerator := elm.(*symbols.Enumerator)
 			assocValues := enumerator.GetAssociatedValues()
 			searchingSymbol := state.GetNextSymbol()
 			for i := 0; i < len(assocValues); i++ {
@@ -60,8 +61,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 				}
 			}
 
-		case *idx.Enum:
-			_enum := elm.(*idx.Enum)
+		case *symbols.Enum:
+			_enum := elm.(*symbols.Enum)
 			enumerators := _enum.GetEnumerators()
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
@@ -82,7 +83,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					WithContextModuleName(searchParams.ModuleInCursor()).
 					WithScopeMode(search_params.InModuleRoot).
 					Build()
-				result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
+				result := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
@@ -91,8 +92,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 				state.Advance()
 			}
 
-		case *idx.Fault:
-			_enum := elm.(*idx.Fault)
+		case *symbols.Fault:
+			_enum := elm.(*symbols.Fault)
 			constants := _enum.GetConstants()
 			searchingSymbol := state.GetNextSymbol()
 			for i := 0; i < len(constants); i++ {
@@ -102,8 +103,8 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					break
 				}
 			}
-		case *idx.Struct:
-			strukt, _ := elm.(*idx.Struct)
+		case *symbols.Struct:
+			strukt, _ := elm.(*symbols.Struct)
 			members := strukt.GetMembers()
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
@@ -125,7 +126,7 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 					WithContextModuleName(searchParams.ModuleInCursor()).
 					WithScopeMode(search_params.InModuleRoot).
 					Build()
-				result := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
+				result := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
@@ -144,42 +145,42 @@ func (l *Language) findInParentSymbols(searchParams search_params.SearchParams, 
 	return searchResult
 }
 
-func isInspectable(elm idx.Indexable) bool {
+func isInspectable(elm symbols.Indexable) bool {
 	isInspectable := true
 	switch elm.(type) {
-	case *idx.Variable:
+	case *symbols.Variable:
 		isInspectable = false
-	case *idx.Function:
+	case *symbols.Function:
 		isInspectable = false
-	case *idx.StructMember:
+	case *symbols.StructMember:
 		isInspectable = false
-	case *idx.Def:
+	case *symbols.Def:
 		isInspectable = false
 	}
 
 	return isInspectable
 }
 
-func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, debugger FindDebugger) idx.Indexable {
+func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string, projState *project_state.ProjectState, debugger FindDebugger) symbols.Indexable {
 	var symbol sourcecode.Word
 	switch elm.(type) {
-	case *idx.Variable:
-		variable, _ := elm.(*idx.Variable)
+	case *symbols.Variable:
+		variable, _ := elm.(*symbols.Variable)
 		symbol = sourcecode.NewWord(variable.GetType().GetName(), variable.GetIdRange())
-	case *idx.StructMember:
-		sm, _ := elm.(*idx.StructMember)
-		symbol := l.indexByFQN.SearchByFQN(sm.GetType().GetFullQualifiedName())
+	case *symbols.StructMember:
+		sm, _ := elm.(*symbols.StructMember)
+		symbol := projState.SearchByFQN(sm.GetType().GetFullQualifiedName())
 		if len(symbol) > 0 {
 			return symbol[0]
 		}
 
-	case *idx.Function:
-		fun, _ := elm.(*idx.Function)
+	case *symbols.Function:
+		fun, _ := elm.(*symbols.Function)
 		symbol = sourcecode.NewWord(fun.GetReturnType().GetName(), fun.GetIdRange())
 
-	case *idx.Def:
+	case *symbols.Def:
 		// Translate to the real symbol
-		def := elm.(*idx.Def)
+		def := elm.(*symbols.Def)
 		var query string
 		if def.ResolvesToType() {
 			query = def.ResolvedType().GetFullQualifiedName()
@@ -188,7 +189,7 @@ func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, d
 			query = def.GetModuleString() + "::" + def.GetResolvesTo()
 		}
 
-		symbols := l.indexByFQN.SearchByFQN(query)
+		symbols := projState.SearchByFQN(query)
 		if len(symbols) > 0 {
 			return symbols[0]
 			// Do not advance state, we need to look inside
@@ -202,7 +203,7 @@ func (l *Language) resolve(elm idx.Indexable, docId string, moduleName string, d
 		WithScopeMode(search_params.InModuleRoot).
 		Build()
 
-	found := l.findClosestSymbolDeclaration(iterSearch, debugger.goIn())
+	found := l.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
 
 	return found.Get()
 }

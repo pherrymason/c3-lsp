@@ -1,0 +1,18 @@
+
+
+Cuando se pide info sobre lo que hay bajo el cursor, 
+iría muy bien saber en que nodo del AST estamos, eso daría info automaticamente del tipo de sentencia, y permitiría hacer una búsqueda mas contextual.
+
+
+
+Bugs
+====
+- Parece que un `def`.resolvesToType todavía no se resuelve correctamente.
+  Ejemplo:
+  def ActionListMap = HashMap(<char*, ActionList>);
+  fn void ActionListManager.addActionList(&self, ActionList actionList) {
+    self.actionLists.s|et(actionList.getName(), actionList);
+  }
+
+  1- def.resolvesToType = "HashMap(<char*, ActionList>)"
+  2- el module era core::actions.

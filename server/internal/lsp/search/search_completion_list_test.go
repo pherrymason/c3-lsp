@@ -1,4 +1,4 @@
-package language
+package search
 
 import (
 	"fmt"
@@ -196,8 +196,9 @@ func Test_extractModulePath(t *testing.T) {
 	}
 }
 
-func TestLanguage_BuildCompletionList(t *testing.T) {
+func TestProjectState_BuildCompletionList(t *testing.T) {
 	state := NewTestState()
+	search := NewSearchWithoutLog()
 
 	t.Run("Should suggest variable names defined in module", func(t *testing.T) {
 		source := `
@@ -220,10 +221,9 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 					source+"\n"+tt.input,
 				)
 
-				doc := state.GetDoc("test.c3")
 				position := buildPosition(4, 1) // Cursor after `v|`
 
-				completionList := state.language.BuildCompletionList(&doc, position)
+				completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 				assert.Equal(t, 1, len(completionList))
 				assert.Equal(t, tt.expected, completionList[0])
@@ -256,10 +256,9 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 					"test.c3",
 					source+"\n"+tt.input+"\n}",
 				)
-				doc := state.GetDoc("test.c3")
 				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
-				completionList := state.language.BuildCompletionList(&doc, position)
+				completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -293,10 +292,9 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 					"test.c3",
 					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
 				)
-				doc := state.GetDoc("test.c3")
 				position := buildPosition(4, uint(len(tt.input))) // Cursor after `<input>|`
 
-				completionList := state.language.BuildCompletionList(&doc, position)
+				completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -305,7 +303,7 @@ func TestLanguage_BuildCompletionList(t *testing.T) {
 	})
 }
 
-func TestLanguage_BuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
+func TestProjectState_BuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
 	expectedKind := protocol.CompletionItemKindField
@@ -321,9 +319,9 @@ func TestLanguage_BuildCompletionList_struct_suggest_all_its_members(t *testing.
 
 	state := NewTestState(logger)
 	state.registerDoc("test.c3", source)
-	doc := state.GetDoc("test.c3")
 
-	completionList := state.language.BuildCompletionList(&doc, position)
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 	assert.Equal(t, 4, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
@@ -341,7 +339,7 @@ func TestLanguage_BuildCompletionList_struct_suggest_all_its_members(t *testing.
 	}, completionList)
 }
 
-func TestLanguage_BuildCompletionList_struct_suggest_members_starting_with_prefix(t *testing.T) {
+func TestProjectState_BuildCompletionList_struct_suggest_members_starting_with_prefix(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
 	expectedKind := protocol.CompletionItemKindField
@@ -356,9 +354,9 @@ func TestLanguage_BuildCompletionList_struct_suggest_members_starting_with_prefi
 
 	state := NewTestState(logger)
 	state.registerDoc("test.c3", source)
-	doc := state.GetDoc("test.c3")
 
-	completionList := state.language.BuildCompletionList(&doc, position)
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 	assert.Equal(t, 1, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
@@ -367,7 +365,7 @@ func TestLanguage_BuildCompletionList_struct_suggest_members_starting_with_prefi
 		completionList)
 }
 
-func TestLanguage_BuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
+func TestProjectState_BuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
 	expectedKind := protocol.CompletionItemKindField
@@ -384,9 +382,9 @@ func TestLanguage_BuildCompletionList_struct_suggest_members_of_substruct(t *tes
 
 	state := NewTestState(logger)
 	state.registerDoc("test.c3", source)
-	doc := state.GetDoc("test.c3")
 
-	completionList := state.language.BuildCompletionList(&doc, position)
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 	assert.Equal(t, 4, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
@@ -405,7 +403,7 @@ func TestLanguage_BuildCompletionList_struct_suggest_members_of_substruct(t *tes
 		completionList)
 }
 
-func TestLanguage_BuildCompletionList_struct_suggest_members_with_prefix_of_substruct(t *testing.T) {
+func TestProjectState_BuildCompletionList_struct_suggest_members_with_prefix_of_substruct(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
 	expectedKind := protocol.CompletionItemKindField
@@ -422,9 +420,9 @@ func TestLanguage_BuildCompletionList_struct_suggest_members_with_prefix_of_subs
 
 	state := NewTestState(logger)
 	state.registerDoc("test.c3", source)
-	doc := state.GetDoc("test.c3")
 
-	completionList := state.language.BuildCompletionList(&doc, position)
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 	assert.Equal(t, 1, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
@@ -433,7 +431,7 @@ func TestLanguage_BuildCompletionList_struct_suggest_members_with_prefix_of_subs
 		completionList)
 }
 
-func TestLanguage_BuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *testing.T) {
+func TestProjectState_BuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
 
@@ -449,9 +447,9 @@ func TestLanguage_BuildCompletionList_struct_suggest_method_with_prefix_of_subst
 
 	state := NewTestState(logger)
 	state.registerDoc("test.c3", source)
-	doc := state.GetDoc("test.c3")
 
-	completionList := state.language.BuildCompletionList(&doc, position)
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 	assert.Equal(t, 1, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
@@ -467,9 +465,9 @@ func TestLanguage_BuildCompletionList_struct_suggest_method_with_prefix_of_subst
 		completionList)
 }
 
-func TestLanguage_BuildCompletionList_enums(t *testing.T) {
-	parser := createParser()
-	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
+func TestProjectState_BuildCompletionList_enums(t *testing.T) {
+	logger := commonlog.MockLogger{}
+	//language := NewProjectState(commonlog.MockLogger{}, option.Some("dummy"), false)
 
 	t.Run("Should suggest Enum type", func(t *testing.T) {
 		source := `
@@ -491,11 +489,13 @@ func TestLanguage_BuildCompletionList_enums(t *testing.T) {
 
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
-				doc := document.NewDocument("test.c3", source+tt.input+`}`)
-				language.RefreshDocumentIdentifiers(&doc, &parser)
+				state := NewTestState(logger)
+				state.registerDoc("test.c3", source+tt.input+`}`)
+
 				position := buildPosition(4, uint(len(tt.input))) // Cursor after `<input>|`
 
-				completionList := language.BuildCompletionList(&doc, position)
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -544,12 +544,12 @@ func TestLanguage_BuildCompletionList_enums(t *testing.T) {
 
 		for _, tt := range cases {
 			t.Run(fmt.Sprintf("Autocomplete enumerables: #%s", tt.name), func(t *testing.T) {
-				doc := document.NewDocument("test.c3", source+tt.input+`
-				}`)
-				language.RefreshDocumentIdentifiers(&doc, &parser)
+				state := NewTestState(logger)
+				state.registerDoc("test.c3", source+tt.input+`}`)
 				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
-				completionList := language.BuildCompletionList(&doc, position)
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -558,10 +558,7 @@ func TestLanguage_BuildCompletionList_enums(t *testing.T) {
 	})
 }
 
-func TestLanguage_BuildCompletionList_faults(t *testing.T) {
-	parser := createParser()
-	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
-
+func TestProjectState_BuildCompletionList_faults(t *testing.T) {
 	t.Run("Should suggest Fault type", func(t *testing.T) {
 		source := `
 		fault WindowError { COH, COUGH, COUGHCOUGH}
@@ -582,11 +579,12 @@ func TestLanguage_BuildCompletionList_faults(t *testing.T) {
 
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
-				doc := document.NewDocument("test.c3", source+tt.input+`}`)
-				language.RefreshDocumentIdentifiers(&doc, &parser)
+				state := NewTestState()
+				state.registerDoc("test.c3", source+tt.input+`}`)
 				position := buildPosition(4, uint(len(tt.input))) // Cursor after `<input>|`
 
-				completionList := language.BuildCompletionList(&doc, position)
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -634,12 +632,12 @@ func TestLanguage_BuildCompletionList_faults(t *testing.T) {
 
 		for _, tt := range cases {
 			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
-				doc := document.NewDocument("test.c3", source+tt.input+`
-				}`)
-				language.RefreshDocumentIdentifiers(&doc, &parser)
+				state := NewTestState()
+				state.registerDoc("test.c3", source+tt.input+`}`)
 				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
-				completionList := language.BuildCompletionList(&doc, position)
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList("test.c3", position, &state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -648,9 +646,9 @@ func TestLanguage_BuildCompletionList_faults(t *testing.T) {
 	})
 }
 
-func TestLanguage_BuildCompletionList_modules(t *testing.T) {
-	parser := createParser()
-	language := NewLanguage(commonlog.MockLogger{}, option.Some("dummy"))
+func TestProjectState_BuildCompletionList_modules(t *testing.T) {
+	//parser := createParser()
+	//language := NewProjectState(commonlog.MockLogger{}, option.Some("dummy"), false)
 
 	t.Run("Should suggest module names present in same document", func(t *testing.T) {
 		cases := []struct {
@@ -710,10 +708,11 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 				if tt.skip {
 					t.Skip()
 				}
-				doc := document.NewDocument("test.c3", tt.source)
-				language.RefreshDocumentIdentifiers(&doc, &parser)
+				state := NewTestState()
+				state.registerDoc("test.c3", tt.source)
 
-				completionList := language.BuildCompletionList(&doc, tt.position)
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList("test.c3", tt.position, &state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -823,10 +822,10 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 					t.Skip()
 				}
 
+				//state := NewTestState()
 				state.registerDoc("app.c3", tt.source)
-				doc := state.GetDoc("app.c3")
-
-				completionList := state.language.BuildCompletionList(&doc, tt.position)
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList("app.c3", tt.position, &state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList), "Different items to suggest")
 				assert.Equal(t, tt.expected, completionList)
@@ -835,10 +834,13 @@ func TestLanguage_BuildCompletionList_modules(t *testing.T) {
 	})
 }
 
-func TestLanguage_BuildCompletionList_interfaces(t *testing.T) {
-	state := NewTestState()
-
+func TestProjectState_BuildCompletionList_interfaces(t *testing.T) {
 	t.Run("should complete interface name", func(t *testing.T) {
+
+		//doc := state.GetDoc("app.c3")
+		//completionList := state.language.BuildCompletionList(&doc, buildPosition(5, 18))
+
+		state := NewTestState()
 		state.registerDoc(
 			"app.c3",
 			`interface EmulatorConsole
@@ -847,8 +849,8 @@ func TestLanguage_BuildCompletionList_interfaces(t *testing.T) {
 		}
 		struct Emu (Emul){}
 		`)
-		doc := state.GetDoc("app.c3")
-		completionList := state.language.BuildCompletionList(&doc, buildPosition(5, 18))
+		search := NewSearchWithoutLog()
+		completionList := search.BuildCompletionList("app.c3", buildPosition(5, 18), &state.state)
 
 		assert.Equal(t, 1, len(completionList), "Different items to suggest")
 		assert.Equal(

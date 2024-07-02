@@ -6,25 +6,27 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 // textDocument/signatureHelp: {"context":{"isRetrigger":false,"triggerCharacter":"(","triggerKind":2},"position":{"character":20,"line":8},"textDocument":{"uri":"file:///Volumes/Development/raul/projects/game-dev/raul-game-project/murder-c3/src/main.c3"}}
 func (h *Handlers) TextDocumentSignatureHelp(context *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
-	doc, ok := h.documents.Get(params.TextDocument.URI)
-	if !ok {
-		return nil, nil
-	}
-
 	// Rewind position after previous "("
+	docId, _ := utils.NormalizePath(params.TextDocument.URI)
+	doc := h.state.GetDocument(docId)
 	posOption := doc.SourceCode.RewindBeforePreviousParenthesis(symbols.NewPositionFromLSPPosition(params.Position))
 
 	if posOption.IsNone() {
 		return nil, nil
 	}
 
-	foundSymbolOption := h.language.FindSymbolDeclarationInWorkspace(doc, posOption.Get())
+	foundSymbolOption := h.search.FindSymbolDeclarationInWorkspace(
+		params.TextDocument.URI,
+		posOption.Get(),
+		h.state,
+	)
 	if foundSymbolOption.IsNone() {
 		return nil, nil
 	}

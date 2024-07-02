@@ -1,4 +1,4 @@
-package language
+package search
 
 import (
 	"github.com/pherrymason/c3-lsp/pkg/option"

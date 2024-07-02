@@ -9,14 +9,14 @@
             "type": "go",
             "request": "launch",
             "mode":"debug",
-            "program": "${workspaceRoot}/server/stdlib_indexer",
+            "program": "${workspaceRoot}/server/cmd/stdlib_indexer",
         },
          {
             "name": "Launch",
             "type": "go",
             "request": "launch",
             "mode":"debug",
-            "program": "${workspaceRoot}/server",
+            "program": "${workspaceRoot}/server/cmd/lsp",
         },
         {
             "name": "Attach process",

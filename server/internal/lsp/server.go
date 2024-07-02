@@ -4,10 +4,9 @@ import (
 	"fmt"
 
 	"github.com/pherrymason/c3-lsp/internal/lsp/handlers"
-	"github.com/pherrymason/c3-lsp/internal/lsp/language"
-	l "github.com/pherrymason/c3-lsp/internal/lsp/language"
-	"github.com/pherrymason/c3-lsp/pkg/document"
-	"github.com/pherrymason/c3-lsp/pkg/fs"
+	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
+	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
+	"github.com/pherrymason/c3-lsp/internal/lsp/search"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	p "github.com/pherrymason/c3-lsp/pkg/parser"
 	"github.com/pkg/errors"
@@ -29,14 +28,12 @@ type ServerOpts struct {
 	Version          string
 	C3Version        option.Option[string]
 	LogFilepath      string
-	FS               fs.FileStorage
-	logger           commonlog.Logger
 	SendCrashReports bool
+	Debug            bool
 }
 
 func NewServer(opts ServerOpts) *Server {
-	// This increases logging verbosity (optional)
-	commonlog.Configure(2, nil)
+	commonlog.Configure(2, nil) // This increases logging verbosity (optional)
 	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", opts.Name))
 
 	if opts.SendCrashReports {
@@ -48,13 +45,14 @@ func NewServer(opts ServerOpts) *Server {
 	handler := protocol.Handler{}
 	glspServer := glspserv.NewServer(&handler, opts.Name, true)
 
-	documents := document.NewDocumentStore(opts.FS, &glspServer.Log)
+	//documents := document.NewDocumentStore(fs.FileStorage{})
 
 	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3Version)
 
-	language := l.NewLanguage(logger, option.Some(requestedLanguageVersion.Number))
+	state := l.NewProjectState(logger, option.Some(requestedLanguageVersion.Number), opts.Debug)
 	parser := p.NewParser(logger)
-	handlers := handlers.NewHandlers(documents, &language, &parser)
+	search := search.NewSearch(logger, opts.Debug)
+	handlers := handlers.NewHandlers(&state, &parser, search)
 
 	handler.Initialized = func(context *glsp.Context, params *protocol.InitializedParams) error {
 		/*
@@ -132,8 +130,8 @@ func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
 	return nil
 }
 
-func checkRequestedLanguageVersion(version option.Option[string]) language.Version {
-	supportedVersions := language.SupportedVersions()
+func checkRequestedLanguageVersion(version option.Option[string]) project_state.Version {
+	supportedVersions := project_state.SupportedVersions()
 
 	if version.IsNone() {
 		return supportedVersions[len(supportedVersions)-1]
