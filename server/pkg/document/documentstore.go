@@ -71,8 +71,8 @@ func (s *DocumentStore) Delete(docId string) {
 }
 
 func (s *DocumentStore) Rename(oldDocURI string, newDocURI string) {
-	oldDocId, _ := utils.NormalizePath(oldDocURI)
-	newDocId, _ := utils.NormalizePath(newDocURI)
+	oldDocId := utils.NormalizePath(oldDocURI)
+	newDocId := utils.NormalizePath(newDocURI)
 
 	if val, ok := s.documents[oldDocId]; ok {
 		val.URI = newDocURI

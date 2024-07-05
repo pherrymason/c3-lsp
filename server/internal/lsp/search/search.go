@@ -44,12 +44,12 @@ func (s *Search) debug(message string, debugger FindDebugger) {
 }
 
 func (self Search) FindSymbolDeclarationInWorkspace(
-	docURI string,
+	docId string,
 	position symbols.Position,
 	state *l.ProjectState,
 ) option.Option[symbols.Indexable] {
 
-	doc := state.GetDocument(docURI)
+	doc := state.GetDocument(docId)
 	searchParams := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
 		*state.GetUnitModulesByDoc(doc.URI),

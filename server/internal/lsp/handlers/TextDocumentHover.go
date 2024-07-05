@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -9,7 +10,8 @@ import (
 // Support "Hover"
 func (h *Handlers) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
-	foundSymbolOption := h.search.FindSymbolDeclarationInWorkspace(params.TextDocument.URI, pos, h.state)
+	docId := utils.NormalizePath(params.TextDocument.URI)
+	foundSymbolOption := h.search.FindSymbolDeclarationInWorkspace(docId, pos, h.state)
 	if foundSymbolOption.IsNone() {
 		return nil, nil
 	}

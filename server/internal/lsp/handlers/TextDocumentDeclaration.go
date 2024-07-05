@@ -3,6 +3,7 @@ package handlers
 import (
 	_prot "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -10,7 +11,7 @@ import (
 // Support "Go to declaration"
 func (h *Handlers) TextDocumentDeclaration(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
 	identifierOption := h.search.FindSymbolDeclarationInWorkspace(
-		params.TextDocument.URI,
+		utils.NormalizePath(params.TextDocument.URI),
 		symbols.NewPositionFromLSPPosition(params.Position),
 		h.state,
 	)

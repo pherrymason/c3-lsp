@@ -32,11 +32,7 @@ func NewDocumentFromString(docId string, sourceCode string) Document {
 }
 
 func NewDocumentFromDocURI(docURI string, sourceCode string, docVersion int32) *Document {
-	normalizedPath, err := utils.NormalizePath(docURI)
-	if err != nil {
-		return nil
-	}
-
+	normalizedPath := utils.NormalizePath(docURI)
 	doc := NewDocumentFromString(normalizedPath, sourceCode)
 
 	return &doc

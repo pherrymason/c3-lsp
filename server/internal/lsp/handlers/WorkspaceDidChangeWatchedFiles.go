@@ -13,7 +13,7 @@ func (h *Handlers) WorkspaceDidChangeWatchedFiles(context *glsp.Context, params 
 func (h *Handlers) WorkspaceDidDeleteFiles(context *glsp.Context, params *protocol.DeleteFilesParams) error {
 	for _, file := range params.Files {
 		// The file has been removed! update our indices
-		docId, _ := utils.NormalizePath(file.URI)
+		docId := utils.NormalizePath(file.URI)
 		//h.documents.Delete(file.URI)
 		h.state.DeleteDocument(docId)
 	}
@@ -25,8 +25,8 @@ func (h *Handlers) WorkspaceDidRenameFiles(context *glsp.Context, params *protoc
 	for _, file := range params.Files {
 		//h.documents.Rename(file.OldURI, file.NewURI)
 
-		oldDocId, _ := utils.NormalizePath(file.OldURI)
-		newDocId, _ := utils.NormalizePath(file.NewURI)
+		oldDocId := utils.NormalizePath(file.OldURI)
+		newDocId := utils.NormalizePath(file.NewURI)
 		h.state.RenameDocument(oldDocId, newDocId)
 	}
 

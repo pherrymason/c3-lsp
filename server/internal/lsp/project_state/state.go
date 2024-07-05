@@ -54,8 +54,8 @@ func (s *ProjectState) SetProjectRootURI(rootURI string) {
 	s.documents.RootURI = rootURI
 }
 
-func (s *ProjectState) GetDocument(docURI string) *document.Document {
-	return s._documents[docURI]
+func (s *ProjectState) GetDocument(docId string) *document.Document {
+	return s._documents[docId]
 }
 
 func (s *ProjectState) GetUnitModulesByDoc(docId string) *symbols_table.UnitModules {
@@ -94,7 +94,7 @@ func (s *ProjectState) RenameDocument(oldDocId string, newDocId string) {
 }
 
 func (s *ProjectState) UpdateDocument(docURI protocol.DocumentUri, changes []interface{}, parser *parser.Parser) {
-	docId, _ := utils.NormalizePath(docURI)
+	docId := utils.NormalizePath(docURI)
 	doc, ok := s._documents[docId]
 	if !ok {
 		return
@@ -105,8 +105,8 @@ func (s *ProjectState) UpdateDocument(docURI protocol.DocumentUri, changes []int
 	s.RefreshDocumentIdentifiers(doc, parser)
 }
 
-func (s *ProjectState) Close(uri protocol.DocumentUri) {
-	docId, _ := utils.NormalizePath(uri)
+func (s *ProjectState) CloseDocument(uri protocol.DocumentUri) {
+	docId := utils.NormalizePath(uri)
 	delete(s._documents, docId)
 }
 

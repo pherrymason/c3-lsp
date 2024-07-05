@@ -6,6 +6,6 @@ import (
 )
 
 func (h *Handlers) TextDocumentDidClose(context *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
-	h.state.Close(params.TextDocument.URI)
+	h.state.CloseDocument(params.TextDocument.URI)
 	return nil
 }

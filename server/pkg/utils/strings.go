@@ -19,10 +19,10 @@ func IsSpaceOrNewline(r rune) bool {
 	return r == ' ' || r == '\n' || r == '\t' || r == '\r' || unicode.IsSpace(r)
 }
 
-func NormalizePath(pathOrUri string) (string, error) {
+func NormalizePath(pathOrUri string) string {
 	path, err := fs.UriToPath(pathOrUri)
 	if err != nil {
-		return "", errors.Wrapf(err, "unable to parse URI: %s", pathOrUri)
+		panic(errors.Wrapf(err, "unable to parse URI: %s", pathOrUri))
 	}
-	return fs.GetCanonicalPath(path), nil
+	return fs.GetCanonicalPath(path)
 }
