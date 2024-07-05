@@ -437,7 +437,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *
 
 			fn void main() {
 				Home home;
-				home.rooms.get().paint();
+				home.rooms.get(0).paint();
 			}`,
 		)
 

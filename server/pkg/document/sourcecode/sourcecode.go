@@ -33,6 +33,7 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 	baseFound := false
 	gettingAccess := false
 	gettingModule := false
+	ignoreSymbol := false
 
 	wb := NewWordBuilderE()
 	var accessPath []Word
@@ -55,18 +56,19 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 			End:   s.indexToPosition(limits.end + 1),
 		}
 
+		// Just ignore content inside parenthesis
 		if re.MatchString(symbol) {
-			if gettingAccess {
+			if gettingAccess && !ignoreSymbol {
 				accessPath = append([]Word{{
 					text:      symbol,
 					textRange: posRange,
 				}}, accessPath...)
-			} else if gettingModule {
+			} else if gettingModule && !ignoreSymbol {
 				modulePath = append([]Word{{
 					text:      symbol,
 					textRange: posRange,
 				}}, modulePath...)
-			} else {
+			} else if !ignoreSymbol {
 				wb.WithText(symbol, posRange)
 				baseFound = true
 			}
@@ -82,8 +84,10 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 			} else if symbol == ":" {
 				gettingAccess = false
 				gettingModule = true
-			} else if gettingAccess && (symbol == "(" || symbol == ")") {
-
+			} else if gettingAccess && symbol == "(" {
+				ignoreSymbol = false
+			} else if gettingAccess && symbol == ")" {
+				ignoreSymbol = true
 			} else {
 				// End
 				break
