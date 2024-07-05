@@ -126,11 +126,13 @@ func (m *Module) SetEndPosition(position Position) {
 	m.docRange.End = position
 }
 
-func (m *Module) SetGenericParameters(generics map[string]*GenericParameter) {
+func (m *Module) SetGenericParameters(generics map[string]*GenericParameter) *Module {
 	m.GenericParameters = generics
 	for _, gn := range generics {
 		m.Insert(gn)
 	}
+
+	return m
 }
 
 func (m Module) GetHoverInfo() string {

@@ -114,8 +114,34 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 			if mod.IsPrivate() {
 				continue
 			}
-			modDefinition := jen.Id("module")
 			somethingAdded := false
+			modDefinition := jen.Id("module")
+			if len(mod.GenericParameters) > 0 {
+				somethingAdded = true
+				genericParametersDef := jen.Dict{}
+				for key, gen := range mod.GenericParameters {
+					genericParametersDef[jen.Lit(key)] =
+						jen.Qual(PackageName+"symbols", "NewGenericParameter").
+							Call(
+								jen.Lit(gen.GetName()),
+								jen.Lit(mod.GetName()),
+								jen.Op("&").Id("docId"),
+								jen.Qual(PackageName+"symbols", "NewRange").Call(
+									jen.Lit(0), jen.Lit(0), jen.Lit(0), jen.Lit(0),
+								),
+								jen.Qual(PackageName+"symbols", "NewRange").Call(
+									jen.Lit(0), jen.Lit(0), jen.Lit(0), jen.Lit(0),
+								),
+							)
+				}
+
+				modDefinition.
+					Dot("SetGenericParameters").
+					Call(
+						jen.Map(jen.String()).Op("*").Qual(PackageName+"symbols", "GenericParameter").
+							Values(genericParametersDef),
+					)
+			}
 
 			for _, variable := range mod.Variables {
 				somethingAdded = true
@@ -189,7 +215,7 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 		Qual(PackageName+"symbols_table", "UnitModules").
 		Block(stmts...)
 
-	err := f.Save("../../internal/lsp/language/stdlib/" + versionIdentifier + ".go")
+	err := f.Save("../../internal/lsp/stdlib/" + versionIdentifier + ".go")
 	if err != nil {
 		log.Fatal(err)
 	}
