@@ -23,9 +23,9 @@ define_declaration: $ => seq(
 	  ';'
 	),
 */
-func (p *Parser) nodeToDef(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Def {
+func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Def {
 	//fmt.Println(node)
-	defBuilder := idx.NewDefBuilder("", moduleName, docId).
+	defBuilder := idx.NewDefBuilder("", currentModule.GetModuleString(), docId).
 		WithDocumentRange(
 			uint(node.StartPoint().Row),
 			uint(node.StartPoint().Column),
@@ -49,7 +49,7 @@ func (p *Parser) nodeToDef(node *sitter.Node, moduleName string, docId *string, 
 			var _type idx.Type
 			if n.Child(0).Type() == "type" {
 				// Might contain module path
-				_type = p.typeNodeToType(n.Child(0), moduleName, sourceCode)
+				_type = p.typeNodeToType(n.Child(0), currentModule, sourceCode)
 				defBuilder.WithResolvesToType(_type)
 			} else if n.Child(0).Type() == "func_typedef" {
 				defBuilder.WithResolvesTo(n.Content(sourceCode))

@@ -33,7 +33,7 @@ struct_member_declaration: $ => choice(
 	  seq('inline', field('type', $.type), optional($.ident), optional($.attributes), ';'),
 	),
 */
-func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) (idx.Struct, []idx.Type) {
+func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Struct, []idx.Type) {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
@@ -93,7 +93,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *strin
 			//fmt.Println("child:", n.Type(), "::", memberNode.Content(sourceCode))
 			switch n.Type() {
 			case "type":
-				fieldType = p.typeNodeToType(n, moduleName, sourceCode)
+				fieldType = p.typeNodeToType(n, currentModule, sourceCode)
 				//fmt.Println(fieldType, n.Content(sourceCode))
 
 				//fieldType = n.Content(sourceCode)
@@ -110,7 +110,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *strin
 			case "attributes":
 				// TODO
 			case "bitstruct_body":
-				bitStructsMembers := p.nodeToBitStructMembers(n, moduleName, docId, sourceCode)
+				bitStructsMembers := p.nodeToBitStructMembers(n, currentModule, docId, sourceCode)
 				structFields = append(structFields, bitStructsMembers...)
 			case "inline":
 				isInline = true
@@ -131,7 +131,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *strin
 					identifiers[y],
 					fieldType, // TODO <--- this type parsing is too simple
 					option.None[[2]uint](),
-					moduleName,
+					currentModule.GetModuleString(),
 					docId,
 					identifiersRange[y],
 				)
@@ -143,7 +143,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *strin
 			structMember = idx.NewInlineSubtype(
 				identifier,
 				fieldType,
-				moduleName,
+				currentModule.GetModuleString(),
 				docId,
 				identifiersRange[0],
 			)
@@ -153,7 +153,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *strin
 				identifier,
 				fieldType,
 				option.None[[2]uint](),
-				moduleName,
+				currentModule.GetModuleString(),
 				docId,
 				identifiersRange[0],
 			)
@@ -167,7 +167,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *strin
 		_struct = idx.NewUnion(
 			name,
 			structFields,
-			moduleName,
+			currentModule.GetModuleString(),
 			docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 			idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
@@ -177,7 +177,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, moduleName string, docId *strin
 			name,
 			interfaces,
 			structFields,
-			moduleName,
+			currentModule.GetModuleString(),
 			docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 			idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),

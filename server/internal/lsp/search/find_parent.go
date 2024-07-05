@@ -14,6 +14,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 	state := NewFindParentState(accessPath)
 	trackedModules := searchParams.TrackTraversedModules()
 	searchResult := NewSearchResult(trackedModules)
+	symbolsHierarchy := []symbols.Indexable{}
 
 	docId := searchParams.DocId()
 	iterSearch := search_params.NewSearchParamsBuilder().
@@ -39,7 +40,8 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 		for {
 			if !isInspectable(elm) {
-				elm = s.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), projState, debugger)
+				elm = s.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), projState, symbolsHierarchy, debugger)
+				symbolsHierarchy = append(symbolsHierarchy, elm)
 			} else {
 				break
 			}
@@ -58,6 +60,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			for i := 0; i < len(assocValues); i++ {
 				if assocValues[i].GetName() == searchingSymbol.Text() {
 					elm = &assocValues[i]
+					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
 					break
 				}
@@ -71,6 +74,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			for i := 0; i < len(enumerators); i++ {
 				if enumerators[i].GetName() == searchingSymbol.Text() {
 					elm = enumerators[i]
+					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
 					foundMember = true
 					break
@@ -91,6 +95,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 
 				elm = result.Get()
+				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
 			}
 
@@ -101,6 +106,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			for i := 0; i < len(constants); i++ {
 				if constants[i].GetName() == searchingSymbol.Text() {
 					elm = constants[i]
+					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
 					break
 				}
@@ -113,6 +119,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			for i := 0; i < len(members); i++ {
 				if members[i].GetName() == searchingSymbol.Text() {
 					elm = members[i]
+					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
 					foundMember = true
 					break
@@ -134,6 +141,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 
 				elm = result.Get()
+				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
 			}
 		}
@@ -163,7 +171,7 @@ func isInspectable(elm symbols.Indexable) bool {
 	return isInspectable
 }
 
-func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string, projState *project_state.ProjectState, debugger FindDebugger) symbols.Indexable {
+func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string, projState *project_state.ProjectState, symbolsHierarchy []symbols.Indexable, debugger FindDebugger) symbols.Indexable {
 	var symbol sourcecode.Word
 	switch elm.(type) {
 	case *symbols.Variable:
@@ -180,7 +188,11 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 
 	case *symbols.Function:
 		fun, _ := elm.(*symbols.Function)
-		symbol = sourcecode.NewWord(fun.GetReturnType().GetName(), fun.GetIdRange())
+
+		returnType := fun.GetReturnType()
+		_type := l.resolveType(*returnType, symbolsHierarchy, projState)
+
+		symbol = sourcecode.NewWord(_type.GetName(), fun.GetIdRange())
 
 	case *symbols.Def:
 		// Translate to the real symbol
@@ -213,6 +225,42 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 		panic(fmt.Sprintf("Could not resolve symbol: %s", elm.GetName()))
 	}
 	return found.Get()
+}
+
+func (l *Search) resolveType(_type symbols.Type, hierarchySymbols []symbols.Indexable, projState *project_state.ProjectState) symbols.Type {
+	if !_type.IsGenericArgument() {
+		return _type
+	}
+
+	// This type is refering to a Generic Argument of the current module.
+	// We cannot use _type.GetName() because it does not contain the real type name.
+	// We need to seach up in the hierarchySymbols for the actual type "injected"
+
+	// V1: Naive implementation: iterate hierarchySymbols in reverse, search first item with a genericArgument field and take that
+	var parentType *symbols.Type
+	escape := false
+	for i := len(hierarchySymbols) - 1; i >= 0 && !escape; i-- {
+		elm := hierarchySymbols[i]
+
+		switch elm.(type) {
+		case *symbols.StructMember:
+			sm := elm.(*symbols.StructMember)
+			if sm.GetType().HasGenericArguments() {
+				parentType = sm.GetType()
+				escape = true
+			}
+
+		case *symbols.Function:
+		}
+	}
+
+	if parentType != nil {
+		_type = parentType.GetGenericArgument(0)
+
+		return _type
+	}
+
+	panic("Generic type not found")
 }
 
 type FindParentState struct {

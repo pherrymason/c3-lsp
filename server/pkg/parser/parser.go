@@ -127,22 +127,21 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				moduleSymbol.AddImports(imports)
 
 			case "global_declaration":
-				moduleName := moduleSymbol.GetModuleString()
-				variables := p.globalVariableDeclarationNodeToVariable(c.Node, moduleName, &doc.URI, sourceCode)
+				variables := p.globalVariableDeclarationNodeToVariable(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddVariables(variables)
 				pendingToResolve.AddVariableType(variables, moduleSymbol)
 
 			case "func_definition", "func_declaration":
-				function := p.nodeToFunction(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				function := p.nodeToFunction(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddFunction(&function)
 				pendingToResolve.AddFunctionTypes(&function, moduleSymbol)
 
 			case "enum_declaration":
-				enum := p.nodeToEnum(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				enum := p.nodeToEnum(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddEnum(&enum)
 
 			case "struct_declaration":
-				strukt, membersNeedingSubtypingResolve := p.nodeToStruct(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				strukt, membersNeedingSubtypingResolve := p.nodeToStruct(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddStruct(&strukt)
 				if len(membersNeedingSubtypingResolve) > 0 {
 					pendingToResolve.AddStructSubtype(&strukt, membersNeedingSubtypingResolve)
@@ -151,28 +150,28 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				pendingToResolve.AddStructMemberTypes(&strukt, moduleSymbol)
 
 			case "bitstruct_declaration":
-				bitstruct := p.nodeToBitStruct(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				bitstruct := p.nodeToBitStruct(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddBitstruct(&bitstruct)
 
 			case "define_declaration":
-				def := p.nodeToDef(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				def := p.nodeToDef(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddDef(&def)
 				pendingToResolve.AddDefType(&def, moduleSymbol)
 
 			case "const_declaration":
-				_const := p.nodeToConstant(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				_const := p.nodeToConstant(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddVariable(&_const)
 
 			case "fault_declaration":
-				fault := p.nodeToFault(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				fault := p.nodeToFault(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddFault(&fault)
 
 			case "interface_declaration":
-				interf := p.nodeToInterface(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				interf := p.nodeToInterface(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddInterface(&interf)
 
 			case "macro_declaration":
-				macro := p.nodeToMacro(c.Node, moduleSymbol.GetModuleString(), &doc.URI, sourceCode)
+				macro := p.nodeToMacro(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddFunction(&macro)
 			default:
 				// TODO test that module ends up with wrong endPosition
@@ -203,7 +202,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 	return parsedModules, pendingToResolve
 }
 
-func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) []*idx.Variable {
+func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, currentModule *idx.Module, docId *string, sourceCode []byte) []*idx.Variable {
 	query := LocalVarDeclaration
 	qc := cst.RunQuery(query, node)
 
@@ -222,7 +221,7 @@ func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, 
 
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				funcVariables := p.localVariableDeclarationNodeToVariable(c.Node, moduleName, docId, sourceCode)
+				funcVariables := p.localVariableDeclarationNodeToVariable(c.Node, currentModule, docId, sourceCode)
 
 				variables = append(variables, funcVariables...)
 			}

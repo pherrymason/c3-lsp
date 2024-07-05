@@ -291,7 +291,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefKilo := idx.NewDefBuilder("Kilo", mod, &doc.URI).
 		WithResolvesToType(
-			idx.NewType(true, "int", 0, "mod"),
+			idx.NewType(true, "int", 0, false, "mod"),
 		).
 		WithIdentifierRange(1, 5, 1, 9).
 		WithDocumentRange(1, 1, 1, 16).
@@ -301,7 +301,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefKiloPtr := idx.NewDefBuilder("KiloPtr", mod, &doc.URI).
 		WithResolvesToType(
-			idx.NewType(false, "Kilo", 1, "mod"),
+			idx.NewType(false, "Kilo", 1, false, "mod"),
 		).
 		WithIdentifierRange(2, 5, 2, 12).
 		WithDocumentRange(2, 1, 2, 21).
@@ -326,8 +326,8 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 				"HashMap",
 				0,
 				[]idx.Type{
-					idx.NewType(false, "String", 0, "mod"),
-					idx.NewType(false, "Feature", 0, "mod"),
+					idx.NewType(false, "String", 0, false, "mod"),
+					idx.NewType(false, "Feature", 0, false, "mod"),
 				}, "mod"),
 		).
 		WithIdentifierRange(4, 5, 4, 10).
@@ -339,7 +339,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefTypeWithModulePath := idx.NewDefBuilder("Camera", mod, &doc.URI).
 		WithResolvesToType(
-			idx.NewType(false, "Camera", 0, "raylib"),
+			idx.NewType(false, "Camera", 0, false, "raylib"),
 		).
 		WithIdentifierRange(5, 5, 5, 11).
 		WithDocumentRange(5, 1, 5, 29).
@@ -490,6 +490,11 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 	assert.Equal(t, "Type2", generic.GetName())
 	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetIdRange())
 	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetDocumentRange())
+
+	// Usages of generic parameters are flagged as such
+	strukt := module.Structs["Foo"]
+	sms := strukt.GetMembers()
+	assert.Equal(t, true, sms[0].GetType().IsGenericArgument())
 
 	module = symbols.Get("foo::another::deep")
 	assert.Equal(t, "foo::another::deep", module.GetName())

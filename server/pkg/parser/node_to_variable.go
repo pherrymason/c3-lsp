@@ -5,7 +5,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId *string, sourceCode []byte) []*idx.Variable {
+func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) []*idx.Variable {
 	var variables []*idx.Variable
 	//var typeNodeContent string
 	var vType idx.Type
@@ -21,13 +21,13 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 		switch n.Type() {
 		case "type":
 			//typeNodeContent = n.Content(sourceCode)
-			vType = p.typeNodeToType(n, moduleName, sourceCode)
+			vType = p.typeNodeToType(n, currentModule, sourceCode)
 		case "ident":
 			variable := idx.NewVariable(
 				n.Content(sourceCode),
 				vType,
 				//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
-				moduleName,
+				currentModule.GetModuleString(),
 				docId,
 				idx.NewRangeFromTreeSitterPositions(
 					n.StartPoint(),
@@ -50,7 +50,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 				sub.Content(sourceCode),
 				vType,
 				//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
-				moduleName,
+				currentModule.GetModuleString(),
 				docId,
 				idx.NewRangeFromTreeSitterPositions(
 					sub.StartPoint(),
@@ -68,7 +68,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 	return variables
 }
 
-func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.Node, moduleName string, docId *string, sourceCode []byte) []*idx.Variable {
+func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) []*idx.Variable {
 	var variables []*idx.Variable
 	//var typeNodeContent string
 	var vType idx.Type
@@ -82,7 +82,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.
 		switch n.Type() {
 		case "type":
 			//typeNodeContent = n.Content(sourceCode)
-			vType = p.typeNodeToType(n, moduleName, sourceCode)
+			vType = p.typeNodeToType(n, currentModule, sourceCode)
 			break
 
 		case "local_decl_after_type":
@@ -92,7 +92,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.
 				identifier.Content(sourceCode),
 				vType,
 				//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
-				moduleName,
+				currentModule.GetModuleString(),
 				docId,
 				idx.NewRangeFromTreeSitterPositions(
 					identifier.StartPoint(),
@@ -119,7 +119,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.
 	      ';'
 	    )
 */
-func (p *Parser) nodeToConstant(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Variable {
+func (p *Parser) nodeToConstant(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Variable {
 	var constant idx.Variable
 	var typeNodeContent string
 	var idNode *sitter.Node
@@ -141,8 +141,8 @@ func (p *Parser) nodeToConstant(node *sitter.Node, moduleName string, docId *str
 
 	constant = idx.NewConstant(
 		idNode.Content(sourceCode),
-		idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
-		moduleName,
+		idx.NewTypeFromString(typeNodeContent, currentModule.GetModuleString()), // <-- moduleName is potentially wrong
+		currentModule.GetModuleString(),
 		docId,
 		idx.NewRangeFromTreeSitterPositions(
 			idNode.StartPoint(),

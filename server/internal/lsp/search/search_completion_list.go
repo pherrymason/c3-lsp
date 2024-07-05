@@ -318,12 +318,13 @@ func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectSt
 	if prevIndexableResult.IsNone() {
 		return prevIndexableResult.result
 	}
+	symbolsHierarchy := []symbols.Indexable{}
 
 	prevIndexable := prevIndexableResult.Get()
 
 	for {
 		if !isInspectable(prevIndexable) {
-			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, debugger)
+			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, symbolsHierarchy, debugger)
 		} else {
 			break
 		}

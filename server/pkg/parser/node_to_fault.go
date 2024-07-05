@@ -24,7 +24,7 @@ fault_body: $ => seq(
 
 ),
 */
-func (p *Parser) nodeToFault(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Fault {
+func (p *Parser) nodeToFault(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Fault {
 	// TODO parse attributes
 
 	baseType := "" // TODO Parse type!
@@ -54,7 +54,7 @@ func (p *Parser) nodeToFault(node *sitter.Node, moduleName string, docId *string
 		nameNode.Content(sourceCode),
 		baseType,
 		constants,
-		moduleName,
+		currentModule.GetModuleString(),
 		docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),

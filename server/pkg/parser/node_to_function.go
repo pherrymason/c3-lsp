@@ -20,7 +20,7 @@ import (
 			field('name', $._func_macro_name),
 		),
 */
-func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Function {
+func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Function {
 	var typeIdentifier string
 	funcHeader := node.Child(1)
 	nameNode := funcHeader.ChildByFieldName("name")
@@ -39,7 +39,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId *str
 				continue
 			}
 
-			argument := p.nodeToArgument(argNode, typeIdentifier, moduleName, docId, sourceCode)
+			argument := p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode)
 			arguments = append(
 				arguments,
 				argument,
@@ -53,10 +53,10 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId *str
 		symbol = idx.NewTypeFunction(
 			typeIdentifier,
 			nameNode.Content(sourceCode),
-			p.typeNodeToType(funcHeader.ChildByFieldName("return_type"), moduleName, sourceCode),
+			p.typeNodeToType(funcHeader.ChildByFieldName("return_type"), currentModule, sourceCode),
 			//funcHeader.ChildByFieldName("return_type").Content(sourceCode),
 			argumentIds,
-			moduleName,
+			currentModule.GetModuleString(),
 			docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
@@ -67,9 +67,9 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId *str
 	} else {
 		symbol = idx.NewFunction(
 			nameNode.Content(sourceCode),
-			p.typeNodeToType(funcHeader.ChildByFieldName("return_type"), moduleName, sourceCode),
+			p.typeNodeToType(funcHeader.ChildByFieldName("return_type"), currentModule, sourceCode),
 			argumentIds,
-			moduleName,
+			currentModule.GetModuleString(),
 			docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
@@ -80,7 +80,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId *str
 
 	var variables []*idx.Variable
 	if node.ChildByFieldName("body") != nil {
-		variables = p.FindVariableDeclarations(node, moduleName, docId, sourceCode)
+		variables = p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)
 	}
 
 	variables = append(variables, arguments...)
@@ -110,7 +110,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, moduleName string, docId *str
       seq($.ct_ident, '...'),								// 2
     ),
 */
-func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, moduleName string, docId *string, sourceCode []byte) *idx.Variable {
+func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, currentModule *idx.Module, docId *string, sourceCode []byte) *idx.Variable {
 	var identifier string = ""
 	var idRange idx.Range
 	var argType idx.Type
@@ -120,13 +120,13 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 
 		switch n.Type() {
 		case "type":
-			argType = p.typeNodeToType(n, moduleName, sourceCode)
+			argType = p.typeNodeToType(n, currentModule, sourceCode)
 		case "ident":
 			identifier = n.Content(sourceCode)
 			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
 			// When detecting a self, the type is the Struct type
 			if identifier == "self" && methodIdentifier != "" {
-				argType = idx.NewTypeFromString(methodIdentifier, moduleName)
+				argType = idx.NewTypeFromString(methodIdentifier, currentModule.GetModuleString())
 			}
 		}
 	}
@@ -134,7 +134,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 	variable := idx.NewVariable(
 		identifier,
 		argType,
-		moduleName,
+		currentModule.GetModuleString(),
 		docId,
 		idRange,
 		idx.NewRangeFromTreeSitterPositions(argNode.StartPoint(),
@@ -171,7 +171,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, m
 		  field('name', $._func_macro_name),
 		),
 */
-func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Function {
+func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Function {
 	var typeIdentifier string
 	var nameNode *sitter.Node
 	funcHeader := node.Child(1)
@@ -192,7 +192,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId *string
 				continue
 			}
 
-			argument := p.nodeToArgument(argNode, typeIdentifier, moduleName, docId, sourceCode)
+			argument := p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode)
 			arguments = append(
 				arguments,
 				argument,
@@ -204,7 +204,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId *string
 	symbol := idx.NewMacro(
 		nameNode.Content(sourceCode),
 		argumentIds,
-		moduleName,
+		currentModule.GetModuleString(),
 		docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 			nameNode.EndPoint()),
@@ -213,7 +213,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, moduleName string, docId *string
 	)
 
 	if node.ChildByFieldName("body") != nil {
-		variables := p.FindVariableDeclarations(node, moduleName, docId, sourceCode)
+		variables := p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)
 		variables = append(arguments, variables...)
 		symbol.AddVariables(variables)
 	}

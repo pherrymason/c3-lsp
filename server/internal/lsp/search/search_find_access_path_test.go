@@ -394,7 +394,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 
 		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
-		assert.True(t, symbolOption.IsNone(), "Struct method not found")
+		assert.True(t, symbolOption.IsNone(), "Struct method should not be found")
 	})
 
 	t.Run("Asking the selectedSymbol information in the very same declaration, should resolve to the correct selectedSymbol. Even if there is another selectedSymbol with same name in a different file.", func(t *testing.T) {
@@ -414,5 +414,54 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		// module B;
 		// MyStruct object;
 		// object.search();
+	})
+}
+
+func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	t.Run("Should xxxxxx", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`module app;
+			import list;
+			
+			struct Home {
+				List(<Room>) rooms;
+			}
+			struct Room {
+				String name;
+			}
+			fn void Room.paint() {}
+
+			fn void main() {
+				Home home;
+				home.rooms.get().paint();
+			}`,
+		)
+
+		state.registerDoc(
+			"list.c3",
+			`module list(<Type>);
+			struct List (Printable)
+			{
+				usz size;
+				usz capacity;
+				Allocator allocator;
+				Type *entries;
+			}
+			fn Type List.get(usz index) {}`,
+		)
+		doc := state.GetDoc("app.c3")
+		position := buildPosition(14, 23) // Cursor is at home.rooms.p|aint()
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.True(t, symbolOption.IsSome(), "Struct method not found")
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "Room.paint", fun.GetName())
+		assert.Equal(t, "Room.paint", fun.GetFullName())
 	})
 }

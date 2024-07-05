@@ -13,7 +13,7 @@ interface_declaration: $ => seq(
 	  field('body', $.interface_body),
 	),
 */
-func (p *Parser) nodeToInterface(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Interface {
+func (p *Parser) nodeToInterface(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Interface {
 	// TODO parse attributes
 	methods := []*idx.Function{}
 
@@ -24,7 +24,7 @@ func (p *Parser) nodeToInterface(node *sitter.Node, moduleName string, docId *st
 			for i := 0; i < int(n.ChildCount()); i++ {
 				m := n.Child(i)
 				if m.Type() == "func_declaration" {
-					fun := p.nodeToFunction(m, moduleName, docId, sourceCode)
+					fun := p.nodeToFunction(m, currentModule, docId, sourceCode)
 					methods = append(methods, &fun)
 				}
 			}
@@ -34,7 +34,7 @@ func (p *Parser) nodeToInterface(node *sitter.Node, moduleName string, docId *st
 	nameNode := node.ChildByFieldName("name")
 	_interface := idx.NewInterface(
 		nameNode.Content(sourceCode),
-		moduleName,
+		currentModule.GetModuleString(),
 		docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),

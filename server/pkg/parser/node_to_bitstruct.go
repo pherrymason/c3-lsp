@@ -8,7 +8,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Bitstruct {
+func (p *Parser) nodeToBitStruct(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Bitstruct {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
@@ -31,9 +31,9 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId *st
 		case "attributes":
 			// TODO attributes
 		case "type":
-			bakedType = p.typeNodeToType(child, moduleName, sourceCode)
+			bakedType = p.typeNodeToType(child, currentModule, sourceCode)
 		case "bitstruct_body":
-			structFields = p.nodeToBitStructMembers(child, moduleName, docId, sourceCode)
+			structFields = p.nodeToBitStructMembers(child, currentModule, docId, sourceCode)
 		}
 	}
 
@@ -42,7 +42,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId *st
 		bakedType,
 		interfaces,
 		structFields,
-		moduleName,
+		currentModule.GetModuleString(),
 		docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
@@ -51,7 +51,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, moduleName string, docId *st
 	return _struct
 }
 
-func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) []*idx.StructMember {
+func (p *Parser) nodeToBitStructMembers(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) []*idx.StructMember {
 
 	structFields := []*idx.StructMember{}
 	// node = bitstruct_body
@@ -67,7 +67,7 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, do
 				switch xNode.Type() {
 				case "base_type":
 					// Note: here we consciously pass bdefnode because typeNodeToType expects a child node of base_type. If we send xNode it will not find it.
-					memberType = p.typeNodeToType(bdefnode, moduleName, sourceCode)
+					memberType = p.typeNodeToType(bdefnode, currentModule, sourceCode)
 				case "ident":
 					identity = xNode.Content(sourceCode)
 				}
@@ -86,7 +86,7 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, moduleName string, do
 				identity,
 				memberType,
 				option.Some(bitRanges),
-				moduleName,
+				currentModule.GetModuleString(),
 				docId,
 				idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
 			)

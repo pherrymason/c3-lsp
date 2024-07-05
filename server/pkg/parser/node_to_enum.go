@@ -32,7 +32,7 @@ import (
 			optional($.attributes),
 		),
 */
-func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId *string, sourceCode []byte) idx.Enum {
+func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Enum {
 	// TODO parse attributes
 
 	baseType := ""
@@ -56,8 +56,8 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId *string,
 							associatedParameters,
 							idx.NewVariable(
 								paramNode.Child(1).Content(sourceCode),
-								idx.NewTypeFromString(paramNode.Child(0).Content(sourceCode), moduleName),
-								moduleName,
+								idx.NewTypeFromString(paramNode.Child(0).Content(sourceCode), currentModule.GetModuleString()),
+								currentModule.GetModuleString(),
 								docId,
 								idx.NewRangeFromTreeSitterPositions(paramNode.Child(0).StartPoint(), paramNode.Child(0).EndPoint()),
 								idx.NewRangeFromTreeSitterPositions(paramNode.StartPoint(), paramNode.EndPoint()),
@@ -77,7 +77,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId *string,
 						name.Content(sourceCode),
 						"",
 						associatedParameters,
-						moduleName,
+						currentModule.GetModuleString(),
 						idx.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
 						docId,
 					)
@@ -92,7 +92,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, moduleName string, docId *string,
 		nameNode.Content(sourceCode),
 		baseType,
 		[]*idx.Enumerator{},
-		moduleName,
+		currentModule.GetModuleString(),
 		docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),

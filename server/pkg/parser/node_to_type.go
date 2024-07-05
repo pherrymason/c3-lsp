@@ -7,20 +7,20 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func (p *Parser) typeNodeToType(node *sitter.Node, moduleName string, sourceCode []byte) symbols.Type {
+func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module, sourceCode []byte) symbols.Type {
 
 	if node.Type() == "optional_type" {
-		return p.extTypeNodeToType(node.Child(0), true, moduleName, sourceCode)
+		return p.extTypeNodeToType(node.Child(0), true, currentModule, sourceCode)
 	}
 
-	return p.extTypeNodeToType(node, false, moduleName, sourceCode)
+	return p.extTypeNodeToType(node, false, currentModule, sourceCode)
 }
 
-func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, moduleName string, sourceCode []byte) symbols.Type {
+func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, currentModule *symbols.Module, sourceCode []byte) symbols.Type {
 	//fmt.Println(node, node.Content(sourceCode))
 	baseTypeLanguage := false
 	baseType := ""
-	modulePath := moduleName
+	modulePath := currentModule.GetModuleString()
 	generic_arguments := []symbols.Type{}
 
 	//fmt.Println(node.Type(), node.Content(sourceCode), node.ChildCount())
@@ -45,7 +45,7 @@ func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, moduleNam
 					for g := 0; g < int(bn.ChildCount()); g++ {
 						gn := bn.Child(g)
 						if gn.Type() == "type" {
-							gType := p.typeNodeToType(gn, moduleName, sourceCode)
+							gType := p.typeNodeToType(gn, currentModule, sourceCode)
 							generic_arguments = append(generic_arguments, gType)
 						}
 					}
@@ -66,14 +66,23 @@ func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, moduleNam
 		}
 	}
 
+	// Is baseType a module generic argument? Flag it.
+	isGenericArgument := false
+	for genericId, _ := range currentModule.GenericParameters {
+		if genericId == baseType {
+			isGenericArgument = true
+		}
+	}
+
 	var parsedType symbols.Type
 	if len(generic_arguments) == 0 {
 		if isOptional {
-			parsedType = symbols.NewOptionalType(baseTypeLanguage, baseType, pointerCount, modulePath)
+			parsedType = symbols.NewOptionalType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, modulePath)
 		} else {
-			parsedType = symbols.NewType(baseTypeLanguage, baseType, pointerCount, modulePath)
+			parsedType = symbols.NewType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, modulePath)
 		}
 	} else {
+		// TODO Can a type with generic be itself a generic argument?
 		parsedType = symbols.NewTypeWithGeneric(baseTypeLanguage, isOptional, baseType, pointerCount, generic_arguments, modulePath)
 	}
 
