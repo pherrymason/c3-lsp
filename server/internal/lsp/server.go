@@ -27,13 +27,20 @@ type ServerOpts struct {
 	Name             string
 	Version          string
 	C3Version        option.Option[string]
-	LogFilepath      string
+	LogFilepath      option.Option[string]
 	SendCrashReports bool
 	Debug            bool
 }
 
 func NewServer(opts ServerOpts) *Server {
-	commonlog.Configure(2, nil) // This increases logging verbosity (optional)
+	var logpath *string
+	if opts.LogFilepath.IsSome() {
+		v := opts.LogFilepath.Get()
+		logpath = &v
+	}
+
+	commonlog.Configure(2, logpath) // This increases logging verbosity (optional)
+
 	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", opts.Name))
 
 	if opts.SendCrashReports {
