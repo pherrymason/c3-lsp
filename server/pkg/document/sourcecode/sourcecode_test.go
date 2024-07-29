@@ -101,21 +101,37 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_with_access_path(t *testing.T
 func Test_SourceCode_SymbolInPosition_finds_symbol_with_access_path_and_method_call(t *testing.T) {
 	unitModule := symbols_table.UnitModules{}
 	text := `// This blank line is intended.
-	system.cpu().init;`
+	system.cpu(arg0, arg1, arg2).init;
+	system.cpu(another.path(arg0), arg1, arg2).init;
+	`
 
 	sc := NewSourceCode(text)
 
 	// position at i|nit
-	result := sc.SymbolInPosition(symbols.NewPosition(1, 15), &unitModule)
+	result := sc.SymbolInPosition(symbols.NewPosition(1, 31), &unitModule)
 
 	assert.Equal(t, "init", result.text)
-	assert.Equal(t, symbols.NewRange(1, 14, 1, 18), result.textRange)
+	assert.Equal(t, symbols.NewRange(1, 30, 1, 34), result.textRange)
 
+	assert.Equal(t, 2, len(result.parentAccessPath))
 	assert.Equal(t, "system", result.parentAccessPath[0].text)
 	assert.Equal(t, symbols.NewRange(1, 1, 1, 7), result.parentAccessPath[0].textRange)
 
 	assert.Equal(t, "cpu", result.parentAccessPath[1].text)
 	assert.Equal(t, symbols.NewRange(1, 8, 1, 11), result.parentAccessPath[1].textRange)
+
+	// position at system.cpu(another.path(arg0), arg1, arg2).i|nit
+	result = sc.SymbolInPosition(symbols.NewPosition(2, 45), &unitModule)
+
+	assert.Equal(t, "init", result.text)
+	assert.Equal(t, symbols.NewRange(2, 44, 2, 48), result.textRange)
+
+	assert.Equal(t, 2, len(result.parentAccessPath))
+	assert.Equal(t, "system", result.parentAccessPath[0].text)
+	assert.Equal(t, symbols.NewRange(2, 1, 2, 7), result.parentAccessPath[0].textRange)
+
+	assert.Equal(t, "cpu", result.parentAccessPath[1].text)
+	assert.Equal(t, symbols.NewRange(2, 8, 2, 11), result.parentAccessPath[1].textRange)
 }
 
 func Test_SourceCode_SymbolInPosition_finds_symbol_dot_word(t *testing.T) {

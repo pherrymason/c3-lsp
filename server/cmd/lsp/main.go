@@ -54,11 +54,16 @@ func main() {
 		c3Version = option.Some(options.c3Version)
 	}
 
+	logFilePath := option.None[string]()
+	if options.logFilePath != "" {
+		logFilePath = option.Some(options.logFilePath)
+	}
+
 	server := lsp.NewServer(lsp.ServerOpts{
 		Name:             appName,
 		Version:          version,
 		C3Version:        c3Version,
-		LogFilepath:      options.logFilePath,
+		LogFilepath:      logFilePath,
 		SendCrashReports: options.sendCrashReports,
 		Debug:            options.debug,
 	})
