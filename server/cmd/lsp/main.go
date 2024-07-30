@@ -83,7 +83,7 @@ func cmdLineArguments() Options {
 
 	var sendCrashReports = flag.Bool("send-crash-reports", false, "Automatically reports crashes to server.")
 
-	var logFilePath = flag.String("log-path", "./lsp.log", "Enables logs and sets its filepath")
+	var logFilePath = flag.String("log-path", "", "Enables logs and sets its filepath")
 	var debug = flag.Bool("debug", false, "Enables debug mode")
 
 	var c3Version = flag.String("lang-version", "", "Specify C3 language version.")
