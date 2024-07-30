@@ -67,6 +67,30 @@ It supports the following options:
 There's a simple vscode extension available for download here: [download vix](https://github.com/pherrymason/c3-lsp/releases/download/latest/c3-lsp-client-0.0.1.vsix)  
 Be sure to configure it with the path of the lsp server binary.
 
+### Sublime Text
+
+The [LSP Package](https://packagecontrol.io/packages/LSP) can be configured to
+work with `c3-lsp`. Add the [syntax highlighting package](https://github.com/c3lang/editor-plugins/tree/main/sublime-text) and configure a LSP client in `Settings` -> `Package Settings` -> `LSP` -> `Settings` like the following:
+
+```yaml
+"clients": {
+    "c3-lsp": {
+      "enabled": true,
+      // The command line required to run the server.
+      "command": [
+        "c3-lsp",
+      ],
+
+      "selector": "source.c3",
+      "schemes": [
+        "file"
+      ],
+      "diagnostics_mode": "open_files",
+    }
+  }
+```
+
+The first element in the `command` array is the path to the `c3-lsp` executable.
 
 ## Useful links:
 - LSP specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
