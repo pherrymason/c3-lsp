@@ -64,7 +64,7 @@ It supports the following options:
 ## Clients
 
 ### VS Code
-There's a simple vscode extension available for download here: [download vix](https://github.com/pherrymason/c3-lsp/releases/download/latest/c3-lsp-client-0.0.1.vsix)  
+There's a simple vscode extension available for download here: [download VSIX](https://github.com/pherrymason/c3-lsp/releases/download/v0.0.6/c3-lsp-client-0.0.2.vsix)  
 Be sure to configure it with the path of the lsp server binary.
 
 ### Sublime Text
