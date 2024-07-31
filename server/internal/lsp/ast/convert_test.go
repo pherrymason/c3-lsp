@@ -164,3 +164,60 @@ func TestConvertToAST_global_variables(t *testing.T) {
 	}
 	assert.Equal(t, expectedAnimals, ast.Modules[0].Declarations[1])
 }
+
+func TestConvertToAST_enum_decl(t *testing.T) {
+	source := `module foo;
+	enum Colors { RED, BLUE, GREEN }
+	enum TypedColors:int { RED, BLUE, GREEN } // Typed enums
+	enum State : int (String desc, bool active) {
+		PEDNING("pending start", false),
+		RUNNING("running", true),
+		TERMINATED("ended", false)
+	}`
+	cst := GetCST(source)
+
+	ast := ConvertToAST(cst, source)
+	expected := EnumDecl{
+		Name: "Colors",
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithStartEnd(1, 1, 1, 33).
+			Build(),
+		Members: []EnumMember{
+			{
+				Name: Identifier{
+					Name: "RED",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(1, 15, 1, 18).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(1, 15, 1, 18).
+					Build(),
+			},
+			{
+				Name: Identifier{
+					Name: "BLUE",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(1, 20, 1, 24).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(1, 20, 1, 24).
+					Build(),
+			},
+			{
+				Name: Identifier{
+					Name: "GREEN",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(1, 26, 1, 31).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(1, 26, 1, 31).
+					Build(),
+			},
+		},
+	}
+
+	assert.Equal(t, expected, ast.Modules[0].Declarations[0])
+}

@@ -160,9 +160,62 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 
 func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 	enumDecl := EnumDecl{
+		Name: node.ChildByFieldName("name").Content(sourceCode),
 		ASTNodeBase: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "enum_spec":
+			enumDecl.BaseType = typeNodeToType(n.Child(1), sourceCode)
+			if n.ChildCount() >= 3 {
+				param_list := n.Child(2)
+				for p := 0; p < int(param_list.ChildCount()); p++ {
+					paramNode := param_list.Child(p)
+					if paramNode.Type() == "enum_param_declaration" {
+						enumDecl.Properties = append(
+							enumDecl.Properties,
+							EnumProperty{
+								ASTNodeBase: NewBaseNodeBuilder().
+									WithSitterPosRange(paramNode.StartPoint(), paramNode.EndPoint()).
+									Build(),
+								Name: Identifier{
+									Name: paramNode.Child(1).Content(sourceCode),
+									ASTNodeBase: NewBaseNodeBuilder().
+										WithSitterPosRange(paramNode.Child(1).StartPoint(), paramNode.Child(1).EndPoint()).
+										Build(),
+								},
+								Type: typeNodeToType(paramNode.Child(0), sourceCode),
+							},
+						)
+					}
+				}
+			}
+
+		case "enum_body":
+			for i := 0; i < int(n.ChildCount()); i++ {
+				enumeratorNode := n.Child(i)
+				if enumeratorNode.Type() == "enum_constant" {
+					name := enumeratorNode.ChildByFieldName("name")
+					enumDecl.Members = append(enumDecl.Members,
+						EnumMember{
+							Name: Identifier{
+								Name: name.Content(sourceCode),
+								ASTNodeBase: NewBaseNodeBuilder().
+									WithSitterPosRange(name.StartPoint(), name.EndPoint()).
+									Build(),
+							},
+							ASTNodeBase: NewBaseNodeBuilder().
+								WithSitterPosRange(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()).
+								Build(),
+						},
+					)
+				}
+			}
+		}
 	}
 
 	return enumDecl

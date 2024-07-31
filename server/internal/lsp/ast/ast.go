@@ -60,15 +60,29 @@ type VariableDecl struct {
 
 type EnumDecl struct {
 	ASTNodeBase
-	Name    string
-	Members []EnumMember
-	Type    TypeInfo
+	Name       string
+	BaseType   TypeInfo
+	Properties []EnumProperty
+	Members    []EnumMember
+}
+
+type EnumProperty struct {
+	ASTNodeBase
+	Type TypeInfo
+	Name Identifier
 }
 
 type EnumMember struct {
 	ASTNodeBase
+	Name       Identifier
+	Value      string
+	Properties []PropertyValue
+}
+
+type PropertyValue struct {
+	ASTNodeBase
 	Name  string
-	Value string
+	Value Expression
 }
 
 type FunctionDecl struct {
@@ -103,9 +117,18 @@ type Identifier struct {
 	Name string
 }
 
+type Expression interface {
+	ASTNode
+}
+
 type Literal struct {
 	ASTNodeBase
 	Value string
+}
+
+type CompositeLiteral struct {
+	ASTNodeBase
+	Values []Expression
 }
 
 // BinaryExpr representa una expresión binaria (como suma, resta, etc.)
@@ -114,8 +137,4 @@ type BinaryExpr struct {
 	Left     ASTNode
 	Operator string
 	Right    ASTNode
-}
-
-type Expression interface {
-	ASTNodeBase
 }
