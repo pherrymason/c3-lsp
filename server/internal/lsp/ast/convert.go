@@ -198,22 +198,61 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 		case "enum_body":
 			for i := 0; i < int(n.ChildCount()); i++ {
 				enumeratorNode := n.Child(i)
-				if enumeratorNode.Type() == "enum_constant" {
-					name := enumeratorNode.ChildByFieldName("name")
-					enumDecl.Members = append(enumDecl.Members,
-						EnumMember{
-							Name: Identifier{
-								Name: name.Content(sourceCode),
-								ASTNodeBase: NewBaseNodeBuilder().
-									WithSitterPosRange(name.StartPoint(), name.EndPoint()).
-									Build(),
-							},
+				if enumeratorNode.Type() != "enum_constant" {
+					continue
+				}
+
+				compositeLiteral := CompositeLiteral{}
+				args := enumeratorNode.ChildByFieldName("args")
+				if args != nil {
+					/*
+						args: enum_arg [7, 12] - [7, 40]
+							arg [7, 16] - [7, 31]
+						  		string_literal [7, 16] - [7, 31]
+									string_content [7, 17] - [7, 30]
+							arg [7, 33] - [7, 38]
+					*/
+					for a := 0; a < int(args.ChildCount()); a++ {
+						arg := args.Child(a)
+						if arg.Type() == "arg" {
+
+							literal := arg.Child(0)
+							switch literal.Type() {
+							case "string_literal":
+								compositeLiteral.Values = append(compositeLiteral.Values,
+									Literal{Value: literal.Child(1).Content(sourceCode)},
+								)
+							case "false":
+								compositeLiteral.Values = append(compositeLiteral.Values,
+									BoolLiteral{Value: false},
+								)
+
+							case "true":
+								compositeLiteral.Values = append(compositeLiteral.Values,
+									BoolLiteral{Value: true},
+								)
+							}
+
+						}
+					}
+				}
+
+				name := enumeratorNode.ChildByFieldName("name")
+				enumDecl.Members = append(enumDecl.Members,
+					EnumMember{
+						Name: Identifier{
+							Name: name.Content(sourceCode),
 							ASTNodeBase: NewBaseNodeBuilder().
-								WithSitterPosRange(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()).
+								WithSitterPosRange(name.StartPoint(), name.EndPoint()).
 								Build(),
 						},
-					)
-				}
+						Value: compositeLiteral,
+						ASTNodeBase: NewBaseNodeBuilder().
+							WithSitterPosRange(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()).
+							Build(),
+					},
+				)
+
 			}
 		}
 	}

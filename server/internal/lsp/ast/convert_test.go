@@ -6,6 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func aWithPos(startRow uint, startCol uint, endRow uint, endCol uint) ASTNodeBase {
+	return NewBaseNodeBuilder().
+		WithStartEnd(startRow, startCol, endRow, endCol).
+		Build()
+}
+
 func TestConvertToAST_module(t *testing.T) {
 	source := `module foo;`
 	cst := GetCST(source)
@@ -14,7 +20,7 @@ func TestConvertToAST_module(t *testing.T) {
 
 	expectedAst := File{
 		Modules: []Module{
-			Module{
+			{
 				Name: "foo",
 				ASTNodeBase: ASTNodeBase{
 					Attributes: nil,
@@ -131,35 +137,25 @@ func TestConvertToAST_global_variables(t *testing.T) {
 	assert.Equal(t, expectedHello, ast.Modules[0].Declarations[0])
 
 	expectedAnimals := VariableDecl{
-		ASTNodeBase: NewBaseNodeBuilder().
-			WithStartEnd(2, 1, 2, 24).
-			Build(),
+		ASTNodeBase: aWithPos(2, 1, 2, 24),
 		Names: []Identifier{
 			{
-				Name: "dog",
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(2, 5, 2, 8).
-					Build(),
+				Name:        "dog",
+				ASTNodeBase: aWithPos(2, 5, 2, 8),
 			},
 			{
-				Name: "cat",
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(2, 10, 2, 13).
-					Build(),
+				Name:        "cat",
+				ASTNodeBase: aWithPos(2, 10, 2, 13),
 			},
 			{
-				Name: "elephant",
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(2, 15, 2, 23).
-					Build(),
+				Name:        "elephant",
+				ASTNodeBase: aWithPos(2, 15, 2, 23),
 			},
 		},
 		Type: TypeInfo{
-			Name:    "int",
-			BuiltIn: true,
-			ASTNodeBase: NewBaseNodeBuilder().
-				WithStartEnd(2, 1, 2, 4).
-				Build(),
+			Name:        "int",
+			BuiltIn:     true,
+			ASTNodeBase: aWithPos(2, 1, 2, 4),
 		},
 	}
 	assert.Equal(t, expectedAnimals, ast.Modules[0].Declarations[1])
@@ -168,11 +164,7 @@ func TestConvertToAST_global_variables(t *testing.T) {
 func TestConvertToAST_enum_decl(t *testing.T) {
 	source := `module foo;
 	enum Colors { RED, BLUE, GREEN }
-	enum TypedColors:int { RED, BLUE, GREEN } // Typed enums
-	enum State : int (String desc, bool active) {
-		PENDING("pending start", false),
-		RUNNING("running", true),
-	}`
+	enum TypedColors:int { RED, BLUE, GREEN } // Typed enums`
 	cst := GetCST(source)
 
 	ast := ConvertToAST(cst, source)
@@ -227,133 +219,116 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	expected = EnumDecl{
 		Name: "TypedColors",
 		BaseType: TypeInfo{
-			Name:     "int",
-			BuiltIn:  true,
-			Optional: false,
-			ASTNodeBase: NewBaseNodeBuilder().
-				WithStartEnd(row, 18, row, 21).
-				Build(),
+			Name:        "int",
+			BuiltIn:     true,
+			Optional:    false,
+			ASTNodeBase: aWithPos(row, 18, row, 21),
 		},
-		ASTNodeBase: NewBaseNodeBuilder().
-			WithStartEnd(row, 1, row, 42).
-			Build(),
+		ASTNodeBase: aWithPos(row, 1, row, 42),
 		Members: []EnumMember{
 			{
 				Name: Identifier{
-					Name: "RED",
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row, 24, row, 27).
-						Build(),
+					Name:        "RED",
+					ASTNodeBase: aWithPos(row, 24, row, 27),
 				},
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(row, 24, row, 27).
-					Build(),
+				ASTNodeBase: aWithPos(row, 24, row, 27),
 			},
 			{
 				Name: Identifier{
-					Name: "BLUE",
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row, 29, row, 33).
-						Build(),
+					Name:        "BLUE",
+					ASTNodeBase: aWithPos(row, 29, row, 33),
 				},
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(row, 29, row, 33).
-					Build(),
+				ASTNodeBase: aWithPos(row, 29, row, 33),
 			},
 			{
 				Name: Identifier{
-					Name: "GREEN",
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row, 35, row, 40).
-						Build(),
+					Name:        "GREEN",
+					ASTNodeBase: aWithPos(row, 35, row, 40),
 				},
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(row, 35, row, 40).
-					Build(),
+				ASTNodeBase: aWithPos(row, 35, row, 40),
 			},
 		},
 	}
 	assert.Equal(t, expected, ast.Modules[0].Declarations[1])
+}
+
+func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
+	source := `module foo;
+	enum State : int (String desc, bool active) {
+		PENDING = {"pending start", false},
+		RUNNING = {"running", true},
+	}`
+	cst := GetCST(source)
+
+	ast := ConvertToAST(cst, source)
 
 	// Test enum with associated parameters declaration
-	row = 3
-	expected = EnumDecl{
+	row := uint(1)
+	expected := EnumDecl{
 		Name: "State",
 		BaseType: TypeInfo{
-			Name:     "int",
-			BuiltIn:  true,
-			Optional: false,
-			ASTNodeBase: NewBaseNodeBuilder().
-				WithStartEnd(row, 14, row, 17).
-				Build(),
+			Name:        "int",
+			BuiltIn:     true,
+			Optional:    false,
+			ASTNodeBase: aWithPos(row, 14, row, 17),
 		},
 		Properties: []EnumProperty{
 			{
 				Name: Identifier{
-					Name: "desc",
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row, 26, row, 30).
-						Build(),
+					Name:        "desc",
+					ASTNodeBase: aWithPos(row, 26, row, 30),
 				},
 				Type: TypeInfo{
-					Name:     "String",
-					BuiltIn:  false,
-					Optional: false,
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row, 19, row, 25).
-						Build(),
+					Name:        "String",
+					BuiltIn:     false,
+					Optional:    false,
+					ASTNodeBase: aWithPos(row, 19, row, 25),
 				},
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(row, 19, row, 30).
-					Build(),
+				ASTNodeBase: aWithPos(row, 19, row, 30),
 			},
 			{
 				Name: Identifier{
-					Name: "active",
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row, 37, row, 43).
-						Build(),
+					Name:        "active",
+					ASTNodeBase: aWithPos(row, 37, row, 43),
 				},
 				Type: TypeInfo{
-					Name:     "bool",
-					BuiltIn:  true,
-					Optional: false,
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row, 32, row, 36).
-						Build(),
+					Name:        "bool",
+					BuiltIn:     true,
+					Optional:    false,
+					ASTNodeBase: aWithPos(row, 32, row, 36),
 				},
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(row, 32, row, 43).
-					Build(),
+				ASTNodeBase: aWithPos(row, 32, row, 43),
 			},
 		},
-		ASTNodeBase: NewBaseNodeBuilder().
-			WithStartEnd(row, 1, row+3, 2).
-			Build(),
+		ASTNodeBase: aWithPos(row, 1, row+3, 2),
 		Members: []EnumMember{
 			{
 				Name: Identifier{
-					Name: "PENDING",
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row+1, 2, row+1, 9).
-						Build(),
+					Name:        "PENDING",
+					ASTNodeBase: aWithPos(row+1, 2, row+1, 9),
 				},
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(row+1, 2, row+1, 33).
-					Build(),
+				Value: CompositeLiteral{
+					Values: []Expression{
+						Literal{Value: "pending start"},
+						BoolLiteral{Value: false},
+					},
+				},
+				ASTNodeBase: aWithPos(row+1, 2, row+1, 36),
 			},
 			{
 				Name: Identifier{
-					Name: "RUNNING",
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(row+2, 2, row+2, 9).
-						Build(),
+					Name:        "RUNNING",
+					ASTNodeBase: aWithPos(row+2, 2, row+2, 9),
 				},
-				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(row+2, 2, row+2, 26).
-					Build(),
+				Value: CompositeLiteral{
+					Values: []Expression{
+						Literal{Value: "running"},
+						BoolLiteral{Value: true},
+					},
+				},
+				ASTNodeBase: aWithPos(row+2, 2, row+2, 29),
 			},
 		},
 	}
-	assert.Equal(t, expected, ast.Modules[0].Declarations[2])
+	assert.Equal(t, expected, ast.Modules[0].Declarations[0])
 }

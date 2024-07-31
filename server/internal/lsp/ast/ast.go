@@ -74,9 +74,8 @@ type EnumProperty struct {
 
 type EnumMember struct {
 	ASTNodeBase
-	Name       Identifier
-	Value      string
-	Properties []PropertyValue
+	Name  Identifier
+	Value CompositeLiteral
 }
 
 type PropertyValue struct {
@@ -124,6 +123,11 @@ type Expression interface {
 type Literal struct {
 	ASTNodeBase
 	Value string
+}
+
+type BoolLiteral struct {
+	ASTNodeBase
+	Value bool
 }
 
 type CompositeLiteral struct {
