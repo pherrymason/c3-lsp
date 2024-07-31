@@ -177,6 +177,8 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	cst := GetCST(source)
 
 	ast := ConvertToAST(cst, source)
+
+	// Test basic enum declaration
 	expected := EnumDecl{
 		Name: "Colors",
 		ASTNodeBase: NewBaseNodeBuilder().
@@ -218,6 +220,57 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 			},
 		},
 	}
-
 	assert.Equal(t, expected, ast.Modules[0].Declarations[0])
+
+	// Test typed enum declaration
+	expected = EnumDecl{
+		Name: "TypedColors",
+		BaseType: TypeInfo{
+			Name:     "int",
+			BuiltIn:  true,
+			Optional: false,
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(2, 18, 2, 21).
+				Build(),
+		},
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithStartEnd(2, 1, 2, 42).
+			Build(),
+		Members: []EnumMember{
+			{
+				Name: Identifier{
+					Name: "RED",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(2, 24, 2, 27).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(2, 24, 2, 27).
+					Build(),
+			},
+			{
+				Name: Identifier{
+					Name: "BLUE",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(2, 29, 2, 33).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(2, 29, 2, 33).
+					Build(),
+			},
+			{
+				Name: Identifier{
+					Name: "GREEN",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(2, 35, 2, 40).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(2, 35, 2, 40).
+					Build(),
+			},
+		},
+	}
+	assert.Equal(t, expected, ast.Modules[0].Declarations[1])
 }
