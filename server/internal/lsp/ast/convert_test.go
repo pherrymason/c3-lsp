@@ -254,9 +254,9 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 
 func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 	source := `module foo;
-	enum State : int (String desc, bool active) {
-		PENDING = {"pending start", false},
-		RUNNING = {"running", true},
+	enum State : int (String desc, bool active, char ke) {
+		PENDING = {"pending start", false, 'c'},
+		RUNNING = {"running", true, 'e'},
 	}`
 	cst := GetCST(source)
 
@@ -299,6 +299,19 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 				},
 				ASTNodeBase: aWithPos(row, 32, row, 43),
 			},
+			{
+				Name: Identifier{
+					Name:        "ke",
+					ASTNodeBase: aWithPos(row, 50, row, 52),
+				},
+				Type: TypeInfo{
+					Name:        "char",
+					BuiltIn:     true,
+					Optional:    false,
+					ASTNodeBase: aWithPos(row, 45, row, 49),
+				},
+				ASTNodeBase: aWithPos(row, 45, row, 52),
+			},
 		},
 		ASTNodeBase: aWithPos(row, 1, row+3, 2),
 		Members: []EnumMember{
@@ -311,9 +324,10 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 					Values: []Expression{
 						Literal{Value: "pending start"},
 						BoolLiteral{Value: false},
+						Literal{Value: "c"},
 					},
 				},
-				ASTNodeBase: aWithPos(row+1, 2, row+1, 36),
+				ASTNodeBase: aWithPos(row+1, 2, row+1, 41),
 			},
 			{
 				Name: Identifier{
@@ -324,9 +338,10 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 					Values: []Expression{
 						Literal{Value: "running"},
 						BoolLiteral{Value: true},
+						Literal{Value: "e"},
 					},
 				},
-				ASTNodeBase: aWithPos(row+2, 2, row+2, 29),
+				ASTNodeBase: aWithPos(row+2, 2, row+2, 34),
 			},
 		},
 	}

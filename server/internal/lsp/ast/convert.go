@@ -205,34 +205,12 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 				compositeLiteral := CompositeLiteral{}
 				args := enumeratorNode.ChildByFieldName("args")
 				if args != nil {
-					/*
-						args: enum_arg [7, 12] - [7, 40]
-							arg [7, 16] - [7, 31]
-						  		string_literal [7, 16] - [7, 31]
-									string_content [7, 17] - [7, 30]
-							arg [7, 33] - [7, 38]
-					*/
 					for a := 0; a < int(args.ChildCount()); a++ {
 						arg := args.Child(a)
 						if arg.Type() == "arg" {
-
-							literal := arg.Child(0)
-							switch literal.Type() {
-							case "string_literal":
-								compositeLiteral.Values = append(compositeLiteral.Values,
-									Literal{Value: literal.Child(1).Content(sourceCode)},
-								)
-							case "false":
-								compositeLiteral.Values = append(compositeLiteral.Values,
-									BoolLiteral{Value: false},
-								)
-
-							case "true":
-								compositeLiteral.Values = append(compositeLiteral.Values,
-									BoolLiteral{Value: true},
-								)
-							}
-
+							compositeLiteral.Values = append(compositeLiteral.Values,
+								convert_literal(arg.Child(0), sourceCode),
+							)
 						}
 					}
 				}
@@ -258,6 +236,23 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 	}
 
 	return enumDecl
+}
+
+func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
+	var literal Expression
+
+	switch node.Type() {
+	case "string_literal", "char_literal":
+		literal = Literal{Value: node.Child(1).Content(sourceCode)}
+
+	case "false":
+		literal = BoolLiteral{Value: false}
+
+	case "true":
+		literal = BoolLiteral{Value: true}
+	}
+
+	return literal
 }
 
 func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
