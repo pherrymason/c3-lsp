@@ -44,6 +44,11 @@
           "default": true,
           "markdownDescription": "Enables debug information logging"
         },
+        "c3lspclient.lsp.log.path": {
+          "type": "string",
+          "default": "",
+          "description": "Saves log to specified file"
+        },
         "c3lspclient.lsp.sendCrashReports": {
           "type": "boolean",
           "default": false,

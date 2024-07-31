@@ -18,6 +18,10 @@ module.exports = {
       args.push('--send-crash-reports');
     }
 
+    if (config.get('log.path').length > 0) {
+        args.push('--log-path '+config.get('log.path'));
+    }
+
     const serverOptions = {
       run: {
         command: executable,
