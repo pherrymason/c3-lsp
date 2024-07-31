@@ -170,15 +170,15 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	enum Colors { RED, BLUE, GREEN }
 	enum TypedColors:int { RED, BLUE, GREEN } // Typed enums
 	enum State : int (String desc, bool active) {
-		PEDNING("pending start", false),
+		PENDING("pending start", false),
 		RUNNING("running", true),
-		TERMINATED("ended", false)
 	}`
 	cst := GetCST(source)
 
 	ast := ConvertToAST(cst, source)
 
 	// Test basic enum declaration
+	row := uint(1)
 	expected := EnumDecl{
 		Name: "Colors",
 		ASTNodeBase: NewBaseNodeBuilder().
@@ -223,6 +223,7 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	assert.Equal(t, expected, ast.Modules[0].Declarations[0])
 
 	// Test typed enum declaration
+	row = 2
 	expected = EnumDecl{
 		Name: "TypedColors",
 		BaseType: TypeInfo{
@@ -230,47 +231,129 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 			BuiltIn:  true,
 			Optional: false,
 			ASTNodeBase: NewBaseNodeBuilder().
-				WithStartEnd(2, 18, 2, 21).
+				WithStartEnd(row, 18, row, 21).
 				Build(),
 		},
 		ASTNodeBase: NewBaseNodeBuilder().
-			WithStartEnd(2, 1, 2, 42).
+			WithStartEnd(row, 1, row, 42).
 			Build(),
 		Members: []EnumMember{
 			{
 				Name: Identifier{
 					Name: "RED",
 					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(2, 24, 2, 27).
+						WithStartEnd(row, 24, row, 27).
 						Build(),
 				},
 				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(2, 24, 2, 27).
+					WithStartEnd(row, 24, row, 27).
 					Build(),
 			},
 			{
 				Name: Identifier{
 					Name: "BLUE",
 					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(2, 29, 2, 33).
+						WithStartEnd(row, 29, row, 33).
 						Build(),
 				},
 				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(2, 29, 2, 33).
+					WithStartEnd(row, 29, row, 33).
 					Build(),
 			},
 			{
 				Name: Identifier{
 					Name: "GREEN",
 					ASTNodeBase: NewBaseNodeBuilder().
-						WithStartEnd(2, 35, 2, 40).
+						WithStartEnd(row, 35, row, 40).
 						Build(),
 				},
 				ASTNodeBase: NewBaseNodeBuilder().
-					WithStartEnd(2, 35, 2, 40).
+					WithStartEnd(row, 35, row, 40).
 					Build(),
 			},
 		},
 	}
 	assert.Equal(t, expected, ast.Modules[0].Declarations[1])
+
+	// Test enum with associated parameters declaration
+	row = 3
+	expected = EnumDecl{
+		Name: "State",
+		BaseType: TypeInfo{
+			Name:     "int",
+			BuiltIn:  true,
+			Optional: false,
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(row, 14, row, 17).
+				Build(),
+		},
+		Properties: []EnumProperty{
+			{
+				Name: Identifier{
+					Name: "desc",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(row, 26, row, 30).
+						Build(),
+				},
+				Type: TypeInfo{
+					Name:     "String",
+					BuiltIn:  false,
+					Optional: false,
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(row, 19, row, 25).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(row, 19, row, 30).
+					Build(),
+			},
+			{
+				Name: Identifier{
+					Name: "active",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(row, 37, row, 43).
+						Build(),
+				},
+				Type: TypeInfo{
+					Name:     "bool",
+					BuiltIn:  true,
+					Optional: false,
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(row, 32, row, 36).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(row, 32, row, 43).
+					Build(),
+			},
+		},
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithStartEnd(row, 1, row+3, 2).
+			Build(),
+		Members: []EnumMember{
+			{
+				Name: Identifier{
+					Name: "PENDING",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(row+1, 2, row+1, 9).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(row+1, 2, row+1, 33).
+					Build(),
+			},
+			{
+				Name: Identifier{
+					Name: "RUNNING",
+					ASTNodeBase: NewBaseNodeBuilder().
+						WithStartEnd(row+2, 2, row+2, 9).
+						Build(),
+				},
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(row+2, 2, row+2, 26).
+					Build(),
+			},
+		},
+	}
+	assert.Equal(t, expected, ast.Modules[0].Declarations[2])
 }
