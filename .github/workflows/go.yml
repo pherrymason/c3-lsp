@@ -46,7 +46,8 @@ jobs:
           race: false
           ldflags: -s -w
           buildmode: default
-          pkg: server/cmd/lsp
+          pkg: cmd/lsp
+          working_dir: server
           trimpath: true
       
       -
