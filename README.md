@@ -45,6 +45,7 @@ Precompiled binaries for the following operating systems are available:
 
 - Linux x64 [download](https://github.com/pherrymason/c3-lsp/releases/download/latest/linux-amd64-c3lsp.zip)  
 - MacOS x64 [download](https://github.com/pherrymason/c3-lsp/releases/download/latest/darwin-amd64-c3lsp.zip).
+- Windows 11 x64 [download](https://github.com/pherrymason/c3-lsp/releases/download/latest/windows-11-64-c3-lsp.exe.zip).
 
 You can also build from source:
 
