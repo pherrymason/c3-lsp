@@ -9,19 +9,49 @@ on:
     branches: [ "main" ]
 
 jobs:
-
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: '1.21'
 
     - name: Test
       run: cd server && go test -v ./...
-
-    - name: Build
-      run: make build-all
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - 
+        name: Checkout
+        uses: actions/checkout@v4
+      
+      -
+        name: Set up Go
+        uses: actions/setup-go@v5
+      
+      -
+        name: Build
+        uses: crazy-max/ghaction-xgo@v3
+        with:
+          xgo_version: latest
+          go_version: 1.21
+          dest: build
+          prefix: myapp
+          targets: windows/amd64,linux/amd64,linux/arm64,darwin/arm64
+          v: true
+          x: false
+          race: false
+          ldflags: -s -w
+          buildmode: default
+          working_dir: server/cmd/lsp
+          trimpath: true
+      
+      -
+        name: Upload assets
+        uses: actions/upload-artifact@v3
+        with:
+          name: myapp
+          path: myfolder/dist/*
