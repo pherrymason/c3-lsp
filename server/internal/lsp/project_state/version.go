@@ -30,6 +30,10 @@ func SupportedVersions() []Version {
 			Number:        "0.6.0",
 			stdLibSymbols: stdlib.Load_v060_stdlib,
 		},
+		{
+			Number:        "0.6.1",
+			stdLibSymbols: stdlib.Load_v061_stdlib,
+		},
 	}
 }
 

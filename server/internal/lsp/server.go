@@ -49,10 +49,12 @@ func NewServer(opts ServerOpts) *Server {
 		logger.Debug("No crash reports")
 	}
 
+	if opts.C3Version.IsSome() {
+		logger.Debug(fmt.Sprintf("C3 Language version specified: %s", opts.C3Version.Get()))
+	}
+
 	handler := protocol.Handler{}
 	glspServer := glspserv.NewServer(&handler, opts.Name, true)
-
-	//documents := document.NewDocumentStore(fs.FileStorage{})
 
 	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3Version)
 
@@ -145,11 +147,15 @@ func checkRequestedLanguageVersion(version option.Option[string]) project_state.
 	}
 
 	for _, sVersion := range supportedVersions {
-		compare := semver.Compare(sVersion.Number, version.Get())
+		if sVersion.Number == "dummy" {
+			continue
+		}
+
+		compare := semver.Compare("v"+sVersion.Number, "v"+version.Get())
 		if compare == 0 {
 			return sVersion
 		}
 	}
 
-	panic("c3 language not supported")
+	panic("c3 language version not supported")
 }
