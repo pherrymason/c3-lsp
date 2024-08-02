@@ -39,7 +39,7 @@ jobs:
           xgo_version: latest
           go_version: 1.21
           dest: /home/runner/work/repo-name/builds
-          prefix: myapp
+          prefix: c3-lsp
           targets: windows/amd64,linux/amd64,linux/arm64,darwin/arm64
           v: true
           x: false
@@ -52,7 +52,7 @@ jobs:
       
       -
         name: Upload assets
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: myapp
+          name: c3-lsp
           path: /home/runner/work/repo-name/builds/*
