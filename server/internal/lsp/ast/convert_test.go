@@ -3,6 +3,7 @@ package ast
 import (
 	"testing"
 
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,9 +15,8 @@ func aWithPos(startRow uint, startCol uint, endRow uint, endCol uint) ASTNodeBas
 
 func TestConvertToAST_module(t *testing.T) {
 	source := `module foo;`
-	cst := GetCST(source)
 
-	ast := ConvertToAST(cst, source)
+	ast := ConvertToAST(GetCST(source), source)
 
 	expectedAst := File{
 		Modules: []Module{
@@ -41,9 +41,8 @@ func TestConvertToAST_module(t *testing.T) {
 
 func TestConvertToAST_module_with_generics(t *testing.T) {
 	source := `module foo(<Type>);`
-	cst := GetCST(source)
 
-	ast := ConvertToAST(cst, source)
+	ast := ConvertToAST(GetCST(source), source)
 
 	expectedAst := File{
 		Modules: []Module{
@@ -69,9 +68,8 @@ func TestConvertToAST_module_with_generics(t *testing.T) {
 
 func TestConvertToAST_module_with_attributes(t *testing.T) {
 	source := `module foo @private;`
-	cst := GetCST(source)
 
-	ast := ConvertToAST(cst, source)
+	ast := ConvertToAST(GetCST(source), source)
 
 	expectedAst := File{
 		Modules: []Module{
@@ -99,9 +97,8 @@ func TestConvertToAST_module_with_imports(t *testing.T) {
 	source := `module foo;
 	import foo;
 	import foo2;`
-	cst := GetCST(source)
 
-	ast := ConvertToAST(cst, source)
+	ast := ConvertToAST(GetCST(source), source)
 
 	assert.Equal(t, []string{"foo", "foo2"}, ast.Modules[0].Imports)
 }
@@ -110,9 +107,8 @@ func TestConvertToAST_global_variables(t *testing.T) {
 	source := `module foo;
 	int hello = 3;
 	int dog, cat, elephant;`
-	cst := GetCST(source)
 
-	ast := ConvertToAST(cst, source)
+	ast := ConvertToAST(GetCST(source), source)
 
 	expectedHello := VariableDecl{
 		ASTNodeBase: NewBaseNodeBuilder().
@@ -127,8 +123,8 @@ func TestConvertToAST_global_variables(t *testing.T) {
 			},
 		},
 		Type: TypeInfo{
-			Name:    "int",
-			BuiltIn: true,
+			Identifier: NewIdentifierBuilder().WithName("int").WithStartEnd(1, 1, 1, 4).Build(),
+			BuiltIn:    true,
 			ASTNodeBase: NewBaseNodeBuilder().
 				WithStartEnd(1, 1, 1, 4).
 				Build(),
@@ -153,7 +149,7 @@ func TestConvertToAST_global_variables(t *testing.T) {
 			},
 		},
 		Type: TypeInfo{
-			Name:        "int",
+			Identifier:  NewIdentifierBuilder().WithName("int").WithStartEnd(2, 1, 2, 4).Build(),
 			BuiltIn:     true,
 			ASTNodeBase: aWithPos(2, 1, 2, 4),
 		},
@@ -165,9 +161,8 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	source := `module foo;
 	enum Colors { RED, BLUE, GREEN }
 	enum TypedColors:int { RED, BLUE, GREEN } // Typed enums`
-	cst := GetCST(source)
 
-	ast := ConvertToAST(cst, source)
+	ast := ConvertToAST(GetCST(source), source)
 
 	// Test basic enum declaration
 	row := uint(1)
@@ -219,7 +214,7 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	expected = EnumDecl{
 		Name: "TypedColors",
 		BaseType: TypeInfo{
-			Name:        "int",
+			Identifier:  NewIdentifierBuilder().WithName("int").WithStartEnd(2, 18, 2, 21).Build(),
 			BuiltIn:     true,
 			Optional:    false,
 			ASTNodeBase: aWithPos(row, 18, row, 21),
@@ -258,16 +253,15 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 		PENDING = {"pending start", false, 'c'},
 		RUNNING = {"running", true, 'e'},
 	}`
-	cst := GetCST(source)
 
-	ast := ConvertToAST(cst, source)
+	ast := ConvertToAST(GetCST(source), source)
 
 	// Test enum with associated parameters declaration
 	row := uint(1)
 	expected := EnumDecl{
 		Name: "State",
 		BaseType: TypeInfo{
-			Name:        "int",
+			Identifier:  NewIdentifierBuilder().WithName("int").WithStartEnd(1, 14, 1, 17).Build(),
 			BuiltIn:     true,
 			Optional:    false,
 			ASTNodeBase: aWithPos(row, 14, row, 17),
@@ -279,7 +273,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 					ASTNodeBase: aWithPos(row, 26, row, 30),
 				},
 				Type: TypeInfo{
-					Name:        "String",
+					Identifier:  NewIdentifierBuilder().WithName("String").WithStartEnd(1, 19, 1, 25).Build(),
 					BuiltIn:     false,
 					Optional:    false,
 					ASTNodeBase: aWithPos(row, 19, row, 25),
@@ -292,7 +286,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 					ASTNodeBase: aWithPos(row, 37, row, 43),
 				},
 				Type: TypeInfo{
-					Name:        "bool",
+					Identifier:  NewIdentifierBuilder().WithName("bool").WithStartEnd(1, 32, 1, 36).Build(),
 					BuiltIn:     true,
 					Optional:    false,
 					ASTNodeBase: aWithPos(row, 32, row, 36),
@@ -305,7 +299,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 					ASTNodeBase: aWithPos(row, 50, row, 52),
 				},
 				Type: TypeInfo{
-					Name:        "char",
+					Identifier:  NewIdentifierBuilder().WithName("char").WithStartEnd(1, 45, 1, 49).Build(),
 					BuiltIn:     true,
 					Optional:    false,
 					ASTNodeBase: aWithPos(row, 45, row, 49),
@@ -346,4 +340,214 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 		},
 	}
 	assert.Equal(t, expected, ast.Modules[0].Declarations[0])
+}
+
+func TestConvertToAST_struct_decl(t *testing.T) {
+	source := `module foo;
+	struct MyStruct {
+		int data;
+		char key;
+		raylib::Camera camera;
+	}`
+
+	ast := ConvertToAST(GetCST(source), source)
+
+	expected := StructDecl{
+		ASTNodeBase: aWithPos(1, 1, 5, 2),
+		Name:        "MyStruct",
+		StructType:  StructTypeNormal,
+		Members: []StructMemberDecl{
+			{
+				ASTNodeBase: aWithPos(2, 2, 2, 11),
+				Names: []Identifier{
+					{
+						ASTNodeBase: aWithPos(2, 6, 2, 10),
+						Name:        "data",
+					},
+				},
+				Type: TypeInfo{
+					ASTNodeBase: aWithPos(2, 2, 2, 5),
+					Identifier:  NewIdentifierBuilder().WithName("int").WithStartEnd(2, 2, 2, 5).Build(),
+					BuiltIn:     true,
+				},
+			},
+			{
+				ASTNodeBase: aWithPos(3, 2, 3, 11),
+				Names: []Identifier{
+					{
+						ASTNodeBase: aWithPos(3, 7, 3, 10),
+						Name:        "key",
+					},
+				},
+				Type: TypeInfo{
+					ASTNodeBase: aWithPos(3, 2, 3, 6),
+					Identifier:  NewIdentifierBuilder().WithName("char").WithStartEnd(3, 2, 3, 6).Build(),
+					BuiltIn:     true,
+				},
+			},
+			{
+				ASTNodeBase: aWithPos(4, 2, 4, 24),
+				Names: []Identifier{
+					{
+						ASTNodeBase: aWithPos(4, 17, 4, 23),
+						Name:        "camera",
+					},
+				},
+				Type: TypeInfo{
+					ASTNodeBase: aWithPos(4, 2, 4, 16),
+					Identifier: Identifier{
+						Path:        "raylib",
+						Name:        "Camera",
+						ASTNodeBase: aWithPos(4, 2, 4, 16),
+					},
+					BuiltIn: false,
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, expected, ast.Modules[0].Declarations[0])
+}
+
+func TestConvertToAST_struct_decl_with_interface(t *testing.T) {
+	source := `module foo;
+	struct MyStruct (MyInterface, MySecondInterface) {
+		int data;
+		char key;
+		raylib::Camera camera;
+	}`
+
+	ast := ConvertToAST(GetCST(source), source)
+
+	expected := []string{"MyInterface", "MySecondInterface"}
+
+	structDecl := ast.Modules[0].Declarations[0].(StructDecl)
+	assert.Equal(t, expected, structDecl.Implements)
+}
+
+func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
+	source := `module x;
+	def Register16 = UInt16;
+	struct Registers {
+		bitstruct : Register16 @overlap {
+			Register16 bc : 0..15;
+			Register b : 8..15;
+			Register c : 0..7;
+		}
+		Register16 sp;
+		Register16 pc;
+	}`
+
+	ast := ConvertToAST(GetCST(source), source)
+	structDecl := ast.Modules[0].Declarations[0].(StructDecl)
+
+	assert.Equal(t, 5, len(structDecl.Members))
+
+	assert.Equal(
+		t,
+		StructMemberDecl{
+			ASTNodeBase: aWithPos(4, 3, 4, 25),
+			Names: []Identifier{
+				NewIdentifierBuilder().
+					WithName("bc").
+					WithStartEnd(4, 14, 4, 16).
+					Build(),
+			},
+			Type: TypeInfo{
+				ASTNodeBase: aWithPos(4, 3, 4, 13),
+				Identifier: NewIdentifierBuilder().
+					WithName("Register16").
+					WithStartEnd(4, 3, 4, 13).
+					Build(),
+			},
+			BitRange: option.Some([2]uint{0, 15}),
+		},
+		structDecl.Members[0],
+	)
+
+	assert.Equal(
+		t,
+		StructMemberDecl{
+			ASTNodeBase: aWithPos(5, 3, 5, 22),
+			Names: []Identifier{
+				NewIdentifierBuilder().
+					WithName("b").
+					WithStartEnd(5, 12, 5, 13).
+					Build(),
+			},
+			Type: TypeInfo{
+				ASTNodeBase: aWithPos(5, 3, 5, 11),
+				Identifier: NewIdentifierBuilder().
+					WithName("Register").
+					WithStartEnd(5, 3, 5, 11).
+					Build(),
+			},
+			BitRange: option.Some([2]uint{8, 15}),
+		},
+		structDecl.Members[1],
+	)
+
+	assert.Equal(
+		t,
+		StructMemberDecl{
+			ASTNodeBase: aWithPos(6, 3, 6, 21),
+			Names: []Identifier{
+				NewIdentifierBuilder().
+					WithName("c").
+					WithStartEnd(6, 12, 6, 13).
+					Build(),
+			},
+			Type: TypeInfo{
+				ASTNodeBase: aWithPos(6, 3, 6, 11),
+				Identifier: NewIdentifierBuilder().
+					WithName("Register").
+					WithStartEnd(6, 3, 6, 11).
+					Build(),
+			},
+			BitRange: option.Some([2]uint{0, 7}),
+		},
+		structDecl.Members[2],
+	)
+
+	assert.Equal(
+		t,
+		StructMemberDecl{
+			ASTNodeBase: aWithPos(8, 2, 8, 16),
+			Names: []Identifier{
+				NewIdentifierBuilder().
+					WithName("sp").
+					WithStartEnd(8, 13, 8, 15).
+					Build(),
+			},
+			Type: TypeInfo{
+				ASTNodeBase: aWithPos(8, 2, 8, 12),
+				Identifier: NewIdentifierBuilder().
+					WithName("Register16").
+					WithStartEnd(8, 2, 8, 12).
+					Build(),
+			},
+		},
+		structDecl.Members[3],
+	)
+
+	assert.Equal(
+		t,
+		StructMemberDecl{
+			ASTNodeBase: aWithPos(9, 2, 9, 16),
+			Names: []Identifier{
+				NewIdentifierBuilder().
+					WithName("pc").
+					WithStartEnd(9, 13, 9, 15).
+					Build(),
+			},
+			Type: TypeInfo{
+				ASTNodeBase: aWithPos(9, 2, 9, 12),
+				Identifier: NewIdentifierBuilder().
+					WithName("Register16").
+					WithStartEnd(9, 2, 9, 12).
+					Build(),
+			},
+		},
+		structDecl.Members[4],
+	)
 }

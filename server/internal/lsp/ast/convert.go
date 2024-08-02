@@ -3,7 +3,12 @@ package ast
 import "C"
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -39,6 +44,11 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string) File {
 
 		case "enum_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_enum_declaration(node, source))
+
+		case "struct_declaration":
+			lastMod.Declarations = append(lastMod.Declarations, convert_struct_declaration(node, source))
+		case "bitstruct_declaration":
+			lastMod.Declarations = append(lastMod.Declarations, convert_bitstruct_declaration(node, source))
 		}
 	}
 
@@ -238,18 +248,291 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 	return enumDecl
 }
 
+func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl {
+	structDecl := StructDecl{
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+			Build(),
+		StructType: StructTypeNormal,
+	}
+
+	structDecl.Name = node.ChildByFieldName("name").Content(sourceCode)
+	isUnion := false
+	//membersNeedingSubtypingResolve := []string{}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		switch child.Type() {
+		case "union":
+			structDecl.StructType = StructTypeUnion
+		case "interface_impl":
+			for x := 0; x < int(child.ChildCount()); x++ {
+				n := child.Child(x)
+				if n.Type() == "interface" {
+					structDecl.Implements = append(structDecl.Implements, n.Content(sourceCode))
+				}
+			}
+		case "attributes":
+			// TODO attributes
+		}
+	}
+
+	// TODO parse attributes
+	bodyNode := node.ChildByFieldName("body")
+	inlinedSubTyping := []string{}
+
+	// Search Struct members
+	for i := 0; i < int(bodyNode.ChildCount()); i++ {
+		memberNode := bodyNode.Child(i)
+		isInline := false
+
+		//fmt.Println("body child:", memberNode.Type())
+		if memberNode.Type() != "struct_member_declaration" {
+			continue
+		}
+		fmt.Printf("%d - %s\n", i, memberNode.Content(sourceCode))
+
+		fieldType := TypeInfo{}
+		member := StructMemberDecl{
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithSitterPosRange(memberNode.StartPoint(), memberNode.EndPoint()).
+				Build(),
+		}
+
+		for x := 0; x < int(memberNode.ChildCount()); x++ {
+			n := memberNode.Child(x)
+
+			switch n.Type() {
+			case "type":
+				fieldType = typeNodeToType(n, sourceCode)
+				member.Type = fieldType
+				//fmt.Println(fieldType, n.Content(sourceCode))
+
+				//fieldType = n.Content(sourceCode)
+				if isInline {
+					//	identifier = "dummy-subtyping"
+				}
+			case "identifier_list":
+				for j := 0; j < int(n.ChildCount()); j++ {
+					member.Names = append(member.Names,
+						Identifier{
+							ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(n.Child(j).StartPoint(), n.Child(j).EndPoint()).Build(),
+							Name:        n.Child(j).Content(sourceCode),
+						},
+					) /*
+						identifiers = append(identifiers, n.Child(j).Content(sourceCode))
+						identifiersRange = append(identifiersRange,
+							idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
+						)*/
+				}
+			case "attributes":
+				// TODO
+			case "bitstruct_body":
+				bitStructsMembers := convert_bitstruct_members(n, sourceCode)
+				structDecl.Members = append(structDecl.Members, bitStructsMembers...)
+				//structFields = append(structFields, bitStructsMembers...)
+
+			case "inline":
+				isInline = true
+				//fmt.Println("inline!: ", n.Content(sourceCode))
+				inlinedSubTyping = append(inlinedSubTyping, "1")
+
+			case "ident":
+				member.Names = append(member.Names,
+					Identifier{
+						ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(n.StartPoint(), n.EndPoint()).Build(),
+						Name:        n.Content(sourceCode),
+					},
+				) /*
+					identifier = n.Content(sourceCode)
+					identifiersRange = append(identifiersRange,
+						idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
+					)*/
+			}
+		}
+
+		/*
+			if len(identifiers) > 0 {
+				for y := 0; y < len(identifiers); y++ {
+					structMember := idx.NewStructMember(
+						identifiers[y],
+						fieldType, // TODO <--- this type parsing is too simple
+						option.None[[2]uint](),
+						currentModule.GetModuleString(),
+						docId,
+						identifiersRange[y],
+					)
+					structFields = append(structFields, &structMember)
+				}
+			} else if isInline {
+				var structMember idx.StructMember
+				membersNeedingSubtypingResolve = append(membersNeedingSubtypingResolve, fieldType)
+				structMember = idx.NewInlineSubtype(
+					identifier,
+					fieldType,
+					currentModule.GetModuleString(),
+					docId,
+					identifiersRange[0],
+				)
+				structFields = append(structFields, &structMember)
+			} else if len(identifier) > 0 {
+				structMember := idx.NewStructMember(
+					identifier,
+					fieldType,
+					option.None[[2]uint](),
+					currentModule.GetModuleString(),
+					docId,
+					identifiersRange[0],
+				)
+
+				structFields = append(structFields, &structMember)
+			}*/
+
+		if len(member.Names) > 0 {
+			structDecl.Members = append(structDecl.Members, member)
+		}
+	}
+
+	if isUnion {
+		/*
+			_struct = idx.NewUnion(
+				name,
+				structFields,
+				currentModule.GetModuleString(),
+				docId,
+				idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+				idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
+			)*/
+	} else {
+		/*
+			_struct = idx.NewStruct(
+				name,
+				interfaces,
+				structFields,
+				currentModule.GetModuleString(),
+				docId,
+				idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+				idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
+			)*/
+	}
+
+	return structDecl
+}
+
+func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) StructDecl {
+	structDecl := StructDecl{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), node.EndPoint()).Build(),
+		StructType:  StructTypeBitStruct,
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		//fmt.Println("type:", child.Type(), child.Content(sourceCode))
+
+		switch child.Type() {
+		case "interface_impl":
+			// TODO
+			for x := 0; x < int(child.ChildCount()); x++ {
+				n := child.Child(x)
+				if n.Type() == "interface" {
+					structDecl.Implements = append(structDecl.Implements, n.Content(sourceCode))
+				}
+			}
+
+		case "attributes":
+			// TODO attributes
+
+		case "type":
+			structDecl.BackingType = option.Some(typeNodeToType(child, sourceCode))
+
+		case "bitstruct_body":
+			structDecl.Members = convert_bitstruct_members(child, sourceCode)
+		}
+	}
+
+	return structDecl
+}
+
+func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMemberDecl {
+	members := []StructMemberDecl{}
+	for i := 0; i < int(node.ChildCount()); i++ {
+		bdefnode := node.Child(i)
+		bType := bdefnode.Type()
+		member := StructMemberDecl{
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithSitterPosRange(bdefnode.StartPoint(), bdefnode.EndPoint()).
+				Build(),
+		}
+
+		if bType == "bitstruct_def" {
+			for x := 0; x < int(bdefnode.ChildCount()); x++ {
+				xNode := bdefnode.Child(x)
+				//fmt.Println(xNode.Type())
+				switch xNode.Type() {
+				case "base_type":
+					// Note: here we consciously pass bdefnode because typeNodeToType expects a child node of base_type. If we send xNode it will not find it.
+					member.Type = typeNodeToType(bdefnode, sourceCode)
+				case "ident":
+					member.Names = append(
+						member.Names,
+						NewIdentifierBuilder().
+							WithName(xNode.Content(sourceCode)).
+							WithSitterPos(xNode).
+							Build(),
+					)
+				}
+			}
+
+			bitRanges := [2]uint{}
+			lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
+			bitRanges[0] = uint(lowBit)
+
+			if bdefnode.ChildCount() >= 6 {
+				highBit, _ := strconv.ParseInt(bdefnode.Child(5).Content(sourceCode), 10, 32)
+				bitRanges[1] = uint(highBit)
+			}
+			member.BitRange = option.Some(bitRanges)
+
+			/*member := idx.NewStructMember(
+				identity,
+				memberType,
+				option.Some(bitRanges),
+				currentModule.GetModuleString(),
+				docId,
+				idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
+			)*/
+			members = append(members, member)
+		} else if bType == "_bitstruct_simple_defs" {
+			// Could not make examples with these to parse.
+		}
+	}
+
+	return members
+}
+
 func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 	var literal Expression
 
 	switch node.Type() {
 	case "string_literal", "char_literal":
 		literal = Literal{Value: node.Child(1).Content(sourceCode)}
+	case "integer_literal", "real_literal":
+		/*
+			for i := 0; i < int(node.ChildCount()); i++ {
+				fmt.Printf("Literal type not supported: %s\n", node.Child(i).Type())
+			}
+			fmt.Printf("Literal value: %s\n", node.Content(sourceCode))*/
+		literal = Literal{
+			Value: node.Content(sourceCode),
+		}
 
 	case "false":
 		literal = BoolLiteral{Value: false}
 
 	case "true":
 		literal = BoolLiteral{Value: true}
+	default:
+		panic(fmt.Sprintf("Literal type not supported: %s\n", node.Type()))
 	}
 
 	return literal
@@ -287,15 +570,26 @@ func extTypeNodeToType(
 		//fmt.Println(n.Type(), n.Content(sourceCode))
 		switch n.Type() {
 		case "base_type":
+			typeInfo.ASTNodeBase = NewBaseNodeBuilder().
+				WithSitterPosRange(n.StartPoint(), n.EndPoint()).
+				Build()
+
 			for b := 0; b < int(n.ChildCount()); b++ {
 				bn := n.Child(b)
-				//fmt.Println("---"+bn.Type(), bn.Content(sourceCode))
+				fmt.Println("---"+bn.Type(), bn.Content(sourceCode))
+
 				switch bn.Type() {
 				case "base_type_name":
-					typeInfo.Name = bn.Content(sourceCode)
+					typeInfo.Identifier = NewIdentifierBuilder().
+						WithName(bn.Content(sourceCode)).
+						WithSitterPos(bn).
+						Build()
 					typeInfo.BuiltIn = true
 				case "type_ident":
-					typeInfo.Name = bn.Content(sourceCode)
+					typeInfo.Identifier = NewIdentifierBuilder().
+						WithName(bn.Content(sourceCode)).
+						WithSitterPos(bn).
+						Build()
 				case "generic_arguments":
 					for g := 0; g < int(bn.ChildCount()); g++ {
 						gn := bn.Child(g)
@@ -307,8 +601,11 @@ func extTypeNodeToType(
 
 				case "module_type_ident":
 					//fmt.Println(bn)
-					//modulePath = strings.Trim(bn.Child(0).Content(sourceCode), ":")
-					//baseType = bn.Child(1).Content(sourceCode)
+					typeInfo.Identifier = NewIdentifierBuilder().
+						WithPath(strings.Trim(bn.Child(0).Content(sourceCode), ":")).
+						WithName(bn.Child(1).Content(sourceCode)).
+						WithSitterPos(bn).
+						Build()
 				}
 			}
 

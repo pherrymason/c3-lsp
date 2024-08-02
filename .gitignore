@@ -3,5 +3,7 @@
 *.log
 assets
 tree-sitter-c3
-parser/target
+parser/chumsky
+server/internal/parser
 server/bin
+dist/
