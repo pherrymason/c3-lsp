@@ -22,6 +22,10 @@ module.exports = {
         args.push('--log-path '+config.get('log.path'));
     }
 
+    if (config.get('c3.version')) {
+        args.push('--lang-version '+config.get('c3.version'));
+    }
+
     const serverOptions = {
       run: {
         command: executable,
