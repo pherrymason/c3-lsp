@@ -136,6 +136,19 @@ func GetCanonicalPath(path string) string {
 	return path
 }
 
+func ConvertPathToURI(path string) string {
+	path2 := strings.ReplaceAll(path, `\`, `/`)
+
+	// Add the file scheme and encode the path
+	uri := url.URL{
+		Scheme: "file",
+		Path:   path2,
+	}
+
+	// Encode any special characters
+	return uri.String()
+}
+
 func ScanForC3(basePath string) ([]string, error) {
 	var files []string
 	extensions := []string{"c3", "c3i"}

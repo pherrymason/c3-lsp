@@ -2,6 +2,7 @@ package handlers
 
 import (
 	_prot "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
+	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
@@ -26,7 +27,7 @@ func (h *Handlers) TextDocumentDefinition(context *glsp.Context, params *protoco
 	}
 
 	return protocol.Location{
-		URI:   symbol.GetDocumentURI(),
+		URI:   fs.ConvertPathToURI(symbol.GetDocumentURI()),
 		Range: _prot.Lsp_NewRangeFromRange(symbol.GetIdRange()),
 	}, nil
 }
