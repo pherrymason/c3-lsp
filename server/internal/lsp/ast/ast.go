@@ -1,6 +1,9 @@
 package ast
 
-import sitter "github.com/smacker/go-tree-sitter"
+import (
+	"github.com/pherrymason/c3-lsp/pkg/option"
+	sitter "github.com/smacker/go-tree-sitter"
+)
 
 type Position struct {
 	Line, Column uint
@@ -84,6 +87,30 @@ type PropertyValue struct {
 	Value Expression
 }
 
+const (
+	StructTypeNormal = iota
+	StructTypeUnion
+	StructTypeBitStruct
+)
+
+type StructType int
+
+type StructDecl struct {
+	ASTNodeBase
+	Name        string
+	BackingType option.Option[TypeInfo]
+	Members     []StructMemberDecl
+	StructType  StructType
+	Implements  []string
+}
+
+type StructMemberDecl struct {
+	ASTNodeBase
+	Names    []Identifier
+	Type     TypeInfo
+	BitRange option.Option[[2]uint]
+}
+
 type FunctionDecl struct {
 	ASTNodeBase
 	Name       *Identifier
@@ -104,7 +131,7 @@ type FunctionCall struct {
 type TypeInfo struct {
 	ASTNodeBase
 	ResolveStatus int
-	Name          string
+	Identifier    Identifier
 	Pointer       uint
 	Optional      bool
 	BuiltIn       bool
@@ -114,6 +141,7 @@ type TypeInfo struct {
 type Identifier struct {
 	ASTNodeBase
 	Name string
+	Path string
 }
 
 type Expression interface {
@@ -123,6 +151,10 @@ type Expression interface {
 type Literal struct {
 	ASTNodeBase
 	Value string
+}
+type NumberLiteral struct {
+	ASTNodeBase
+	Value uint
 }
 
 type BoolLiteral struct {

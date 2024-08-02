@@ -32,3 +32,41 @@ func (d *ASTBaseNodeBuilder) WithStartEnd(startRow uint, startCol uint, endRow u
 	d.bn.EndPos = Position{endRow, endCol}
 	return d
 }
+
+type IdentifierBuilder struct {
+	bi Identifier
+	bn ASTBaseNodeBuilder
+}
+
+func NewIdentifierBuilder() *IdentifierBuilder {
+	return &IdentifierBuilder{
+		bi: Identifier{},
+		bn: *NewBaseNodeBuilder(),
+	}
+}
+
+func (i *IdentifierBuilder) WithName(name string) *IdentifierBuilder {
+	i.bi.Name = name
+	return i
+}
+func (i *IdentifierBuilder) WithPath(path string) *IdentifierBuilder {
+	i.bi.Path = path
+	return i
+}
+
+func (i *IdentifierBuilder) WithSitterPos(node *sitter.Node) *IdentifierBuilder {
+	i.bn.WithSitterPosRange(node.StartPoint(), node.EndPoint())
+	return i
+}
+
+func (i *IdentifierBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *IdentifierBuilder {
+	i.bn.WithStartEnd(startRow, startCol, endRow, endCol)
+	return i
+}
+
+func (i *IdentifierBuilder) Build() Identifier {
+	ident := i.bi
+	ident.ASTNodeBase = i.bn.Build()
+
+	return ident
+}
