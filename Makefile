@@ -33,18 +33,25 @@ build:
 build-dev:
 	go build -C server/cmd/lsp -gcflags="all=-N -l" -o ../../bin/c3-lsp
 
-build-all:
+build-all: build-darwin build-linux
+
 # Build darwin-amd64
-	echo "Building darwin-amd64"
+build-darwin:
+	@echo "Building darwin-amd64"
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3-lsp
 	cd server/bin && zip ./darwin-amd64-c3lsp.zip c3-lsp
 	echo "darwin-amd64 built"
 
 # Build linux
-	echo "Building linux-amd64"
+build-linux:
+	@echo "Building linux-amd64"
+ifeq ($(shell uname -s), Darwin)
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" go build -C server/cmd/lsp -o ../../bin/c3-lsp
+else 
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3-lsp
+endif
 	cd server/bin && zip ./linux-amd64-c3lsp.zip c3-lsp
-	echo "linux-amd64 built"
+	@echo "linux-amd64 built"
 
 
 #attach-process:
