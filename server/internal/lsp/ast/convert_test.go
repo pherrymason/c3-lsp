@@ -551,3 +551,20 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 		structDecl.Members[4],
 	)
 }
+
+func TestConvertToAST_struct_decl_with_inline_substructs(t *testing.T) {
+	source := `module x;
+	struct Person {
+		int age;
+		String name;
+	}
+	struct ImportantPerson {
+		inline Person person;
+		String title;
+	}`
+
+	ast := ConvertToAST(GetCST(source), source)
+	structDecl := ast.Modules[0].Declarations[1].(StructDecl)
+
+	assert.Equal(t, true, structDecl.Members[0].IsInlined)
+}

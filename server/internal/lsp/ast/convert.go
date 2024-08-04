@@ -257,7 +257,6 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 	}
 
 	structDecl.Name = node.ChildByFieldName("name").Content(sourceCode)
-	isUnion := false
 	//membersNeedingSubtypingResolve := []string{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -279,7 +278,6 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 
 	// TODO parse attributes
 	bodyNode := node.ChildByFieldName("body")
-	inlinedSubTyping := []string{}
 
 	// Search Struct members
 	for i := 0; i < int(bodyNode.ChildCount()); i++ {
@@ -333,9 +331,10 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 				//structFields = append(structFields, bitStructsMembers...)
 
 			case "inline":
-				isInline = true
+				//isInline = true
 				//fmt.Println("inline!: ", n.Content(sourceCode))
-				inlinedSubTyping = append(inlinedSubTyping, "1")
+				//inlinedSubTyping = append(inlinedSubTyping, "1")
+				member.IsInlined = true
 
 			case "ident":
 				member.Names = append(member.Names,
@@ -391,29 +390,6 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 		if len(member.Names) > 0 {
 			structDecl.Members = append(structDecl.Members, member)
 		}
-	}
-
-	if isUnion {
-		/*
-			_struct = idx.NewUnion(
-				name,
-				structFields,
-				currentModule.GetModuleString(),
-				docId,
-				idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-				idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
-			)*/
-	} else {
-		/*
-			_struct = idx.NewStruct(
-				name,
-				interfaces,
-				structFields,
-				currentModule.GetModuleString(),
-				docId,
-				idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-				idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
-			)*/
 	}
 
 	return structDecl

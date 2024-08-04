@@ -106,9 +106,10 @@ type StructDecl struct {
 
 type StructMemberDecl struct {
 	ASTNodeBase
-	Names    []Identifier
-	Type     TypeInfo
-	BitRange option.Option[[2]uint]
+	Names     []Identifier
+	Type      TypeInfo
+	BitRange  option.Option[[2]uint]
+	IsInlined bool
 }
 
 type FunctionDecl struct {
