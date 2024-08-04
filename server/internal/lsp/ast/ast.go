@@ -61,6 +61,12 @@ type VariableDecl struct {
 	//Initializer Initializer
 }
 
+type ConstDecl struct {
+	ASTNodeBase
+	Names []Identifier
+	Type  TypeInfo
+}
+
 type EnumDecl struct {
 	ASTNodeBase
 	Name       string

@@ -53,6 +53,9 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string) File {
 
 		case "fault_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_fault_declaration(node, source))
+
+		case "const_declaration":
+			lastMod.Declarations = append(lastMod.Declarations, convert_const_declaration(node, source))
 		}
 	}
 
@@ -534,6 +537,41 @@ func convert_fault_declaration(node *sitter.Node, sourceCode []byte) Expression 
 	}
 
 	return fault
+}
+
+func convert_const_declaration(node *sitter.Node, sourceCode []byte) Expression {
+	constant := ConstDecl{
+		Names: []Identifier{},
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+			Build(),
+	}
+
+	var idNode *sitter.Node
+
+	//fmt.Println(node.ChildCount())
+	//fmt.Println(node)
+	//fmt.Println(node.Content(sourceCode))
+
+	for i := uint32(0); i < node.ChildCount(); i++ {
+		n := node.Child(int(i))
+		switch n.Type() {
+		case "type":
+			constant.Type = typeNodeToType(n, sourceCode)
+
+		case "const_ident":
+			idNode = n
+		}
+	}
+
+	constant.Names = append(constant.Names,
+		NewIdentifierBuilder().
+			WithName(idNode.Content(sourceCode)).
+			WithSitterPos(idNode).
+			Build(),
+	)
+
+	return constant
 }
 
 func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
