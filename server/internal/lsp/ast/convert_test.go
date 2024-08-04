@@ -581,3 +581,50 @@ func TestConvertToAST_union_decl(t *testing.T) {
 
 	assert.Equal(t, StructTypeUnion, int(unionDecl.StructType))
 }
+
+func TestConvertToAST_bitstruct_decl(t *testing.T) {
+	source := `module x;
+	bitstruct Test (AnInterface) : uint
+	{
+		ushort a : 0..15;
+		ushort b : 16..31;
+		bool c : 7;
+	}`
+
+	ast := ConvertToAST(GetCST(source), source)
+	bitstructDecl := ast.Modules[0].Declarations[0].(StructDecl)
+
+	assert.Equal(t, StructTypeBitStruct, int(bitstructDecl.StructType))
+	assert.Equal(t, true, bitstructDecl.BackingType.IsSome())
+
+	expectedType := TypeInfo{
+		ASTNodeBase: aWithPos(1, 32, 1, 36),
+		BuiltIn:     true,
+		Identifier: NewIdentifierBuilder().
+			WithName("uint").
+			WithStartEnd(1, 32, 1, 36).
+			Build(),
+	}
+	assert.Equal(t, expectedType, bitstructDecl.BackingType.Get())
+	assert.Equal(t, []string{"AnInterface"}, bitstructDecl.Implements)
+
+	expect := StructMemberDecl{
+		ASTNodeBase: aWithPos(3, 2, 3, 19),
+		Names: []Identifier{
+			NewIdentifierBuilder().
+				WithName("a").
+				WithStartEnd(3, 9, 3, 10).
+				Build(),
+		},
+		Type: TypeInfo{
+			ASTNodeBase: aWithPos(3, 2, 3, 8),
+			BuiltIn:     true,
+			Identifier: NewIdentifierBuilder().
+				WithName("ushort").
+				WithStartEnd(3, 2, 3, 8).
+				Build(),
+		},
+		BitRange: option.Some([2]uint{0, 15}),
+	}
+	assert.Equal(t, expect, bitstructDecl.Members[0])
+}
