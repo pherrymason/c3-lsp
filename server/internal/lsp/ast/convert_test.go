@@ -628,3 +628,55 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 	}
 	assert.Equal(t, expect, bitstructDecl.Members[0])
 }
+
+func TestConvertToAST_fault_decl(t *testing.T) {
+	source := `module x;
+	fault IOResult
+	{
+	  IO_ERROR,
+	  PARSE_ERROR
+	};`
+
+	ast := ConvertToAST(GetCST(source), source)
+	faultDecl := ast.Modules[0].Declarations[0].(FaultDecl)
+
+	assert.Equal(
+		t,
+		NewIdentifierBuilder().
+			WithName("IOResult").
+			WithStartEnd(1, 7, 1, 15).
+			Build(),
+		faultDecl.Name,
+	)
+	assert.Equal(t, Position{1, 1}, faultDecl.ASTNodeBase.StartPos)
+	assert.Equal(t, Position{5, 2}, faultDecl.ASTNodeBase.EndPos)
+
+	assert.Equal(t, false, faultDecl.BackingType.IsSome())
+	assert.Equal(t, 2, len(faultDecl.Members))
+
+	assert.Equal(t,
+		FaultMember{
+			Name: NewIdentifierBuilder().
+				WithName("IO_ERROR").
+				WithStartEnd(3, 3, 3, 11).
+				Build(),
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(3, 3, 3, 11).
+				Build(),
+		},
+		faultDecl.Members[0],
+	)
+
+	assert.Equal(t,
+		FaultMember{
+			Name: NewIdentifierBuilder().
+				WithName("PARSE_ERROR").
+				WithStartEnd(4, 3, 4, 14).
+				Build(),
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(4, 3, 4, 14).
+				Build(),
+		},
+		faultDecl.Members[1],
+	)
+}

@@ -112,6 +112,18 @@ type StructMemberDecl struct {
 	IsInlined bool
 }
 
+type FaultDecl struct {
+	ASTNodeBase
+	Name        Identifier
+	BackingType option.Option[TypeInfo]
+	Members     []FaultMember
+}
+
+type FaultMember struct {
+	ASTNodeBase
+	Name Identifier
+}
+
 type FunctionDecl struct {
 	ASTNodeBase
 	Name       *Identifier

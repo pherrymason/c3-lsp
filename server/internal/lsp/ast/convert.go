@@ -50,6 +50,9 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string) File {
 
 		case "bitstruct_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_bitstruct_declaration(node, source))
+
+		case "fault_declaration":
+			lastMod.Declarations = append(lastMod.Declarations, convert_fault_declaration(node, source))
 		}
 	}
 
@@ -485,6 +488,52 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 	}
 
 	return members
+}
+
+func convert_fault_declaration(node *sitter.Node, sourceCode []byte) Expression {
+	// TODO parse attributes
+
+	baseType := option.None[TypeInfo]() // TODO Parse type!
+	var constants []FaultMember
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "fault_body":
+			for i := 0; i < int(n.ChildCount()); i++ {
+				constantNode := n.Child(i)
+
+				if constantNode.Type() == "const_ident" {
+					constants = append(constants,
+						FaultMember{
+							Name: NewIdentifierBuilder().
+								WithName(constantNode.Content(sourceCode)).
+								WithSitterPos(constantNode).
+								Build(),
+							ASTNodeBase: NewBaseNodeBuilder().
+								WithSitterPosRange(constantNode.StartPoint(), constantNode.EndPoint()).
+								Build(),
+						},
+					)
+				}
+			}
+		}
+	}
+
+	nameNode := node.ChildByFieldName("name")
+	fault := FaultDecl{
+		Name: NewIdentifierBuilder().
+			WithName(nameNode.Content(sourceCode)).
+			WithSitterPos(nameNode).
+			Build(),
+		BackingType: baseType,
+		Members:     constants,
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+			Build(),
+	}
+
+	return fault
 }
 
 func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
