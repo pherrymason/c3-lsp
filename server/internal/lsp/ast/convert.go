@@ -47,6 +47,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string) File {
 
 		case "struct_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_struct_declaration(node, source))
+
 		case "bitstruct_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_bitstruct_declaration(node, source))
 		}

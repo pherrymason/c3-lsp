@@ -568,3 +568,16 @@ func TestConvertToAST_struct_decl_with_inline_substructs(t *testing.T) {
 
 	assert.Equal(t, true, structDecl.Members[0].IsInlined)
 }
+
+func TestConvertToAST_union_decl(t *testing.T) {
+	source := `module foo;
+	union MyStruct {
+		char data;
+		char key;
+	}`
+
+	ast := ConvertToAST(GetCST(source), source)
+	unionDecl := ast.Modules[0].Declarations[0].(StructDecl)
+
+	assert.Equal(t, StructTypeUnion, int(unionDecl.StructType))
+}
