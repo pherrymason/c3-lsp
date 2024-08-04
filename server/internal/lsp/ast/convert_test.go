@@ -811,3 +811,54 @@ func TestExtractSymbols_function_with_arguments_declaration(t *testing.T) {
 		fnDecl.Parameters[2],
 	)
 }
+
+func TestExtractSymbols_method_declaration(t *testing.T) {
+	source := `module foo;
+	fn Object* UserStruct.method(self, int* pointer) {
+		return 1;
+	}`
+	ast := ConvertToAST(GetCST(source), source)
+
+	methodDecl := ast.Modules[0].Declarations[0].(MethodDeclaration)
+
+	assert.Equal(t, Position{1, 1}, methodDecl.ASTNodeBase.StartPos)
+	assert.Equal(t, Position{3, 2}, methodDecl.ASTNodeBase.EndPos)
+
+	assert.Equal(t, "method", methodDecl.Name.Name, "Function name")
+	assert.Equal(t, Position{1, 23}, methodDecl.Name.ASTNodeBase.StartPos)
+	assert.Equal(t, Position{1, 29}, methodDecl.Name.ASTNodeBase.EndPos)
+
+	assert.Equal(t, "Object", methodDecl.ReturnType.Identifier.Name, "Return type")
+	assert.Equal(t, uint(1), methodDecl.ReturnType.Pointer, "Return type is pointer")
+	assert.Equal(t, Position{1, 4}, methodDecl.ReturnType.ASTNodeBase.StartPos)
+	assert.Equal(t, Position{1, 10}, methodDecl.ReturnType.ASTNodeBase.EndPos)
+
+	assert.Equal(t, 2, len(methodDecl.Parameters))
+	assert.Equal(t,
+		FunctionParameter{
+			Name: NewIdentifierBuilder().WithName("self").WithStartEnd(1, 30, 1, 34).Build(),
+			Type: NewTypeInfoBuilder().
+				WithName("UserStruct").WithNameStartEnd(1, 30, 1, 34).
+				IsPointer().
+				WithStartEnd(1, 30, 1, 34).
+				Build(),
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(1, 30, 1, 34).Build(),
+		},
+		methodDecl.Parameters[0],
+	)
+	assert.Equal(t,
+		FunctionParameter{
+			Name: NewIdentifierBuilder().WithName("pointer").WithStartEnd(1, 41, 1, 48).Build(),
+			Type: NewTypeInfoBuilder().
+				WithName("int").WithNameStartEnd(1, 36, 1, 39).
+				IsBuiltin().
+				IsPointer().
+				WithStartEnd(1, 36, 1, 39).
+				Build(),
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(1, 36, 1, 48).Build(),
+		},
+		methodDecl.Parameters[1],
+	)
+}

@@ -684,7 +684,12 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 			// When detecting a self, the type is the Struct type
 			if identifier.Name == "self" && methodIdentifier.IsSome() {
 				argType = TypeInfo{
-					Identifier: methodIdentifier.Get(),
+					Identifier: NewIdentifierBuilder().
+						WithName(methodIdentifier.Get().Name).
+						WithSitterPos(n).
+						Build(),
+					Pointer:     uint(1),
+					ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
 				}
 			}
 		}
