@@ -56,6 +56,9 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string) File {
 
 		case "const_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_const_declaration(node, source))
+
+		case "func_definition", "func_declaration":
+			lastMod.Declarations = append(lastMod.Declarations, convert_function_declaration(node, source))
 		}
 	}
 
@@ -572,6 +575,127 @@ func convert_const_declaration(node *sitter.Node, sourceCode []byte) Expression 
 	)
 
 	return constant
+}
+
+func convert_function_declaration(node *sitter.Node, sourceCode []byte) Expression {
+	var typeIdentifier option.Option[Identifier]
+	funcHeader := node.Child(1)
+	nameNode := funcHeader.ChildByFieldName("name")
+
+	if funcHeader.ChildByFieldName("method_type") != nil {
+		typeIdentifier = option.Some(NewIdentifierBuilder().
+			WithName(funcHeader.ChildByFieldName("method_type").Content(sourceCode)).
+			WithSitterPos(funcHeader.ChildByFieldName("method_type")).
+			Build())
+	}
+
+	parameters := []FunctionParameter{}
+	nodeParameters := node.Child(2)
+	if nodeParameters.ChildCount() > 2 {
+		for i := uint32(0); i < nodeParameters.ChildCount(); i++ {
+			argNode := nodeParameters.Child(int(i))
+			if argNode.Type() != "parameter" {
+				continue
+			}
+
+			parameters = append(
+				parameters,
+				convert_function_parameter(argNode, typeIdentifier, sourceCode),
+			)
+		}
+	}
+
+	var funcDecl Expression
+	if typeIdentifier.IsSome() {
+		funcDecl = MethodDeclaration{
+			StructName: typeIdentifier.Get(),
+			Name: NewIdentifierBuilder().
+				WithName(nameNode.Content(sourceCode)).
+				WithSitterPos(nameNode).
+				Build(),
+			ReturnType: typeNodeToType(funcHeader.ChildByFieldName("return_type"), sourceCode),
+			Parameters: parameters,
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+				Build(),
+		}
+	} else {
+		funcDecl = FunctionDecl{
+			Name: NewIdentifierBuilder().
+				WithName(nameNode.Content(sourceCode)).
+				WithSitterPos(nameNode).
+				Build(),
+			ReturnType: typeNodeToType(funcHeader.ChildByFieldName("return_type"), sourceCode),
+			Parameters: parameters,
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+				Build(),
+		}
+	}
+	/*
+		var variables []*idx.Variable
+		if node.ChildByFieldName("body") != nil {
+			variables = p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)
+		}
+
+		variables = append(variables, parameters...)
+
+		funcDecl.AddVariables(variables)
+	*/
+	return funcDecl
+}
+
+// nodeToArgument Very similar to nodeToVariable, but arguments have optional identifiers (for example when using `self` for struct methods)
+/*
+	_parameter: $ => choice(
+      seq($.type, $.ident, optional($.attributes)),			// 3
+      seq($.type, '...', $.ident, optional($.attributes)),	// 3/4
+      seq($.type, '...', $.ct_ident),						// 3
+      seq($.type, $.ct_ident),								// 2
+      seq($.type, '...', optional($.attributes)),			// 2/3
+      seq($.type, $.hash_ident, optional($.attributes)),	// 2/3
+      seq($.type, '&', $.ident, optional($.attributes)),	// 3/4
+      seq($.type, optional($.attributes)),					// 1/2
+      seq('&', $.ident, optional($.attributes)),			// 2/3
+      seq($.hash_ident, optional($.attributes)),			// 1/2
+      '...',												// 1
+      seq($.ident, optional($.attributes)),					// 1/2
+      seq($.ident, '...', optional($.attributes)),			// 2/3
+      $.ct_ident,											// 1
+      seq($.ct_ident, '...'),								// 2
+    ),
+*/
+func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Option[Identifier], sourceCode []byte) FunctionParameter {
+	var identifier Identifier
+	var argType TypeInfo
+
+	for i := 0; i < int(argNode.ChildCount()); i++ {
+		n := argNode.Child(int(i))
+
+		switch n.Type() {
+		case "type":
+			argType = typeNodeToType(n, sourceCode)
+		case "ident":
+			identifier = NewIdentifierBuilder().
+				WithName(n.Content(sourceCode)).
+				WithSitterPos(n).
+				Build()
+
+			// When detecting a self, the type is the Struct type
+			if identifier.Name == "self" && methodIdentifier.IsSome() {
+				argType = TypeInfo{
+					Identifier: methodIdentifier.Get(),
+				}
+			}
+		}
+	}
+
+	variable := FunctionParameter{
+		Name: identifier,
+		Type: argType,
+	}
+
+	return variable
 }
 
 func convert_literal(node *sitter.Node, sourceCode []byte) Expression {

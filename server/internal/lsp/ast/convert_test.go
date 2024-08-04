@@ -714,3 +714,23 @@ func TestConvertToAST_const_decl(t *testing.T) {
 		constDecl.Type,
 	)
 }
+
+func TestExtractSymbols_Functions_Definitions(t *testing.T) {
+	source := `module foo;
+	fn void test() {
+		return 1;
+	}`
+	ast := ConvertToAST(GetCST(source), source)
+
+	fnDecl := ast.Modules[0].Declarations[0].(FunctionDecl)
+	assert.Equal(t, Position{1, 1}, fnDecl.ASTNodeBase.StartPos)
+	assert.Equal(t, Position{3, 2}, fnDecl.ASTNodeBase.EndPos)
+
+	assert.Equal(t, "test", fnDecl.Name.Name, "Function name")
+	assert.Equal(t, Position{1, 9}, fnDecl.Name.ASTNodeBase.StartPos)
+	assert.Equal(t, Position{1, 13}, fnDecl.Name.ASTNodeBase.EndPos)
+
+	assert.Equal(t, "void", fnDecl.ReturnType.Identifier.Name, "Return type")
+	assert.Equal(t, Position{1, 4}, fnDecl.ReturnType.ASTNodeBase.StartPos)
+	assert.Equal(t, Position{1, 8}, fnDecl.ReturnType.ASTNodeBase.EndPos)
+}

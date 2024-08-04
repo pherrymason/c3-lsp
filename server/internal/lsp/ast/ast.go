@@ -132,9 +132,24 @@ type FaultMember struct {
 
 type FunctionDecl struct {
 	ASTNodeBase
-	Name       *Identifier
-	Parameters []*Identifier
-	ReturnType *Identifier
+	Name       Identifier
+	Parameters []FunctionParameter
+	ReturnType TypeInfo
+	Body       Block
+}
+
+type FunctionParameter struct {
+	ASTNodeBase
+	Name Identifier
+	Type TypeInfo
+}
+
+type MethodDeclaration struct {
+	ASTNodeBase
+	StructName Identifier
+	Name       Identifier
+	Parameters []FunctionParameter
+	ReturnType TypeInfo
 	Body       Block
 }
 
