@@ -439,7 +439,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 	}`
 
 	ast := ConvertToAST(GetCST(source), source)
-	structDecl := ast.Modules[0].Declarations[0].(StructDecl)
+	structDecl := ast.Modules[0].Declarations[1].(StructDecl)
 
 	assert.Equal(t, 5, len(structDecl.Members))
 
