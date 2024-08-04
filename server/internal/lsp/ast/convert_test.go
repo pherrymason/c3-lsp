@@ -715,7 +715,7 @@ func TestConvertToAST_const_decl(t *testing.T) {
 	)
 }
 
-func TestExtractSymbols_Functions_Definitions(t *testing.T) {
+func TestExtractSymbols_function_declaration(t *testing.T) {
 	source := `module foo;
 	fn void test() {
 		return 1;
@@ -733,4 +733,81 @@ func TestExtractSymbols_Functions_Definitions(t *testing.T) {
 	assert.Equal(t, "void", fnDecl.ReturnType.Identifier.Name, "Return type")
 	assert.Equal(t, Position{1, 4}, fnDecl.ReturnType.ASTNodeBase.StartPos)
 	assert.Equal(t, Position{1, 8}, fnDecl.ReturnType.ASTNodeBase.EndPos)
+}
+
+func TestExtractSymbols_function_declaration_one_line(t *testing.T) {
+	source := `module foo;
+	fn void init_window(int width, int height, char* title) @extern("InitWindow");`
+	ast := ConvertToAST(GetCST(source), source)
+
+	fnDecl := ast.Modules[0].Declarations[0].(FunctionDecl)
+
+	assert.Equal(t, "init_window", fnDecl.Name.Name, "Function name")
+	assert.Equal(t, Position{1, 1}, fnDecl.ASTNodeBase.StartPos)
+	assert.Equal(t, Position{1, 79}, fnDecl.ASTNodeBase.EndPos)
+}
+
+func TestExtractSymbols_Function_returning_optional_type_declaration(t *testing.T) {
+	source := `module foo;
+	fn usz! test() {
+		return 1;
+	}`
+	ast := ConvertToAST(GetCST(source), source)
+
+	fnDecl := ast.Modules[0].Declarations[0].(FunctionDecl)
+
+	assert.Equal(t, "usz", fnDecl.ReturnType.Identifier.Name, "Return type")
+	assert.Equal(t, true, fnDecl.ReturnType.Optional, "Return type should be optional")
+}
+
+func TestExtractSymbols_function_with_arguments_declaration(t *testing.T) {
+	source := `module foo;
+	fn void test(int number, char ch, int* pointer) {
+		return 1;
+	}`
+	ast := ConvertToAST(GetCST(source), source)
+
+	fnDecl := ast.Modules[0].Declarations[0].(FunctionDecl)
+
+	assert.Equal(t, 3, len(fnDecl.Parameters))
+	assert.Equal(t,
+		FunctionParameter{
+			Name: NewIdentifierBuilder().WithName("number").WithStartEnd(1, 18, 1, 24).Build(),
+			Type: NewTypeInfoBuilder().
+				WithName("int").WithNameStartEnd(1, 14, 1, 17).
+				IsBuiltin().
+				WithStartEnd(1, 14, 1, 17).
+				Build(),
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(1, 14, 1, 24).Build(),
+		},
+		fnDecl.Parameters[0],
+	)
+	assert.Equal(t,
+		FunctionParameter{
+			Name: NewIdentifierBuilder().WithName("ch").WithStartEnd(1, 31, 1, 33).Build(),
+			Type: NewTypeInfoBuilder().
+				WithName("char").WithNameStartEnd(1, 26, 1, 30).
+				IsBuiltin().
+				WithStartEnd(1, 26, 1, 30).
+				Build(),
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(1, 26, 1, 33).Build(),
+		},
+		fnDecl.Parameters[1],
+	)
+	assert.Equal(t,
+		FunctionParameter{
+			Name: NewIdentifierBuilder().WithName("pointer").WithStartEnd(1, 40, 1, 47).Build(),
+			Type: NewTypeInfoBuilder().
+				WithName("int").WithNameStartEnd(1, 35, 1, 38).
+				IsBuiltin().
+				IsPointer().
+				WithStartEnd(1, 35, 1, 38).
+				Build(),
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(1, 35, 1, 47).Build(),
+		},
+		fnDecl.Parameters[2],
+	)
 }

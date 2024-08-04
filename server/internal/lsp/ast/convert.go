@@ -691,8 +691,9 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 	}
 
 	variable := FunctionParameter{
-		Name: identifier,
-		Type: argType,
+		Name:        identifier,
+		Type:        argType,
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
 	}
 
 	return variable
