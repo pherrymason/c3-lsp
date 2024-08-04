@@ -7,10 +7,9 @@ WIP LSP for [C3 language](https://github.com/c3lang/c3c)
 ## Table of Contents
 
 - [Features](#Features)
-- [Project Goals](#project-goals)
-- [Installation](#Installation)
 - [Usage](#Usage)
-- [Clients](#Clients)
+- [Installation](#Installation)
+- [Project Goals](#project-goals)
 
 ## Features
 Supported Language server features:
@@ -22,6 +21,35 @@ Supported Language server features:
 - Signature Help
 
 Furthermore, the LSP is able to resolve stdlib symbols information (for supported C3c versions), allowing to use this in completion and hover functionalities.
+
+## Usage 
+### Usage with text editors / IDE's
+Usually you'll use a plugin for your editor that will automatically run the server with the required arguments.  
+Some plugins/extensions might already include the binaries, check their documentation.  
+If they don't include it, they might allow you to specify the path to the lsp binary, so download the lsp binary and configure the plugin/extension to its location.
+
+Read more in the [wiki](https://github.com/pherrymason/c3-lsp/wiki/Integration-with-editors).
+
+### Standalone usage
+Simply run `c3-lsp` to start the server.  
+It supports the following options:
+- **help:** Display accepted options.
+- **send-reports:** If enabled (disabled by default) will send __crash__ reports to Sentry so bugs can be debugged easily.
+- **lang-version:** Use it to specify a specific c3 language version. By default `c3-lsp` will select the last version supported.
+
+
+## Installation
+Project is written in Golang, so in theory it could be built to any OS supported by Golang.  
+Precompiled binaries for the following operating systems are available: Linux, Windows 11 and MacOs.
+
+Find latest built binaries in the [releases page](https://github.com/pherrymason/c3-lsp/releases)
+
+You can also build from source:
+
+- Download and install golang: https://go.dev/
+- Clone this repo
+- Run `make build`: This will create `c3-lsp` in `server/bin` folder.
+
 
 ## Project Goals
 Writing a Language Server Protocol (LSP) can be a complex and challenging task. To manage this complexity, our initial focus is on covering the basic yet essential needs of a typical LSP implementation.
@@ -39,59 +67,6 @@ These features will significantly improve the developer experience by providing 
 ### Future plans
 Once these initial objectives are completed, we will explore additional functionalities that can be added to the project, further enhancing its capabilities and usefulness.
 
-## Installation
-Project is written in Golang, so in theory it could be built to any OS supported by Golang.  
-Precompiled binaries for the following operating systems are available:
-
-- Linux x64 [download](https://github.com/pherrymason/c3-lsp/releases/download/latest/linux-amd64-c3lsp.zip)  
-- MacOS x64 [download](https://github.com/pherrymason/c3-lsp/releases/download/latest/darwin-amd64-c3lsp.zip).
-- Windows 11 x64 [download](https://github.com/pherrymason/c3-lsp/releases/download/latest/windows-11-64-c3-lsp.exe.zip).
-
-You can also build from source:
-
-- Download and install golang: https://go.dev/
-- Clone this repo
-- Run `make build`: This will create `c3-lsp` in `server/bin` folder.
-
-
-## Usage
-Simply run `c3-lsp` to start the server.  
-It supports the following options:
-- **help:** Display accepted options.
-- **send-reports:** If enabled (disabled by default) will send __crash__ reports to Sentry so bugs can be debugged easily.
-- **lang-version:** Use it to specify a specific c3 language version. By default `c3-lsp` will select the last version supported.
-
-
-## Clients
-
-### VS Code
-There's a simple vscode extension available for download here: [download VSIX](https://github.com/pherrymason/c3-lsp/releases/download/v0.0.6/c3-lsp-client-0.0.2.vsix)  
-Be sure to configure it with the path of the lsp server binary.
-
-### Sublime Text
-
-The [LSP Package](https://packagecontrol.io/packages/LSP) can be configured to
-work with `c3-lsp`. Add the [syntax highlighting package](https://github.com/c3lang/editor-plugins/tree/main/sublime-text) and configure a LSP client in `Settings` -> `Package Settings` -> `LSP` -> `Settings` like the following:
-
-```yaml
-"clients": {
-    "c3-lsp": {
-      "enabled": true,
-      // The command line required to run the server.
-      "command": [
-        "c3-lsp",
-      ],
-
-      "selector": "source.c3",
-      "schemes": [
-        "file"
-      ],
-      "diagnostics_mode": "open_files",
-    }
-  }
-```
-
-The first element in the `command` array is the path to the `c3-lsp` executable.
 
 ## Useful links:
 - LSP specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
