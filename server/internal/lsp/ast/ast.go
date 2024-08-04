@@ -130,6 +130,13 @@ type FaultMember struct {
 	Name Identifier
 }
 
+type DefDecl struct {
+	ASTNodeBase
+	Name           Identifier
+	resolvesTo     string
+	resolvesToType option.Option[TypeInfo]
+}
+
 type FunctionDecl struct {
 	ASTNodeBase
 	Name       Identifier

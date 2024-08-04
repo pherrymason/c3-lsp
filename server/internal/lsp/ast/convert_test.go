@@ -715,7 +715,76 @@ func TestConvertToAST_const_decl(t *testing.T) {
 	)
 }
 
-func TestExtractSymbols_function_declaration(t *testing.T) {
+func TestConvertToAST_def_decl(t *testing.T) {
+	source := `module foo;
+	def Kilo = int;
+	def KiloPtr = Kilo*;
+	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*); // TODO
+	def MyMap = HashMap(<String, Feature>);
+	def Camera = raylib::Camera;`
+	ast := ConvertToAST(GetCST(source), source)
+	row := uint(0)
+
+	assert.Equal(t,
+		DefDecl{
+			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 1, 1, 16).Build(),
+			Name:        NewIdentifierBuilder().WithName("Kilo").WithStartEnd(1, 5, 1, 9).Build(),
+			resolvesToType: option.Some(
+				NewTypeInfoBuilder().
+					WithName("int").WithNameStartEnd(1, 12, 1, 15).
+					IsBuiltin().
+					WithStartEnd(1, 12, 1, 15).
+					Build(),
+			),
+		}, ast.Modules[0].Declarations[0])
+
+	assert.Equal(t,
+		DefDecl{
+			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 1, 2, 21).Build(),
+			Name:        NewIdentifierBuilder().WithName("KiloPtr").WithStartEnd(2, 5, 2, 12).Build(),
+			resolvesToType: option.Some(
+				NewTypeInfoBuilder().
+					WithName("Kilo").WithNameStartEnd(2, 15, 2, 19).
+					IsPointer().
+					WithStartEnd(2, 15, 2, 19).
+					Build(),
+			),
+		}, ast.Modules[0].Declarations[1])
+
+	// Def with generics
+	row = 4
+	assert.Equal(t,
+		DefDecl{
+			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(row, 1, row, 40).Build(),
+			Name:        NewIdentifierBuilder().WithName("MyMap").WithStartEnd(row, 5, row, 10).Build(),
+			resolvesToType: option.Some(
+				NewTypeInfoBuilder().
+					WithName("HashMap").WithNameStartEnd(row, 13, row, 20).
+					WithStartEnd(row, 13, row, 39).
+					WithGeneric("String", row, 22, row, 28).
+					WithGeneric("Feature", row, 30, row, 37).
+					Build(),
+			),
+		}, ast.Modules[0].Declarations[3])
+
+	// Def with Identifier path
+	row = 5
+	assert.Equal(t,
+		DefDecl{
+			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(row, 1, row, 29).Build(),
+			Name:        NewIdentifierBuilder().WithName("Camera").WithStartEnd(row, 5, row, 11).Build(),
+			resolvesToType: option.Some(
+				NewTypeInfoBuilder().
+					WithPath("raylib").
+					WithName("Camera").WithNameStartEnd(row, 14, row, 28).
+					WithStartEnd(row, 14, row, 28).
+					Build(),
+			),
+		}, ast.Modules[0].Declarations[4])
+
+}
+
+func TestConvertToAST_function_declaration(t *testing.T) {
 	source := `module foo;
 	fn void test() {
 		return 1;
@@ -735,7 +804,7 @@ func TestExtractSymbols_function_declaration(t *testing.T) {
 	assert.Equal(t, Position{1, 8}, fnDecl.ReturnType.ASTNodeBase.EndPos)
 }
 
-func TestExtractSymbols_function_declaration_one_line(t *testing.T) {
+func TestConvertToAST_function_declaration_one_line(t *testing.T) {
 	source := `module foo;
 	fn void init_window(int width, int height, char* title) @extern("InitWindow");`
 	ast := ConvertToAST(GetCST(source), source)
@@ -747,7 +816,7 @@ func TestExtractSymbols_function_declaration_one_line(t *testing.T) {
 	assert.Equal(t, Position{1, 79}, fnDecl.ASTNodeBase.EndPos)
 }
 
-func TestExtractSymbols_Function_returning_optional_type_declaration(t *testing.T) {
+func TestConvertToAST_Function_returning_optional_type_declaration(t *testing.T) {
 	source := `module foo;
 	fn usz! test() {
 		return 1;
@@ -760,7 +829,7 @@ func TestExtractSymbols_Function_returning_optional_type_declaration(t *testing.
 	assert.Equal(t, true, fnDecl.ReturnType.Optional, "Return type should be optional")
 }
 
-func TestExtractSymbols_function_with_arguments_declaration(t *testing.T) {
+func TestConvertToAST_function_with_arguments_declaration(t *testing.T) {
 	source := `module foo;
 	fn void test(int number, char ch, int* pointer) {
 		return 1;
@@ -812,7 +881,7 @@ func TestExtractSymbols_function_with_arguments_declaration(t *testing.T) {
 	)
 }
 
-func TestExtractSymbols_method_declaration(t *testing.T) {
+func TestConvertToAST_method_declaration(t *testing.T) {
 	source := `module foo;
 	fn Object* UserStruct.method(self, int* pointer) {
 		return 1;
@@ -862,7 +931,7 @@ func TestExtractSymbols_method_declaration(t *testing.T) {
 	)
 }
 
-func TestExtractSymbols_method_declaration_mutable(t *testing.T) {
+func TestConvertToAST_method_declaration_mutable(t *testing.T) {
 	source := `module foo;
 	fn Object* UserStruct.method(&self, int* pointer) {
 		return 1;

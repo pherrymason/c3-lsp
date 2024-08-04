@@ -1,6 +1,9 @@
 package ast
 
-import sitter "github.com/smacker/go-tree-sitter"
+import (
+	"github.com/pherrymason/c3-lsp/pkg/option"
+	sitter "github.com/smacker/go-tree-sitter"
+)
 
 // --
 // ASTBaseNodeBuilder
@@ -86,42 +89,109 @@ func (i *IdentifierBuilder) Build() Identifier {
 // TypeInfoBuilder
 // --
 type TypeInfoBuilder struct {
-	bt TypeInfo
+	t TypeInfo
 }
 
 func NewTypeInfoBuilder() *TypeInfoBuilder {
 	return &TypeInfoBuilder{
-		bt: TypeInfo{},
+		t: TypeInfo{},
 	}
 }
 
 func (b *TypeInfoBuilder) IsBuiltin() *TypeInfoBuilder {
-	b.bt.BuiltIn = true
+	b.t.BuiltIn = true
 	return b
 }
 func (b *TypeInfoBuilder) IsPointer() *TypeInfoBuilder {
-	b.bt.Pointer = 1
+	b.t.Pointer = 1
+	return b
+}
+
+func (b *TypeInfoBuilder) WithGeneric(name string, startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
+	b.t.Generics = append(
+		b.t.Generics,
+		NewTypeInfoBuilder().
+			WithName(name).
+			WithNameStartEnd(startRow, startCol, endRow, endCol).
+			WithStartEnd(startRow, startCol, endRow, endCol).
+			Build(),
+	)
+
 	return b
 }
 
 func (b *TypeInfoBuilder) WithName(name string) *TypeInfoBuilder {
-	b.bt.Identifier.Name = name
+	b.t.Identifier.Name = name
+
+	return b
+}
+
+func (b *TypeInfoBuilder) WithPath(path string) *TypeInfoBuilder {
+	b.t.Identifier.Path = path
 
 	return b
 }
 
 func (b *TypeInfoBuilder) WithNameStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.bt.Identifier.StartPos = Position{startRow, startCol}
-	b.bt.Identifier.EndPos = Position{endRow, endCol}
+	b.t.Identifier.StartPos = Position{startRow, startCol}
+	b.t.Identifier.EndPos = Position{endRow, endCol}
 	return b
 }
 
 func (b *TypeInfoBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.bt.ASTNodeBase.StartPos = Position{startRow, startCol}
-	b.bt.ASTNodeBase.EndPos = Position{endRow, endCol}
+	b.t.ASTNodeBase.StartPos = Position{startRow, startCol}
+	b.t.ASTNodeBase.EndPos = Position{endRow, endCol}
 	return b
 }
 
 func (i *TypeInfoBuilder) Build() TypeInfo {
-	return i.bt
+	return i.t
+}
+
+// --
+// DefDeclBuilder
+// --
+type DefDeclBuilder struct {
+	d DefDecl
+	a ASTBaseNodeBuilder
+}
+
+func NewDefDeclBuilder() *DefDeclBuilder {
+	return &DefDeclBuilder{
+		d: DefDecl{},
+		a: *NewBaseNodeBuilder(),
+	}
+}
+
+func (b *DefDeclBuilder) WithResolvesToType(typeInfo TypeInfo) *DefDeclBuilder {
+	b.d.resolvesToType = option.Some(typeInfo)
+	return b
+}
+
+func (b *DefDeclBuilder) WithResolvesTo(resolvesTo string) *DefDeclBuilder {
+	b.d.resolvesTo = resolvesTo
+	return b
+}
+
+func (b *DefDeclBuilder) WithSitterPos(node *sitter.Node) *DefDeclBuilder {
+	b.a.WithSitterPosRange(node.StartPoint(), node.EndPoint())
+	return b
+}
+
+func (b *DefDeclBuilder) WithName(name string) *DefDeclBuilder {
+	b.d.Name.Name = name
+	return b
+}
+func (b *DefDeclBuilder) WithIdentifierSitterPos(node *sitter.Node) *DefDeclBuilder {
+	b.d.Name.StartPos = Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+	b.d.Name.EndPos = Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
+
+	return b
+}
+
+func (b *DefDeclBuilder) Build() DefDecl {
+	def := b.d
+	def.ASTNodeBase = b.a.Build()
+
+	return def
 }

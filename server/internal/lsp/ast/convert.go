@@ -57,6 +57,9 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string) File {
 		case "const_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_const_declaration(node, source))
 
+		case "define_declaration":
+			lastMod.Declarations = append(lastMod.Declarations, convert_def_declaration(node, source))
+
 		case "func_definition", "func_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_function_declaration(node, source))
 		}
@@ -575,6 +578,42 @@ func convert_const_declaration(node *sitter.Node, sourceCode []byte) Expression 
 	)
 
 	return constant
+}
+
+/*
+define_declaration [13, 0] - [13, 15]
+
+	type_ident [13, 4] - [13, 8]
+	typedef_type [13, 11] - [13, 14]
+	type [13, 11] - [13, 14]
+		base_type [13, 11] - [13, 14]
+		base_type_name [13, 11] - [13, 14]
+*/
+func convert_def_declaration(node *sitter.Node, sourceCode []byte) Expression {
+	defBuilder := NewDefDeclBuilder().
+		WithSitterPos(node)
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "type_ident", "define_ident":
+			defBuilder.WithName(n.Content(sourceCode)).
+				WithIdentifierSitterPos(n)
+
+		case "typedef_type":
+			var _type TypeInfo
+			if n.Child(0).Type() == "type" {
+				// Might contain module path
+				_type = typeNodeToType(n.Child(0), sourceCode)
+				defBuilder.WithResolvesToType(_type)
+			} else if n.Child(0).Type() == "func_typedef" {
+				// TODO Parse full info of this func typedefinition
+				defBuilder.WithResolvesTo(n.Content(sourceCode))
+			}
+		}
+	}
+
+	return defBuilder.Build()
 }
 
 func convert_function_declaration(node *sitter.Node, sourceCode []byte) Expression {
