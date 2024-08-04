@@ -839,7 +839,6 @@ func TestExtractSymbols_method_declaration(t *testing.T) {
 			Name: NewIdentifierBuilder().WithName("self").WithStartEnd(1, 30, 1, 34).Build(),
 			Type: NewTypeInfoBuilder().
 				WithName("UserStruct").WithNameStartEnd(1, 30, 1, 34).
-				IsPointer().
 				WithStartEnd(1, 30, 1, 34).
 				Build(),
 			ASTNodeBase: NewBaseNodeBuilder().
@@ -860,5 +859,28 @@ func TestExtractSymbols_method_declaration(t *testing.T) {
 				WithStartEnd(1, 36, 1, 48).Build(),
 		},
 		methodDecl.Parameters[1],
+	)
+}
+
+func TestExtractSymbols_method_declaration_mutable(t *testing.T) {
+	source := `module foo;
+	fn Object* UserStruct.method(&self, int* pointer) {
+		return 1;
+	}`
+	ast := ConvertToAST(GetCST(source), source)
+	methodDecl := ast.Modules[0].Declarations[0].(MethodDeclaration)
+
+	assert.Equal(t,
+		FunctionParameter{
+			Name: NewIdentifierBuilder().WithName("self").WithStartEnd(1, 31, 1, 35).Build(),
+			Type: NewTypeInfoBuilder().
+				WithName("UserStruct").WithNameStartEnd(1, 31, 1, 35).
+				WithStartEnd(1, 30, 1, 35).
+				IsPointer().
+				Build(),
+			ASTNodeBase: NewBaseNodeBuilder().
+				WithStartEnd(1, 30, 1, 35).Build(),
+		},
+		methodDecl.Parameters[0],
 	)
 }

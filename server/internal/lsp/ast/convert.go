@@ -668,11 +668,15 @@ func convert_function_declaration(node *sitter.Node, sourceCode []byte) Expressi
 func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Option[Identifier], sourceCode []byte) FunctionParameter {
 	var identifier Identifier
 	var argType TypeInfo
+	ampersandFound := false
 
 	for i := 0; i < int(argNode.ChildCount()); i++ {
 		n := argNode.Child(int(i))
 
 		switch n.Type() {
+		case "&":
+			ampersandFound = true
+
 		case "type":
 			argType = typeNodeToType(n, sourceCode)
 		case "ident":
@@ -683,16 +687,25 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 
 			// When detecting a self, the type is the Struct type
 			if identifier.Name == "self" && methodIdentifier.IsSome() {
+				pointer := uint(0)
+				if ampersandFound {
+					pointer = 1
+				}
+
 				argType = TypeInfo{
 					Identifier: NewIdentifierBuilder().
 						WithName(methodIdentifier.Get().Name).
 						WithSitterPos(n).
 						Build(),
-					Pointer:     uint(1),
+					Pointer:     pointer,
 					ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
 				}
 			}
 		}
+	}
+
+	if ampersandFound {
+		fmt.Println("poiner")
 	}
 
 	variable := FunctionParameter{
