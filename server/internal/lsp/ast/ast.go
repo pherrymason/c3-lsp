@@ -39,6 +39,7 @@ type ASTNode interface {
 
 type File struct {
 	ASTNodeBase
+	Name    string
 	Modules []Module
 }
 
@@ -46,6 +47,8 @@ type Module struct {
 	ASTNodeBase
 	Name              string
 	GenericParameters []string
+	Functions         []Declaration
+	Macros            []Declaration
 	Declarations      []Declaration
 	Imports           []string
 }
@@ -137,27 +140,35 @@ type DefDecl struct {
 	resolvesToType option.Option[TypeInfo]
 }
 
+type MacroDecl struct {
+	ASTNodeBase
+	Signature MacroSignature
+	Body      Block
+}
+
+type MacroSignature struct {
+	Name       Identifier
+	Parameters []FunctionParameter
+}
+
 type FunctionDecl struct {
+	ASTNodeBase
+	ParentTypeId option.Option[Identifier]
+	Signature    FunctionSignature
+	Body         Block
+}
+
+type FunctionSignature struct {
 	ASTNodeBase
 	Name       Identifier
 	Parameters []FunctionParameter
 	ReturnType TypeInfo
-	Body       Block
 }
 
 type FunctionParameter struct {
 	ASTNodeBase
 	Name Identifier
 	Type TypeInfo
-}
-
-type MethodDeclaration struct {
-	ASTNodeBase
-	StructName Identifier
-	Name       Identifier
-	Parameters []FunctionParameter
-	ReturnType TypeInfo
-	Body       Block
 }
 
 type Block struct {
@@ -167,6 +178,12 @@ type Block struct {
 
 type FunctionCall struct {
 	ASTNodeBase
+}
+
+type InterfaceDecl struct {
+	ASTNodeBase
+	Name    Identifier
+	Methods []FunctionSignature
 }
 
 type TypeInfo struct {

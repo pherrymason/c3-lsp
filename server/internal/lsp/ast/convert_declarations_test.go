@@ -52,6 +52,7 @@ func TestConvertToAST_module_implicit(t *testing.T) {
 					WithName("int").
 					WithNameStartEnd(1, 1, 1, 4).
 					WithStartEnd(1, 1, 1, 4).Build(),
+				Initializer: Literal{Value: "0"},
 			},
 		},
 	}
@@ -156,6 +157,7 @@ func TestConvertToAST_global_variables(t *testing.T) {
 				WithStartEnd(1, 1, 1, 4).
 				Build(),
 		},
+		Initializer: Literal{Value: "3"},
 	}
 	assert.Equal(t, expectedHello, ast.Modules[0].Declarations[0])
 
@@ -343,9 +345,9 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 				},
 				Value: CompositeLiteral{
 					Values: []Expression{
-						Literal{Value: "pending start"},
+						Literal{Value: "\"pending start\""},
 						BoolLiteral{Value: false},
-						Literal{Value: "c"},
+						Literal{Value: "'c'"},
 					},
 				},
 				ASTNodeBase: aWithPos(row+1, 2, row+1, 41),
@@ -357,9 +359,9 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 				},
 				Value: CompositeLiteral{
 					Values: []Expression{
-						Literal{Value: "running"},
+						Literal{Value: "\"running\""},
 						BoolLiteral{Value: true},
-						Literal{Value: "e"},
+						Literal{Value: "'e'"},
 					},
 				},
 				ASTNodeBase: aWithPos(row+2, 2, row+2, 34),

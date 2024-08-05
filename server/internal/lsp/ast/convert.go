@@ -9,6 +9,7 @@ import (
 
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
 	"github.com/pherrymason/c3-lsp/pkg/option"
+	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -16,24 +17,45 @@ func GetCST(sourceCode string) *sitter.Node {
 	return cst.GetParsedTreeFromString(sourceCode).RootNode()
 }
 
-func ConvertToAST(cstNode *sitter.Node, sourceCode string) File {
+func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File {
 	source := []byte(sourceCode)
 
 	var prg File
 
 	if cstNode.Type() == "source_file" {
-		prg = convertSourceFile(cstNode, source)
+		prg = File{
+			Name:        fileName,
+			ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(cstNode).Build(),
+		}
 	}
 
+	anonymousModule := false
 	for i := 0; i < int(cstNode.ChildCount()); i++ {
+		node := cstNode.Child(i)
+		parsedModules := len(prg.Modules)
+		if parsedModules == 0 && node.Type() != "module" {
+			anonymousModule = true
+			prg.Modules = append(prg.Modules,
+				Module{
+					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(uint(node.StartPoint().Row), uint(node.StartPoint().Column), 0, 0).Build(),
+					Name:        symbols.NormalizeModuleName(fileName),
+				},
+			)
+			parsedModules = len(prg.Modules)
+		}
+
 		var lastMod *Module
-		if len(prg.Modules) > 0 {
+		if parsedModules > 0 {
 			lastMod = &prg.Modules[len(prg.Modules)-1]
 		}
 
-		node := cstNode.Child(i)
 		switch node.Type() {
 		case "module":
+			if anonymousModule {
+				anonymousModule = false
+				lastMod.ASTNodeBase.EndPos = Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+			}
+
 			prg.Modules = append(prg.Modules, convert_module(node, source))
 
 		case "import_declaration":
@@ -61,7 +83,13 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string) File {
 			lastMod.Declarations = append(lastMod.Declarations, convert_def_declaration(node, source))
 
 		case "func_definition", "func_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, convert_function_declaration(node, source))
+			lastMod.Functions = append(lastMod.Functions, convert_function_declaration(node, source))
+
+		case "interface_declaration":
+			lastMod.Declarations = append(lastMod.Declarations, convert_interface_declaration(node, source))
+
+		case "macro_declaration":
+			lastMod.Macros = append(lastMod.Macros, convert_macro_declaration(node, source))
 		}
 	}
 
@@ -619,6 +647,37 @@ func convert_def_declaration(node *sitter.Node, sourceCode []byte) Expression {
 func convert_function_declaration(node *sitter.Node, sourceCode []byte) Expression {
 	var typeIdentifier option.Option[Identifier]
 	funcHeader := node.Child(1)
+
+	if funcHeader.ChildByFieldName("method_type") != nil {
+		typeIdentifier = option.Some(NewIdentifierBuilder().
+			WithName(funcHeader.ChildByFieldName("method_type").Content(sourceCode)).
+			WithSitterPos(funcHeader.ChildByFieldName("method_type")).
+			Build())
+	}
+	signature := convert_function_signature(node, sourceCode)
+
+	funcDecl := FunctionDecl{
+		ASTNodeBase:  NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ParentTypeId: typeIdentifier,
+		Signature:    signature,
+	}
+
+	/*
+		var variables []*idx.Variable
+		if node.ChildByFieldName("body") != nil {
+			variables = p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)
+		}
+
+		variables = append(variables, parameters...)
+
+		funcDecl.AddVariables(variables)
+	*/
+	return funcDecl
+}
+
+func convert_function_signature(node *sitter.Node, sourceCode []byte) FunctionSignature {
+	var typeIdentifier option.Option[Identifier]
+	funcHeader := node.Child(1)
 	nameNode := funcHeader.ChildByFieldName("name")
 
 	if funcHeader.ChildByFieldName("method_type") != nil {
@@ -644,44 +703,19 @@ func convert_function_declaration(node *sitter.Node, sourceCode []byte) Expressi
 		}
 	}
 
-	var funcDecl Expression
-	if typeIdentifier.IsSome() {
-		funcDecl = MethodDeclaration{
-			StructName: typeIdentifier.Get(),
-			Name: NewIdentifierBuilder().
-				WithName(nameNode.Content(sourceCode)).
-				WithSitterPos(nameNode).
-				Build(),
-			ReturnType: typeNodeToType(funcHeader.ChildByFieldName("return_type"), sourceCode),
-			Parameters: parameters,
-			ASTNodeBase: NewBaseNodeBuilder().
-				WithSitterPosRange(node.StartPoint(), node.EndPoint()).
-				Build(),
-		}
-	} else {
-		funcDecl = FunctionDecl{
-			Name: NewIdentifierBuilder().
-				WithName(nameNode.Content(sourceCode)).
-				WithSitterPos(nameNode).
-				Build(),
-			ReturnType: typeNodeToType(funcHeader.ChildByFieldName("return_type"), sourceCode),
-			Parameters: parameters,
-			ASTNodeBase: NewBaseNodeBuilder().
-				WithSitterPosRange(node.StartPoint(), node.EndPoint()).
-				Build(),
-		}
+	signatureDecl := FunctionSignature{
+		Name: NewIdentifierBuilder().
+			WithName(nameNode.Content(sourceCode)).
+			WithSitterPos(nameNode).
+			Build(),
+		ReturnType: typeNodeToType(funcHeader.ChildByFieldName("return_type"), sourceCode),
+		Parameters: parameters,
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+			Build(),
 	}
-	/*
-		var variables []*idx.Variable
-		if node.ChildByFieldName("body") != nil {
-			variables = p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)
-		}
 
-		variables = append(variables, parameters...)
-
-		funcDecl.AddVariables(variables)
-	*/
-	return funcDecl
+	return signatureDecl
 }
 
 // nodeToArgument Very similar to nodeToVariable, but arguments have optional identifiers (for example when using `self` for struct methods)
@@ -754,6 +788,73 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 	}
 
 	return variable
+}
+
+func convert_interface_declaration(node *sitter.Node, sourceCode []byte) Expression {
+	// TODO parse attributes
+	methods := []FunctionSignature{}
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "interface_body":
+			for i := 0; i < int(n.ChildCount()); i++ {
+				m := n.Child(i)
+				if m.Type() == "func_declaration" {
+					fun := convert_function_signature(m, sourceCode)
+					methods = append(methods, fun)
+				}
+			}
+		}
+	}
+
+	nameNode := node.ChildByFieldName("name")
+	_interface := InterfaceDecl{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		Name:        NewIdentifierBuilder().WithName(nameNode.Content(sourceCode)).WithSitterPos(nameNode).Build(),
+		Methods:     methods,
+	}
+
+	return _interface
+}
+
+func convert_macro_declaration(node *sitter.Node, sourceCode []byte) Expression {
+	var nameNode *sitter.Node
+
+	parameters := []FunctionParameter{}
+	nodeParameters := node.Child(2)
+	if nodeParameters.ChildCount() > 2 {
+		for i := uint32(0); i < nodeParameters.ChildCount(); i++ {
+			argNode := nodeParameters.Child(int(i))
+			if argNode.Type() != "parameter" {
+				continue
+			}
+
+			parameters = append(
+				parameters,
+				convert_function_parameter(argNode, option.None[Identifier](), sourceCode),
+			)
+		}
+	}
+
+	nameNode = node.Child(1).ChildByFieldName("name")
+	macro := MacroDecl{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		Signature: MacroSignature{
+			Name: NewIdentifierBuilder().
+				WithName(nameNode.Content(sourceCode)).
+				WithSitterPos(nameNode).
+				Build(),
+			Parameters: parameters,
+		},
+	}
+	/*
+		if node.ChildByFieldName("body") != nil {
+			variables := p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)
+			variables = append(arguments, variables...)
+			macro.AddVariables(variables)
+		}
+	*/
+	return macro
 }
 
 func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
