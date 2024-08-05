@@ -34,6 +34,10 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 			literal:  "\"hello\"",
 			expected: Literal{Value: "\"hello\""},
 		},
+		{
+			literal:  "anotherVariable",
+			expected: NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 13, 2, 28).Build(),
+		},
 	}
 
 	for _, tt := range cases {

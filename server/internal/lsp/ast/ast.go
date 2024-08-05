@@ -59,9 +59,9 @@ type Declaration interface {
 
 type VariableDecl struct {
 	ASTNodeBase
-	Names []Identifier
-	Type  TypeInfo
-	//Initializer Initializer
+	Names       []Identifier
+	Type        TypeInfo
+	Initializer Expression
 }
 
 type ConstDecl struct {
@@ -173,7 +173,8 @@ type FunctionParameter struct {
 
 type Block struct {
 	ASTNodeBase
-	Statements []ASTNode
+	Declarations []Declaration
+	Statements   []ASTNode
 }
 
 type FunctionCall struct {
@@ -202,15 +203,11 @@ type Identifier struct {
 	Path string
 }
 
-type Expression interface {
-	ASTNode
-}
-
 type Literal struct {
 	ASTNodeBase
 	Value string
 }
-type NumberLiteral struct {
+type IntegerLiteral struct {
 	ASTNodeBase
 	Value uint
 }

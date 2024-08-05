@@ -162,7 +162,7 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 
 	for i := uint32(0); i < node.ChildCount(); i++ {
 		n := node.Child(int(i))
-		//fmt.Println(i, ":", n.Type(), ":: ", n.Content(sourceCode), ":: has errors: ", n.HasError())
+		fmt.Println(i, ":", n.Type(), ":: ", n.Content(source), ":: has errors: ", n.HasError())
 		switch n.Type() {
 		case "type":
 			variable.Type = typeNodeToType(n, source)
@@ -195,14 +195,16 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 					)
 				}
 			}
+		}
+	}
 
-		case "integer_literal":
-			/*
-				initializer := &ast.Initializer{}
-				initializer.SetPosition(child.StartPoint(), child.EndPoint())
-				initializer.Value = child.Content()
-				decl.Initializer = initializer
-			*/
+	// Check for initializer
+	right := node.ChildByFieldName("right")
+	if right != nil {
+		if is_literal(right) {
+			variable.Initializer = convert_literal(right, source)
+		} else if right.Type() == "ident" {
+			variable.Initializer = NewIdentifierBuilder().WithName(right.Content(source)).WithSitterPos(right).Build()
 		}
 	}
 
@@ -857,12 +859,30 @@ func convert_macro_declaration(node *sitter.Node, sourceCode []byte) Expression 
 	return macro
 }
 
+func is_literal(node *sitter.Node) bool {
+	literals := []string{
+		"string_literal", "char_literal",
+		"integer_literal", "real_literal",
+		"true",
+		"false",
+	}
+
+	value := node.Type()
+	for _, v := range literals {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
 func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 	var literal Expression
-
+	//fmt.Printf("Converting literal %s\n", node.Type())
 	switch node.Type() {
 	case "string_literal", "char_literal":
-		literal = Literal{Value: node.Child(1).Content(sourceCode)}
+		fmt.Printf("%s: %s\n", node.Type(), node.Content(sourceCode))
+		literal = Literal{Value: node.Content(sourceCode)}
 	case "integer_literal", "real_literal":
 		/*
 			for i := 0; i < int(node.ChildCount()); i++ {
