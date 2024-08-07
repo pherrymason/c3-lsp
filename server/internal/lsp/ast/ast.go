@@ -216,10 +216,32 @@ type BoolLiteral struct {
 	ASTNodeBase
 	Value bool
 }
-
 type CompositeLiteral struct {
 	ASTNodeBase
 	Values []Expression
+}
+
+type InitializerList struct {
+	ASTNodeBase
+	Args []Expression
+}
+type Arg interface {
+	ASTNode
+}
+type ArgParamPathSet struct {
+	ASTNodeBase
+	Path string
+	Expr Expression
+}
+
+type ArgFieldSet struct {
+	ASTNodeBase
+	FieldName string
+	Expr      Expression
+}
+
+func (arg *ArgFieldSet) SetExpr(expr Expression) {
+	arg.Expr = expr
 }
 
 // BinaryExpr representa una expresión binaria (como suma, resta, etc.)
