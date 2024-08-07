@@ -162,10 +162,10 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 
 	for i := uint32(0); i < node.ChildCount(); i++ {
 		n := node.Child(int(i))
-		fmt.Println(i, ":", n.Type(), ":: ", n.Content(source), ":: has errors: ", n.HasError())
+		//fmt.Println(i, ":", n.Type(), ":: ", n.Content(source), ":: has errors: ", n.HasError())
 		switch n.Type() {
 		case "type":
-			variable.Type = typeNodeToType(n, source)
+			variable.Type = convert_type(n, source)
 
 		case "ident":
 			variable.Names = append(
@@ -199,13 +199,11 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 	}
 
 	// Check for initializer
+	// _assign_right_expr
 	right := node.ChildByFieldName("right")
 	if right != nil {
-		if is_literal(right) {
-			variable.Initializer = convert_literal(right, source)
-		} else if right.Type() == "ident" {
-			variable.Initializer = NewIdentifierBuilder().WithName(right.Content(source)).WithSitterPos(right).Build()
-		}
+		variable.Initializer = convert_expression(right, source)
+		//variable.Initializer = convert_base_expression(right, source)
 	}
 
 	return variable
@@ -223,7 +221,7 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 		n := node.Child(i)
 		switch n.Type() {
 		case "enum_spec":
-			enumDecl.BaseType = typeNodeToType(n.Child(1), sourceCode)
+			enumDecl.BaseType = convert_type(n.Child(1), sourceCode)
 			if n.ChildCount() >= 3 {
 				param_list := n.Child(2)
 				for p := 0; p < int(param_list.ChildCount()); p++ {
@@ -241,7 +239,7 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 										WithSitterPosRange(paramNode.Child(1).StartPoint(), paramNode.Child(1).EndPoint()).
 										Build(),
 								},
-								Type: typeNodeToType(paramNode.Child(0), sourceCode),
+								Type: convert_type(paramNode.Child(0), sourceCode),
 							},
 						)
 					}
@@ -358,7 +356,7 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 
 			switch n.Type() {
 			case "type":
-				fieldType = typeNodeToType(n, sourceCode)
+				fieldType = convert_type(n, sourceCode)
 				member.Type = fieldType
 				//fmt.Println(fieldType, n.Content(sourceCode))
 
@@ -478,7 +476,10 @@ func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) StructD
 			// TODO attributes
 
 		case "type":
-			structDecl.BackingType = option.Some(typeNodeToType(child, sourceCode))
+			structDecl.BackingType = option.Some(convert_type(child, sourceCode))
+
+		case "bitstruct_body":
+			structDecl.Members = convert_bitstruct_members(child, sourceCode)
 		}
 	}
 
@@ -503,7 +504,7 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 				switch xNode.Type() {
 				case "base_type":
 					// Note: here we consciously pass bdefnode because typeNodeToType expects a child node of base_type. If we send xNode it will not find it.
-					member.Type = typeNodeToType(bdefnode, sourceCode)
+					member.Type = convert_type(bdefnode, sourceCode)
 				case "ident":
 					member.Names = append(
 						member.Names,
@@ -607,7 +608,7 @@ func convert_const_declaration(node *sitter.Node, sourceCode []byte) Expression 
 		n := node.Child(int(i))
 		switch n.Type() {
 		case "type":
-			constant.Type = typeNodeToType(n, sourceCode)
+			constant.Type = convert_type(n, sourceCode)
 
 		case "const_ident":
 			idNode = n
@@ -648,7 +649,7 @@ func convert_def_declaration(node *sitter.Node, sourceCode []byte) Expression {
 			var _type TypeInfo
 			if n.Child(0).Type() == "type" {
 				// Might contain module path
-				_type = typeNodeToType(n.Child(0), sourceCode)
+				_type = convert_type(n.Child(0), sourceCode)
 				defBuilder.WithResolvesToType(_type)
 			} else if n.Child(0).Type() == "func_typedef" {
 				// TODO Parse full info of this func typedefinition
@@ -724,7 +725,7 @@ func convert_function_signature(node *sitter.Node, sourceCode []byte) FunctionSi
 			WithName(nameNode.Content(sourceCode)).
 			WithSitterPos(nameNode).
 			Build(),
-		ReturnType: typeNodeToType(funcHeader.ChildByFieldName("return_type"), sourceCode),
+		ReturnType: convert_type(funcHeader.ChildByFieldName("return_type"), sourceCode),
 		Parameters: parameters,
 		ASTNodeBase: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
@@ -767,7 +768,7 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 			ampersandFound = true
 
 		case "type":
-			argType = typeNodeToType(n, sourceCode)
+			argType = convert_type(n, sourceCode)
 		case "ident":
 			identifier = NewIdentifierBuilder().
 				WithName(n.Content(sourceCode)).
@@ -875,10 +876,12 @@ func convert_macro_declaration(node *sitter.Node, sourceCode []byte) Expression 
 
 func is_literal(node *sitter.Node) bool {
 	literals := []string{
-		"string_literal", "char_literal",
+		"string_literal", "char_literal", "raw_string_literal",
 		"integer_literal", "real_literal",
+		"bytes_literal",
 		"true",
 		"false",
+		"null",
 	}
 
 	value := node.Type()
@@ -890,36 +893,19 @@ func is_literal(node *sitter.Node) bool {
 	return false
 }
 
-func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
-	var literal Expression
-	//fmt.Printf("Converting literal %s\n", node.Type())
-	switch node.Type() {
-	case "string_literal", "char_literal":
-		fmt.Printf("%s: %s\n", node.Type(), node.Content(sourceCode))
-		literal = Literal{Value: node.Content(sourceCode)}
-	case "integer_literal", "real_literal":
-		/*
-			for i := 0; i < int(node.ChildCount()); i++ {
-				fmt.Printf("Literal type not supported: %s\n", node.Child(i).Type())
-			}
-			fmt.Printf("Literal value: %s\n", node.Content(sourceCode))*/
-		literal = Literal{
-			Value: node.Content(sourceCode),
-		}
-
-	case "false":
-		literal = BoolLiteral{Value: false}
-
-	case "true":
-		literal = BoolLiteral{Value: true}
-	default:
-		panic(fmt.Sprintf("Literal type not supported: %s\n", node.Type()))
+func convert_type(node *sitter.Node, sourceCode []byte) TypeInfo {
+	if node.Type() == "optional_type" {
+		return extTypeNodeToType(node.Child(0), true, sourceCode)
 	}
 
-	return literal
+	return extTypeNodeToType(node, false, sourceCode)
 }
 
-func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
+func extTypeNodeToType(
+	node *sitter.Node,
+	isOptional bool,
+	sourceCode []byte,
+) TypeInfo {
 	/*
 		baseTypeLanguage := false
 		baseType := ""
@@ -948,7 +934,7 @@ func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
 
 			for b := 0; b < int(n.ChildCount()); b++ {
 				bn := n.Child(b)
-				fmt.Println("---"+bn.Type(), bn.Content(sourceCode))
+				//fmt.Println("---"+bn.Type(), bn.Content(sourceCode))
 
 				switch bn.Type() {
 				case "base_type_name":
@@ -966,7 +952,7 @@ func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
 					for g := 0; g < int(bn.ChildCount()); g++ {
 						gn := bn.Child(g)
 						if gn.Type() == "type" {
-							gType := typeNodeToType(gn, sourceCode)
+							gType := convert_type(gn, sourceCode)
 							typeInfo.Generics = append(typeInfo.Generics, gType)
 						}
 					}
