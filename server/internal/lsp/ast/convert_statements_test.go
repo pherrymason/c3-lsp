@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -334,131 +335,120 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected Expression
+		expected FunctionCall
 	}{
 		{
-			skip:  true,
-			input: "$alignof(Type)", // type
+			input: "$(Type)", // type
 			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 24).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$alignof").WithStartEnd(1, 9, 1, 17).Build(),
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 9+6).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$").WithStartEnd(1, 9, 1, 9).Build(),
 				Arguments: []Arg{
 					NewTypeInfoBuilder().
 						WithName("Type").
-						WithNameStartEnd(1, 9+9, 1, 9+13).
-						WithStartEnd(1, 9+9, 1, 9+13).
+						WithNameStartEnd(1, 10, 1, 10+4).
+						WithStartEnd(1, 10, 1, 10+4).
 						Build(),
 				},
 			},
 		},
 		{
-			skip:  true,
-			input: "$alignof(10)", // type
+			input: "$(10)", // literal
 			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 21).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$alignof").WithStartEnd(1, 9, 1, 17).Build(),
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 9+4).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$").WithStartEnd(1, 9, 1, 9).Build(),
 				Arguments:   []Arg{Literal{Value: "10"}},
 			},
 		},
 		{
-			skip:  true,
-			input: "$alignof(a[5])", // type
+			input: "$(a[5])",
 			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 23).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$alignof").WithStartEnd(1, 9, 1, 17).Build(),
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 9+6).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$").WithStartEnd(1, 9, 1, 9).Build(),
 				Arguments: []Arg{
 					IndexAccess{
-						Array: NewIdentifierBuilder().WithName("a").WithStartEnd(1, 18, 1, 19).Build(),
+						Array: NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
 						Index: "[5]",
 					},
 				},
 			},
 		},
 		{
-			skip:  true,
-			input: "$alignof(a[5..6])", // type
+			input: "$(a[5..6])",
 			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 26).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$alignof").WithStartEnd(1, 9, 1, 17).Build(),
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 9+9).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$").WithStartEnd(1, 9, 1, 9).Build(),
 				Arguments: []Arg{
 					RangeAccess{
-						Array:      NewIdentifierBuilder().WithName("a").WithStartEnd(1, 18, 1, 19).Build(),
+						Array:      NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
 						RangeStart: 5,
 						RangeEnd:   6,
 					},
 				},
 			},
 		},
-		// "$extnameof",
-		{
-			input: "$extnameof(Type)", // type
-			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 25).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$extnameof").WithStartEnd(1, 9, 1, 19).Build(),
-				Arguments: []Arg{
-					NewTypeInfoBuilder().
-						WithName("Type").
-						WithNameStartEnd(1, 9+11, 1, 9+15).
-						WithStartEnd(1, 9+11, 1, 9+15).
-						Build(),
-				},
-			},
-		},
-		{
-			input: "$extnameof(10)", // type
-			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 23).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$extnameof").WithStartEnd(1, 9, 1, 19).Build(),
-				Arguments:   []Arg{Literal{Value: "10"}},
-			},
-		},
-		{
-			input: "$extnameof(a[5])", // type
-			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 25).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$extnameof").WithStartEnd(1, 9, 1, 19).Build(),
-				Arguments: []Arg{
-					IndexAccess{
-						Array: NewIdentifierBuilder().WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
-						Index: "[5]",
-					},
-				},
-			},
-		},
-		{
-			input: "$extnameof(a[5..6])", // type
-			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 28).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$extnameof").WithStartEnd(1, 9, 1, 19).Build(),
-				Arguments: []Arg{
-					RangeAccess{
-						Array:      NewIdentifierBuilder().WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
-						RangeStart: 5,
-						RangeEnd:   6,
-					},
-				},
-			},
-		},
-		/*
-			"$extnameof",
-			"$nameof",
-			"$offsetof",
-			"$qnameof",
-		*/
 	}
 
-	for _, tt := range cases {
-		if tt.skip {
-			continue
+	methods := []string{
+		"$alignof",
+		//	"$extnameof",
+		//	"$nameof",
+		//	"$offsetof",
+		// "$qnameof",
+	}
+
+	for _, method := range methods {
+		for _, tt := range cases {
+			if tt.skip {
+				continue
+			}
+
+			input := strings.Replace(tt.input, "$", method, 1)
+			length := uint(len(method))
+			t.Run(
+				fmt.Sprintf(
+					"assignment initializer list: %s",
+					input,
+				), func(t *testing.T) {
+					source := `module foo;
+	int x = ` + input + `;`
+					ast := ConvertToAST(GetCST(source), source, "file.c3")
+					varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
+
+					// Adapt positions
+					//tt.expected.ASTNodeBase.StartPos.Column += uint(len(input))
+					tt.expected.EndPos.Column += length
+
+					tt.expected.Identifier.Name = method
+					tt.expected.Identifier.EndPos.Column += length
+					arg := tt.expected.Arguments[0]
+					switch arg.(type) {
+					case TypeInfo:
+						argV := arg.(TypeInfo)
+						argV.Identifier.StartPos.Column += length
+						argV.Identifier.EndPos.Column += length
+						argV.StartPos.Column += length
+						argV.EndPos.Column += length
+						tt.expected.Arguments[0] = argV
+
+					case IndexAccess:
+						argV := arg.(IndexAccess)
+						ident := argV.Array.(Identifier)
+						ident.StartPos.Column += length
+						ident.EndPos.Column += length
+						argV.Array = ident
+						tt.expected.Arguments[0] = argV
+
+					case RangeAccess:
+						argV := arg.(RangeAccess)
+						ident := argV.Array.(Identifier)
+						ident.StartPos.Column += length
+						ident.EndPos.Column += length
+						argV.Array = ident
+						tt.expected.Arguments[0] = argV
+					}
+
+					assert.Equal(t, tt.expected, varDecl.Initializer)
+				})
 		}
-
-		t.Run(fmt.Sprintf("assignment initializer list: %s", tt.input), func(t *testing.T) {
-			source := `module foo;
-	int x = ` + tt.input + `;`
-			ast := ConvertToAST(GetCST(source), source, "file.c3")
-			varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
-
-			assert.Equal(t, tt.expected, varDecl.Initializer)
-		})
 	}
 }
