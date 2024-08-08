@@ -59,7 +59,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 			prg.Modules = append(prg.Modules, convert_module(node, source))
 
 		case "import_declaration":
-			lastMod.Imports = append(lastMod.Imports, convert_imports(node, source)...)
+			lastMod.Imports = append(lastMod.Imports, convert_imports(node, source).(Import))
 
 		case "global_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_global_declaration(node, source))
@@ -130,8 +130,8 @@ func convert_module(node *sitter.Node, source []byte) Module {
 	return module
 }
 
-func convert_imports(node *sitter.Node, source []byte) []string {
-	imports := []string{}
+func convert_imports(node *sitter.Node, source []byte) Expression {
+	imports := Import{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -145,14 +145,14 @@ func convert_imports(node *sitter.Node, source []byte) []string {
 					temp_mod += sn.Content(source)
 				}
 			}
-			imports = append(imports, temp_mod)
+			//imports = append(imports, Import{Path: temp_mod})
 		}
 	}
 
 	return imports
 }
 
-func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
+func convert_global_declaration(node *sitter.Node, source []byte) Expression {
 	variable := VariableDecl{
 		Names: []Identifier{},
 		ASTNodeBase: NewBaseNodeBuilder().
@@ -195,13 +195,20 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 					)
 				}
 			}
+
+			/*default:
+			if n.IsNamed() {
+				variable.Initializer = convert_expression(n, source)
+			}*/
 		}
 	}
 
 	// Check for initializer
 	// _assign_right_expr
+
 	right := node.ChildByFieldName("right")
 	if right != nil {
+		debugNode(right, source)
 		variable.Initializer = convert_expression(right, source)
 		//variable.Initializer = convert_base_expression(right, source)
 	}
@@ -209,7 +216,7 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 	return variable
 }
 
-func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
+func convert_enum_declaration(node *sitter.Node, sourceCode []byte) Expression {
 	enumDecl := EnumDecl{
 		Name: node.ChildByFieldName("name").Content(sourceCode),
 		ASTNodeBase: NewBaseNodeBuilder().
@@ -302,7 +309,7 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 	return enumDecl
 }
 
-func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl {
+func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression {
 	structDecl := StructDecl{
 		ASTNodeBase: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
@@ -449,7 +456,7 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 	return structDecl
 }
 
-func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) StructDecl {
+func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) Expression {
 	structDecl := StructDecl{
 		ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), node.EndPoint()).Build(),
 		StructType:  StructTypeBitStruct,

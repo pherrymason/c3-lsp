@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -48,4 +50,14 @@ func NormalizePath(pathOrUri string) string {
 		panic(errors.Wrapf(err, "unable to parse URI: %s", pathOrUri))
 	}
 	return fs.GetCanonicalPath(path)
+}
+
+func StringToUint(value string) uint {
+	uint64Value, err := strconv.ParseUint(value, 10, 0)
+	if err != nil {
+		panic(fmt.Sprintf("Could not convert string to uint: %s", value))
+	}
+
+	// Convertir uint64 a uint (sólo si está dentro del rango de uint)
+	return uint(uint64Value)
 }
