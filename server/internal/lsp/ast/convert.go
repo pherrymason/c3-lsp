@@ -131,24 +131,27 @@ func convert_module(node *sitter.Node, source []byte) Module {
 }
 
 func convert_imports(node *sitter.Node, source []byte) Expression {
-	imports := Import{}
-
-	for i := 0; i < int(node.ChildCount()); i++ {
-		n := node.Child(i)
-
-		switch n.Type() {
-		case "path_ident":
-			temp_mod := ""
-			for m := 0; m < int(n.ChildCount()); m++ {
-				sn := n.Child(m)
-				if sn.Type() == "ident" || sn.Type() == "module_resolution" {
-					temp_mod += sn.Content(source)
-				}
-			}
-			//imports = append(imports, Import{Path: temp_mod})
-		}
+	imports := Import{
+		Path: node.ChildByFieldName("path").Content(source),
 	}
+	/*
+		for i := 0; i < int(node.ChildCount()); i++ {
+			n := node.Child(i)
 
+			switch n.Type() {
+			case "path_ident":
+
+				temp_mod := ""
+				for m := 0; m < int(n.ChildCount()); m++ {
+					sn := n.Child(m)
+					if sn.Type() == "ident" || sn.Type() == "module_resolution" {
+						temp_mod += sn.Content(source)
+					}
+				}
+				//imports = append(imports, Import{Path: temp_mod})
+			}
+		}
+	*/
 	return imports
 }
 

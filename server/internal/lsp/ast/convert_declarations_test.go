@@ -124,13 +124,13 @@ func TestConvertToAST_module_with_attributes(t *testing.T) {
 func TestConvertToAST_module_with_imports(t *testing.T) {
 	source := `module foo;
 	import foo;
-	import foo2;`
+	import foo2::subfoo;`
 
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	assert.Equal(t, []Import{
 		{Path: "foo"},
-		{Path: "foo2"},
+		{Path: "foo2::subfoo"},
 	}, ast.Modules[0].Imports)
 }
 
