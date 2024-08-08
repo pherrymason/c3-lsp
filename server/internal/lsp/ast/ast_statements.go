@@ -78,3 +78,9 @@ type UnaryExpression struct {
 	Operator   string
 	Expression Expression
 }
+
+type InlineTypeWithInitizlization struct {
+	ASTNodeBase
+	Type            TypeInfo
+	InitializerList InitializerList
+}

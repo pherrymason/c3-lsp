@@ -71,10 +71,23 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 			literal:  "$$builtin",
 			expected: Literal{Value: "$$builtin"},
 		},
+		// _ident_expr
+		// - const_ident
 		{
-			literal:  "anotherVariable",
-			expected: NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 13, 2, 28).Build(),
+			literal:  "A_CONSTANT",
+			expected: NewIdentifierBuilder().WithName("A_CONSTANT").WithStartEnd(2, 13, 2, 23).Build(),
 		},
+		// - ident
+		{
+			literal:  "ident",
+			expected: NewIdentifierBuilder().WithName("ident").WithStartEnd(2, 13, 2, 18).Build(),
+		},
+		// - at_ident
+		{
+			literal:  "@ident",
+			expected: NewIdentifierBuilder().WithName("@ident").WithStartEnd(2, 13, 2, 19).Build(),
+		},
+		// module_ident_expr:
 		{
 			literal:  "path::ident",
 			expected: NewIdentifierBuilder().WithPath("path").WithName("ident").WithStartEnd(2, 13, 2, 24).Build(),
@@ -93,6 +106,32 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 				Operator:   "&",
 				Expression: NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).Build(),
 			},
+		},
+
+		// seq($.type, $.initializer_list),
+		{
+			literal: "Type{1,2}",
+			expected: InlineTypeWithInitizlization{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 22).Build(),
+				Type: NewTypeInfoBuilder().
+					WithName("Type").
+					WithNameStartEnd(2, 13, 2, 17).
+					WithStartEnd(2, 13, 2, 17).
+					Build(),
+				InitializerList: InitializerList{
+					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 17, 2, 22).Build(),
+					Args: []Expression{
+						Literal{Value: "1"},
+						Literal{Value: "2"},
+					},
+				},
+			},
+		},
+
+		// $vacount
+		{
+			literal:  "$vacount",
+			expected: Literal{Value: "$vacount"},
 		},
 	}
 
@@ -286,7 +325,140 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 	module foo;
 	fn void main() {
 		object.call(1).call2(3);
-	}`
+		}`
 
 	ConvertToAST(GetCST(source), source, "file.c3")
+}
+
+func TestConvertToAST_compile_time_call(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected Expression
+	}{
+		{
+			skip:  true,
+			input: "$alignof(Type)", // type
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 24).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$alignof").WithStartEnd(1, 9, 1, 17).Build(),
+				Arguments: []Arg{
+					NewTypeInfoBuilder().
+						WithName("Type").
+						WithNameStartEnd(1, 9+9, 1, 9+13).
+						WithStartEnd(1, 9+9, 1, 9+13).
+						Build(),
+				},
+			},
+		},
+		{
+			skip:  true,
+			input: "$alignof(10)", // type
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 21).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$alignof").WithStartEnd(1, 9, 1, 17).Build(),
+				Arguments:   []Arg{Literal{Value: "10"}},
+			},
+		},
+		{
+			skip:  true,
+			input: "$alignof(a[5])", // type
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 23).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$alignof").WithStartEnd(1, 9, 1, 17).Build(),
+				Arguments: []Arg{
+					IndexAccess{
+						Array: NewIdentifierBuilder().WithName("a").WithStartEnd(1, 18, 1, 19).Build(),
+						Index: "[5]",
+					},
+				},
+			},
+		},
+		{
+			skip:  true,
+			input: "$alignof(a[5..6])", // type
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 26).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$alignof").WithStartEnd(1, 9, 1, 17).Build(),
+				Arguments: []Arg{
+					RangeAccess{
+						Array:      NewIdentifierBuilder().WithName("a").WithStartEnd(1, 18, 1, 19).Build(),
+						RangeStart: 5,
+						RangeEnd:   6,
+					},
+				},
+			},
+		},
+		// "$extnameof",
+		{
+			input: "$extnameof(Type)", // type
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 25).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$extnameof").WithStartEnd(1, 9, 1, 19).Build(),
+				Arguments: []Arg{
+					NewTypeInfoBuilder().
+						WithName("Type").
+						WithNameStartEnd(1, 9+11, 1, 9+15).
+						WithStartEnd(1, 9+11, 1, 9+15).
+						Build(),
+				},
+			},
+		},
+		{
+			input: "$extnameof(10)", // type
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 23).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$extnameof").WithStartEnd(1, 9, 1, 19).Build(),
+				Arguments:   []Arg{Literal{Value: "10"}},
+			},
+		},
+		{
+			input: "$extnameof(a[5])", // type
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 25).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$extnameof").WithStartEnd(1, 9, 1, 19).Build(),
+				Arguments: []Arg{
+					IndexAccess{
+						Array: NewIdentifierBuilder().WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
+						Index: "[5]",
+					},
+				},
+			},
+		},
+		{
+			input: "$extnameof(a[5..6])", // type
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 28).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$extnameof").WithStartEnd(1, 9, 1, 19).Build(),
+				Arguments: []Arg{
+					RangeAccess{
+						Array:      NewIdentifierBuilder().WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
+						RangeStart: 5,
+						RangeEnd:   6,
+					},
+				},
+			},
+		},
+		/*
+			"$extnameof",
+			"$nameof",
+			"$offsetof",
+			"$qnameof",
+		*/
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(fmt.Sprintf("assignment initializer list: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+	int x = ` + tt.input + `;`
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+			varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
+
+			assert.Equal(t, tt.expected, varDecl.Initializer)
+		})
+	}
 }

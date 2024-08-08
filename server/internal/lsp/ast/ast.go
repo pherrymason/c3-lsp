@@ -50,7 +50,12 @@ type Module struct {
 	Functions         []Declaration
 	Macros            []Declaration
 	Declarations      []Declaration
-	Imports           []string
+	Imports           []Import
+}
+
+type Import struct {
+	ASTNodeBase
+	Path string
 }
 
 type Declaration interface {
@@ -179,6 +184,8 @@ type Block struct {
 
 type FunctionCall struct {
 	ASTNodeBase
+	Identifier Identifier
+	Arguments  []Arg
 }
 
 type InterfaceDecl struct {
@@ -225,6 +232,22 @@ type InitializerList struct {
 	ASTNodeBase
 	Args []Expression
 }
+
+const (
+	PathTypeIndexed = iota
+	PathTypeField
+	PathTypeRange
+)
+
+type Path struct {
+	ASTNodeBase
+	PathType  int
+	Path      string
+	PathStart string
+	PathEnd   string
+	FieldName string
+}
+
 type Arg interface {
 	ASTNode
 }
@@ -250,4 +273,23 @@ type BinaryExpr struct {
 	Left     ASTNode
 	Operator string
 	Right    ASTNode
+}
+
+type IndexAccess struct {
+	ASTNodeBase
+	Array Expression
+	Index string
+}
+
+type RangeAccess struct {
+	ASTNodeBase
+	Array      Expression
+	RangeStart uint
+	RangeEnd   uint
+}
+
+type FieldAccess struct {
+	ASTNodeBase
+	Object Expression
+	Field  Expression
 }
