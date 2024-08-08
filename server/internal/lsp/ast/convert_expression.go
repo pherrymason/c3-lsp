@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -26,8 +27,8 @@ d
 	$._base_expr,
 */
 func convert_expression(node *sitter.Node, source []byte) Expression {
-	debugNode(node, source)
 	fmt.Printf("================\n")
+	debugNode(node, source)
 
 	base_expr := convert_base_expression(node, source)
 	if base_expr != nil {
@@ -45,7 +46,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 		expression = convert_literal(node, source)
 	} else {
 		switch nodeType {
-		case "ident", "ct_ident", "hash_ident":
+		case "ident", "ct_ident", "hash_ident", "const_ident", "at_ident":
 			expression = NewIdentifierBuilder().WithName(node.Content(source)).WithSitterPos(node).Build()
 
 		case "module_ident_expr":
@@ -80,16 +81,56 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			}
 			expression = initList
 
+		case "type":
+			fmt.Printf("SEQ\n\n\n")
+			nextNode := node.NextNamedSibling()
+			fmt.Printf("Next node:")
+			debugNode(nextNode, source)
+
+			baseExpr := convert_base_expression(node.NextNamedSibling(), source)
+			initList, ok := baseExpr.(InitializerList)
+			if !ok {
+				initList = InitializerList{}
+			}
+
+			expression = InlineTypeWithInitizlization{
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithStartEnd(
+						uint(node.StartPoint().Row),
+						uint(node.StartPoint().Column),
+						initList.ASTNodeBase.EndPos.Line,
+						initList.ASTNodeBase.EndPos.Column,
+					).Build(),
+				Type:            convert_type(node, source),
+				InitializerList: initList,
+			}
+
 		case "field_expr":
 		case "type_access_expr":
 		case "paren_expr":
 		case "expr_block":
 
 		case "$vacount": // literally $vacount
+			expression = Literal{Value: "$vacount"}
+
+		// Compile time calls
+		case "$alignof",
+			"$extnameof",
+			"$nameof",
+			"$offsetof",
+			"$qnameof":
+			expression = convert_compile_time_call(node, source)
+			// choice
+			// seq($._base_expr, $.param_path),
+			// $.type,
+			// $._base_expr,
+			//convert_param_path
+
+		case "_ct_arg":
+		case "_ct_analyse":
 
 			// Sequences
 			/*
-				seq($.type, $.initializer_list),
 				seq($._ct_call, '(', $.flat_path, ')'),
 				seq($._ct_arg, '(', $._expr, ')'),
 				seq($._ct_analyse, '(', $.comma_decl_or_expr, ')'),
@@ -132,6 +173,11 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 func convert_arg(node *sitter.Node, source []byte) Arg {
 	debugNode(node, source)
 	childCount := int(node.ChildCount())
+
+	if is_literal(node.Child(0)) {
+		return convert_literal(node.Child(0), source)
+	}
+
 	switch node.Child(0).Type() {
 	case "param_path":
 		param_path := node.Child(0)
@@ -192,32 +238,127 @@ func convert_arg(node *sitter.Node, source []byte) Arg {
 	}
 
 	return nil
-	/*
-		for i := 0; i < childCount; i++ {
-			fmt.Print("- ")
-			debugNode(node.Child(i), source)
-			nodeType := node.Type()
+}
 
-			// param_path + = expr|type
-			if nodeType == "param_path" {
-				arg = ArgParamPathSet{
-					path: node.Child(i).Content(source),
-				}
+const (
+	PathIdent = iota
+	PathField
+)
 
-				for j := i + 1; j < childCount; i++ {
-					fmt.Print("\t       ")
-					n := node.Child(j)
-					debugNode(n, source)
-					if n.Type() != "=" {
+func convert_param_path(param_path *sitter.Node, source []byte) Path {
+	var path Path
+	param_path_element := param_path.Child(0)
+	debugNode(param_path_element.Child(0), source)
 
-					}
-				}
+	pathType := PathTypeIndexed
+	for p := 0; p < int(param_path_element.ChildCount()); p++ {
+		pnode := param_path_element.Child(p)
+		debugNode(pnode, source)
+		if pnode.IsNamed() {
+			if pnode.Type() == "ident" {
+				pathType = PathTypeField
+			}
+		} else if pnode.Type() == ".." {
+			pathType = PathTypeRange
+		}
+	}
+
+	path = Path{
+		PathType: pathType,
+	}
+	if pathType == PathTypeField {
+		path.FieldName = param_path_element.Child(1).Content(source)
+	} else if pathType == PathTypeRange {
+		path.PathStart = param_path_element.Child(1).Content(source)
+		path.PathEnd = param_path_element.Child(3).Content(source)
+
+	} else {
+		path.Path = param_path.Child(0).Content(source)
+	}
+
+	return path
+}
+
+/*
+"$alignof",
+
+	"$extnameof",
+	"$nameof",
+	"$offsetof",
+	"$qnameof"
+*/
+func convert_compile_time_call(node *sitter.Node, source []byte) Expression {
+	// seq($._ct_call, '(', $.flat_path, ')'),
+	endNode := node.NextSibling()
+	for {
+		n := endNode.NextSibling()
+
+		if n == nil {
+			break
+		}
+		debugNode(n, source)
+		endNode = n
+	}
+
+	flatPath := node.NextNamedSibling()
+	endNode = flatPath.NextSibling()
+
+	debugNode(endNode, source)
+
+	funcCall := FunctionCall{
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
+			Build(),
+		Identifier: NewIdentifierBuilder().
+			WithName(node.Content(source)).
+			WithSitterPos(node).
+			Build(),
+		Arguments: []Arg{convert_flat_path(flatPath, source)},
+	}
+
+	return funcCall
+}
+
+func convert_flat_path(node *sitter.Node, source []byte) Expression {
+	debugNode(node, source)
+	debugNode(node.Child(0), source)
+	node = node.Child(0)
+
+	if node.Type() == "type" {
+		return convert_type(node, source)
+	}
+
+	base_expr := convert_base_expression(node, source)
+
+	next := node.NextSibling()
+	if next != nil {
+		// base_expr + param_path
+		//base_expr := convert_base_expression(node, source)
+		//param_path := convert_param_path(node.NextSibling(), source)
+		path := convert_param_path(next, source)
+		switch path.PathType {
+		case PathTypeIndexed:
+			return IndexAccess{
+				Array: base_expr,
+				Index: path.Path,
+			}
+		case PathTypeField:
+			return FieldAccess{
+				Object: base_expr,
+				Field:  path,
+			}
+		case PathTypeRange:
+			return RangeAccess{
+				Array:      base_expr,
+				RangeStart: utils.StringToUint(path.PathStart),
+				RangeEnd:   utils.StringToUint(path.PathEnd),
 			}
 		}
+	}
 
-		return arg*/
+	return base_expr
 }
 
 func debugNode(node *sitter.Node, source []byte) {
-	fmt.Printf("%s: %s\n", node.Type(), node.Content(source))
+	fmt.Printf("%s: %s\n----- %s\n", node.Type(), node.Content(source), node)
 }
