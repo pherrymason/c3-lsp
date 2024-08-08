@@ -128,7 +128,10 @@ func TestConvertToAST_module_with_imports(t *testing.T) {
 
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-	assert.Equal(t, []string{"foo", "foo2"}, ast.Modules[0].Imports)
+	assert.Equal(t, []Import{
+		{Path: "foo"},
+		{Path: "foo2"},
+	}, ast.Modules[0].Imports)
 }
 
 func TestConvertToAST_global_variables(t *testing.T) {
