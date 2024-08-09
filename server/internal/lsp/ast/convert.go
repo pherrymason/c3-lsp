@@ -134,24 +134,7 @@ func convert_imports(node *sitter.Node, source []byte) Expression {
 	imports := Import{
 		Path: node.ChildByFieldName("path").Content(source),
 	}
-	/*
-		for i := 0; i < int(node.ChildCount()); i++ {
-			n := node.Child(i)
 
-			switch n.Type() {
-			case "path_ident":
-
-				temp_mod := ""
-				for m := 0; m < int(n.ChildCount()); m++ {
-					sn := n.Child(m)
-					if sn.Type() == "ident" || sn.Type() == "module_resolution" {
-						temp_mod += sn.Content(source)
-					}
-				}
-				//imports = append(imports, Import{Path: temp_mod})
-			}
-		}
-	*/
 	return imports
 }
 
@@ -211,7 +194,6 @@ func convert_global_declaration(node *sitter.Node, source []byte) Expression {
 
 	right := node.ChildByFieldName("right")
 	if right != nil {
-		debugNode(right, source)
 		variable.Initializer = convert_expression(right, source)
 		//variable.Initializer = convert_base_expression(right, source)
 	}
