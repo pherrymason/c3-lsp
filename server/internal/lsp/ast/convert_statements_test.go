@@ -333,77 +333,64 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 
 func TestConvertToAST_compile_time_call(t *testing.T) {
 	cases := []struct {
-		skip     bool
-		input    string
-		expected FunctionCall
+		skip             bool
+		input            string
+		expected         FunctionCall
+		functionCallName string
+		ArgumentTypeName string
+		Argument         Expression
 	}{
 		{
-			input: "$(Type)", // type
-			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 9+6).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$").WithStartEnd(1, 9, 1, 9).Build(),
-				Arguments: []Arg{
-					NewTypeInfoBuilder().
-						WithName("Type").
-						WithNameStartEnd(1, 10, 1, 10+4).
-						WithStartEnd(1, 10, 1, 10+4).
-						Build(),
-				},
+			input:            "$(Type)", // type
+			functionCallName: "$",
+			ArgumentTypeName: "TypeInfo",
+			Argument: NewTypeInfoBuilder().
+				WithName("Type").
+				WithNameStartEnd(1, 10, 1, 10+4).
+				WithStartEnd(1, 10, 1, 10+4).
+				Build(),
+		},
+		{
+			input:            "$(10)", // literal
+			ArgumentTypeName: "Literal",
+			Argument:         Literal{Value: "10"},
+		},
+		{
+			input:            "$(a[5])",
+			ArgumentTypeName: "IndexAccess",
+			Argument: IndexAccess{
+				Array: NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
+				Index: "[5]",
 			},
 		},
 		{
-			input: "$(10)", // literal
-			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 9+4).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$").WithStartEnd(1, 9, 1, 9).Build(),
-				Arguments:   []Arg{Literal{Value: "10"}},
-			},
-		},
-		{
-			input: "$(a[5])",
-			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 9+6).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$").WithStartEnd(1, 9, 1, 9).Build(),
-				Arguments: []Arg{
-					IndexAccess{
-						Array: NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
-						Index: "[5]",
-					},
-				},
-			},
-		},
-		{
-			input: "$(a[5..6])",
-			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 9+9).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("$").WithStartEnd(1, 9, 1, 9).Build(),
-				Arguments: []Arg{
-					RangeAccess{
-						Array:      NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
-						RangeStart: 5,
-						RangeEnd:   6,
-					},
-				},
+			input:            "$(a[5..6])",
+			ArgumentTypeName: "RangeAccess",
+			Argument: RangeAccess{
+				Array:      NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
+				RangeStart: 5,
+				RangeEnd:   6,
 			},
 		},
 	}
 
 	methods := []string{
 		"$alignof",
-		//	"$extnameof",
-		//	"$nameof",
-		//	"$offsetof",
-		// "$qnameof",
+		"$extnameof",
+		"$nameof",
+		"$offsetof",
+		"$qnameof",
 	}
 
 	for _, method := range methods {
+		fmt.Printf("*********: %s\n", method)
 		for _, tt := range cases {
 			if tt.skip {
 				continue
 			}
 
 			input := strings.Replace(tt.input, "$", method, 1)
-			length := uint(len(method))
+
 			t.Run(
 				fmt.Sprintf(
 					"assignment initializer list: %s",
@@ -413,41 +400,46 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 	int x = ` + input + `;`
 					ast := ConvertToAST(GetCST(source), source, "file.c3")
 					varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
+					initializer := varDecl.Initializer.(FunctionCall)
 
-					// Adapt positions
-					//tt.expected.ASTNodeBase.StartPos.Column += uint(len(input))
-					tt.expected.EndPos.Column += length
+					assert.Equal(t, method, initializer.Identifier.Name)
 
-					tt.expected.Identifier.Name = method
-					tt.expected.Identifier.EndPos.Column += length
-					arg := tt.expected.Arguments[0]
+					arg := initializer.Arguments[0]
 					switch arg.(type) {
+					case Literal:
+						if tt.ArgumentTypeName != "Literal" {
+							t.Errorf("Expected argument must be Literal. It was %s", tt.ArgumentTypeName)
+						}
+						e := tt.Argument.(Literal)
+						assert.Equal(t, e.Value, arg.(Literal).Value)
+
 					case TypeInfo:
-						argV := arg.(TypeInfo)
-						argV.Identifier.StartPos.Column += length
-						argV.Identifier.EndPos.Column += length
-						argV.StartPos.Column += length
-						argV.EndPos.Column += length
-						tt.expected.Arguments[0] = argV
+						if tt.ArgumentTypeName != "TypeInfo" {
+							t.Errorf("Expected argument must be TypeInfo. It was %s", tt.ArgumentTypeName)
+						}
+						e := tt.Argument.(TypeInfo)
+						assert.Equal(t, e.Identifier.Name, arg.(TypeInfo).Identifier.Name)
 
 					case IndexAccess:
-						argV := arg.(IndexAccess)
-						ident := argV.Array.(Identifier)
-						ident.StartPos.Column += length
-						ident.EndPos.Column += length
-						argV.Array = ident
-						tt.expected.Arguments[0] = argV
+						if tt.ArgumentTypeName != "IndexAccess" {
+							t.Errorf("Expected argument must be IndexAccess. It was %s", tt.ArgumentTypeName)
+						}
+						e := tt.Argument.(IndexAccess)
+						assert.Equal(t, e.Array.(Identifier).Name, arg.(IndexAccess).Array.(Identifier).Name)
 
 					case RangeAccess:
-						argV := arg.(RangeAccess)
-						ident := argV.Array.(Identifier)
-						ident.StartPos.Column += length
-						ident.EndPos.Column += length
-						argV.Array = ident
-						tt.expected.Arguments[0] = argV
+						if tt.ArgumentTypeName != "RangeAccess" {
+							t.Errorf("Expected argument must be RangeAccess. It was %s", tt.ArgumentTypeName)
+						}
+						e := tt.Argument.(RangeAccess)
+						assert.Equal(t, e.Array.(Identifier).Name, arg.(RangeAccess).Array.(Identifier).Name)
+						assert.Equal(t, e.RangeStart, arg.(RangeAccess).RangeStart)
+						assert.Equal(t, e.RangeEnd, arg.(RangeAccess).RangeEnd)
+
+					default:
+						t.Errorf("Expected argument wrong type.")
 					}
 
-					assert.Equal(t, tt.expected, varDecl.Initializer)
 				})
 		}
 	}

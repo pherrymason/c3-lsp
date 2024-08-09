@@ -27,9 +27,6 @@ d
 	$._base_expr,
 */
 func convert_expression(node *sitter.Node, source []byte) Expression {
-	fmt.Printf("================\n")
-	debugNode(node, source)
-
 	base_expr := convert_base_expression(node, source)
 	if base_expr != nil {
 		return base_expr
@@ -40,7 +37,7 @@ func convert_expression(node *sitter.Node, source []byte) Expression {
 
 func convert_base_expression(node *sitter.Node, source []byte) Expression {
 	var expression Expression
-	fmt.Printf("Converting expression %s\n", node.Type())
+	//fmt.Printf("Converting expression %s\n", node.Type())
 	nodeType := node.Type()
 	if is_literal(node) {
 		expression = convert_literal(node, source)
@@ -82,11 +79,6 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			expression = initList
 
 		case "type":
-			fmt.Printf("SEQ\n\n\n")
-			nextNode := node.NextNamedSibling()
-			fmt.Printf("Next node:")
-			debugNode(nextNode, source)
-
 			baseExpr := convert_base_expression(node.NextNamedSibling(), source)
 			initList, ok := baseExpr.(InitializerList)
 			if !ok {
@@ -114,19 +106,21 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			expression = Literal{Value: "$vacount"}
 
 		// Compile time calls
+		// _ct_call
 		case "$alignof",
 			"$extnameof",
 			"$nameof",
 			"$offsetof",
 			"$qnameof":
 			expression = convert_compile_time_call(node, source)
-			// choice
-			// seq($._base_expr, $.param_path),
-			// $.type,
-			// $._base_expr,
-			//convert_param_path
 
-		case "_ct_arg":
+		// _ct_arg
+		case "$vaconst",
+			"$vaarg",
+			"$varef",
+			"$vaexpr":
+			expression = convert_compile_time_arg(node, source)
+
 		case "_ct_analyse":
 
 			// Sequences
@@ -171,7 +165,6 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 }
 
 func convert_arg(node *sitter.Node, source []byte) Arg {
-	debugNode(node, source)
 	childCount := int(node.ChildCount())
 
 	if is_literal(node.Child(0)) {
@@ -183,7 +176,6 @@ func convert_arg(node *sitter.Node, source []byte) Arg {
 		param_path := node.Child(0)
 		var arg Arg
 		param_path_element := param_path.Child(0)
-		debugNode(param_path_element.Child(0), source)
 
 		argType := 0
 		for p := 0; p < int(param_path_element.ChildCount()); p++ {
@@ -210,7 +202,6 @@ func convert_arg(node *sitter.Node, source []byte) Arg {
 		for j := 1; j < childCount; j++ {
 			fmt.Print("\t       ")
 			n := node.Child(j)
-			debugNode(n, source)
 			var expr Expression
 			if n.Type() == "type" {
 				expr = convert_type(n, source)
@@ -248,12 +239,10 @@ const (
 func convert_param_path(param_path *sitter.Node, source []byte) Path {
 	var path Path
 	param_path_element := param_path.Child(0)
-	debugNode(param_path_element.Child(0), source)
 
 	pathType := PathTypeIndexed
 	for p := 0; p < int(param_path_element.ChildCount()); p++ {
 		pnode := param_path_element.Child(p)
-		debugNode(pnode, source)
 		if pnode.IsNamed() {
 			if pnode.Type() == "ident" {
 				pathType = PathTypeField
@@ -296,14 +285,11 @@ func convert_compile_time_call(node *sitter.Node, source []byte) Expression {
 		if n == nil {
 			break
 		}
-		debugNode(n, source)
 		endNode = n
 	}
 
 	flatPath := node.NextNamedSibling()
 	endNode = flatPath.NextSibling()
-
-	debugNode(endNode, source)
 
 	funcCall := FunctionCall{
 		ASTNodeBase: NewBaseNodeBuilder().
@@ -320,8 +306,6 @@ func convert_compile_time_call(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_flat_path(node *sitter.Node, source []byte) Expression {
-	debugNode(node, source)
-	debugNode(node.Child(0), source)
 	node = node.Child(0)
 
 	if node.Type() == "type" {
@@ -357,6 +341,31 @@ func convert_flat_path(node *sitter.Node, source []byte) Expression {
 	}
 
 	return base_expr
+}
+
+func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
+	endNode := node.NextSibling()
+	for {
+		n := endNode.NextSibling()
+
+		if n.Type() == ")" {
+			endNode = n
+			break
+		}
+	}
+
+	funcCall := FunctionCall{
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
+			Build(),
+		Identifier: NewIdentifierBuilder().
+			WithName(node.Content(source)).
+			WithSitterPos(node).
+			Build(),
+		Arguments: []Arg{convert_expression(node.NextSibling(), source)},
+	}
+
+	return funcCall
 }
 
 func debugNode(node *sitter.Node, source []byte) {
