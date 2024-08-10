@@ -160,7 +160,7 @@ type LambdaDeclaration struct {
 	ASTNodeBase
 	Parameters []FunctionParameter
 	ReturnType option.Option[TypeInfo]
-	Body       Block
+	Body       CompoundStatement
 }
 
 type FunctionDecl struct {
@@ -299,4 +299,9 @@ type FieldAccess struct {
 	ASTNodeBase
 	Object Expression
 	Field  Expression
+}
+
+type CompoundStatement struct {
+	ASTNodeBase
+	Statements []Expression
 }

@@ -611,7 +611,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 					WithNameStartEnd(1, 11, 1, 14).
 					WithStartEnd(1, 11, 1, 14).
 					Build()),
-				Body: Block{
+				Body: CompoundStatement{
 					Statements: []Expression{},
 				},
 			},
