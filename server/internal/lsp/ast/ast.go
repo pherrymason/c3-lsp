@@ -156,6 +156,13 @@ type MacroSignature struct {
 	Parameters []FunctionParameter
 }
 
+type LambdaDeclaration struct {
+	ASTNodeBase
+	Parameters []FunctionParameter
+	ReturnType option.Option[TypeInfo]
+	Body       Block
+}
+
 type FunctionDecl struct {
 	ASTNodeBase
 	ParentTypeId option.Option[Identifier]
@@ -179,7 +186,7 @@ type FunctionParameter struct {
 type Block struct {
 	ASTNodeBase
 	Declarations []Declaration
-	Statements   []ASTNode
+	Statements   []Expression
 }
 
 type FunctionCall struct {

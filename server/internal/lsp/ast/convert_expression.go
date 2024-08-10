@@ -3,28 +3,27 @@ package ast
 import (
 	"fmt"
 
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
 /*
-d
-
-	$.assignment_expr,
-	$.ternary_expr,
-	$.lambda_expr,
-	$.elvis_orelse_expr,
-	$.suffix_expr,
-	$.binary_expr,
-	$.unary_expr,
-	$.cast_expr,
-	$.rethrow_expr,
-	$.trailing_generic_expr,
-	$.update_expr,
-	$.call_expr,
-	$.subscript_expr,
-	$.initializer_list,
-	$._base_expr,
+$.assignment_expr,
+$.ternary_expr,
+$.lambda_expr,
+$.elvis_orelse_expr,
+$.suffix_expr,
+$.binary_expr,
+$.unary_expr,
+$.cast_expr,
+$.rethrow_expr,
+$.trailing_generic_expr,
+$.update_expr,
+$.call_expr,
+$.subscript_expr,
+$.initializer_list,
+$._base_expr,
 */
 func convert_expression(node *sitter.Node, source []byte) Expression {
 	base_expr := convert_base_expression(node, source)
@@ -121,7 +120,53 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			"$vaexpr":
 			expression = convert_compile_time_arg(node, source)
 
-		case "_ct_analyse":
+		// _ct_analyse
+		case "$eval",
+			"$defined",
+			"$sizeof",
+			"$stringify",
+			"$is_const":
+			expression = convert_compile_analyse(node, source)
+
+		case "$feature":
+			next := node.NextNamedSibling()
+			expression = FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+				Identifier: NewIdentifierBuilder().
+					WithName(node.Content(source)).
+					WithSitterPos(node).
+					Build(),
+				Arguments: []Arg{convert_base_expression(next, source)},
+			}
+
+		case "$and", "$or":
+			next := node.NextNamedSibling()
+			debugNode(next, source)
+			expression = FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+				Identifier: NewIdentifierBuilder().
+					WithName(node.Content(source)).
+					WithSitterPos(node).
+					Build(),
+				Arguments: cast_expressions_to_args(
+					convert_token_separated(next, ",", source, convert_decl_or_expr),
+				),
+			}
+
+		case "$assignable":
+			// TODO
+
+		case "$embed":
+			// TODO
+
+		case "lambda_declaration":
+			expression = convert_lambda_declaration(node, source)
+
+			lambda := expression.(LambdaDeclaration)
+			lambda.Body = Block{
+				Statements: convert_compound_stmt(node.NextSibling(), source),
+			}
+			expression = lambda
 
 			// Sequences
 			/*
@@ -137,7 +182,6 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 				seq($.lambda_declaration, $.compound_stmt),
 			*/
 		}
-
 	}
 
 	return expression
@@ -344,15 +388,20 @@ func convert_flat_path(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
-	endNode := node.NextSibling()
+	endNode := node
+	var insideParenths *sitter.Node
 	for {
 		n := endNode.NextSibling()
-
+		endNode = n
+		if n.Type() != "(" && n.Type() != ")" {
+			insideParenths = n
+		}
 		if n.Type() == ")" {
-			endNode = n
 			break
 		}
 	}
+
+	expr := convert_expression(insideParenths, source)
 
 	funcCall := FunctionCall{
 		ASTNodeBase: NewBaseNodeBuilder().
@@ -362,10 +411,149 @@ func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			Build(),
-		Arguments: []Arg{convert_expression(node.NextSibling(), source)},
+		Arguments: []Arg{expr},
 	}
 
 	return funcCall
+}
+
+func convert_compile_analyse(node *sitter.Node, source []byte) Expression {
+	// comma_decl_or_expr
+	debugNode(node, source)
+	decl_or_expr_node := node.NextNamedSibling()
+	debugNode(decl_or_expr_node, source)
+
+	expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
+
+	funcCall := FunctionCall{
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithSitterPosRange(node.StartPoint(), decl_or_expr_node.NextSibling().EndPoint()).
+			Build(),
+		Identifier: NewIdentifierBuilder().
+			WithName(node.Content(source)).
+			WithSitterPos(node).
+			Build(),
+		Arguments: cast_expressions_to_args(expressions),
+	}
+
+	return funcCall
+}
+
+func cast_expressions_to_args(expressions []Expression) []Arg {
+	var args []Arg
+
+	for _, expr := range expressions {
+		// Realiza una conversión de tipo de Expression a Arg
+		if arg, ok := expr.(Arg); ok {
+			args = append(args, arg)
+		} else {
+			// Si algún elemento no puede convertirse, retornamos un error
+			panic(fmt.Sprintf("no se pudo convertir %v a Arg", expr))
+		}
+	}
+
+	return args
+}
+
+type NodeConverterSeparated func(node *sitter.Node, source []byte) (Expression, int)
+
+func convert_token_separated(node *sitter.Node, separator string, source []byte, convert_func NodeConverterSeparated) []Expression {
+	expressions := []Expression{}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		debugNode(n, source)
+		if n.Type() == separator {
+			continue
+		}
+		expr, advance := convert_func(n, source)
+
+		if expr != nil {
+			expressions = append(expressions, expr)
+		}
+		i += advance
+	}
+
+	return expressions
+}
+
+func convert_decl_or_expr(node *sitter.Node, source []byte) (Expression, int) {
+	debugNode(node, source)
+	if node.Type() == "var_decl" {
+		// TODO
+	} else if node.Type() == "type" || node.Type() == "optional_type" {
+		typeInfo := convert_type(node, source)
+		if node.NextSibling().Type() == "local_decl_after_type" {
+			decl := node.NextNamedSibling()
+			name := convert_expression(decl.ChildByFieldName("name"), source)
+			if name == nil {
+				panic("Expected ident inside local_decl_after_type")
+			}
+
+			next := decl.NextNamedSibling()
+			for {
+				if next == nil {
+					break
+				}
+
+				if next.Type() == "attributes" {
+					// TODO
+				}
+
+				next = next.NextSibling()
+			}
+			right := node.Parent().ChildByFieldName("right")
+			var initializer Expression
+			if right != nil {
+				initializer = convert_expression(right, source)
+			}
+
+			return VariableDecl{
+				ASTNodeBase: NewBaseNodeBuilder().
+					WithSitterPosRange(node.StartPoint(), node.NextSibling().EndPoint()).
+					Build(),
+				Type:        typeInfo,
+				Names:       []Identifier{name.(Identifier)},
+				Initializer: initializer,
+			}, 1
+
+		}
+		return typeInfo, 0
+	} else {
+		return convert_expression(node, source), 0
+	}
+
+	return nil, 0
+}
+
+func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
+	debugNode(node, source)
+	rType := option.None[TypeInfo]()
+	parameters := []FunctionParameter{}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "type", "optional_type":
+			r := convert_type(n, source)
+			rType = option.Some[TypeInfo](r)
+		case "fn_parameter_list":
+
+		case "attributes":
+			// TODO
+		}
+	}
+
+	return LambdaDeclaration{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ReturnType:  rType,
+		Parameters:  parameters,
+	}
+}
+
+func convert_compound_stmt(node *sitter.Node, source []byte) []Expression {
+
+	return []Expression{}
 }
 
 func debugNode(node *sitter.Node, source []byte) {

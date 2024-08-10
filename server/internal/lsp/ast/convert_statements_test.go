@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -277,7 +278,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 	}
 
 	for _, tt := range cases {
-		t.Run(fmt.Sprintf("assignment initializer list: %s", tt.literal), func(t *testing.T) {
+		t.Run(fmt.Sprintf("compile_time_call: %s", tt.literal), func(t *testing.T) {
 			source := `
 			module foo;
 			int var = ` + tt.literal + ";"
@@ -439,8 +440,198 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 					default:
 						t.Errorf("Expected argument wrong type.")
 					}
-
 				})
 		}
+	}
+}
+
+func TestConvertToAST_compile_time_argument_call(t *testing.T) {
+
+	methods := []string{
+		"$vaconst",
+		"$vaarg",
+		"$varef",
+		"$vaexpr",
+	}
+
+	for _, method := range methods {
+		fmt.Printf("*********: %s\n", method)
+
+		t.Run(
+			fmt.Sprintf("compile_time_argument_call: %s", method),
+			func(t *testing.T) {
+				length := uint(len(method))
+				source := `module foo;
+				int x = ` + method + `(id);`
+
+				ast := ConvertToAST(GetCST(source), source, "file.c3")
+				varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
+				initializer := varDecl.Initializer.(FunctionCall)
+
+				assert.Equal(t, FunctionCall{
+					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 16+length).Build(),
+					Identifier:  NewIdentifierBuilder().WithName(method).WithStartEnd(1, 12, 1, 12+length).Build(),
+					Arguments: []Arg{
+						NewIdentifierBuilder().WithName("id").WithStartEnd(1, 12+length+1, 1, 14+length+1).Build(),
+					},
+				}, initializer)
+			})
+	}
+}
+
+func TestConvertToAST_compile_time_analyse(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected FunctionCall
+	}{
+		{
+			input: "$eval(id)",
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 21).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).Build(),
+				Arguments: []Arg{
+					NewIdentifierBuilder().WithName("id").WithStartEnd(1, 18, 1, 20).Build(),
+				},
+			},
+		},
+		{
+			input: "$and(id)",
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 19).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$and").WithStartEnd(1, 12, 1, 16).Build(),
+				Arguments: []Arg{
+					NewIdentifierBuilder().WithName("id").WithStartEnd(1, 17, 1, 19).Build(),
+				},
+			},
+		},
+		{
+			input: "$eval(int id = 1)",
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 29).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).Build(),
+				Arguments: []Arg{
+					VariableDecl{
+						ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 18, 1, 28).Build(),
+						Names: []Identifier{
+							NewIdentifierBuilder().WithName("id").WithStartEnd(1, 22, 1, 24).Build(),
+						},
+						Type: NewTypeInfoBuilder().
+							WithStartEnd(1, 18, 1, 21).
+							WithName("int").
+							WithNameStartEnd(1, 18, 1, 21).
+							IsBuiltin().
+							Build(),
+					},
+				},
+			},
+		},
+		{
+			skip:  true,
+			input: "$eval(int! id = 1)",
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 30).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).Build(),
+				Arguments: []Arg{
+					VariableDecl{
+						ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 18, 1, 29).Build(),
+						Names: []Identifier{
+							NewIdentifierBuilder().WithName("id").WithStartEnd(1, 23, 1, 25).Build(),
+						},
+						Type: NewTypeInfoBuilder().
+							WithStartEnd(1, 18, 1, 21).
+							WithName("int").
+							WithNameStartEnd(1, 18, 1, 21).
+							IsBuiltin().
+							IsOptional().
+							Build(),
+					},
+				},
+			},
+		},
+		{
+			skip:  true, // TODO
+			input: "$eval(var id = 1)",
+			expected: FunctionCall{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 29).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).Build(),
+				Arguments: []Arg{
+					VariableDecl{
+						ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 18, 1, 28).Build(),
+						Names: []Identifier{
+							NewIdentifierBuilder().WithName("id").WithStartEnd(1, 18, 1, 19).Build(),
+						},
+						Initializer: Literal{Value: "1"},
+					},
+				},
+			},
+		},
+	}
+	/*
+		methods := []string{
+			"$eval",
+			"$defined",
+			"$sizeof",
+			"$stringify",
+			"$is_const",
+		}*/
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("compile_time_analyse: %s", tt.input),
+			func(t *testing.T) {
+				source := `module foo;
+				int x = ` + tt.input + `;`
+
+				ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+				assert.Equal(t, tt.expected, ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(FunctionCall))
+			})
+	}
+}
+
+func TestConvertToAST_lambda_declaration(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected LambdaDeclaration
+	}{
+		{
+			input: "int i = fn int (int a, int b){};",
+			expected: LambdaDeclaration{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 29).Build(),
+				Parameters:  []FunctionParameter{},
+				ReturnType: option.Some[TypeInfo](NewTypeInfoBuilder().
+					WithName("int").
+					IsBuiltin().
+					WithNameStartEnd(1, 11, 1, 14).
+					WithStartEnd(1, 11, 1, 14).
+					Build()),
+				Body: Block{
+					Statements: []Expression{},
+				},
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("lambda_declaration: %s", tt.input),
+			func(t *testing.T) {
+				source := `module foo;
+` + tt.input + `;`
+
+				ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+				assert.Equal(t, tt.expected, ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(LambdaDeclaration))
+			})
 	}
 }
