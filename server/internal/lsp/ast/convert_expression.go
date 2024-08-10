@@ -598,6 +598,9 @@ func convert_statement(node *sitter.Node, source []byte) Expression {
 	switch node.Type() {
 	case "compound_stmt":
 		return convert_compound_stmt(node, source)
+
+	case "expr_stmt":
+		return convert_expression(node.Child(0), source)
 	}
 
 	return nil

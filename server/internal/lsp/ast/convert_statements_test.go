@@ -616,6 +616,17 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: "int i = fn (int a, int b){};",
+			expected: LambdaDeclaration{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 25).Build(),
+				Parameters:  []FunctionParameter{},
+				ReturnType:  option.None[TypeInfo](),
+				Body: CompoundStatement{
+					Statements: []Expression{},
+				},
+			},
+		},
 	}
 
 	for _, tt := range cases {
