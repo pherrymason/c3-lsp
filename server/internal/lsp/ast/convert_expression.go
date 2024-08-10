@@ -537,7 +537,7 @@ func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
 			r := convert_type(n, source)
 			rType = option.Some[TypeInfo](r)
 		case "fn_parameter_list":
-
+			parameters = convert_function_parameter_list(n, option.None[Identifier](), source)
 		case "attributes":
 			// TODO
 		}
