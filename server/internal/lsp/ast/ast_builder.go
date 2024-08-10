@@ -98,6 +98,10 @@ func NewTypeInfoBuilder() *TypeInfoBuilder {
 	}
 }
 
+func (b *TypeInfoBuilder) IsOptional() *TypeInfoBuilder {
+	b.t.Optional = true
+	return b
+}
 func (b *TypeInfoBuilder) IsBuiltin() *TypeInfoBuilder {
 	b.t.BuiltIn = true
 	return b
