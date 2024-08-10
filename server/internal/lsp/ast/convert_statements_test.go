@@ -604,22 +604,43 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 			input: "int i = fn int (int a, int b){};",
 			expected: LambdaDeclaration{
 				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 29).Build(),
-				Parameters:  []FunctionParameter{},
 				ReturnType: option.Some[TypeInfo](NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
 					WithNameStartEnd(1, 11, 1, 14).
 					WithStartEnd(1, 11, 1, 14).
 					Build()),
+				Parameters: []FunctionParameter{
+					{
+						ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 16, 1, 21).Build(),
+						Name:        NewIdentifierBuilder().WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
+						Type: NewTypeInfoBuilder().
+							WithName("int").
+							IsBuiltin().
+							WithNameStartEnd(1, 16, 1, 19).
+							WithStartEnd(1, 16, 1, 19).
+							Build(),
+					},
+					{
+						ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 23, 1, 28).Build(),
+						Name:        NewIdentifierBuilder().WithName("b").WithStartEnd(1, 27, 1, 28).Build(),
+						Type: NewTypeInfoBuilder().
+							WithName("int").
+							IsBuiltin().
+							WithNameStartEnd(1, 23, 1, 26).
+							WithStartEnd(1, 23, 1, 26).
+							Build(),
+					},
+				},
 				Body: CompoundStatement{
 					Statements: []Expression{},
 				},
 			},
 		},
 		{
-			input: "int i = fn (int a, int b){};",
+			input: "int i = fn (){};",
 			expected: LambdaDeclaration{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 25).Build(),
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 13).Build(),
 				Parameters:  []FunctionParameter{},
 				ReturnType:  option.None[TypeInfo](),
 				Body: CompoundStatement{
