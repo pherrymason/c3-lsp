@@ -163,9 +163,8 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			expression = convert_lambda_declaration(node, source)
 
 			lambda := expression.(LambdaDeclaration)
-			lambda.Body = Block{
-				Statements: convert_compound_stmt(node.NextSibling(), source),
-			}
+			lambda.Body = convert_compound_stmt(node.NextSibling(), source).(CompoundStatement)
+
 			expression = lambda
 
 			// Sequences
@@ -551,9 +550,57 @@ func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
 	}
 }
 
-func convert_compound_stmt(node *sitter.Node, source []byte) []Expression {
+/*
+$.compound_stmt,
+$.expr_stmt,
+$.declaration_stmt,
+$.var_stmt,
+$.return_stmt,
+$.continue_stmt,
+$.break_stmt,
+$.switch_stmt,
+$.nextcase_stmt,
+$.if_stmt,
+$.for_stmt,
+$.foreach_stmt,
+$.while_stmt,
+$.do_stmt,
+$.defer_stmt,
+$.assert_stmt,
+$.asm_block_stmt,
 
-	return []Expression{}
+$.ct_echo_stmt,
+$.ct_assert_stmt,
+$.ct_if_stmt,
+$.ct_switch_stmt,
+$.ct_foreach_stmt,
+$.ct_for_stmt,
+*/
+func convert_compound_stmt(node *sitter.Node, source []byte) Expression {
+	cmpStatement := CompoundStatement{
+		Statements: []Expression{},
+	}
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() != "{" && n.Type() != "}" {
+			cmpStatement.Statements = append(
+				cmpStatement.Statements,
+				convert_statement(n, source),
+			)
+		}
+	}
+
+	return cmpStatement
+}
+
+func convert_statement(node *sitter.Node, source []byte) Expression {
+
+	switch node.Type() {
+	case "compound_stmt":
+		return convert_compound_stmt(node, source)
+	}
+
+	return nil
 }
 
 func debugNode(node *sitter.Node, source []byte) {
