@@ -52,7 +52,7 @@ func TestConvertToAST_module_implicit(t *testing.T) {
 					WithName("int").
 					WithNameStartEnd(1, 1, 1, 4).
 					WithStartEnd(1, 1, 1, 4).Build(),
-				Initializer: Literal{Value: "0"},
+				Initializer: IntegerLiteral{Value: "0"},
 			},
 		},
 	}
@@ -160,7 +160,7 @@ func TestConvertToAST_global_variables(t *testing.T) {
 				WithStartEnd(1, 1, 1, 4).
 				Build(),
 		},
-		Initializer: Literal{Value: "3"},
+		Initializer: IntegerLiteral{Value: "3"},
 	}
 	assert.Equal(t, expectedHello, ast.Modules[0].Declarations[0])
 

@@ -167,7 +167,7 @@ type FunctionDecl struct {
 	ASTNodeBase
 	ParentTypeId option.Option[Identifier]
 	Signature    FunctionSignature
-	Body         Block
+	Body         Expression
 }
 
 type FunctionSignature struct {
@@ -223,7 +223,11 @@ type Literal struct {
 }
 type IntegerLiteral struct {
 	ASTNodeBase
-	Value uint
+	Value string
+}
+type RealLiteral struct {
+	ASTNodeBase
+	Value string
 }
 
 type BoolLiteral struct {

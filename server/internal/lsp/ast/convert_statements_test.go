@@ -19,11 +19,11 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 	}{
 		{
 			literal:  "1",
-			expected: Literal{Value: "1"},
+			expected: IntegerLiteral{Value: "1"},
 		},
 		{
 			literal:  "1.1",
-			expected: Literal{Value: "1.1"},
+			expected: RealLiteral{Value: "1.1"},
 		},
 		{
 			literal:  "false",
@@ -123,8 +123,8 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 				InitializerList: InitializerList{
 					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 17, 2, 22).Build(),
 					Args: []Expression{
-						Literal{Value: "1"},
-						Literal{Value: "2"},
+						IntegerLiteral{Value: "1"},
+						IntegerLiteral{Value: "2"},
 					},
 				},
 			},
@@ -163,11 +163,11 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 				Args: []Expression{
 					ArgParamPathSet{
 						Path: "[0]",
-						Expr: Literal{Value: "1"},
+						Expr: IntegerLiteral{Value: "1"},
 					},
 					ArgParamPathSet{
 						Path: "[2]",
-						Expr: Literal{Value: "2"},
+						Expr: IntegerLiteral{Value: "2"},
 					},
 				},
 			},
@@ -195,7 +195,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 				Args: []Expression{
 					ArgParamPathSet{
 						Path: "[0..2]",
-						Expr: Literal{Value: "2"},
+						Expr: IntegerLiteral{Value: "2"},
 					},
 				},
 			},
@@ -208,7 +208,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 					ArgFieldSet{
 						//ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13+2, 2, 13+3).Build(),
 						FieldName: "a",
-						Expr:      Literal{Value: "1"},
+						Expr:      IntegerLiteral{Value: "1"},
 					},
 				},
 			},
@@ -353,8 +353,8 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 		},
 		{
 			input:            "$(10)", // literal
-			ArgumentTypeName: "Literal",
-			Argument:         Literal{Value: "10"},
+			ArgumentTypeName: "IntegerLiteral",
+			Argument:         IntegerLiteral{Value: "10"},
 		},
 		{
 			input:            "$(a[5])",
@@ -413,6 +413,12 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 						}
 						e := tt.Argument.(Literal)
 						assert.Equal(t, e.Value, arg.(Literal).Value)
+					case IntegerLiteral:
+						if tt.ArgumentTypeName != "IntegerLiteral" {
+							t.Errorf("Expected argument must be IntegerLiteral. It was %s", tt.ArgumentTypeName)
+						}
+						e := tt.Argument.(IntegerLiteral)
+						assert.Equal(t, e.Value, arg.(IntegerLiteral).Value)
 
 					case TypeInfo:
 						if tt.ArgumentTypeName != "TypeInfo" {
@@ -561,7 +567,7 @@ func TestConvertToAST_compile_time_analyse(t *testing.T) {
 						Names: []Identifier{
 							NewIdentifierBuilder().WithName("id").WithStartEnd(1, 18, 1, 19).Build(),
 						},
-						Initializer: Literal{Value: "1"},
+						Initializer: IntegerLiteral{Value: "1"},
 					},
 				},
 			},
@@ -664,6 +670,42 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 				ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 				assert.Equal(t, tt.expected, ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(LambdaDeclaration))
+			})
+	}
+}
+
+func TestConvertToAST_asignment_expr(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected AssignmentStatement
+	}{
+		{
+			input: "i = 10;",
+			expected: AssignmentStatement{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+6).Build(),
+				Left:        NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).Build(),
+				Right:       IntegerLiteral{Value: "10"},
+				Operator:    "=",
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("lambda_declaration: %s", tt.input),
+			func(t *testing.T) {
+				source := `module foo;
+				fn void main(){` + tt.input + `};`
+
+				ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+				cmp_stmts := ast.Modules[0].Functions[0].(FunctionDecl).Body.(CompoundStatement)
+				assert.Equal(t, tt.expected, cmp_stmts.Statements[0].(AssignmentStatement))
 			})
 	}
 }
