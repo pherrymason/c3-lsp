@@ -11,8 +11,9 @@ type ExpressionStatement struct {
 
 type AssignmentStatement struct {
 	ASTNodeBase
-	Left  Expression
-	Right Expression
+	Left     Expression
+	Right    Expression
+	Operator string
 }
 
 type Expression interface {

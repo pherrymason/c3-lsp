@@ -7,22 +7,39 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func convert_function_declaration(node *sitter.Node, sourceCode []byte) Expression {
+func convert_function_declaration(node *sitter.Node, source []byte) Expression {
 	var typeIdentifier option.Option[Identifier]
 	funcHeader := node.Child(1)
 
 	if funcHeader.ChildByFieldName("method_type") != nil {
 		typeIdentifier = option.Some(NewIdentifierBuilder().
-			WithName(funcHeader.ChildByFieldName("method_type").Content(sourceCode)).
+			WithName(funcHeader.ChildByFieldName("method_type").Content(source)).
 			WithSitterPos(funcHeader.ChildByFieldName("method_type")).
 			Build())
 	}
-	signature := convert_function_signature(node, sourceCode)
+	signature := convert_function_signature(node, source)
+
+	bodyNode := node.ChildByFieldName("body")
+	var body Expression
+	if bodyNode != nil {
+		debugNode(bodyNode, source)
+		n := bodyNode.Child(0)
+		// options
+		// compound_stmt
+		// => expr;
+		if n.Type() == "compound_stmt" {
+			body = convert_compound_stmt(n, source)
+		} else {
+			debugNode(n.NextSibling(), source)
+			body = convert_expression(n.NextSibling(), source)
+		}
+	}
 
 	funcDecl := FunctionDecl{
 		ASTNodeBase:  NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		ParentTypeId: typeIdentifier,
 		Signature:    signature,
+		Body:         body,
 	}
 
 	/*
