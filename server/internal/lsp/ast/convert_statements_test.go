@@ -689,6 +689,19 @@ func TestConvertToAST_asignment_expr(t *testing.T) {
 				Operator:    "=",
 			},
 		},
+		{
+			input: "$CompileTimeType = Type;",
+			expected: AssignmentStatement{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+23).Build(),
+				Left:        Literal{Value: "$CompileTimeType"},
+				Right: NewTypeInfoBuilder().
+					WithName("Type").
+					WithNameStartEnd(1, 38, 1, 42).
+					WithStartEnd(1, 38, 1, 42).
+					Build(),
+				Operator: "=",
+			},
+		},
 	}
 
 	for _, tt := range cases {
