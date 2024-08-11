@@ -26,12 +26,41 @@ $.initializer_list,
 $._base_expr,
 */
 func convert_expression(node *sitter.Node, source []byte) Expression {
+	switch node.Type() {
+	case "assignment_expr":
+		return convert_assignment_expr(node, source)
+	}
+
 	base_expr := convert_base_expression(node, source)
 	if base_expr != nil {
 		return base_expr
 	}
 
 	return nil
+}
+
+func convert_assignment_expr(node *sitter.Node, source []byte) Expression {
+	leftNode := node.ChildByFieldName("left")
+	rightNode := node.ChildByFieldName("right")
+	var left Expression
+	var right Expression
+	operator := ""
+	if leftNode.Type() == "ct_type_ident" {
+		left = convert_ct_type_ident(leftNode, source)
+		right = convert_type(rightNode, source)
+		operator = "="
+	} else {
+		left = convert_expression(leftNode, source)
+		right = convert_expression(rightNode, source)
+		operator = node.ChildByFieldName("operator").Content(source)
+	}
+
+	return AssignmentStatement{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		Left:        left,
+		Right:       right,
+		Operator:    operator,
+	}
 }
 
 func convert_base_expression(node *sitter.Node, source []byte) Expression {
@@ -192,8 +221,10 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 	switch node.Type() {
 	case "string_literal", "char_literal", "raw_string_literal", "bytes_literal":
 		literal = Literal{Value: node.Content(sourceCode)}
-	case "integer_literal", "real_literal":
-		literal = Literal{Value: node.Content(sourceCode)}
+	case "integer_literal":
+		literal = IntegerLiteral{Value: node.Content(sourceCode)}
+	case "real_literal":
+		literal = RealLiteral{Value: node.Content(sourceCode)}
 	case "false":
 		literal = BoolLiteral{Value: false}
 	case "true":
@@ -311,43 +342,6 @@ func convert_param_path(param_path *sitter.Node, source []byte) Path {
 	return path
 }
 
-/*
-"$alignof",
-
-	"$extnameof",
-	"$nameof",
-	"$offsetof",
-	"$qnameof"
-*/
-func convert_compile_time_call(node *sitter.Node, source []byte) Expression {
-	// seq($._ct_call, '(', $.flat_path, ')'),
-	endNode := node.NextSibling()
-	for {
-		n := endNode.NextSibling()
-
-		if n == nil {
-			break
-		}
-		endNode = n
-	}
-
-	flatPath := node.NextNamedSibling()
-	endNode = flatPath.NextSibling()
-
-	funcCall := FunctionCall{
-		ASTNodeBase: NewBaseNodeBuilder().
-			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
-			Build(),
-		Identifier: NewIdentifierBuilder().
-			WithName(node.Content(source)).
-			WithSitterPos(node).
-			Build(),
-		Arguments: []Arg{convert_flat_path(flatPath, source)},
-	}
-
-	return funcCall
-}
-
 func convert_flat_path(node *sitter.Node, source []byte) Expression {
 	node = node.Child(0)
 
@@ -384,58 +378,6 @@ func convert_flat_path(node *sitter.Node, source []byte) Expression {
 	}
 
 	return base_expr
-}
-
-func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
-	endNode := node
-	var insideParenths *sitter.Node
-	for {
-		n := endNode.NextSibling()
-		endNode = n
-		if n.Type() != "(" && n.Type() != ")" {
-			insideParenths = n
-		}
-		if n.Type() == ")" {
-			break
-		}
-	}
-
-	expr := convert_expression(insideParenths, source)
-
-	funcCall := FunctionCall{
-		ASTNodeBase: NewBaseNodeBuilder().
-			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
-			Build(),
-		Identifier: NewIdentifierBuilder().
-			WithName(node.Content(source)).
-			WithSitterPos(node).
-			Build(),
-		Arguments: []Arg{expr},
-	}
-
-	return funcCall
-}
-
-func convert_compile_analyse(node *sitter.Node, source []byte) Expression {
-	// comma_decl_or_expr
-	debugNode(node, source)
-	decl_or_expr_node := node.NextNamedSibling()
-	debugNode(decl_or_expr_node, source)
-
-	expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
-
-	funcCall := FunctionCall{
-		ASTNodeBase: NewBaseNodeBuilder().
-			WithSitterPosRange(node.StartPoint(), decl_or_expr_node.NextSibling().EndPoint()).
-			Build(),
-		Identifier: NewIdentifierBuilder().
-			WithName(node.Content(source)).
-			WithSitterPos(node).
-			Build(),
-		Arguments: cast_expressions_to_args(expressions),
-	}
-
-	return funcCall
 }
 
 func cast_expressions_to_args(expressions []Expression) []Arg {
@@ -603,9 +545,15 @@ func convert_statement(node *sitter.Node, source []byte) Expression {
 		return convert_expression(node.Child(0), source)
 	}
 
+	debugNode(node, source)
 	return nil
 }
 
 func debugNode(node *sitter.Node, source []byte) {
+	if node == nil {
+		fmt.Printf("Node is nil\n")
+		return
+	}
+
 	fmt.Printf("%s: %s\n----- %s\n", node.Type(), node.Content(source), node)
 }
