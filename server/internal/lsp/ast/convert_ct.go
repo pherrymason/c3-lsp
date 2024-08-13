@@ -1,6 +1,10 @@
 package ast
 
-import sitter "github.com/smacker/go-tree-sitter"
+import (
+	"fmt"
+
+	sitter "github.com/smacker/go-tree-sitter"
+)
 
 func convert_ct_type_ident(node *sitter.Node, source []byte) Expression {
 	return Literal{Value: node.Content(source)}
@@ -73,13 +77,37 @@ func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
 	return funcCall
 }
 
-func convert_compile_analyse(node *sitter.Node, source []byte) Expression {
-	// comma_decl_or_expr
-	debugNode(node, source)
+/*
+*
+
+	seq($._ct_analyse, '(', $.comma_decl_or_expr, ')'),
+	_ct_analyse: $ => choice(
+		'$eval',
+		'$defined',
+		'$sizeof',
+		'$stringify',
+		'$is_const',
+	)
+
+	-- NOW --
+	'$eval',
+	'$is_const',
+	'$sizeof',
+	'$stringify',
+	$._ct_arg:
+		$vaconst',
+		'$vaarg',
+		'$varef',
+		'$vaexpr',
+*/
+func convert_compile_time_analyse(node *sitter.Node, source []byte) Expression {
 	decl_or_expr_node := node.NextNamedSibling()
+	fmt.Printf("cca: ")
+	debugNode(node, source)
+	fmt.Printf("\nnext: ")
 	debugNode(decl_or_expr_node, source)
 
-	expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
+	//expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
 
 	funcCall := FunctionCall{
 		ASTNodeBase: NewBaseNodeBuilder().
@@ -89,7 +117,9 @@ func convert_compile_analyse(node *sitter.Node, source []byte) Expression {
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			Build(),
-		Arguments: cast_expressions_to_args(expressions),
+		Arguments: []Arg{
+			convert_expression(decl_or_expr_node, source),
+		},
 	}
 
 	return funcCall

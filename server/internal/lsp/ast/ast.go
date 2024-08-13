@@ -160,7 +160,7 @@ type LambdaDeclaration struct {
 	ASTNodeBase
 	Parameters []FunctionParameter
 	ReturnType option.Option[TypeInfo]
-	Body       CompoundStatement
+	Body       Expression
 }
 
 type FunctionDecl struct {
