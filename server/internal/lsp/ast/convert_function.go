@@ -10,7 +10,7 @@ import (
 func convert_function_declaration(node *sitter.Node, source []byte) Expression {
 	var typeIdentifier option.Option[Identifier]
 	funcHeader := node.Child(1)
-	debugNode(funcHeader, source)
+	//debugNode(funcHeader, source)
 
 	if funcHeader.ChildByFieldName("method_type") != nil {
 		typeIdentifier = option.Some(NewIdentifierBuilder().
@@ -199,11 +199,15 @@ func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_lambda_expr(node *sitter.Node, source []byte) Expression {
-	expr := convert_lambda_declaration(node, source)
+	debugNode(node, source)
+	expr := convert_lambda_declaration(node.Child(0), source)
 
 	lambda := expr.(LambdaDeclaration)
 
-	bodyNode := node.ChildByFieldName("body")
+	debugNode(node.Child(1), source)
+	bodyNode := node.Child(1).ChildByFieldName("body")
+	debugNode(bodyNode, source)
+
 	lambda.Body = convert_expression(bodyNode, source)
 
 	return lambda
