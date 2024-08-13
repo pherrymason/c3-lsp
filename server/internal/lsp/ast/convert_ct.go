@@ -1,8 +1,6 @@
 package ast
 
 import (
-	"fmt"
-
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -102,10 +100,10 @@ func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
 */
 func convert_compile_time_analyse(node *sitter.Node, source []byte) Expression {
 	decl_or_expr_node := node.NextNamedSibling()
-	fmt.Printf("cca: ")
-	debugNode(node, source)
-	fmt.Printf("\nnext: ")
-	debugNode(decl_or_expr_node, source)
+	//fmt.Printf("cca: ")
+	//debugNode(node, source)
+	//fmt.Printf("\nnext: ")
+	//debugNode(decl_or_expr_node, source)
 
 	//expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
 
