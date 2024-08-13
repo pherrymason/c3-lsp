@@ -10,6 +10,7 @@ import (
 func convert_function_declaration(node *sitter.Node, source []byte) Expression {
 	var typeIdentifier option.Option[Identifier]
 	funcHeader := node.Child(1)
+	debugNode(funcHeader, source)
 
 	if funcHeader.ChildByFieldName("method_type") != nil {
 		typeIdentifier = option.Some(NewIdentifierBuilder().
@@ -22,7 +23,6 @@ func convert_function_declaration(node *sitter.Node, source []byte) Expression {
 	bodyNode := node.ChildByFieldName("body")
 	var body Expression
 	if bodyNode != nil {
-		debugNode(bodyNode, source)
 		n := bodyNode.Child(0)
 		// options
 		// compound_stmt
@@ -30,7 +30,6 @@ func convert_function_declaration(node *sitter.Node, source []byte) Expression {
 		if n.Type() == "compound_stmt" {
 			body = convert_compound_stmt(n, source)
 		} else {
-			debugNode(n.NextSibling(), source)
 			body = convert_expression(n.NextSibling(), source)
 		}
 	}
@@ -173,4 +172,39 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 	}
 
 	return variable
+}
+
+func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
+	rType := option.None[TypeInfo]()
+	parameters := []FunctionParameter{}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "type", "optional_type":
+			r := convert_type(n, source)
+			rType = option.Some[TypeInfo](r)
+		case "fn_parameter_list":
+			parameters = convert_function_parameter_list(n, option.None[Identifier](), source)
+		case "attributes":
+			// TODO
+		}
+	}
+
+	return LambdaDeclaration{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ReturnType:  rType,
+		Parameters:  parameters,
+	}
+}
+
+func convert_lambda_expr(node *sitter.Node, source []byte) Expression {
+	expr := convert_lambda_declaration(node, source)
+
+	lambda := expr.(LambdaDeclaration)
+
+	bodyNode := node.ChildByFieldName("body")
+	lambda.Body = convert_expression(bodyNode, source)
+
+	return lambda
 }

@@ -58,7 +58,7 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, currentModule *idx.Mo
 	for i := 0; i < int(node.ChildCount()); i++ {
 		bdefnode := node.Child(i)
 		bType := bdefnode.Type()
-		if bType == "bitstruct_def" {
+		if bType == "bitstruct_member_declaration" {
 			var memberType idx.Type
 			var identity string
 			for x := 0; x < int(bdefnode.ChildCount()); x++ {
