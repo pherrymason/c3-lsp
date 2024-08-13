@@ -146,9 +146,9 @@ func convert_global_declaration(node *sitter.Node, source []byte) Expression {
 			Build(),
 	}
 
-	for i := uint32(0); i < node.ChildCount(); i++ {
-		n := node.Child(int(i))
-		//fmt.Println(i, ":", n.Type(), ":: ", n.Content(source), ":: has errors: ", n.HasError())
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		//debugNode(n, source)
 		switch n.Type() {
 		case "type":
 			variable.Type = convert_type(n, source)
@@ -156,12 +156,7 @@ func convert_global_declaration(node *sitter.Node, source []byte) Expression {
 		case "ident":
 			variable.Names = append(
 				variable.Names,
-				Identifier{
-					Name: n.Content(source),
-					ASTNodeBase: NewBaseNodeBuilder().
-						WithSitterPosRange(n.StartPoint(), n.EndPoint()).
-						Build(),
-				},
+				convert_ident(n, source).(Identifier),
 			)
 
 		case ";":
@@ -172,12 +167,7 @@ func convert_global_declaration(node *sitter.Node, source []byte) Expression {
 				if sub.Type() == "ident" {
 					variable.Names = append(
 						variable.Names,
-						Identifier{
-							Name: sub.Content(source),
-							ASTNodeBase: NewBaseNodeBuilder().
-								WithSitterPosRange(sub.StartPoint(), sub.EndPoint()).
-								Build(),
-						},
+						convert_ident(sub, source).(Identifier),
 					)
 				}
 			}
@@ -303,7 +293,6 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression
 	}
 
 	structDecl.Name = node.ChildByFieldName("name").Content(sourceCode)
-	//membersNeedingSubtypingResolve := []string{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
@@ -328,7 +317,6 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression
 	// Search Struct members
 	for i := 0; i < int(bodyNode.ChildCount()); i++ {
 		memberNode := bodyNode.Child(i)
-		isInline := false
 
 		//fmt.Println("body child:", memberNode.Type())
 		if memberNode.Type() != "struct_member_declaration" {
@@ -345,54 +333,34 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression
 
 		for x := 0; x < int(memberNode.ChildCount()); x++ {
 			n := memberNode.Child(x)
+			//debugNode(n, sourceCode)
 
 			switch n.Type() {
 			case "type":
 				fieldType = convert_type(n, sourceCode)
 				member.Type = fieldType
-				//fmt.Println(fieldType, n.Content(sourceCode))
-
-				//fieldType = n.Content(sourceCode)
-				if isInline {
-					//	identifier = "dummy-subtyping"
-				}
 			case "identifier_list":
 				for j := 0; j < int(n.ChildCount()); j++ {
-					member.Names = append(member.Names,
-						Identifier{
-							ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(n.Child(j).StartPoint(), n.Child(j).EndPoint()).Build(),
-							Name:        n.Child(j).Content(sourceCode),
-						},
-					) /*
-						identifiers = append(identifiers, n.Child(j).Content(sourceCode))
-						identifiersRange = append(identifiersRange,
-							idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
-						)*/
+					member.Names = append(
+						member.Names,
+						convert_ident(n.Child(j), sourceCode).(Identifier),
+					)
 				}
 			case "attributes":
 				// TODO
+
 			case "bitstruct_body":
 				bitStructsMembers := convert_bitstruct_members(n, sourceCode)
 				structDecl.Members = append(structDecl.Members, bitStructsMembers...)
 				//structFields = append(structFields, bitStructsMembers...)
 
 			case "inline":
-				//isInline = true
-				//fmt.Println("inline!: ", n.Content(sourceCode))
-				//inlinedSubTyping = append(inlinedSubTyping, "1")
 				member.IsInlined = true
 
 			case "ident":
 				member.Names = append(member.Names,
-					Identifier{
-						ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(n.StartPoint(), n.EndPoint()).Build(),
-						Name:        n.Content(sourceCode),
-					},
-				) /*
-					identifier = n.Content(sourceCode)
-					identifiersRange = append(identifiersRange,
-						idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
-					)*/
+					convert_ident(n, sourceCode).(Identifier),
+				)
 			}
 		}
 
@@ -478,10 +446,11 @@ func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) Express
 	return structDecl
 }
 
-func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMemberDecl {
+func convert_bitstruct_members(node *sitter.Node, source []byte) []StructMemberDecl {
 	members := []StructMemberDecl{}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		bdefnode := node.Child(i)
+		//debugNode(bdefnode, source)
 		bType := bdefnode.Type()
 		member := StructMemberDecl{
 			ASTNodeBase: NewBaseNodeBuilder().
@@ -496,14 +465,11 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 				switch xNode.Type() {
 				case "base_type":
 					// Note: here we consciously pass bdefnode because typeNodeToType expects a child node of base_type. If we send xNode it will not find it.
-					member.Type = convert_type(bdefnode, sourceCode)
+					member.Type = convert_type(bdefnode, source)
 				case "ident":
 					member.Names = append(
 						member.Names,
-						NewIdentifierBuilder().
-							WithName(xNode.Content(sourceCode)).
-							WithSitterPos(xNode).
-							Build(),
+						convert_ident(xNode, source).(Identifier),
 					)
 				}
 			}
@@ -516,7 +482,7 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 			}
 
 			if bdefnode.ChildCount() >= 6 {
-				highBit, _ := strconv.ParseInt(bdefnode.Child(5).Content(sourceCode), 10, 32)
+				highBit, _ := strconv.ParseInt(bdefnode.Child(5).Content(source), 10, 32)
 				bitRanges[1] = uint(highBit)
 			}
 			member.BitRange = option.Some(bitRanges)
@@ -739,17 +705,25 @@ func is_literal(node *sitter.Node) bool {
 	return false
 }
 
-func convert_type(node *sitter.Node, sourceCode []byte) TypeInfo {
-	if node.Type() == "optional_type" {
-		return extTypeNodeToType(node.Child(0), true, sourceCode)
+func convert_ident(node *sitter.Node, source []byte) Expression {
+	return Identifier{
+		Name: node.Content(source),
+		ASTNodeBase: NewBaseNodeBuilder().
+			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+			Build(),
 	}
+}
 
-	return extTypeNodeToType(node, false, sourceCode)
+func convert_type(node *sitter.Node, sourceCode []byte) TypeInfo {
+	/*if node.Type() == "optional_type" {
+		return extTypeNodeToType(node.Child(0), true, sourceCode)
+	}*/
+
+	return extTypeNodeToType(node, sourceCode)
 }
 
 func extTypeNodeToType(
 	node *sitter.Node,
-	isOptional bool,
 	sourceCode []byte,
 ) TypeInfo {
 	/*
@@ -763,10 +737,11 @@ func extTypeNodeToType(
 	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "!"
 
 	typeInfo := TypeInfo{
-		Optional: isOptional,
+		Optional: false,
 		ASTNodeBase: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
+		Pointer: uint(0),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -819,29 +794,90 @@ func extTypeNodeToType(
 				// TODO Only covers pointer to final value
 				typeInfo.Pointer = 1
 			}
+		case "!":
+			typeInfo.Optional = true
 		}
 	}
-
-	// Is baseType a module generic argument? Flag it.
-	/*isGenericArgument := false
-	for genericId, _ := range currentModule.GenericParameters {
-		if genericId == baseType {
-			isGenericArgument = true
-		}
-	}
-
-
-	var parsedType symbols.Type
-	if len(generic_arguments) == 0 {
-		if isOptional {
-			parsedType = symbols.NewOptionalType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, modulePath)
-		} else {
-			parsedType = symbols.NewType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, modulePath)
-		}
-	} else {
-		// TODO Can a type with generic be itself a generic argument?
-		parsedType = symbols.NewTypeWithGeneric(baseTypeLanguage, isOptional, baseType, pointerCount, generic_arguments, modulePath)
-	}*/
 
 	return typeInfo
+}
+
+func nodeTypeConverterMap(nodeType string) NodeConverter {
+	funcMap := map[string]NodeConverter{
+		"assignment_expr": convert_assignment_expr,
+		"binary_expr":     convert_binary_expr,
+		"bytes_literal":   convert_literal,
+		//"call_expr":             convert_dummy,
+		//"cast_expr":             convert_dummy,
+		"char_literal": convert_literal,
+		//"elvis_orelse_expr":     convert_dummy,
+		"ident":           convert_ident,
+		"integer_literal": convert_literal,
+		//"initializer_list":      convert_dummy,
+		"lambda_expr":        convert_lambda_expr,
+		"raw_string_literal": convert_literal,
+		"real_literal":       convert_literal,
+		//"rethrow_expr":          convert_dummy,
+		//"suffix_expr":           convert_dummy,
+		//"subscript_expr":        convert_dummy,
+		"string_literal": convert_literal,
+		"ternary_expr":   convert_ternary_expr,
+		//"trailing_generic_expr": convert_dummy,
+		//"unary_expr":            convert_dummy,
+		//"update_expr":           convert_dummy,
+		"_base_expr": convert_base_expression,
+	}
+	if function, exists := funcMap[nodeType]; exists {
+		return function
+	}
+
+	return nil
+	//panic(fmt.Sprintf("La función %s no existe\n", nodeType))
+}
+
+func anyOf(nodeTypes []string, node *sitter.Node, source []byte) Expression {
+	var converter NodeConverter
+	if inArray(node.Type(), nodeTypes) {
+		converter = nodeTypeConverterMap(node.Type())
+	}
+
+	if converter != nil {
+		expr := converter(node, source)
+		if expr != nil {
+			return expr
+		}
+	}
+
+	/*if !inArray(node.Type(), nodeTypes) {
+		panic(fmt.Sprintf("Unexpected node type: %s", node.Type()))
+	}
+
+	converter := nodeTypeConverterMap(node.Type())
+
+	if converter != nil {
+		return converter(node, source)
+	}*/
+
+	for _, expectedType := range nodeTypes {
+		if strings.HasPrefix(expectedType, "_") {
+			method := nodeTypeConverterMap(expectedType)
+
+			expr := method(node, source)
+			if expr != nil {
+				return expr
+			}
+		}
+	}
+
+	panic(fmt.Sprintf("Could not find method to convert %s node type.\n", node.Type()))
+}
+
+func inArray(needle string, haystack []string) bool {
+	for _, item := range haystack {
+		if item == needle {
+			return true
+		}
+	}
+
+	return false
 }

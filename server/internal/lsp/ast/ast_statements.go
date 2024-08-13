@@ -16,6 +16,13 @@ type AssignmentStatement struct {
 	Operator string
 }
 
+type TernaryExpression struct {
+	ASTNodeBase
+	Condition   Expression
+	Consequence Expression
+	Alternative Expression
+}
+
 type Expression interface {
 	ASTNode
 }
