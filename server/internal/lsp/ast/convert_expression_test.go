@@ -412,7 +412,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 	}
 
 	for _, method := range methods {
-		fmt.Printf("*********: %s\n", method)
+		//fmt.Printf("*********: %s\n", method)
 		for _, tt := range cases {
 			if tt.skip {
 				continue
@@ -489,7 +489,7 @@ func TestConvertToAST_compile_time_argument_call(t *testing.T) {
 	}
 
 	for _, method := range methods {
-		fmt.Printf("*********: %s\n", method)
+		//fmt.Printf("*********: %s\n", method)
 
 		t.Run(
 			fmt.Sprintf("compile_time_argument_call: %s", method),
@@ -731,4 +731,25 @@ func TestConvertToAST_ternary_expr(t *testing.T) {
 				assert.Equal(t, tt.expected, cmp_stmts.Statements[0].(TernaryExpression))
 			})
 	}
+}
+
+func TestConvertToAST_lmabda_expr(t *testing.T) {
+	source := `module foo;
+	int i = fn int () => 10;`
+
+	ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+	expected := LambdaDeclaration{
+		ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 10, 1, 34).Build(),
+		ReturnType: option.Some(NewTypeInfoBuilder().
+			WithStartEnd(1, 13, 1, 16).
+			WithName("int").
+			WithNameStartEnd(1, 13, 1, 16).
+			Build(),
+		),
+	}
+
+	lambda := ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(LambdaDeclaration)
+	assert.Equal(t, expected, lambda)
+
 }

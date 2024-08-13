@@ -27,22 +27,25 @@ $._base_expr,
 func convert_expression(node *sitter.Node, source []byte) Expression {
 	//fmt.Print("convert_expression:\n")
 	//debugNode(node, source)
-	return anyOf([]string{
-		"assignment_expr",
-		"ternary_expr",
-		"lambda_expr",
-		"elvis_orelse_expr",
-		"suffix_expr",
-		"binary_expr",
-		"unary_expr",
-		"cast_expr",
-		"rethrow_expr",
-		"trailing_generic_expr",
-		"update_expr",
-		"call_expr",
-		"subscript_expr",
-		"initializer_list",
-		"_base_expr",
+	return anyOf([]NodeRule{
+		NodeOfType("assignment_expr"),
+		NodeOfType("ternary_expr"),
+		NodeSequenceOf([]NodeRule{
+			NodeOfType("lambda_declaration"),
+			NodeOfType("implies_body"),
+		}, "lambda_expr"),
+		NodeOfType("elvis_orelse_expr"),
+		NodeOfType("suffix_expr"),
+		NodeOfType("binary_expr"),
+		NodeOfType("unary_expr"),
+		NodeOfType("cast_expr"),
+		NodeOfType("rethrow_expr"),
+		NodeOfType("trailing_generic_expr"),
+		NodeOfType("update_expr"),
+		NodeOfType("call_expr"),
+		NodeOfType("subscript_expr"),
+		NodeOfType("initializer_list"),
+		NodeTryConversionFunc("_base_expr"),
 	}, node, source)
 	/*
 	   switch node.Type() {
@@ -103,17 +106,17 @@ func convert_binary_expr(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
-	expected := []string{
-		"binary_expr",
-		"unary_expr",
-		"cast_expr",
-		"rethrow_expr",
-		"trailing_generic_expr",
-		"update_expr",
-		"call_expr",
-		"subscript_expr",
-		"initializer_list",
-		"<$>convert_base_expression",
+	expected := []NodeRule{
+		NodeOfType("binary_expr"),
+		NodeOfType("unary_expr"),
+		NodeOfType("cast_expr"),
+		NodeOfType("rethrow_expr"),
+		NodeOfType("trailing_generic_expr"),
+		NodeOfType("update_expr"),
+		NodeOfType("call_expr"),
+		NodeOfType("subscript_expr"),
+		NodeOfType("initializer_list"),
+		NodeOfType("_base_expr"),
 	}
 	condition := anyOf(expected, node.ChildByFieldName("condition"), source)
 
@@ -281,7 +284,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 
 func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 	var literal Expression
-	fmt.Printf("Converting literal %s\n", node.Type())
+	//fmt.Printf("Converting literal %s\n", node.Type())
 	switch node.Type() {
 	case "string_literal", "char_literal", "raw_string_literal", "bytes_literal":
 		literal = Literal{Value: node.Content(sourceCode)}
