@@ -740,13 +740,19 @@ func TestConvertToAST_lmabda_expr(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	expected := LambdaDeclaration{
-		ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 10, 1, 34).Build(),
+		ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 24).Build(),
 		ReturnType: option.Some(NewTypeInfoBuilder().
-			WithStartEnd(1, 13, 1, 16).
+			WithStartEnd(1, 12, 1, 15).
 			WithName("int").
-			WithNameStartEnd(1, 13, 1, 16).
+			WithNameStartEnd(1, 12, 1, 15).
+			IsBuiltin().
 			Build(),
 		),
+		Parameters: []FunctionParameter{},
+		Body: ReturnStatement{
+			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 22, 1, 24).Build(),
+			Return:      option.Some(Expression(IntegerLiteral{Value: "10"})),
+		},
 	}
 
 	lambda := ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(LambdaDeclaration)
