@@ -128,6 +128,17 @@ func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
 	}
 }
 
+func convert_elvis_orelse_expr(node *sitter.Node, source []byte) Expression {
+	conditionNode := node.ChildByFieldName("condition")
+
+	return TernaryExpression{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		Condition:   convert_expression(conditionNode, source),
+		Consequence: convert_ident(conditionNode, source),
+		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
+	}
+}
+
 func convert_base_expression(node *sitter.Node, source []byte) Expression {
 	var expression Expression
 	//fmt.Printf("converting_base_expression\n")
