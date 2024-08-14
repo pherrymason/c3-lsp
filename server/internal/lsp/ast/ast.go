@@ -309,3 +309,8 @@ type CompoundStatement struct {
 	ASTNodeBase
 	Statements []Expression
 }
+
+type ReturnStatement struct {
+	ASTNodeBase
+	Return option.Option[Expression]
+}
