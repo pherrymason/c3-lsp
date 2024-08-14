@@ -733,7 +733,7 @@ func TestConvertToAST_ternary_expr(t *testing.T) {
 	}
 }
 
-func TestConvertToAST_lmabda_expr(t *testing.T) {
+func TestConvertToAST_lambda_expr(t *testing.T) {
 	source := `module foo;
 	int i = fn int () => 10;`
 
@@ -758,4 +758,48 @@ func TestConvertToAST_lmabda_expr(t *testing.T) {
 	lambda := ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(LambdaDeclaration)
 	assert.Equal(t, expected, lambda)
 
+}
+
+func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		source   string
+		expected TernaryExpression
+	}{
+		{
+			source: `module foo;
+			int i = condition ?: 10;`,
+			expected: TernaryExpression{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
+				Condition:   NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
+				Consequence: NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
+				Alternative: IntegerLiteral{Value: "10"},
+			},
+		},
+		{
+			source: `module foo;
+			int i = condition ?? 10;`,
+			expected: TernaryExpression{
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
+				Condition:   NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
+				Consequence: NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
+				Alternative: IntegerLiteral{Value: "10"},
+			},
+		},
+	}
+
+	for i, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("elivs_or_else_expr: %d", i),
+			func(t *testing.T) {
+				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
+
+				varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
+				assert.Equal(t, tt.expected, varDecl.Initializer.(TernaryExpression))
+			})
+	}
 }
