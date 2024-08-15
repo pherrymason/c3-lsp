@@ -11,7 +11,9 @@ type CursorContext struct {
 	Position symbols.Position
 	DocURI   protocol.DocumentUri
 
-	IsLiteral bool
+	IsLiteral          bool
+	IsIdentifier       bool
+	IsModuleIdentifier bool
 }
 
 func BuildFromDocumentPosition(
@@ -57,6 +59,13 @@ func BuildFromDocumentPosition(
 		context.IsLiteral = true
 	case "bytes_expr":
 		context.IsLiteral = true
+
+	case "ident":
+		context.IsIdentifier = true
+
+		if node.Parent().Type() == "module_resolution" {
+			context.IsModuleIdentifier = true
+		}
 	}
 
 	return context
