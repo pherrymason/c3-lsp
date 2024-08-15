@@ -652,7 +652,6 @@ func TestBuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *t
 
 func TestBuildCompletionList_enums(t *testing.T) {
 	logger := commonlog.MockLogger{}
-	//language := NewProjectState(commonlog.MockLogger{}, option.Some("dummy"), false)
 
 	t.Run("Should suggest Enum type", func(t *testing.T) {
 		source := `
@@ -1090,4 +1089,48 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 
 func CreateCompletionItem(label string, kind protocol.CompletionItemKind) protocol.CompletionItem {
 	return protocol.CompletionItem{Label: label, Kind: &kind}
+}
+
+func TestBuildCompletionList_should_resolve_(t *testing.T) {
+	state := NewTestState()
+	state.registerDoc(
+		"app.c3",
+		`module app;
+		import my::io;
+		fn void main() {
+			io::
+		}`)
+
+	state.registerDoc(
+		"my.c3",
+		`module my::io;
+				int suggestion = 10;
+				`,
+	)
+	state.registerDoc(
+		"trap.c3",
+		`module invalid::io;
+		int invalidSuggestion = 10;
+		`,
+	)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(4, 7),
+			DocURI:   "app.c3",
+		},
+		&state.state)
+
+	assert.Equal(t, 1, len(completionList), "Wrong number of items to suggest")
+	assert.Equal(
+		t,
+		[]protocol.CompletionItem{
+			{
+				Label: "suggestion",
+				Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindVariable),
+			},
+		},
+		completionList,
+	)
 }
