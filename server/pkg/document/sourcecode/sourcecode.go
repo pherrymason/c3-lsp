@@ -24,11 +24,11 @@ func NewSourceCode(text string) SourceCode {
 	return SourceCode{Text: text}
 }
 
+var symbolPattern = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+
 // Tries to find the symbol under cursor position
 func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules *symbols_table.UnitModules) Word {
 	index := cursorPosition.IndexIn(s.Text)
-	pattern := `^[a-zA-Z0-9_]+$`
-	re, _ := regexp.Compile(pattern)
 
 	baseFound := false
 	gettingAccess := false
@@ -58,7 +58,7 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 		}
 
 		// Just ignore content inside parenthesis
-		if re.MatchString(symbol) {
+		if symbolPattern.MatchString(symbol) {
 			if gettingAccess && insideParenthesis == 0 /*!ignoreSymbol*/ {
 				accessPath = append([]Word{{
 					text:      symbol,
