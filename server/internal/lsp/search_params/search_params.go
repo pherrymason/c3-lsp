@@ -23,10 +23,6 @@ const (
 	InModuleRoot
 )
 
-// TODO: Still confusing difference between module and modulePath
-// when each is used and what they really represent?
-// symbolModulePath: if symbol has an implicit module path specified, this will be that. If symbol does not have any module path, this will be empty
-// module: best guess of what module cursor is currently at. Currently is the last `module xxxx` found.
 type SearchParams struct {
 	word sourcecode.Word
 	//symbol      string        // symbol to search. @DEPRECATED, use word.Text()

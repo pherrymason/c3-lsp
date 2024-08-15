@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/pherrymason/c3-lsp/pkg/symbols"
+	ctx "github.com/pherrymason/c3-lsp/internal/lsp/context"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -10,9 +10,15 @@ import (
 // Support "Completion"
 // Returns: []CompletionItem | CompletionList | nil
 func (h *Handlers) TextDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
-	suggestions := h.search.BuildCompletionList(
+
+	cursorContext := ctx.BuildFromDocumentPosition(
+		params.Position,
 		utils.NormalizePath(params.TextDocument.URI),
-		symbols.NewPositionFromLSPPosition(params.Position),
+		h.state,
+	)
+
+	suggestions := h.search.BuildCompletionList(
+		cursorContext,
 		h.state,
 	)
 	return suggestions, nil
