@@ -16,6 +16,17 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+func filterOutKeywordSuggestions(completionList []protocol.CompletionItem) []protocol.CompletionItem {
+	filteredCompletionList := []protocol.CompletionItem{}
+	for _, item := range completionList {
+		if *item.Kind != protocol.CompletionItemKindKeyword {
+			filteredCompletionList = append(filteredCompletionList, item)
+		}
+	}
+
+	return filteredCompletionList
+}
+
 func Test_isCompletingAChain(t *testing.T) {
 	cases := []struct {
 		name                     string
@@ -356,8 +367,10 @@ func TestBuildCompletionList(t *testing.T) {
 					},
 					&state.state)
 
-				assert.Equal(t, 1, len(completionList))
-				assert.Equal(t, tt.expected, completionList[0])
+				filteredCompletionList := filterOutKeywordSuggestions(completionList)
+
+				assert.Equal(t, 1, len(filteredCompletionList))
+				assert.Equal(t, tt.expected, filteredCompletionList[0])
 			})
 		}
 	})
@@ -396,8 +409,10 @@ func TestBuildCompletionList(t *testing.T) {
 					},
 					&state.state)
 
-				assert.Equal(t, len(tt.expected), len(completionList))
-				assert.Equal(t, tt.expected, completionList)
+				filteredCompletionList := filterOutKeywordSuggestions(completionList)
+
+				assert.Equal(t, len(tt.expected), len(filteredCompletionList))
+				assert.Equal(t, tt.expected, filteredCompletionList)
 			})
 		}
 	})
@@ -509,11 +524,13 @@ func TestBuildCompletionList_struct_suggest_members_starting_with_prefix(t *test
 		},
 		&state.state)
 
-	assert.Equal(t, 1, len(completionList))
+	filteredCompletionList := filterOutKeywordSuggestions(completionList)
+
+	assert.Equal(t, 1, len(filteredCompletionList))
 	assert.Equal(t, []protocol.CompletionItem{
 		{Label: "width", Kind: &expectedKind},
 	},
-		completionList)
+		filteredCompletionList)
 }
 
 func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
@@ -585,11 +602,13 @@ func TestBuildCompletionList_struct_suggest_members_with_prefix_of_substruct(t *
 		},
 		&state.state)
 
-	assert.Equal(t, 1, len(completionList))
+	filteredCompletionList := filterOutKeywordSuggestions(completionList)
+
+	assert.Equal(t, 1, len(filteredCompletionList))
 	assert.Equal(t, []protocol.CompletionItem{
 		{Label: "red", Kind: &expectedKind},
 	},
-		completionList)
+		filteredCompletionList)
 }
 
 func TestBuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *testing.T) {
@@ -616,8 +635,8 @@ func TestBuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *t
 			DocURI:   "test.c3",
 		},
 		&state.state)
-
-	assert.Equal(t, 1, len(completionList))
+	filteredCompletionList := filterOutKeywordSuggestions(completionList)
+	assert.Equal(t, 1, len(filteredCompletionList))
 	assert.Equal(t, []protocol.CompletionItem{
 		{
 			Label: "Color.toHex",
@@ -628,7 +647,7 @@ func TestBuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *t
 			},
 		},
 	},
-		completionList)
+		filteredCompletionList)
 }
 
 func TestBuildCompletionList_enums(t *testing.T) {
@@ -1023,8 +1042,10 @@ func TestBuildCompletionList_modules(t *testing.T) {
 					},
 					&state.state)
 
-				assert.Equal(t, len(tt.expected), len(completionList), "Different items to suggest")
-				assert.Equal(t, tt.expected, completionList)
+				filteredCompletionList := filterOutKeywordSuggestions(completionList)
+
+				assert.Equal(t, len(tt.expected), len(filteredCompletionList), "Different items to suggest")
+				assert.Equal(t, tt.expected, filteredCompletionList)
 			})
 		}
 	})
