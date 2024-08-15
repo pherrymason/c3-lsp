@@ -35,7 +35,7 @@ func convert_expression(node *sitter.Node, source []byte) Expression {
 			NodeOfType("implies_body"),
 		}, "lambda_expr"),
 		NodeOfType("elvis_orelse_expr"),
-		NodeOfType("suffix_expr"),
+		NodeOfType("optional_expr"),
 		NodeOfType("binary_expr"),
 		NodeOfType("unary_expr"),
 		NodeOfType("cast_expr"),
@@ -129,6 +129,17 @@ func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_elvis_orelse_expr(node *sitter.Node, source []byte) Expression {
+	conditionNode := node.ChildByFieldName("condition")
+
+	return TernaryExpression{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		Condition:   convert_expression(conditionNode, source),
+		Consequence: convert_ident(conditionNode, source),
+		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
+	}
+}
+
+func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 	conditionNode := node.ChildByFieldName("condition")
 
 	return TernaryExpression{

@@ -89,6 +89,7 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 		"integer_literal":   convert_literal,
 		//"initializer_list":      convert_dummy,
 		"lambda_expr":        convert_lambda_expr,
+		"optional_expr":      convert_optional_expr,
 		"raw_string_literal": convert_literal,
 		"real_literal":       convert_literal,
 		//"rethrow_expr":          convert_dummy,
