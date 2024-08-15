@@ -10,6 +10,7 @@ import (
 	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	protocol_utils "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
 	sp "github.com/pherrymason/c3-lsp/internal/lsp/search_params"
+	"github.com/pherrymason/c3-lsp/pkg/c3"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
@@ -154,6 +155,18 @@ func (s *Search) BuildCompletionList(
 		ctx.Position.RewindCharacter(),
 		state.GetUnitModulesByDoc(doc.URI),
 	)
+
+	// Check if it might be a C3 language keyword
+	keywordKind := protocol.CompletionItemKindKeyword
+	for _, keyword := range c3.Keywords() {
+		if strings.HasPrefix(keyword, symbolInPosition.Text()) {
+			items = append(items, protocol.CompletionItem{
+				Label: keyword,
+				Kind:  &keywordKind,
+			})
+		}
+	}
+
 	if symbolInPosition.IsSeparator() {
 		// Probably, theres no symbol at cursor!
 		filterMembers = false

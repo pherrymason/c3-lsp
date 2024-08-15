@@ -1,7 +1,7 @@
 package c3
 
-func IsLanguageKeyword(symbol string) bool {
-	keywords := []string{
+func Keywords() []string {
+	return []string{
 		"void", "bool", "char", "double",
 		"float", "float16", "int128", "ichar",
 		"int", "iptr", "isz", "long",
@@ -29,6 +29,11 @@ func IsLanguageKeyword(symbol string) bool {
 		"$typeof", "$vacount", "$vatype", "$vaconst",
 		"$varef", "$vaarg", "$vaexpr", "$vasplat",
 	}
+}
+
+func IsLanguageKeyword(symbol string) bool {
+	keywords := Keywords()
+
 	for _, w := range keywords {
 		if w == symbol {
 			return true

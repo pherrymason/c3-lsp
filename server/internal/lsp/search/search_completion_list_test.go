@@ -2,6 +2,7 @@ package search
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/internal/lsp/context"
@@ -215,6 +216,110 @@ func TestBuildCompletionList_should_return_nil_when_cursor_is_in_literal(t *test
 		&state.state)
 
 	assert.Equal(t, 0, len(completionList))
+}
+
+func TestBuildCompletionList_suggests_C3_keywords(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected []string
+	}{
+		{input: "vo", expected: []string{"void"}},
+		{input: "bo", expected: []string{"bool"}},
+		{input: "ch", expected: []string{"char"}},
+		{input: "do", expected: []string{"double", "do"}},
+		{input: "fl", expected: []string{"float", "float16", "float128"}},
+		{input: "ic", expected: []string{"ichar"}},
+		{input: "in", expected: []string{"int", "int128", "inline"}},
+		{input: "ipt", expected: []string{"iptr"}},
+		{input: "is", expected: []string{"isz"}},
+		{input: "lo", expected: []string{"long"}},
+		{input: "sh", expected: []string{"short"}},
+		{input: "uin", expected: []string{"uint", "uint128"}},
+		{input: "ul", expected: []string{"ulong"}},
+		{input: "up", expected: []string{"uptr"}},
+		{input: "ush", expected: []string{"ushort"}},
+		{input: "us", expected: []string{"usz", "ushort"}},
+		{input: "an", expected: []string{"any", "anyfault"}},
+		{input: "type", expected: []string{"typeid"}},
+		{input: "ass", expected: []string{"assert"}},
+		{input: "as", expected: []string{"asm", "assert"}},
+		{input: "bit", expected: []string{"bitstruct"}},
+		{input: "br", expected: []string{"break"}},
+		{input: "ca", expected: []string{"case", "catch"}},
+		{input: "con", expected: []string{"const", "continue"}},
+		{input: "de", expected: []string{"def", "default", "defer"}},
+		{input: "di", expected: []string{"distinct"}},
+		{input: "d", expected: []string{"def", "default", "defer", "distinct", "do", "double"}},
+		{input: "el", expected: []string{"else"}},
+		{input: "en", expected: []string{"enum"}},
+		{input: "ex", expected: []string{"extern"}},
+		{input: "fa", expected: []string{"false", "fault"}},
+		{input: "fo", expected: []string{"for", "foreach", "foreach_r"}},
+		{input: "tl", expected: []string{"tlocal"}},
+		{input: "im", expected: []string{"import"}},
+		{input: "ma", expected: []string{"macro"}},
+		{input: "mo", expected: []string{"module"}},
+		{input: "ne", expected: []string{"nextcase"}},
+		{input: "nu", expected: []string{"null"}},
+		{input: "re", expected: []string{"return"}},
+		{input: "sta", expected: []string{"static"}},
+		{input: "str", expected: []string{"struct"}},
+		{input: "sw", expected: []string{"switch"}},
+		{input: "tru", expected: []string{"true"}},
+		{input: "tr", expected: []string{"true", "try"}},
+		{input: "un", expected: []string{"union"}},
+		{input: "va", expected: []string{"var"}},
+		{input: "wh", expected: []string{"while"}},
+		/*
+			"$alignof", "$assert", "$case", "$default",
+			"$defined", "$echo", "$embed", "$exec",
+			"$else", "$endfor", "$endforeach", "$endif",
+			"$endswitch", "$eval", "$evaltype", "$error",
+			"$extnameof", "$for", "$foreach", "$if",
+			"$include", "$nameof", "$offsetof", "$qnameof",
+			"$sizeof", "$stringify", "$switch", "$typefrom",
+			"$typeof", "$vacount", "$vatype", "$vaconst",
+			"$varef", "$vaarg", "$vaexpr", "$vasplat",*/
+	}
+
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	for _, tt := range cases {
+		t.Run(fmt.Sprintf("Should suggest C3 keywords: %s", strings.Join(tt.expected, ", ")), func(t *testing.T) {
+			state.registerDoc(
+				"test.c3",
+				tt.input,
+			)
+
+			position := buildPosition(1, 1) // Cursor after `<input>|`
+
+			completionList := search.BuildCompletionList(
+				context.CursorContext{
+					Position: position,
+					DocURI:   "test.c3",
+				},
+				&state.state)
+
+			expectedMap := make(map[string]bool)
+			for _, exp := range tt.expected {
+				expectedMap[exp] = true
+			}
+
+			for _, item := range completionList {
+				assert.Equal(t, protocol.CompletionItemKindKeyword, *item.Kind)
+				if _, exists := expectedMap[item.Label]; !exists {
+					t.Errorf("unexpected completion: %s", item.Label)
+				} else {
+					delete(expectedMap, item.Label)
+				}
+			}
+
+			if len(expectedMap) > 0 {
+				t.Errorf("missing expected completions: %v", expectedMap)
+			}
+		})
+	}
 }
 
 func TestBuildCompletionList(t *testing.T) {
