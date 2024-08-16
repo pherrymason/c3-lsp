@@ -1,28 +1,37 @@
+ASSETS_DIR = assets
+TREE_SITTER_DIR = $(ASSETS_DIR)/tree-sitter-c3
+TREE_SITTER_GIT = git@github.com:c3lang/tree-sitter-c3.git
+C3C_DIR = $(ASSETS_DIR)/c3c
+C3C_GIT = git@github.com:c3lang/c3c.git
+
+
 init:
 	$(MAKE) clone-tree-sitter
+	$(MAKE) clone-c3c
 	$(MAKE) build-parser
 
 clone-tree-sitter:
-#	[ ! -d "tree-sitter-c3" ] && git clone git@github.com:cbuttner/tree-sitter-c3.git assets/tree-sitter-c3 || true
-	[ ! -d "tree-sitter-c3" ] && git clone git@github.com:pherrymason/tree-sitter-c3.git assets/tree-sitter-c3 || true
+	[ ! -d $(TREE_SITTER_DIR) ] && git clone $(TREE_SITTER_GIT) $(TREE_SITTER_DIR) || true
+
+clone-c3c:
+	[ ! -d $(C3C_DIR) ] && git clone $(C3C_GIT) $(C3C_DIR) || true
 
 treesitter-playground:
-	cd assets/tree-sitter-c3 && tree-sitter build-wasm && tree-sitter playground
+	cd $(TREE_SITTER_DIR) && tree-sitter build-wasm && tree-sitter playground
 
 build-parser:
-	cd assets/tree-sitter-c3 && tree-sitter generate
+	cd $(TREE_SITTER_DIR) && tree-sitter generate
 	rm -rf server/internal/lsp/cst/tree_sitter
 	rm -f server/internal/lsp/cst/parser.c
-	cp -r assets/tree-sitter-c3/src/tree_sitter server/internal/lsp/cst
-	cp assets/tree-sitter-c3/src/parser.c server/internal/lsp/cst/parser.c
-	cp assets/tree-sitter-c3/src/scanner.c server/internal/lsp/cst/scanner.c
-	cp assets/tree-sitter-c3/src/scanner.c server/internal/lsp/cst/scanner.c
+	cp -r $(TREE_SITTER_DIR)/src/tree_sitter server/internal/lsp/cst
+	cp $(TREE_SITTER_DIR)/src/parser.c server/internal/lsp/cst/parser.c
+	cp $(TREE_SITTER_DIR)/src/scanner.c server/internal/lsp/cst/scanner.c
 
 index-c3-std:
 ifndef VERSION
 	$(error VERSION is not set. Usage: make index-c3-std VERSION=x.y.z)
 endif
-	cd assets/c3c && git fetch --all && git reset --hard origin/master && git checkout tags/v$(VERSION) 
+	cd $(C3C_DIR) && git fetch --all && git reset --hard origin/master && git checkout tags/v$(VERSION)
 	cd server/cmd/stdlib_indexer && go run main.go blurp.go --$(VERSION)
 
 # cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
