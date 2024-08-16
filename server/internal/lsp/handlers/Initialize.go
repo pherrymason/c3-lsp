@@ -16,9 +16,9 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 
 	change := protocol.TextDocumentSyncKindIncremental
 	capabilities.TextDocumentSync = protocol.TextDocumentSyncOptions{
-		OpenClose: cast.BoolPtr(true),
+		OpenClose: cast.ToPtr(true),
 		Change:    &change,
-		Save:      cast.BoolPtr(true),
+		Save:      cast.ToPtr(true),
 	}
 	capabilities.DeclarationProvider = true
 	capabilities.CompletionProvider = &protocol.CompletionOptions{
