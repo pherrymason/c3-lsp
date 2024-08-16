@@ -158,7 +158,7 @@ func (s *Search) BuildCompletionList(
 
 	// Check if it might be a C3 language keyword
 	keywordKind := protocol.CompletionItemKindKeyword
-	for _, keyword := range c3.Keywords() {
+	for keyword := range c3.Keywords() {
 		if strings.HasPrefix(keyword, symbolInPosition.Text()) {
 			items = append(items, protocol.CompletionItem{
 				Label: keyword,
