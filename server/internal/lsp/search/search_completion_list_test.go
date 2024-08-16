@@ -490,7 +490,7 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 		{Label: "height", Kind: &expectedKind},
 		{
 			Label: "Square.toCircle",
-			Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod),
+			Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 			TextEdit: protocol.TextEdit{
 				NewText: "toCircle",
 				Range:   protocol_utils.NewLSPRange(5, 7, 5, 8),
@@ -564,7 +564,7 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 		{Label: "blue", Kind: &expectedKind},
 		{
 			Label: "Color.toHex",
-			Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod),
+			Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 			TextEdit: protocol.TextEdit{
 				NewText: "toHex",
 				Range:   protocol_utils.NewLSPRange(6, 13, 6, 14),
@@ -640,7 +640,7 @@ func TestBuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *t
 	assert.Equal(t, []protocol.CompletionItem{
 		{
 			Label: "Color.toHex",
-			Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindMethod),
+			Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 			TextEdit: protocol.TextEdit{
 				NewText: "toHex",
 				Range:   protocol_utils.NewLSPRange(6, 13, 6, 14),
@@ -870,8 +870,8 @@ func TestBuildCompletionList_modules(t *testing.T) {
 				buildPosition(4, 5), // Cursor at `a|`
 				[]protocol.CompletionItem{{
 					Label:  "app",
-					Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
-					Detail: cast.StrPtr("Module"),
+					Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+					Detail: cast.ToPtr("Module"),
 					TextEdit: protocol.TextEdit{
 						NewText: "app",
 						Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
@@ -891,8 +891,8 @@ func TestBuildCompletionList_modules(t *testing.T) {
 				[]protocol.CompletionItem{
 					{
 						Label:  "app::foo",
-						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
-						Detail: cast.StrPtr("Module"),
+						Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+						Detail: cast.ToPtr("Module"),
 						TextEdit: protocol.TextEdit{
 							NewText: "app::foo",
 							Range: protocol.Range{
@@ -955,8 +955,8 @@ func TestBuildCompletionList_modules(t *testing.T) {
 				[]protocol.CompletionItem{
 					{
 						Label:  "app",
-						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
-						Detail: cast.StrPtr("Module"),
+						Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+						Detail: cast.ToPtr("Module"),
 						TextEdit: protocol.TextEdit{
 							NewText: "app",
 							Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
@@ -964,8 +964,8 @@ func TestBuildCompletionList_modules(t *testing.T) {
 					},
 					{
 						Label:  "app::window",
-						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
-						Detail: cast.StrPtr("Module"),
+						Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+						Detail: cast.ToPtr("Module"),
 						TextEdit: protocol.TextEdit{
 							NewText: "app::window",
 							Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
@@ -973,8 +973,8 @@ func TestBuildCompletionList_modules(t *testing.T) {
 					},
 					{
 						Label:  "app::window::errors",
-						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
-						Detail: cast.StrPtr("Module"),
+						Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+						Detail: cast.ToPtr("Module"),
 						TextEdit: protocol.TextEdit{
 							NewText: "app::window::errors",
 							Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
@@ -994,8 +994,8 @@ func TestBuildCompletionList_modules(t *testing.T) {
 				[]protocol.CompletionItem{
 					{
 						Label:  "app::foo",
-						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
-						Detail: cast.StrPtr("Module"),
+						Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+						Detail: cast.ToPtr("Module"),
 						TextEdit: protocol.TextEdit{
 							NewText: "app::foo",
 							Range:   protocol_utils.NewLSPRange(5, 4, 5, 9),
@@ -1003,8 +1003,8 @@ func TestBuildCompletionList_modules(t *testing.T) {
 					},
 					{
 						Label:  "app::window",
-						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
-						Detail: cast.StrPtr("Module"),
+						Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+						Detail: cast.ToPtr("Module"),
 						TextEdit: protocol.TextEdit{
 							NewText: "app::window",
 							Range:   protocol_utils.NewLSPRange(5, 4, 5, 9),
@@ -1012,8 +1012,8 @@ func TestBuildCompletionList_modules(t *testing.T) {
 					},
 					{
 						Label:  "app::window::errors",
-						Kind:   cast.CompletionItemKindPtr(protocol.CompletionItemKindModule),
-						Detail: cast.StrPtr("Module"),
+						Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+						Detail: cast.ToPtr("Module"),
 						TextEdit: protocol.TextEdit{
 							NewText: "app::window::errors",
 							Range:   protocol_utils.NewLSPRange(5, 4, 5, 9),
@@ -1079,7 +1079,7 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 			[]protocol.CompletionItem{
 				{
 					Label: "EmulatorConsole",
-					Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindInterface),
+					Kind:  cast.ToPtr(protocol.CompletionItemKindInterface),
 				},
 			},
 			completionList,
@@ -1128,7 +1128,7 @@ func TestBuildCompletionList_should_resolve_(t *testing.T) {
 		[]protocol.CompletionItem{
 			{
 				Label: "suggestion",
-				Kind:  cast.CompletionItemKindPtr(protocol.CompletionItemKindVariable),
+				Kind:  cast.ToPtr(protocol.CompletionItemKindVariable),
 			},
 		},
 		completionList,
