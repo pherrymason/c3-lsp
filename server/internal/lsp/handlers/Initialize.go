@@ -46,8 +46,11 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 			},
 		},
 	}
-	h.state.SetProjectRootURI(*params.RootURI)
-	h.indexWorkspace()
+
+	if params.RootURI != nil {
+		h.state.SetProjectRootURI(*params.RootURI)
+		h.indexWorkspace()
+	}
 
 	return protocol.InitializeResult{
 		Capabilities: capabilities,
