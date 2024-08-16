@@ -304,8 +304,8 @@ func (s *Search) BuildCompletionList(
 
 				items = append(items, protocol.CompletionItem{
 					Label:  storedIdentifier.GetName(),
-					Kind:   cast.CompletionItemKindPtr(storedIdentifier.GetKind()),
-					Detail: cast.StrPtr("Module"),
+					Kind:   cast.ToPtr(storedIdentifier.GetKind()),
+					Detail: cast.ToPtr("Module"),
 					TextEdit: protocol.TextEdit{
 						NewText: storedIdentifier.GetName(),
 						Range:   editRange,
@@ -314,7 +314,7 @@ func (s *Search) BuildCompletionList(
 			} else {
 				items = append(items, protocol.CompletionItem{
 					Label: storedIdentifier.GetName(),
-					Kind:  cast.CompletionItemKindPtr(storedIdentifier.GetKind()),
+					Kind:  cast.ToPtr(storedIdentifier.GetKind()),
 				})
 			}
 		}
