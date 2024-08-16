@@ -6,9 +6,11 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/pherrymason/c3-lsp/internal/lsp/context"
 	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	protocol_utils "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
 	sp "github.com/pherrymason/c3-lsp/internal/lsp/search_params"
+	"github.com/pherrymason/c3-lsp/pkg/c3"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
@@ -127,10 +129,13 @@ func extractExplicitModulePath(possibleModulePath string) option.Option[symbols.
 
 // Returns: []CompletionItem | CompletionList | nil
 func (s *Search) BuildCompletionList(
-	docURI string,
-	position symbols.Position,
+	ctx context.CursorContext,
 	state *l.ProjectState,
 ) []protocol.CompletionItem {
+	if ctx.IsLiteral {
+		return []protocol.CompletionItem{}
+	}
+
 	var items []protocol.CompletionItem
 
 	filterMembers := true /*
@@ -145,14 +150,23 @@ func (s *Search) BuildCompletionList(
 		}
 	*/
 
-	doc := state.GetDocument(docURI)
+	doc := state.GetDocument(ctx.DocURI)
 	symbolInPosition := doc.SourceCode.SymbolInPosition(
-		symbols.Position{
-			Line:      uint(position.Line),
-			Character: uint(position.Character - 1),
-		},
+		ctx.Position.RewindCharacter(),
 		state.GetUnitModulesByDoc(doc.URI),
 	)
+
+	// Check if it might be a C3 language keyword
+	keywordKind := protocol.CompletionItemKindKeyword
+	for keyword := range c3.Keywords() {
+		if strings.HasPrefix(keyword, symbolInPosition.Text()) {
+			items = append(items, protocol.CompletionItem{
+				Label: keyword,
+				Kind:  &keywordKind,
+			})
+		}
+	}
+
 	if symbolInPosition.IsSeparator() {
 		// Probably, theres no symbol at cursor!
 		filterMembers = false
@@ -160,7 +174,7 @@ func (s *Search) BuildCompletionList(
 	s.logger.Debug(fmt.Sprintf("building completion list: \"%s\"", symbolInPosition.Text())) //TODO warp %s en "
 
 	// Check if module path is being written/exists
-	isCompletingModulePath, possibleModulePath := isCompletingAModulePath(doc, position)
+	isCompletingModulePath, possibleModulePath := isCompletingAModulePath(doc, ctx.Position)
 
 	hasExplicitModulePath := option.None[symbols.ModulePath]()
 	if isCompletingModulePath {
@@ -268,7 +282,7 @@ func (s *Search) BuildCompletionList(
 		params := FindSymbolsParams{
 			docId:              doc.URI,
 			scopedToModulePath: hasExplicitModulePath,
-			position:           option.Some(position),
+			position:           option.Some(ctx.Position),
 		}
 		// Search symbols loadable in module located in position
 		scopeSymbols := s.findSymbolsInScope(params, state)

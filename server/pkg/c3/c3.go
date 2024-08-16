@@ -29,6 +29,10 @@ var keywords = map[string]struct{}{
 	"$varef": {}, "$vaarg": {}, "$vaexpr": {}, "$vasplat": {},
 }
 
+func Keywords() map[string]struct{} {
+	return keywords
+}
+
 func IsLanguageKeyword(symbol string) bool {
 	_, exists := keywords[symbol]
 	return exists
