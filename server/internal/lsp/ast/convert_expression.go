@@ -47,25 +47,6 @@ func convert_expression(node *sitter.Node, source []byte) Expression {
 		NodeOfType("initializer_list"),
 		NodeTryConversionFunc("_base_expr"),
 	}, node, source)
-	/*
-	   switch node.Type() {
-	   case "assignment_expr":
-
-	   	return convert_assignment_expr(node, source)
-
-	   case "ternary_expr":
-
-	   		return convert_ternary_expr(node, source)
-	   	}
-
-	   base_expr := convert_base_expression(node, source)
-
-	   	if base_expr != nil {
-	   		return base_expr
-	   	}
-
-	   return nil
-	*/
 }
 
 func convert_assignment_expr(node *sitter.Node, source []byte) Expression {
