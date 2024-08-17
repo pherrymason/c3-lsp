@@ -5,19 +5,19 @@ type Statement interface {
 }
 
 type ExpressionStatement struct {
-	ASTNodeBase
+	ASTBaseNode
 	Expr Expression
 }
 
 type AssignmentStatement struct {
-	ASTNodeBase
+	ASTBaseNode
 	Left     Expression
 	Right    Expression
 	Operator string
 }
 
 type TernaryExpression struct {
-	ASTNodeBase
+	ASTBaseNode
 	Condition   Expression
 	Consequence Expression
 	Alternative Expression
@@ -82,33 +82,39 @@ $._base_expr
 	seq($.lambda_declaration, $.compound_stmt),
 */
 type UnaryExpression struct {
-	ASTNodeBase
+	ASTBaseNode
 	Operator   string
 	Expression Expression
 }
 
 // BinaryExpr representa una expresión binaria (como suma, resta, etc.)
 type BinaryExpr struct {
-	ASTNodeBase
+	ASTBaseNode
 	Left     ASTNode
 	Operator string
 	Right    ASTNode
 }
 
 type OptionalExpression struct {
-	ASTNodeBase
+	ASTBaseNode
 	Argument Expression
 	Operator string
 }
 
 type CastExpression struct {
-	ASTNodeBase
+	ASTBaseNode
 	Type  TypeInfo
 	Value Expression
 }
 
+type RethrowExpression struct {
+	ASTBaseNode
+	Operator string
+	Argument Expression
+}
+
 type InlineTypeWithInitizlization struct {
-	ASTNodeBase
+	ASTBaseNode
 	Type            TypeInfo
 	InitializerList InitializerList
 }

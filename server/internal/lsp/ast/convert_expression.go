@@ -85,7 +85,7 @@ func convert_assignment_expr(node *sitter.Node, source []byte) Expression {
 	}
 
 	return AssignmentStatement{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		Left:        left,
 		Right:       right,
 		Operator:    operator,
@@ -98,7 +98,7 @@ func convert_binary_expr(node *sitter.Node, source []byte) Expression {
 	right := convert_expression(node.ChildByFieldName("right"), source)
 
 	return BinaryExpr{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		Left:        left,
 		Operator:    operator,
 		Right:       right,
@@ -121,7 +121,7 @@ func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
 	condition := anyOf(expected, node.ChildByFieldName("condition"), source)
 
 	return TernaryExpression{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		Condition:   condition,
 		Consequence: convert_expression(node.ChildByFieldName("consequence"), source),
 		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
@@ -132,7 +132,7 @@ func convert_elvis_orelse_expr(node *sitter.Node, source []byte) Expression {
 	conditionNode := node.ChildByFieldName("condition")
 
 	return TernaryExpression{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		Condition:   convert_expression(conditionNode, source),
 		Consequence: convert_ident(conditionNode, source),
 		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
@@ -148,7 +148,7 @@ func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 
 	argumentNode := node.ChildByFieldName("argument")
 	return OptionalExpression{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		Operator:    operator,
 		Argument:    convert_expression(argumentNode, source),
 	}
@@ -156,7 +156,7 @@ func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 	return UnaryExpression{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		Operator:    node.ChildByFieldName("operator").Content(source),
 		Expression:  convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -164,9 +164,38 @@ func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_cast_expr(node *sitter.Node, source []byte) Expression {
 	return CastExpression{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		Type:        convert_type(node.ChildByFieldName("type"), source),
 		Value:       convert_expression(node.ChildByFieldName("value"), source),
+	}
+}
+
+func convert_rethrow_expr(node *sitter.Node, source []byte) Expression {
+	return RethrowExpression{
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		Operator:    node.ChildByFieldName("operator").Content(source),
+		Argument:    convert_expression(node.ChildByFieldName("value"), source),
+	}
+}
+
+func convert_call_expr(node *sitter.Node, source []byte) Expression {
+
+	invocationNode := node.ChildByFieldName("arguments")
+	args := []Arg{}
+	for i := 0; i < int(invocationNode.ChildCount()); i++ {
+		n := invocationNode.Child(i)
+		if n.Type() == "arg" {
+			debugNode(n, source)
+			args = append(args, convert_arg(n, source))
+		}
+	}
+
+	// TODO convert trailing CompoundStatement
+
+	return FunctionCall{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Identifier:  convert_expression(node.ChildByFieldName("function"), source),
+		Arguments:   args,
 	}
 }
 
@@ -200,7 +229,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 
 		case "initializer_list":
 			initList := InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().
+				ASTBaseNode: NewBaseNodeBuilder().
 					WithSitterPos(node).Build(),
 			}
 			for i := 0; i < int(node.ChildCount()); i++ {
@@ -219,12 +248,12 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			}
 
 			expression = InlineTypeWithInitizlization{
-				ASTNodeBase: NewBaseNodeBuilder().
+				ASTBaseNode: NewBaseNodeBuilder().
 					WithStartEnd(
 						uint(node.StartPoint().Row),
 						uint(node.StartPoint().Column),
-						initList.ASTNodeBase.EndPos.Line,
-						initList.ASTNodeBase.EndPos.Column,
+						initList.ASTBaseNode.EndPos.Line,
+						initList.ASTBaseNode.EndPos.Column,
 					).Build(),
 				Type:            convert_type(node, source),
 				InitializerList: initList,
@@ -264,7 +293,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 		case "$feature":
 			next := node.NextNamedSibling()
 			expression = FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
 				Identifier: NewIdentifierBuilder().
 					WithName(node.Content(source)).
 					WithSitterPos(node).
@@ -281,7 +310,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			next := node.NextNamedSibling()
 
 			expression = FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
 				Identifier: NewIdentifierBuilder().
 					WithName(node.Content(source)).
 					WithSitterPos(node).
@@ -406,6 +435,13 @@ func convert_arg(node *sitter.Node, source []byte) Arg {
 		return Literal{Value: node.Content(source)}
 	case "...":
 		return Expression(convert_expression(node.Child(1), source))
+	default:
+
+		// try expr
+		expr := convert_expression(node.Child(0), source)
+		if expr != nil {
+			return expr
+		}
 	}
 
 	return nil
