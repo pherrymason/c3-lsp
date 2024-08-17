@@ -162,6 +162,14 @@ func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 	}
 }
 
+func convert_cast_expr(node *sitter.Node, source []byte) Expression {
+	return CastExpression{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		Type:        convert_type(node.ChildByFieldName("type"), source),
+		Value:       convert_expression(node.ChildByFieldName("value"), source),
+	}
+}
+
 func convert_base_expression(node *sitter.Node, source []byte) Expression {
 	var expression Expression
 	//fmt.Printf("converting_base_expression\n")

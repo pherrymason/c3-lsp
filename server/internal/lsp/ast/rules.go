@@ -84,7 +84,7 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 		"binary_expr":     convert_binary_expr,
 		"bytes_literal":   convert_literal,
 		//"call_expr":             convert_dummy,
-		//"cast_expr":             convert_dummy,
+		"cast_expr":         convert_cast_expr,
 		"char_literal":      convert_literal,
 		"elvis_orelse_expr": convert_elvis_orelse_expr,
 		"ident":             convert_ident,

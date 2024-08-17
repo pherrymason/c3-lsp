@@ -101,6 +101,12 @@ type OptionalExpression struct {
 	Operator string
 }
 
+type CastExpression struct {
+	ASTNodeBase
+	Type  TypeInfo
+	Value Expression
+}
+
 type InlineTypeWithInitizlization struct {
 	ASTNodeBase
 	Type            TypeInfo
