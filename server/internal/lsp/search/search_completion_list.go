@@ -339,6 +339,10 @@ func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectSt
 	for {
 		if !isInspectable(prevIndexable) {
 			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, symbolsHierarchy, debugger)
+
+			if prevIndexable == nil {
+				return option.None[symbols.Indexable]()
+			}
 		} else {
 			break
 		}
