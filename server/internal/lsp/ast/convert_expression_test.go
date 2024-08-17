@@ -126,8 +126,9 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "&anotherVariable",
 			expected: UnaryExpression{
-				Operator:   "&",
-				Expression: NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).Build(),
+				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 29).Build(),
+				Operator:    "&",
+				Expression:  NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).Build(),
 			},
 		},
 

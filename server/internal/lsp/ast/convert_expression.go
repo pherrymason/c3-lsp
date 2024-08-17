@@ -188,10 +188,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			expression = Literal{Value: node.Content(source)}
 
 		case "unary_expr":
-			expression = UnaryExpression{
-				Operator:   node.Child(0).Content(source),
-				Expression: convert_base_expression(node.ChildByFieldName("argument"), source),
-			}
+			expression = convert_unary_expr(node, source)
 
 		case "initializer_list":
 			initList := InitializerList{
