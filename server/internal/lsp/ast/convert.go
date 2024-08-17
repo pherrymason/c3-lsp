@@ -715,10 +715,6 @@ func convert_ident(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_type(node *sitter.Node, sourceCode []byte) TypeInfo {
-	/*if node.Type() == "optional_type" {
-		return extTypeNodeToType(node.Child(0), true, sourceCode)
-	}*/
-
 	return extTypeNodeToType(node, sourceCode)
 }
 

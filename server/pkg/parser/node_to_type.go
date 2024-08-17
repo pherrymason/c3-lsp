@@ -10,7 +10,8 @@ import (
 )
 
 func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module, sourceCode []byte) symbols.Type {
-	//fmt.Println(node, node.Content(sourceCode))
+
+	isOptional := false
 	baseTypeLanguage := false
 	baseType := ""
 	modulePath := currentModule.GetModuleString()
@@ -71,6 +72,8 @@ func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module
 					}
 				}
 			}
+		case "!":
+			isOptional = true
 		}
 	}
 
