@@ -140,7 +140,14 @@ func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 	return UnaryExpression{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Operator:    node.ChildByFieldName("operator").Content(source),
-		Expression:  convert_expression(node.ChildByFieldName("argument"), source),
+		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
+	}
+}
+func convert_update_expr(node *sitter.Node, source []byte) Expression {
+	return UpdateExpression{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Operator:    node.ChildByFieldName("operator").Content(source),
+		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
 }
 
@@ -148,7 +155,7 @@ func convert_cast_expr(node *sitter.Node, source []byte) Expression {
 	return CastExpression{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Type:        convert_type(node.ChildByFieldName("type"), source),
-		Value:       convert_expression(node.ChildByFieldName("value"), source),
+		Argument:    convert_expression(node.ChildByFieldName("value"), source),
 	}
 }
 

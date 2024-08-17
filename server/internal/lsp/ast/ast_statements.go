@@ -23,6 +23,12 @@ type TernaryExpression struct {
 	Alternative Expression
 }
 
+type UpdateExpression struct {
+	ASTBaseNode
+	Operator string
+	Argument Expression
+}
+
 type Expression interface {
 	ASTNode
 }
@@ -83,8 +89,8 @@ $._base_expr
 */
 type UnaryExpression struct {
 	ASTBaseNode
-	Operator   string
-	Expression Expression
+	Operator string
+	Argument Expression
 }
 
 // BinaryExpr representa una expresión binaria (como suma, resta, etc.)
@@ -103,8 +109,8 @@ type OptionalExpression struct {
 
 type CastExpression struct {
 	ASTBaseNode
-	Type  TypeInfo
-	Value Expression
+	Type     TypeInfo
+	Argument Expression
 }
 
 type RethrowExpression struct {

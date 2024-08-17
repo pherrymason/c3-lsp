@@ -128,7 +128,7 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 			expected: UnaryExpression{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 29).Build(),
 				Operator:    "&",
-				Expression:  NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).Build(),
+				Argument:    NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).Build(),
 			},
 		},
 
@@ -876,7 +876,7 @@ func TestConvertToAST_unary_expr(t *testing.T) {
 		UnaryExpression{
 			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 2, 2, 5).Build(),
 			Operator:    "++",
-			Expression:  NewIdentifierBuilder().WithName("b").WithStartEnd(2, 4, 2, 5).Build(),
+			Argument:    NewIdentifierBuilder().WithName("b").WithStartEnd(2, 4, 2, 5).Build(),
 		},
 		stmt.(UnaryExpression),
 	)
@@ -900,7 +900,7 @@ func TestConvertToAST_cast_expr(t *testing.T) {
 				WithStartEnd(2, 3, 2, 6).
 				IsBuiltin().
 				Build(),
-			Value: NewIdentifierBuilder().WithName("b").WithStartEnd(2, 7, 2, 8).Build(),
+			Argument: NewIdentifierBuilder().WithName("b").WithStartEnd(2, 7, 2, 8).Build(),
 		},
 		stmt.(CastExpression),
 	)
@@ -1081,7 +1081,7 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 					UnaryExpression{
 						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 29, 2, 31).Build(),
 						Operator:    "&",
-						Expression:  NewIdentifierBuilder().WithName("g").WithStartEnd(2, 30, 2, 31).Build(),
+						Argument:    NewIdentifierBuilder().WithName("g").WithStartEnd(2, 30, 2, 31).Build(),
 					},
 				},
 			},
@@ -1107,7 +1107,7 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 					UnaryExpression{
 						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 39, 2, 41).Build(),
 						Operator:    "&",
-						Expression:  NewIdentifierBuilder().WithName("g").WithStartEnd(2, 40, 2, 41).Build(),
+						Argument:    NewIdentifierBuilder().WithName("g").WithStartEnd(2, 40, 2, 41).Build(),
 					},
 				},
 			},
@@ -1128,6 +1128,62 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 					t,
 					tt.expected,
 					ast.Modules[0].Functions[0].(FunctionDecl).Body.(CompoundStatement).Statements[0].(FunctionCall),
+				)
+			},
+		)
+	}
+}
+
+func TestConvertToAST_update_expr(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		source   string
+		expected UpdateExpression
+	}{
+		{
+			source: `module foo;
+			fn void main(){
+				a++;
+			}`,
+			expected: UpdateExpression{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 7).Build(),
+				Operator:    "++",
+				Argument: Identifier{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 5).Build(),
+					Name:        "a",
+				},
+			},
+		},
+		{
+			source: `module foo;
+			fn void main(){
+				a--;
+			}`,
+			expected: UpdateExpression{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 7).Build(),
+				Operator:    "--",
+				Argument: NewIdentifierBuilder().
+					WithName("a").
+					WithStartEnd(2, 4, 2, 5).
+					Build(),
+			},
+		},
+	}
+
+	for i, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("update_expr: %d", i),
+			func(t *testing.T) {
+				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
+
+				assert.Equal(
+					t,
+					tt.expected,
+					ast.Modules[0].Functions[0].(FunctionDecl).Body.(CompoundStatement).Statements[0].(UpdateExpression),
 				)
 			},
 		)
