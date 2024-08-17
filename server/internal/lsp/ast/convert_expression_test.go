@@ -855,3 +855,26 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 			})
 	}
 }
+
+func TestConvertToAST_binary_expr(t *testing.T) {
+	t.Skip("TODO")
+}
+
+func TestConvertToAST_unary_expr(t *testing.T) {
+	source := `module foo;
+	fn void main() {
+		++b;
+	}`
+
+	ast := ConvertToAST(GetCST(source), source, "file.c3")
+	stmt := ast.Modules[0].Functions[0].(FunctionDecl).Body.(CompoundStatement).Statements[0]
+
+	assert.Equal(t,
+		UnaryExpression{
+			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 2, 2, 5).Build(),
+			Operator:    "++",
+			Expression:  NewIdentifierBuilder().WithName("b").WithStartEnd(2, 4, 2, 5).Build(),
+		},
+		stmt.(UnaryExpression),
+	)
+}
