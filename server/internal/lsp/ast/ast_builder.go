@@ -9,15 +9,22 @@ import (
 // ASTBaseNodeBuilder
 // --
 type ASTBaseNodeBuilder struct {
-	bn ASTNodeBase
+	bn ASTBaseNode
 }
 
 func NewBaseNodeBuilder() *ASTBaseNodeBuilder {
 	return &ASTBaseNodeBuilder{
-		bn: ASTNodeBase{},
+		bn: ASTBaseNode{},
 	}
 }
-func (d *ASTBaseNodeBuilder) Build() ASTNodeBase {
+
+func NewBaseNodeFromSitterNode(node *sitter.Node) ASTBaseNode {
+	builder := NewBaseNodeBuilder().
+		WithSitterPos(node)
+
+	return builder.Build()
+}
+func (d *ASTBaseNodeBuilder) Build() ASTBaseNode {
 	return d.bn
 }
 
@@ -80,7 +87,7 @@ func (i *IdentifierBuilder) WithStartEnd(startRow uint, startCol uint, endRow ui
 
 func (i *IdentifierBuilder) Build() Identifier {
 	ident := i.bi
-	ident.ASTNodeBase = i.bn.Build()
+	ident.ASTBaseNode = i.bn.Build()
 
 	return ident
 }
@@ -98,6 +105,10 @@ func NewTypeInfoBuilder() *TypeInfoBuilder {
 	}
 }
 
+func (b *TypeInfoBuilder) IsOptional() *TypeInfoBuilder {
+	b.t.Optional = true
+	return b
+}
 func (b *TypeInfoBuilder) IsBuiltin() *TypeInfoBuilder {
 	b.t.BuiltIn = true
 	return b
@@ -139,8 +150,8 @@ func (b *TypeInfoBuilder) WithNameStartEnd(startRow uint, startCol uint, endRow 
 }
 
 func (b *TypeInfoBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.ASTNodeBase.StartPos = Position{startRow, startCol}
-	b.t.ASTNodeBase.EndPos = Position{endRow, endCol}
+	b.t.ASTBaseNode.StartPos = Position{startRow, startCol}
+	b.t.ASTBaseNode.EndPos = Position{endRow, endCol}
 	return b
 }
 
@@ -191,7 +202,7 @@ func (b *DefDeclBuilder) WithIdentifierSitterPos(node *sitter.Node) *DefDeclBuil
 
 func (b *DefDeclBuilder) Build() DefDecl {
 	def := b.d
-	def.ASTNodeBase = b.a.Build()
+	def.ASTBaseNode = b.a.Build()
 
 	return def
 }

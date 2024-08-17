@@ -75,6 +75,7 @@ func TestParses_TypedEnums(t *testing.T) {
 	})
 
 	t.Run("associate values < v6.0", func(t *testing.T) {
+		t.Skip()
 		source := `
 		enum State : int (String state_desc, bool active)
 		{

@@ -9,15 +9,7 @@ import (
 
 func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module, sourceCode []byte) symbols.Type {
 
-	if node.Type() == "optional_type" {
-		return p.extTypeNodeToType(node.Child(0), true, currentModule, sourceCode)
-	}
-
-	return p.extTypeNodeToType(node, false, currentModule, sourceCode)
-}
-
-func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, currentModule *symbols.Module, sourceCode []byte) symbols.Type {
-	//fmt.Println(node, node.Content(sourceCode))
+	isOptional := false
 	baseTypeLanguage := false
 	baseType := ""
 	modulePath := currentModule.GetModuleString()
@@ -63,6 +55,8 @@ func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, currentMo
 			if suffix == "*" {
 				pointerCount = 1
 			}
+		case "!":
+			isOptional = true
 		}
 	}
 

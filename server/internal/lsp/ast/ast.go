@@ -14,20 +14,20 @@ const (
 	ResolveStatusDone
 )
 
-type ASTNodeBase struct {
+type ASTBaseNode struct {
 	StartPos, EndPos Position
 	Attributes       []string
 }
 
-func (n ASTNodeBase) Start() Position {
+func (n ASTBaseNode) Start() Position {
 	return n.StartPos
 }
 
-func (n ASTNodeBase) End() Position {
+func (n ASTBaseNode) End() Position {
 	return n.EndPos
 }
 
-func (n *ASTNodeBase) SetPos(start sitter.Point, end sitter.Point) {
+func (n *ASTBaseNode) SetPos(start sitter.Point, end sitter.Point) {
 	n.StartPos = Position{Line: uint(start.Row), Column: uint(start.Column)}
 	n.EndPos = Position{Line: uint(end.Row), Column: uint(end.Column)}
 }
@@ -38,19 +38,24 @@ type ASTNode interface {
 }
 
 type File struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name    string
 	Modules []Module
 }
 
 type Module struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name              string
 	GenericParameters []string
 	Functions         []Declaration
 	Macros            []Declaration
 	Declarations      []Declaration
-	Imports           []string
+	Imports           []Import
+}
+
+type Import struct {
+	ASTBaseNode
+	Path string
 }
 
 type Declaration interface {
@@ -58,20 +63,20 @@ type Declaration interface {
 }
 
 type VariableDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Names       []Identifier
 	Type        TypeInfo
 	Initializer Expression
 }
 
 type ConstDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Names []Identifier
 	Type  TypeInfo
 }
 
 type EnumDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name       string
 	BaseType   TypeInfo
 	Properties []EnumProperty
@@ -79,19 +84,19 @@ type EnumDecl struct {
 }
 
 type EnumProperty struct {
-	ASTNodeBase
+	ASTBaseNode
 	Type TypeInfo
 	Name Identifier
 }
 
 type EnumMember struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name  Identifier
 	Value CompositeLiteral
 }
 
 type PropertyValue struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name  string
 	Value Expression
 }
@@ -105,7 +110,7 @@ const (
 type StructType int
 
 type StructDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name        string
 	BackingType option.Option[TypeInfo]
 	Members     []StructMemberDecl
@@ -114,7 +119,7 @@ type StructDecl struct {
 }
 
 type StructMemberDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Names     []Identifier
 	Type      TypeInfo
 	BitRange  option.Option[[2]uint]
@@ -122,26 +127,26 @@ type StructMemberDecl struct {
 }
 
 type FaultDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name        Identifier
 	BackingType option.Option[TypeInfo]
 	Members     []FaultMember
 }
 
 type FaultMember struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name Identifier
 }
 
 type DefDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name           Identifier
 	resolvesTo     string
 	resolvesToType option.Option[TypeInfo]
 }
 
 type MacroDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Signature MacroSignature
 	Body      Block
 }
@@ -151,44 +156,53 @@ type MacroSignature struct {
 	Parameters []FunctionParameter
 }
 
+type LambdaDeclaration struct {
+	ASTBaseNode
+	Parameters []FunctionParameter
+	ReturnType option.Option[TypeInfo]
+	Body       Expression
+}
+
 type FunctionDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	ParentTypeId option.Option[Identifier]
 	Signature    FunctionSignature
-	Body         Block
+	Body         Expression
 }
 
 type FunctionSignature struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name       Identifier
 	Parameters []FunctionParameter
 	ReturnType TypeInfo
 }
 
 type FunctionParameter struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name Identifier
 	Type TypeInfo
 }
 
 type Block struct {
-	ASTNodeBase
+	ASTBaseNode
 	Declarations []Declaration
-	Statements   []ASTNode
+	Statements   []Expression
 }
 
 type FunctionCall struct {
-	ASTNodeBase
+	ASTBaseNode
+	Identifier Expression
+	Arguments  []Arg
 }
 
 type InterfaceDecl struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name    Identifier
 	Methods []FunctionSignature
 }
 
 type TypeInfo struct {
-	ASTNodeBase
+	ASTBaseNode
 	ResolveStatus int
 	Identifier    Identifier
 	Pointer       uint
@@ -198,34 +212,97 @@ type TypeInfo struct {
 }
 
 type Identifier struct {
-	ASTNodeBase
+	ASTBaseNode
 	Name string
 	Path string
 }
 
 type Literal struct {
-	ASTNodeBase
+	ASTBaseNode
 	Value string
 }
 type IntegerLiteral struct {
-	ASTNodeBase
-	Value uint
+	ASTBaseNode
+	Value string
+}
+type RealLiteral struct {
+	ASTBaseNode
+	Value string
 }
 
 type BoolLiteral struct {
-	ASTNodeBase
+	ASTBaseNode
 	Value bool
 }
-
 type CompositeLiteral struct {
-	ASTNodeBase
+	ASTBaseNode
 	Values []Expression
 }
 
-// BinaryExpr representa una expresión binaria (como suma, resta, etc.)
-type BinaryExpr struct {
-	ASTNodeBase
-	Left     ASTNode
-	Operator string
-	Right    ASTNode
+type InitializerList struct {
+	ASTBaseNode
+	Args []Expression
+}
+
+const (
+	PathTypeIndexed = iota
+	PathTypeField
+	PathTypeRange
+)
+
+type Path struct {
+	ASTBaseNode
+	PathType  int
+	Path      string
+	PathStart string
+	PathEnd   string
+	FieldName string
+}
+
+type Arg interface {
+	ASTNode
+}
+type ArgParamPathSet struct {
+	ASTBaseNode
+	Path string
+	Expr Expression
+}
+
+type ArgFieldSet struct {
+	ASTBaseNode
+	FieldName string
+	Expr      Expression
+}
+
+func (arg *ArgFieldSet) SetExpr(expr Expression) {
+	arg.Expr = expr
+}
+
+type IndexAccess struct {
+	ASTBaseNode
+	Array Expression
+	Index string
+}
+
+type RangeAccess struct {
+	ASTBaseNode
+	Array      Expression
+	RangeStart uint
+	RangeEnd   uint
+}
+
+type FieldAccess struct {
+	ASTBaseNode
+	Object Expression
+	Field  Expression
+}
+
+type CompoundStatement struct {
+	ASTBaseNode
+	Statements []Expression
+}
+
+type ReturnStatement struct {
+	ASTBaseNode
+	Return option.Option[Expression]
 }
