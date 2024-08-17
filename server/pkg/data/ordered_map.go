@@ -33,7 +33,7 @@ func (om *OrderedMap[T]) Keys() []string {
 }
 
 func (om *OrderedMap[T]) Values() []T {
-	values := []T{}
+	values := make([]T, 0, len(om.values))
 	for _, key := range om.keys {
 		values = append(values, om.values[key])
 	}
