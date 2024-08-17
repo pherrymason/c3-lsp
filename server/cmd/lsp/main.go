@@ -12,8 +12,8 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-const version = "0.0.9"
-const prerelease = true
+const version = "0.1.0"
+const prerelease = false
 const appName = "C3-LSP"
 
 func getVersion() string {
