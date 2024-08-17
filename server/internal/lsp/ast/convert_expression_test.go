@@ -1053,3 +1053,83 @@ func TestConvertToAST_call_expr(t *testing.T) {
 			})
 	}
 }
+
+func TestConvertToAST_trailing_generic_expr(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		source   string
+		expected FunctionCall
+	}{
+		{
+			source: `module foo;
+			fn void main(){
+				test(<int, double>)(1.0, &g);
+			}`,
+			expected: FunctionCall{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 32).Build(),
+				Identifier: Identifier{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 8).Build(),
+					Name:        "test",
+					Path:        "",
+				},
+				GenericArguments: option.Some([]Expression{
+					NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(2, 10, 2, 13).WithStartEnd(2, 10, 2, 13).Build(),
+					NewTypeInfoBuilder().WithName("double").IsBuiltin().WithNameStartEnd(2, 15, 2, 21).WithStartEnd(2, 15, 2, 21).Build(),
+				}),
+				Arguments: []Arg{
+					RealLiteral{Value: "1.0"},
+					UnaryExpression{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 29, 2, 31).Build(),
+						Operator:    "&",
+						Expression:  NewIdentifierBuilder().WithName("g").WithStartEnd(2, 30, 2, 31).Build(),
+					},
+				},
+			},
+		},
+		{
+			source: `module foo;
+			fn void main(){
+				foo_test::test(<int, double>)(1.0, &g);
+			}`,
+			expected: FunctionCall{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 42).Build(),
+				Identifier: NewIdentifierBuilder().
+					WithName("test").
+					WithPath("foo_test").
+					WithStartEnd(2, 4, 2, 18).
+					Build(),
+				GenericArguments: option.Some([]Expression{
+					NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(2, 20, 2, 23).WithStartEnd(2, 20, 2, 23).Build(),
+					NewTypeInfoBuilder().WithName("double").IsBuiltin().WithNameStartEnd(2, 25, 2, 31).WithStartEnd(2, 25, 2, 31).Build(),
+				}),
+				Arguments: []Arg{
+					RealLiteral{Value: "1.0"},
+					UnaryExpression{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 39, 2, 41).Build(),
+						Operator:    "&",
+						Expression:  NewIdentifierBuilder().WithName("g").WithStartEnd(2, 40, 2, 41).Build(),
+					},
+				},
+			},
+		},
+	}
+
+	for i, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("trailing_generic_expr: %d", i),
+			func(t *testing.T) {
+				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
+
+				assert.Equal(
+					t,
+					tt.expected,
+					ast.Modules[0].Functions[0].(FunctionDecl).Body.(CompoundStatement).Statements[0].(FunctionCall),
+				)
+			},
+		)
+	}
+}

@@ -172,19 +172,69 @@ func convert_call_expr(node *sitter.Node, source []byte) Expression {
 		}
 	}
 
-	// TODO convert trailing CompoundStatement
 	trailingNode := node.ChildByFieldName("trailing")
 	compoundStmt := option.None[CompoundStatement]()
 	if trailingNode != nil {
 		compoundStmt = option.Some(convert_compound_stmt(trailingNode, source).(CompoundStatement))
 	}
 
-	return FunctionCall{
-		ASTBaseNode:   NewBaseNodeFromSitterNode(node),
-		Identifier:    convert_expression(node.ChildByFieldName("function"), source),
-		Arguments:     args,
-		TrailingBlock: compoundStmt,
+	expr := convert_expression(node.ChildByFieldName("function"), source)
+	var identifier Expression
+	genericArguments := option.None[[]Expression]()
+	switch expr.(type) {
+	case Identifier:
+		identifier = expr
+	case TrailingGenericsExpr:
+		identifier = expr.(TrailingGenericsExpr).Identifier
+		ga := expr.(TrailingGenericsExpr).GenericArguments
+		genericArguments = option.Some(ga)
 	}
+
+	return FunctionCall{
+		ASTBaseNode:      NewBaseNodeFromSitterNode(node),
+		Identifier:       identifier,
+		GenericArguments: genericArguments,
+		Arguments:        args,
+		TrailingBlock:    compoundStmt,
+	}
+}
+
+/*
+trailing_generic_expr: $ => prec.right(PREC.TRAILING, seq(
+field('argument', $._expr),
+field('operator', $.generic_arguments),
+)),
+*/
+func convert_trailing_generic_expr(node *sitter.Node, source []byte) Expression {
+	argNode := node.ChildByFieldName("argument")
+	expr := convert_expression(argNode, source)
+
+	operator := convert_generic_arguments(node.ChildByFieldName("operator"), source)
+
+	return TrailingGenericsExpr{
+		ASTBaseNode:      NewBaseNodeFromSitterNode(node),
+		Identifier:       expr.(Identifier),
+		GenericArguments: operator,
+	}
+}
+
+func convert_generic_arguments(node *sitter.Node, source []byte) []Expression {
+	args := []Expression{}
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+
+		switch n.Type() {
+		case "(<", ">)", ",":
+			//ignore
+		case "type":
+			args = append(args, convert_type(n, source))
+
+		default:
+			args = append(args, convert_expression(n, source))
+		}
+	}
+
+	return args
 }
 
 func convert_base_expression(node *sitter.Node, source []byte) Expression {
