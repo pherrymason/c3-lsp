@@ -278,14 +278,6 @@ func (arg *ArgFieldSet) SetExpr(expr Expression) {
 	arg.Expr = expr
 }
 
-// BinaryExpr representa una expresión binaria (como suma, resta, etc.)
-type BinaryExpr struct {
-	ASTNodeBase
-	Left     ASTNode
-	Operator string
-	Right    ASTNode
-}
-
 type IndexAccess struct {
 	ASTNodeBase
 	Array Expression
