@@ -12,7 +12,7 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-const version = "0.0.9"
+const version = "0.2.0"
 const prerelease = true
 const appName = "C3-LSP"
 
