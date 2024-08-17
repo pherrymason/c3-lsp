@@ -1003,11 +1003,14 @@ func TestConvertToAST_call_expr(t *testing.T) {
 			},
 		},
 		{
-			// TODO implement trailing compount statement following function call
-			skip: true,
+			// Trailing blocks: https://c3-lang.org/references/docs/macros/#capturing-a-trailing-block
+			skip: false,
 			source: `module foo;
 			fn void main() {
-				simple(a, b) @attributes;
+				$simple(a, b)
+				{
+				    int a = 1;
+				};
 			}`,
 			expected: FunctionCall{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 16).Build(),
