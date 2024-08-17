@@ -191,8 +191,9 @@ type Block struct {
 
 type FunctionCall struct {
 	ASTBaseNode
-	Identifier Expression
-	Arguments  []Arg
+	Identifier    Expression
+	Arguments     []Arg
+	TrailingBlock option.Option[CompoundStatement]
 }
 
 type InterfaceDecl struct {

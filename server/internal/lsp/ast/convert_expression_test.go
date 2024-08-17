@@ -609,7 +609,8 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 					},
 				},
 				Body: CompoundStatement{
-					Statements: []Expression{},
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 29, 1, 31).Build(),
+					Statements:  []Expression{},
 				},
 			},
 		},
@@ -620,7 +621,8 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 				Parameters:  []FunctionParameter{},
 				ReturnType:  option.None[TypeInfo](),
 				Body: CompoundStatement{
-					Statements: []Expression{},
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 13, 1, 15).Build(),
+					Statements:  []Expression{},
 				},
 			},
 		},
@@ -1009,16 +1011,29 @@ func TestConvertToAST_call_expr(t *testing.T) {
 			fn void main() {
 				$simple(a, b)
 				{
-				    int a = 1;
+				    a = 1;
 				};
 			}`,
 			expected: FunctionCall{
-				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 16).Build(),
-				Identifier:  NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 5, 5).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("$simple").WithStartEnd(2, 4, 2, 11).Build(),
 				Arguments: []Arg{
-					NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).Build(),
-					NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).Build(),
+					NewIdentifierBuilder().WithName("a").WithStartEnd(2, 12, 2, 13).Build(),
+					NewIdentifierBuilder().WithName("b").WithStartEnd(2, 15, 2, 16).Build(),
 				},
+				TrailingBlock: option.Some(
+					CompoundStatement{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 4, 5, 5).Build(),
+						Statements: []Expression{
+							AssignmentStatement{
+								ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 8, 4, 13).Build(),
+								Left:        NewIdentifierBuilder().WithName("a").WithStartEnd(4, 8, 4, 9).Build(),
+								Right:       IntegerLiteral{Value: "1"},
+								Operator:    "=",
+							},
+						},
+					},
+				),
 			},
 		},
 	}
