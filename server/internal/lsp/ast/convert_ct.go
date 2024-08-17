@@ -32,7 +32,7 @@ func convert_compile_time_call(node *sitter.Node, source []byte) Expression {
 	endNode = flatPath.NextSibling()
 
 	funcCall := FunctionCall{
-		ASTNodeBase: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().
@@ -62,7 +62,7 @@ func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
 	expr := convert_expression(insideParenths, source)
 
 	funcCall := FunctionCall{
-		ASTNodeBase: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().
@@ -108,7 +108,7 @@ func convert_compile_time_analyse(node *sitter.Node, source []byte) Expression {
 	//expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
 
 	funcCall := FunctionCall{
-		ASTNodeBase: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), decl_or_expr_node.NextSibling().EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().

@@ -126,7 +126,7 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "&anotherVariable",
 			expected: UnaryExpression{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 29).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 29).Build(),
 				Operator:    "&",
 				Expression:  NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).Build(),
 			},
@@ -136,14 +136,14 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "Type{1,2}",
 			expected: InlineTypeWithInitizlization{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 22).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 22).Build(),
 				Type: NewTypeInfoBuilder().
 					WithName("Type").
 					WithNameStartEnd(2, 13, 2, 17).
 					WithStartEnd(2, 13, 2, 17).
 					Build(),
 				InitializerList: InitializerList{
-					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 17, 2, 22).Build(),
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 17, 2, 22).Build(),
 					Args: []Expression{
 						IntegerLiteral{Value: "1"},
 						IntegerLiteral{Value: "2"},
@@ -184,7 +184,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{[0] = 1, [2] = 2}",
 			expected: InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 13+18).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 13+18).Build(),
 				Args: []Expression{
 					ArgParamPathSet{
 						Path: "[0]",
@@ -200,7 +200,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{[0] = Type}",
 			expected: InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 13+12).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 13+12).Build(),
 				Args: []Expression{
 					ArgParamPathSet{
 						Path: "[0]",
@@ -216,7 +216,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{[0..2] = 2}",
 			expected: InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 25).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 25).Build(),
 				Args: []Expression{
 					ArgParamPathSet{
 						Path: "[0..2]",
@@ -228,7 +228,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{.a = 1}",
 			expected: InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 13+8).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 13+8).Build(),
 				Args: []Expression{
 					ArgFieldSet{
 						//ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13+2, 2, 13+3).Build(),
@@ -241,7 +241,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{Type}",
 			expected: InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 13+6).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 13+6).Build(),
 				Args: []Expression{
 					NewTypeInfoBuilder().
 						WithStartEnd(2, 13+1, 2, 13+5).
@@ -254,7 +254,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{$vasplat()}",
 			expected: InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 25).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 25).Build(),
 				Args: []Expression{
 					Literal{Value: "$vasplat()"},
 				},
@@ -263,7 +263,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{$vasplat(0..1)}",
 			expected: InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 29).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 29).Build(),
 				Args: []Expression{
 					Literal{Value: "$vasplat(0..1)"},
 				},
@@ -272,7 +272,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{...id}",
 			expected: InitializerList{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 20).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 13, 2, 20).Build(),
 				Args: []Expression{
 					NewIdentifierBuilder().
 						WithName("id").
@@ -432,7 +432,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 					varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
 					initializer := varDecl.Initializer.(FunctionCall)
 
-					assert.Equal(t, method, initializer.Identifier.Name)
+					assert.Equal(t, method, initializer.Identifier.(Identifier).Name)
 
 					arg := initializer.Arguments[0]
 					switch arg.(type) {
@@ -504,7 +504,7 @@ func TestConvertToAST_compile_time_argument_call(t *testing.T) {
 				initializer := varDecl.Initializer.(FunctionCall)
 
 				assert.Equal(t, FunctionCall{
-					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 16+length).Build(),
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 16+length).Build(),
 					Identifier:  NewIdentifierBuilder().WithName(method).WithStartEnd(1, 12, 1, 12+length).Build(),
 					Arguments: []Arg{
 						NewIdentifierBuilder().WithName("id").WithStartEnd(1, 12+length+1, 1, 14+length+1).Build(),
@@ -523,7 +523,7 @@ func TestConvertToAST_compile_time_analyse(t *testing.T) {
 		{
 			input: "$eval(id)",
 			expected: FunctionCall{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 21).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 21).Build(),
 				Identifier:  NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).Build(),
 				Arguments: []Arg{
 					NewIdentifierBuilder().WithName("id").WithStartEnd(1, 18, 1, 20).Build(),
@@ -579,7 +579,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 		{
 			input: "int i = fn int (int a, int b){};",
 			expected: LambdaDeclaration{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 29).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 29).Build(),
 				ReturnType: option.Some[TypeInfo](NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
@@ -588,7 +588,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 					Build()),
 				Parameters: []FunctionParameter{
 					{
-						ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 16, 1, 21).Build(),
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 16, 1, 21).Build(),
 						Name:        NewIdentifierBuilder().WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
 						Type: NewTypeInfoBuilder().
 							WithName("int").
@@ -598,7 +598,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 							Build(),
 					},
 					{
-						ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 23, 1, 28).Build(),
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 23, 1, 28).Build(),
 						Name:        NewIdentifierBuilder().WithName("b").WithStartEnd(1, 27, 1, 28).Build(),
 						Type: NewTypeInfoBuilder().
 							WithName("int").
@@ -616,7 +616,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 		{
 			input: "int i = fn (){};",
 			expected: LambdaDeclaration{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 13).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 8, 1, 13).Build(),
 				Parameters:  []FunctionParameter{},
 				ReturnType:  option.None[TypeInfo](),
 				Body: CompoundStatement{
@@ -653,7 +653,7 @@ func TestConvertToAST_asignment_expr(t *testing.T) {
 		{
 			input: "i = 10;",
 			expected: AssignmentStatement{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+6).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+6).Build(),
 				Left:        NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).Build(),
 				Right:       IntegerLiteral{Value: "10"},
 				Operator:    "=",
@@ -662,7 +662,7 @@ func TestConvertToAST_asignment_expr(t *testing.T) {
 		{
 			input: "$CompileTimeType = Type;",
 			expected: AssignmentStatement{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+23).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+23).Build(),
 				Left:        Literal{Value: "$CompileTimeType"},
 				Right: NewTypeInfoBuilder().
 					WithName("Type").
@@ -702,9 +702,9 @@ func TestConvertToAST_ternary_expr(t *testing.T) {
 		{
 			input: "i > 10 ? a:b;",
 			expected: TernaryExpression{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+12).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+12).Build(),
 				Condition: BinaryExpr{
-					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 25).Build(),
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 25).Build(),
 					Left:        NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).Build(),
 					Operator:    ">",
 					Right:       IntegerLiteral{Value: "10"},
@@ -741,7 +741,7 @@ func TestConvertToAST_lambda_expr(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	expected := LambdaDeclaration{
-		ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 24).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 24).Build(),
 		ReturnType: option.Some(NewTypeInfoBuilder().
 			WithStartEnd(1, 12, 1, 15).
 			WithName("int").
@@ -751,7 +751,7 @@ func TestConvertToAST_lambda_expr(t *testing.T) {
 		),
 		Parameters: []FunctionParameter{},
 		Body: ReturnStatement{
-			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 22, 1, 24).Build(),
+			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 22, 1, 24).Build(),
 			Return:      option.Some(Expression(IntegerLiteral{Value: "10"})),
 		},
 	}
@@ -771,7 +771,7 @@ func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
 			source: `module foo;
 			int i = condition ?: 10;`,
 			expected: TernaryExpression{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
 				Condition:   NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
 				Consequence: NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
 				Alternative: IntegerLiteral{Value: "10"},
@@ -781,7 +781,7 @@ func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
 			source: `module foo;
 			int i = condition ?? 10;`,
 			expected: TernaryExpression{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
 				Condition:   NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
 				Consequence: NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
 				Alternative: IntegerLiteral{Value: "10"},
@@ -815,10 +815,10 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 			source: `module foo;
 			int b = a + b?;`,
 			expected: OptionalExpression{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 17).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 17).Build(),
 				Operator:    "?",
 				Argument: BinaryExpr{
-					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 16).Build(),
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 16).Build(),
 					Left:        NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).Build(),
 					Right:       NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).Build(),
 					Operator:    "+",
@@ -829,10 +829,10 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 			source: `module foo;
 			int b = a + b?!;`,
 			expected: OptionalExpression{
-				ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 18).Build(),
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 18).Build(),
 				Operator:    "?!",
 				Argument: BinaryExpr{
-					ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 16).Build(),
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 16).Build(),
 					Left:        NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).Build(),
 					Right:       NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).Build(),
 					Operator:    "+",
@@ -847,7 +847,7 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 		}
 
 		t.Run(
-			fmt.Sprintf("elivs_or_else_expr: %d", i),
+			fmt.Sprintf("optional_expr: %d", i),
 			func(t *testing.T) {
 				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
@@ -872,7 +872,7 @@ func TestConvertToAST_unary_expr(t *testing.T) {
 
 	assert.Equal(t,
 		UnaryExpression{
-			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 2, 2, 5).Build(),
+			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 2, 2, 5).Build(),
 			Operator:    "++",
 			Expression:  NewIdentifierBuilder().WithName("b").WithStartEnd(2, 4, 2, 5).Build(),
 		},
@@ -891,7 +891,7 @@ func TestConvertToAST_cast_expr(t *testing.T) {
 
 	assert.Equal(t,
 		CastExpression{
-			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 2, 2, 8).Build(),
+			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 2, 2, 8).Build(),
 			Type: NewTypeInfoBuilder().
 				WithName("int").
 				WithNameStartEnd(2, 3, 2, 6).
@@ -902,4 +902,102 @@ func TestConvertToAST_cast_expr(t *testing.T) {
 		},
 		stmt.(CastExpression),
 	)
+}
+
+func TestConvertToAST_rethrow_expr(t *testing.T) {
+	t.Skip("Pending until implement call_expr")
+	cases := []struct {
+		skip     bool
+		source   string
+		expected RethrowExpression
+	}{
+		{
+			source: `module foo;
+			int b = foo_may_error()!;`,
+			expected: RethrowExpression{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 27).Build(),
+				Operator:    "!",
+				Argument: FunctionCall{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 25).Build(),
+				},
+			},
+		},
+		{
+			source: `module foo;
+			int b = foo_may_error()!!;`,
+			expected: RethrowExpression{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 28).Build(),
+				Operator:    "!!",
+				Argument: FunctionCall{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 25).Build(),
+				},
+			},
+		},
+	}
+
+	for i, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("rethrow_expr: %d", i),
+			func(t *testing.T) {
+				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
+
+				varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
+				assert.Equal(t, tt.expected, varDecl.Initializer.(RethrowExpression))
+			})
+	}
+}
+
+func TestConvertToAST_call_expr(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		source   string
+		expected FunctionCall
+	}{
+		{
+			source: `module foo;
+			fn void main() {
+				simple();
+			}`,
+			expected: FunctionCall{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 12).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).Build(),
+				Arguments:   []Arg{},
+			},
+		},
+		{
+			source: `module foo;
+			fn void main() {
+				simple(a, b);
+			}`,
+			expected: FunctionCall{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 16).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).Build(),
+				Arguments: []Arg{
+					NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).Build(),
+					NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).Build(),
+				},
+			},
+		},
+	}
+
+	for i, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("call_expr: %d", i),
+			func(t *testing.T) {
+				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
+
+				mainFnc := ast.Modules[0].Functions[0].(FunctionDecl)
+				assert.Equal(t, tt.expected, mainFnc.Body.(CompoundStatement).Statements[0].(FunctionCall))
+			})
+	}
 }

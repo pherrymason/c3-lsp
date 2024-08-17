@@ -45,6 +45,7 @@ type OfType struct {
 func (o OfType) Validate(node *sitter.Node, source []byte) bool {
 	return node.Type() == o.Name
 }
+
 func (o OfType) Type() string {
 	return o.Name
 }
@@ -80,10 +81,10 @@ type NodeConverter func(node *sitter.Node, source []byte) Expression
 
 func nodeTypeConverterMap(nodeType string) NodeConverter {
 	funcMap := map[string]NodeConverter{
-		"assignment_expr": convert_assignment_expr,
-		"binary_expr":     convert_binary_expr,
-		"bytes_literal":   convert_literal,
-		//"call_expr":             convert_dummy,
+		"assignment_expr":   convert_assignment_expr,
+		"binary_expr":       convert_binary_expr,
+		"bytes_literal":     convert_literal,
+		"call_expr":         convert_call_expr,
 		"cast_expr":         convert_cast_expr,
 		"char_literal":      convert_literal,
 		"elvis_orelse_expr": convert_elvis_orelse_expr,
@@ -94,7 +95,7 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 		"optional_expr":      convert_optional_expr,
 		"raw_string_literal": convert_literal,
 		"real_literal":       convert_literal,
-		//"rethrow_expr":          convert_dummy,
+		"rethrow_expr":       convert_rethrow_expr,
 		//"suffix_expr":           convert_dummy,
 		//"subscript_expr":        convert_dummy,
 		"string_literal": convert_literal,
@@ -117,6 +118,9 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 func anyOf(rules []NodeRule, node *sitter.Node, source []byte) Expression {
 	var converter NodeConverter
 	//debugNode(node, source)
+	if node == nil {
+		panic("Nil node supplied!")
+	}
 
 	for _, rule := range rules {
 		if rule.Validate(node, source) {

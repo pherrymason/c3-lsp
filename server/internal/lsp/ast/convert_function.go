@@ -35,7 +35,7 @@ func convert_function_declaration(node *sitter.Node, source []byte) Expression {
 	}
 
 	funcDecl := FunctionDecl{
-		ASTNodeBase:  NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode:  NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		ParentTypeId: typeIdentifier,
 		Signature:    signature,
 		Body:         body,
@@ -73,7 +73,7 @@ func convert_function_signature(node *sitter.Node, sourceCode []byte) FunctionSi
 			Build(),
 		ReturnType: convert_type(funcHeader.ChildByFieldName("return_type"), sourceCode),
 		Parameters: convert_function_parameter_list(node.Child(2), typeIdentifier, sourceCode),
-		ASTNodeBase: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
 	}
@@ -159,7 +159,7 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 						WithSitterPos(n).
 						Build(),
 					Pointer:     pointer,
-					ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
+					ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
 				}
 			}
 		}
@@ -168,7 +168,7 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 	variable := FunctionParameter{
 		Name:        identifier,
 		Type:        argType,
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
 	}
 
 	return variable
@@ -192,7 +192,7 @@ func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
 	}
 
 	return LambdaDeclaration{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		ReturnType:  rType,
 		Parameters:  parameters,
 	}
@@ -208,10 +208,10 @@ func convert_lambda_expr(node *sitter.Node, source []byte) Expression {
 	bodyNode := node.Child(1).ChildByFieldName("body")
 	debugNode(bodyNode, source)
 
-	lambda.ASTNodeBase.EndPos.Column = uint(bodyNode.EndPoint().Column)
-	lambda.ASTNodeBase.EndPos.Line = uint(bodyNode.EndPoint().Row)
+	lambda.ASTBaseNode.EndPos.Column = uint(bodyNode.EndPoint().Column)
+	lambda.ASTBaseNode.EndPos.Line = uint(bodyNode.EndPoint().Row)
 	lambda.Body = ReturnStatement{
-		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(bodyNode).Build(),
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(bodyNode).Build(),
 		Return:      option.Some(convert_expression(bodyNode, source)),
 	}
 
