@@ -142,7 +142,7 @@ func convert_elvis_orelse_expr(node *sitter.Node, source []byte) Expression {
 func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 	operatorNode := node.ChildByFieldName("operator")
 	operator := operatorNode.Content(source)
-	if operatorNode.NextSibling().Type() == "!" {
+	if operatorNode.NextSibling() != nil && operatorNode.NextSibling().Type() == "!" {
 		operator += "!"
 	}
 
