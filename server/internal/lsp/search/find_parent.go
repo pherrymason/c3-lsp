@@ -41,6 +41,9 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		for {
 			if !isInspectable(elm) {
 				elm = s.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), projState, symbolsHierarchy, debugger)
+				if elm == nil {
+					return NewSearchResultEmptyWithTraversedModules(result.traversedModules)
+				}
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 			} else {
 				break
@@ -222,7 +225,8 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 	found := l.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
 
 	if found.IsNone() {
-		panic(fmt.Sprintf("Could not resolve symbol: %s", elm.GetName()))
+		return nil
+		//panic(fmt.Sprintf("Could not resolve symbol: %s", elm.GetName()))
 	}
 	return found.Get()
 }
