@@ -191,9 +191,10 @@ type Block struct {
 
 type FunctionCall struct {
 	ASTBaseNode
-	Identifier    Expression
-	Arguments     []Arg
-	TrailingBlock option.Option[CompoundStatement]
+	Identifier       Expression
+	GenericArguments option.Option[[]Expression]
+	Arguments        []Arg
+	TrailingBlock    option.Option[CompoundStatement]
 }
 
 type InterfaceDecl struct {
@@ -216,6 +217,14 @@ type Identifier struct {
 	ASTBaseNode
 	Name string
 	Path string
+}
+
+// Used only as a temporal container.
+// It is decomposed and its info extracted to build other ast nodes.
+type TrailingGenericsExpr struct {
+	ASTBaseNode
+	Identifier       Identifier
+	GenericArguments []Expression
 }
 
 type Literal struct {
