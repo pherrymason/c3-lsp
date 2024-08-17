@@ -174,7 +174,7 @@ func convert_rethrow_expr(node *sitter.Node, source []byte) Expression {
 	return RethrowExpression{
 		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
 		Operator:    node.ChildByFieldName("operator").Content(source),
-		Argument:    convert_expression(node.ChildByFieldName("value"), source),
+		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
 }
 
