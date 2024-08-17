@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/pherrymason/c3-lsp/pkg/document"
@@ -60,10 +61,6 @@ func getC3Version(path string) string {
 	panic("Could not find c3c version: Did not find COMPILER_VERSION in versino.h")
 }
 
-func buildStdDocId(path string) string {
-	return strings.ReplaceAll(path, "../../../assets/c3c/lib/", "c3_stdlib::")
-}
-
 func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 	f := jen.NewFile("stdlib")
 	versionIdentifier := "v" + strings.ReplaceAll(c3Version, ".", "")
@@ -109,7 +106,7 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 		jen.Var().Id("module").Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
 	}
 
-	for _, ps := range symbolsTable.All() {
+	for _, ps := range sortedValues(symbolsTable.All()) {
 		for _, mod := range ps.Modules() {
 			if mod.IsPrivate() {
 				continue
@@ -143,7 +140,7 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 					)
 			}
 
-			for _, variable := range mod.Variables {
+			for _, variable := range sortedValues(mod.Variables) {
 				somethingAdded = true
 				// Generate variable
 				varDef := Generate_variable(variable, mod)
@@ -151,34 +148,35 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 					Dot("AddVariable").Call(varDef)
 			}
 
-			for _, strukt := range mod.Structs {
+			for _, strukt := range sortedValues(mod.Structs) {
 				somethingAdded = true
 				structDef := Generate_struct(strukt, mod)
 				modDefinition.
 					Dot("AddStruct").Call(structDef)
 			}
-			for _, bitstruct := range mod.Bitstructs {
+
+			for _, bitstruct := range sortedValues(mod.Bitstructs) {
 				somethingAdded = true
 				bitstructDef := Generate_bitstruct(bitstruct, mod)
 				modDefinition.
 					Dot("AddBitstruct").Call(bitstructDef)
 			}
 
-			for _, def := range mod.Defs {
+			for _, def := range sortedValues(mod.Defs) {
 				somethingAdded = true
 				defDef := Generate_definition(def, mod)
 				modDefinition.
 					Dot("AddDef").Call(defDef)
 			}
 
-			for _, enum := range mod.Enums {
+			for _, enum := range sortedValues(mod.Enums) {
 				somethingAdded = true
 				enumDef := Generate_enum(enum, mod)
 				modDefinition.
 					Dot("AddEnum").Call(enumDef)
 			}
 
-			for _, fault := range mod.Faults {
+			for _, fault := range sortedValues(mod.Faults) {
 				somethingAdded = true
 				enumDef := Generate_fault(fault, mod)
 				modDefinition.
@@ -219,4 +217,17 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func sortedValues[T any](m map[string]T) []T {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	values := make([]T, 0, len(m))
+	for _, k := range keys {
+		values = append(values, m[k])
+	}
+	return values
 }
