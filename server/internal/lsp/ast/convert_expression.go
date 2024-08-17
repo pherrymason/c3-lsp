@@ -140,13 +140,17 @@ func convert_elvis_orelse_expr(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_optional_expr(node *sitter.Node, source []byte) Expression {
-	conditionNode := node.ChildByFieldName("condition")
+	operatorNode := node.ChildByFieldName("operator")
+	operator := operatorNode.Content(source)
+	if operatorNode.NextSibling().Type() == "!" {
+		operator += "!"
+	}
 
-	return TernaryExpression{
+	argumentNode := node.ChildByFieldName("argument")
+	return OptionalExpression{
 		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
-		Condition:   convert_expression(conditionNode, source),
-		Consequence: convert_ident(conditionNode, source),
-		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
+		Operator:    operator,
+		Argument:    convert_expression(argumentNode, source),
 	}
 }
 

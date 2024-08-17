@@ -76,6 +76,8 @@ func NodeTryConversionFunc(name string) TryConversionFunc {
 	return TryConversionFunc{FuncName: name}
 }
 
+type NodeConverter func(node *sitter.Node, source []byte) Expression
+
 func nodeTypeConverterMap(nodeType string) NodeConverter {
 	funcMap := map[string]NodeConverter{
 		"assignment_expr": convert_assignment_expr,
