@@ -337,9 +337,9 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		state.registerDoc(
 			"app.c3",
 			`enum WindowStatus : int (int counter) {
-				OPEN(1), 
-				BACKGROUND(2), 
-				MINIMIZED(3) 
+				OPEN = {1}, 
+				BACKGROUND = {2}, 
+				MINIMIZED = {3}
 			}
 			fn void main() {
 				int status = WindowStatus.BACKGROUND.counter;
