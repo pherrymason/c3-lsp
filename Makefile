@@ -1,6 +1,7 @@
 ASSETS_DIR = assets
 TREE_SITTER_DIR = $(ASSETS_DIR)/tree-sitter-c3
 TREE_SITTER_GIT = git@github.com:c3lang/tree-sitter-c3.git
+TREE_SITTER_COMMIT = 790a0326833cd647e00d8dec01268aa1ec2e3bdb
 C3C_DIR = $(ASSETS_DIR)/c3c
 C3C_GIT = git@github.com:c3lang/c3c.git
 
@@ -20,7 +21,7 @@ treesitter-playground:
 	cd $(TREE_SITTER_DIR) && tree-sitter build-wasm && tree-sitter playground
 
 build-parser:
-	cd $(TREE_SITTER_DIR) && tree-sitter generate
+	cd $(TREE_SITTER_DIR) && git fetch --all && git checkout $(TREE_SITTER_COMMIT) && tree-sitter generate
 	rm -rf server/internal/lsp/cst/tree_sitter
 	rm -f server/internal/lsp/cst/parser.c
 	cp -r $(TREE_SITTER_DIR)/src/tree_sitter server/internal/lsp/cst
