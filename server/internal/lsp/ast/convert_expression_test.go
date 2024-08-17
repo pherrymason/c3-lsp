@@ -905,7 +905,7 @@ func TestConvertToAST_cast_expr(t *testing.T) {
 }
 
 func TestConvertToAST_rethrow_expr(t *testing.T) {
-	t.Skip("Pending until implement call_expr")
+	//t.Skip("Pending until implement call_expr")
 	cases := []struct {
 		skip     bool
 		source   string
@@ -919,7 +919,8 @@ func TestConvertToAST_rethrow_expr(t *testing.T) {
 				Operator:    "!",
 				Argument: FunctionCall{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
-					Identifier:  NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 25).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).Build(),
+					Arguments:   []Arg{},
 				},
 			},
 		},
@@ -931,7 +932,8 @@ func TestConvertToAST_rethrow_expr(t *testing.T) {
 				Operator:    "!!",
 				Argument: FunctionCall{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 26).Build(),
-					Identifier:  NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 25).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).Build(),
+					Arguments:   []Arg{},
 				},
 			},
 		},
@@ -974,6 +976,38 @@ func TestConvertToAST_call_expr(t *testing.T) {
 			source: `module foo;
 			fn void main() {
 				simple(a, b);
+			}`,
+			expected: FunctionCall{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 16).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).Build(),
+				Arguments: []Arg{
+					NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).Build(),
+					NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).Build(),
+				},
+			},
+		},
+		{
+			// TODO implement attributes after argument list
+			skip: true,
+			source: `module foo;
+			fn void main() {
+				simple(a, b) @attributes;
+			}`,
+			expected: FunctionCall{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 16).Build(),
+				Identifier:  NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).Build(),
+				Arguments: []Arg{
+					NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).Build(),
+					NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).Build(),
+				},
+			},
+		},
+		{
+			// TODO implement trailing compount statement following function call
+			skip: true,
+			source: `module foo;
+			fn void main() {
+				simple(a, b) @attributes;
 			}`,
 			expected: FunctionCall{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 16).Build(),
