@@ -87,6 +87,20 @@ type UnaryExpression struct {
 	Expression Expression
 }
 
+// BinaryExpr representa una expresión binaria (como suma, resta, etc.)
+type BinaryExpr struct {
+	ASTNodeBase
+	Left     ASTNode
+	Operator string
+	Right    ASTNode
+}
+
+type OptionalExpression struct {
+	ASTNodeBase
+	Argument Expression
+	Operator string
+}
+
 type InlineTypeWithInitizlization struct {
 	ASTNodeBase
 	Type            TypeInfo
