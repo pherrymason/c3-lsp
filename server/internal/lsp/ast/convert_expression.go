@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -66,7 +67,7 @@ func convert_assignment_expr(node *sitter.Node, source []byte) Expression {
 	}
 
 	return AssignmentStatement{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Left:        left,
 		Right:       right,
 		Operator:    operator,
@@ -79,7 +80,7 @@ func convert_binary_expr(node *sitter.Node, source []byte) Expression {
 	right := convert_expression(node.ChildByFieldName("right"), source)
 
 	return BinaryExpr{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Left:        left,
 		Operator:    operator,
 		Right:       right,
@@ -102,7 +103,7 @@ func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
 	condition := anyOf(expected, node.ChildByFieldName("condition"), source)
 
 	return TernaryExpression{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Condition:   condition,
 		Consequence: convert_expression(node.ChildByFieldName("consequence"), source),
 		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
@@ -113,7 +114,7 @@ func convert_elvis_orelse_expr(node *sitter.Node, source []byte) Expression {
 	conditionNode := node.ChildByFieldName("condition")
 
 	return TernaryExpression{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Condition:   convert_expression(conditionNode, source),
 		Consequence: convert_ident(conditionNode, source),
 		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
@@ -129,7 +130,7 @@ func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 
 	argumentNode := node.ChildByFieldName("argument")
 	return OptionalExpression{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Operator:    operator,
 		Argument:    convert_expression(argumentNode, source),
 	}
@@ -137,7 +138,7 @@ func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 	return UnaryExpression{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Operator:    node.ChildByFieldName("operator").Content(source),
 		Expression:  convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -145,7 +146,7 @@ func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_cast_expr(node *sitter.Node, source []byte) Expression {
 	return CastExpression{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Type:        convert_type(node.ChildByFieldName("type"), source),
 		Value:       convert_expression(node.ChildByFieldName("value"), source),
 	}
@@ -153,7 +154,7 @@ func convert_cast_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_rethrow_expr(node *sitter.Node, source []byte) Expression {
 	return RethrowExpression{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Operator:    node.ChildByFieldName("operator").Content(source),
 		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -172,11 +173,17 @@ func convert_call_expr(node *sitter.Node, source []byte) Expression {
 	}
 
 	// TODO convert trailing CompoundStatement
+	trailingNode := node.ChildByFieldName("trailing")
+	compoundStmt := option.None[CompoundStatement]()
+	if trailingNode != nil {
+		compoundStmt = option.Some(convert_compound_stmt(trailingNode, source).(CompoundStatement))
+	}
 
 	return FunctionCall{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
-		Identifier:  convert_expression(node.ChildByFieldName("function"), source),
-		Arguments:   args,
+		ASTBaseNode:   NewBaseNodeFromSitterNode(node),
+		Identifier:    convert_expression(node.ChildByFieldName("function"), source),
+		Arguments:     args,
+		TrailingBlock: compoundStmt,
 	}
 }
 
@@ -210,8 +217,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 
 		case "initializer_list":
 			initList := InitializerList{
-				ASTBaseNode: NewBaseNodeBuilder().
-					WithSitterPos(node).Build(),
+				ASTBaseNode: NewBaseNodeFromSitterNode(node),
 			}
 			for i := 0; i < int(node.ChildCount()); i++ {
 				n := node.Child(i)
@@ -568,7 +574,8 @@ $.ct_for_stmt,
 */
 func convert_compound_stmt(node *sitter.Node, source []byte) Expression {
 	cmpStatement := CompoundStatement{
-		Statements: []Expression{},
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Statements:  []Expression{},
 	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
