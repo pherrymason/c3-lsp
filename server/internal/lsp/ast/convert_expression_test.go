@@ -879,3 +879,27 @@ func TestConvertToAST_unary_expr(t *testing.T) {
 		stmt.(UnaryExpression),
 	)
 }
+
+func TestConvertToAST_cast_expr(t *testing.T) {
+	source := `module foo;
+	fn void main() {
+		(int)b;
+	}`
+
+	ast := ConvertToAST(GetCST(source), source, "file.c3")
+	stmt := ast.Modules[0].Functions[0].(FunctionDecl).Body.(CompoundStatement).Statements[0]
+
+	assert.Equal(t,
+		CastExpression{
+			ASTNodeBase: NewBaseNodeBuilder().WithStartEnd(2, 2, 2, 8).Build(),
+			Type: NewTypeInfoBuilder().
+				WithName("int").
+				WithNameStartEnd(2, 3, 2, 6).
+				WithStartEnd(2, 3, 2, 6).
+				IsBuiltin().
+				Build(),
+			Value: NewIdentifierBuilder().WithName("b").WithStartEnd(2, 7, 2, 8).Build(),
+		},
+		stmt.(CastExpression),
+	)
+}
