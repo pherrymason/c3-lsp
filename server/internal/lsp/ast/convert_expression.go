@@ -154,6 +154,14 @@ func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 	}
 }
 
+func convert_unary_expr(node *sitter.Node, source []byte) Expression {
+	return UnaryExpression{
+		ASTNodeBase: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		Operator:    node.ChildByFieldName("operator").Content(source),
+		Expression:  convert_expression(node.ChildByFieldName("argument"), source),
+	}
+}
+
 func convert_base_expression(node *sitter.Node, source []byte) Expression {
 	var expression Expression
 	//fmt.Printf("converting_base_expression\n")
