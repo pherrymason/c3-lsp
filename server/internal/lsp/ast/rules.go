@@ -102,9 +102,9 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 		"ternary_expr":          convert_ternary_expr,
 		"trailing_generic_expr": convert_trailing_generic_expr,
 		"unary_expr":            convert_unary_expr,
-		//"update_expr":           convert_dummy,
-		"_expr":      convert_expression,
-		"_base_expr": convert_base_expression,
+		"update_expr":           convert_update_expr,
+		"_expr":                 convert_expression,
+		"_base_expr":            convert_base_expression,
 	}
 
 	if function, exists := funcMap[nodeType]; exists {
