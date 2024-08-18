@@ -271,7 +271,6 @@ func convert_call_expr(node *sitter.Node, source []byte) Expression {
 	for i := 0; i < int(invocationNode.ChildCount()); i++ {
 		n := invocationNode.Child(i)
 		if n.Type() == "arg" {
-			debugNode(n, source)
 			args = append(args, convert_arg(n, source))
 		}
 	}
