@@ -21,7 +21,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 	source := []byte(sourceCode)
 
 	var prg File
-	fmt.Print(cstNode)
+	//fmt.Print(cstNode)
 	if cstNode.Type() == "source_file" {
 		prg = File{
 			Name:        fileName,
@@ -363,43 +363,6 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression
 			}
 		}
 
-		/*
-			if len(identifiers) > 0 {
-				for y := 0; y < len(identifiers); y++ {
-					structMember := idx.NewStructMember(
-						identifiers[y],
-						fieldType, // TODO <--- this type parsing is too simple
-						option.None[[2]uint](),
-						currentModule.GetModuleString(),
-						docId,
-						identifiersRange[y],
-					)
-					structFields = append(structFields, &structMember)
-				}
-			} else if isInline {
-				var structMember idx.StructMember
-				membersNeedingSubtypingResolve = append(membersNeedingSubtypingResolve, fieldType)
-				structMember = idx.NewInlineSubtype(
-					identifier,
-					fieldType,
-					currentModule.GetModuleString(),
-					docId,
-					identifiersRange[0],
-				)
-				structFields = append(structFields, &structMember)
-			} else if len(identifier) > 0 {
-				structMember := idx.NewStructMember(
-					identifier,
-					fieldType,
-					option.None[[2]uint](),
-					currentModule.GetModuleString(),
-					docId,
-					identifiersRange[0],
-				)
-
-				structFields = append(structFields, &structMember)
-			}*/
-
 		if len(member.Names) > 0 {
 			structDecl.Members = append(structDecl.Members, member)
 		}
@@ -547,7 +510,7 @@ func convert_fault_declaration(node *sitter.Node, sourceCode []byte) Expression 
 	return fault
 }
 
-func convert_const_declaration(node *sitter.Node, sourceCode []byte) Expression {
+func convert_const_declaration(node *sitter.Node, source []byte) Expression {
 	constant := ConstDecl{
 		Names: []Identifier{},
 		ASTBaseNode: NewBaseNodeBuilder().
@@ -561,23 +524,31 @@ func convert_const_declaration(node *sitter.Node, sourceCode []byte) Expression 
 	//fmt.Println(node)
 	//fmt.Println(node.Content(sourceCode))
 
-	for i := uint32(0); i < node.ChildCount(); i++ {
-		n := node.Child(int(i))
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
 		switch n.Type() {
 		case "type":
-			constant.Type = convert_type(n, sourceCode).(TypeInfo)
+			constant.Type = option.Some(convert_type(n, source).(TypeInfo))
 
 		case "const_ident":
 			idNode = n
+
+		case "attributes":
+			// TODO
 		}
 	}
 
 	constant.Names = append(constant.Names,
 		NewIdentifierBuilder().
-			WithName(idNode.Content(sourceCode)).
+			WithName(idNode.Content(source)).
 			WithSitterPos(idNode).
 			Build(),
 	)
+
+	right := node.ChildByFieldName("right")
+	if right != nil {
+		constant.Initializer = convert_expression(right, source)
+	}
 
 	return constant
 }
