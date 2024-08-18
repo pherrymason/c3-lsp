@@ -122,3 +122,29 @@ func convert_compile_time_analyse(node *sitter.Node, source []byte) Expression {
 
 	return funcCall
 }
+
+func convert_compile_time_call_unk(node *sitter.Node, source []byte) Expression {
+	next := node.NextNamedSibling()
+	return FunctionCall{
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+		Identifier: NewIdentifierBuilder().
+			WithName(node.Content(source)).
+			WithSitterPos(node).
+			Build(),
+		Arguments: cast_expressions_to_args(
+			convert_token_separated(next, ",", source, convert_expression),
+		),
+	}
+}
+
+func convert_feature(node *sitter.Node, source []byte) Expression {
+	next := node.NextNamedSibling()
+	return FunctionCall{
+		ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+		Identifier: NewIdentifierBuilder().
+			WithName(node.Content(source)).
+			WithSitterPos(node).
+			Build(),
+		Arguments: []Arg{convert_base_expression(next, source)},
+	}
+}

@@ -1,7 +1,7 @@
 ASSETS_DIR = assets
 TREE_SITTER_DIR = $(ASSETS_DIR)/tree-sitter-c3
 TREE_SITTER_GIT = git@github.com:c3lang/tree-sitter-c3.git
-TREE_SITTER_COMMIT = 127ee1f88dc7c20d5fb97c6cebdb50c31cd7a5e4
+TREE_SITTER_COMMIT = 790a0326833cd647e00d8dec01268aa1ec2e3bdb
 C3C_DIR = $(ASSETS_DIR)/c3c
 C3C_GIT = git@github.com:c3lang/c3c.git
 

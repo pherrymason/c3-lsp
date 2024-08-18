@@ -71,7 +71,7 @@ func convert_function_signature(node *sitter.Node, sourceCode []byte) FunctionSi
 			WithName(nameNode.Content(sourceCode)).
 			WithSitterPos(nameNode).
 			Build(),
-		ReturnType: convert_type(funcHeader.ChildByFieldName("return_type"), sourceCode),
+		ReturnType: convert_type(funcHeader.ChildByFieldName("return_type"), sourceCode).(TypeInfo),
 		Parameters: convert_function_parameter_list(node.Child(2), typeIdentifier, sourceCode),
 		ASTBaseNode: NewBaseNodeBuilder().
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
@@ -139,7 +139,7 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 			ampersandFound = true
 
 		case "type":
-			argType = convert_type(n, sourceCode)
+			argType = convert_type(n, sourceCode).(TypeInfo)
 		case "ident":
 			identifier = NewIdentifierBuilder().
 				WithName(n.Content(sourceCode)).
@@ -182,7 +182,7 @@ func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
 		n := node.Child(i)
 		switch n.Type() {
 		case "type", "optional_type":
-			r := convert_type(n, source)
+			r := convert_type(n, source).(TypeInfo)
 			rType = option.Some[TypeInfo](r)
 		case "fn_parameter_list":
 			parameters = convert_function_parameter_list(n, option.None[Identifier](), source)
@@ -196,6 +196,15 @@ func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
 		ReturnType:  rType,
 		Parameters:  parameters,
 	}
+}
+
+func convert_lambda_declaration_with_body(node *sitter.Node, source []byte) Expression {
+	expression := convert_lambda_declaration(node, source)
+
+	lambda := expression.(LambdaDeclaration)
+	lambda.Body = convert_compound_stmt(node.NextSibling(), source).(CompoundStatement)
+
+	return lambda
 }
 
 func convert_lambda_expr(node *sitter.Node, source []byte) Expression {

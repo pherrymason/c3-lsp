@@ -21,7 +21,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 	source := []byte(sourceCode)
 
 	var prg File
-
+	fmt.Print(cstNode)
 	if cstNode.Type() == "source_file" {
 		prg = File{
 			Name:        fileName,
@@ -151,7 +151,7 @@ func convert_global_declaration(node *sitter.Node, source []byte) Expression {
 		//debugNode(n, source)
 		switch n.Type() {
 		case "type":
-			variable.Type = convert_type(n, source)
+			variable.Type = convert_type(n, source).(TypeInfo)
 
 		case "ident":
 			variable.Names = append(
@@ -185,7 +185,6 @@ func convert_global_declaration(node *sitter.Node, source []byte) Expression {
 	right := node.ChildByFieldName("right")
 	if right != nil {
 		variable.Initializer = convert_expression(right, source)
-		//variable.Initializer = convert_base_expression(right, source)
 	}
 
 	return variable
@@ -203,7 +202,7 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) Expression {
 		n := node.Child(i)
 		switch n.Type() {
 		case "enum_spec":
-			enumDecl.BaseType = convert_type(n.Child(1), sourceCode)
+			enumDecl.BaseType = convert_type(n.Child(1), sourceCode).(TypeInfo)
 			if n.ChildCount() >= 3 {
 				param_list := n.Child(2)
 				for p := 0; p < int(param_list.ChildCount()); p++ {
@@ -221,7 +220,7 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) Expression {
 										WithSitterPosRange(paramNode.Child(1).StartPoint(), paramNode.Child(1).EndPoint()).
 										Build(),
 								},
-								Type: convert_type(paramNode.Child(0), sourceCode),
+								Type: convert_type(paramNode.Child(0), sourceCode).(TypeInfo),
 							},
 						)
 					}
@@ -324,7 +323,7 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression
 
 			switch n.Type() {
 			case "type":
-				fieldType = convert_type(n, sourceCode)
+				fieldType = convert_type(n, sourceCode).(TypeInfo)
 				member.Type = fieldType
 			case "identifier_list":
 				for j := 0; j < int(n.ChildCount()); j++ {
@@ -420,7 +419,7 @@ func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) Express
 			// TODO attributes
 
 		case "type":
-			structDecl.BackingType = option.Some(convert_type(child, sourceCode))
+			structDecl.BackingType = option.Some(convert_type(child, sourceCode).(TypeInfo))
 
 		case "bitstruct_body":
 			structDecl.Members = convert_bitstruct_members(child, sourceCode)
@@ -449,7 +448,7 @@ func convert_bitstruct_members(node *sitter.Node, source []byte) []StructMemberD
 				switch xNode.Type() {
 				case "base_type":
 					// Note: here we consciously pass bdefnode because typeNodeToType expects a child node of base_type. If we send xNode it will not find it.
-					member.Type = convert_type(bdefnode, source)
+					member.Type = convert_type(bdefnode, source).(TypeInfo)
 				case "ident":
 					member.Names = append(
 						member.Names,
@@ -549,7 +548,7 @@ func convert_const_declaration(node *sitter.Node, sourceCode []byte) Expression 
 		n := node.Child(int(i))
 		switch n.Type() {
 		case "type":
-			constant.Type = convert_type(n, sourceCode)
+			constant.Type = convert_type(n, sourceCode).(TypeInfo)
 
 		case "const_ident":
 			idNode = n
@@ -590,7 +589,7 @@ func convert_def_declaration(node *sitter.Node, sourceCode []byte) Expression {
 			var _type TypeInfo
 			if n.Child(0).Type() == "type" {
 				// Might contain module path
-				_type = convert_type(n.Child(0), sourceCode)
+				_type = convert_type(n.Child(0), sourceCode).(TypeInfo)
 				defBuilder.WithResolvesToType(_type)
 			} else if n.Child(0).Type() == "func_typedef" {
 				// TODO Parse full info of this func typedefinition
@@ -697,7 +696,7 @@ func convert_ident(node *sitter.Node, source []byte) Expression {
 	}
 }
 
-func convert_type(node *sitter.Node, sourceCode []byte) TypeInfo {
+func convert_type(node *sitter.Node, sourceCode []byte) Expression {
 	return extTypeNodeToType(node, sourceCode)
 }
 
@@ -742,7 +741,7 @@ func extTypeNodeToType(
 					for g := 0; g < int(bn.ChildCount()); g++ {
 						gn := bn.Child(g)
 						if gn.Type() == "type" {
-							gType := convert_type(gn, sourceCode)
+							gType := convert_type(gn, sourceCode).(TypeInfo)
 							typeInfo.Generics = append(typeInfo.Generics, gType)
 						}
 					}
