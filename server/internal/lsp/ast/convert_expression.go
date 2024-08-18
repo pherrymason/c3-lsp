@@ -293,16 +293,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			expression = convert_unary_expr(node, source)
 
 		case "initializer_list":
-			initList := InitializerList{
-				ASTBaseNode: NewBaseNodeFromSitterNode(node),
-			}
-			for i := 0; i < int(node.ChildCount()); i++ {
-				n := node.Child(i)
-				if n.Type() == "arg" {
-					initList.Args = append(initList.Args, convert_arg(n, source))
-				}
-			}
-			expression = initList
+			expression = convert_initializer_list(node, source)
 
 		case "type":
 			baseExpr := convert_base_expression(node.NextNamedSibling(), source)
@@ -435,6 +426,20 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 	}
 
 	return literal
+}
+
+func convert_initializer_list(node *sitter.Node, source []byte) Expression {
+	initList := InitializerList{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+	}
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() == "arg" {
+			initList.Args = append(initList.Args, convert_arg(n, source))
+		}
+	}
+
+	return initList
 }
 
 func convert_arg(node *sitter.Node, source []byte) Arg {
