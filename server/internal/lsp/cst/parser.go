@@ -1,11 +1,13 @@
 package cst
 
-//#include "tree_sitter/parser.h"
+// #cgo CFLAGS: -std=c11 -fPIC
+// #include "tree_sitter/parser.h"
 //TSLanguage *tree_sitter_c3();
 import "C"
 import (
-	sitter "github.com/smacker/go-tree-sitter"
 	"unsafe"
+
+	sitter "github.com/smacker/go-tree-sitter"
 )
 
 func NewSitterParser() *sitter.Parser {
