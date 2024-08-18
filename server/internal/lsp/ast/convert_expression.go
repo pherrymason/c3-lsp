@@ -615,63 +615,6 @@ func convert_token_separated(node *sitter.Node, separator string, source []byte,
 	return expressions
 }
 
-/*
-$.compound_stmt,
-$.expr_stmt,
-$.declaration_stmt,
-$.var_stmt,
-$.return_stmt,
-$.continue_stmt,
-$.break_stmt,
-$.switch_stmt,
-$.nextcase_stmt,
-$.if_stmt,
-$.for_stmt,
-$.foreach_stmt,
-$.while_stmt,
-$.do_stmt,
-$.defer_stmt,
-$.assert_stmt,
-$.asm_block_stmt,
-
-$.ct_echo_stmt,
-$.ct_assert_stmt,
-$.ct_if_stmt,
-$.ct_switch_stmt,
-$.ct_foreach_stmt,
-$.ct_for_stmt,
-*/
-func convert_compound_stmt(node *sitter.Node, source []byte) Expression {
-	cmpStatement := CompoundStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
-		Statements:  []Expression{},
-	}
-	for i := 0; i < int(node.ChildCount()); i++ {
-		n := node.Child(i)
-		if n.Type() != "{" && n.Type() != "}" {
-			cmpStatement.Statements = append(
-				cmpStatement.Statements,
-				convert_statement(n, source),
-			)
-		}
-	}
-
-	return cmpStatement
-}
-
-func convert_statement(node *sitter.Node, source []byte) Expression {
-
-	switch node.Type() {
-	case "compound_stmt":
-		return convert_compound_stmt(node, source)
-
-	case "expr_stmt":
-		return convert_expression(node.Child(0), source)
-	}
-
-	return nil
-}
-
 func convert_dummy(node *sitter.Node, source []byte) Expression {
 	return nil
 }

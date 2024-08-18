@@ -71,8 +71,9 @@ type VariableDecl struct {
 
 type ConstDecl struct {
 	ASTBaseNode
-	Names []Identifier
-	Type  TypeInfo
+	Names       []Identifier
+	Type        option.Option[TypeInfo]
+	Initializer Expression
 }
 
 type EnumDecl struct {
@@ -210,6 +211,8 @@ type TypeInfo struct {
 	Pointer       uint
 	Optional      bool
 	BuiltIn       bool
+	Static        bool
+	TLocal        bool
 	Generics      []TypeInfo
 }
 
