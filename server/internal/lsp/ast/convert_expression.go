@@ -31,7 +31,7 @@ func convert_expression(node *sitter.Node, source []byte) Expression {
 	return anyOf([]NodeRule{
 		NodeOfType("assignment_expr"),
 		NodeOfType("ternary_expr"),
-		NodeSequenceOf([]NodeRule{
+		NodeChildWithSequenceOf([]NodeRule{
 			NodeOfType("lambda_declaration"),
 			NodeOfType("implies_body"),
 		}, "lambda_expr"),
@@ -48,6 +48,79 @@ func convert_expression(node *sitter.Node, source []byte) Expression {
 		NodeOfType("initializer_list"),
 		NodeTryConversionFunc("_base_expr"),
 	}, node, source)
+}
+
+func convert_base_expression(node *sitter.Node, source []byte) Expression {
+	var expression Expression
+	//debugNode(node, source)
+
+	return anyOf([]NodeRule{
+		NodeOfType("string_literal"),
+		NodeOfType("char_literal"),
+		NodeOfType("raw_string_literal"),
+		NodeOfType("integer_literal"),
+		NodeOfType("real_literal"),
+		NodeOfType("bytes_literal"),
+		NodeOfType("true"),
+		NodeOfType("false"),
+		NodeOfType("null"),
+
+		NodeOfType("ident"),
+		NodeOfType("ct_ident"),
+		NodeOfType("hash_ident"),
+		NodeOfType("const_ident"),
+		NodeOfType("at_ident"),
+		NodeOfType("module_ident_expr"),
+		NodeOfType("bytes_expr"),
+		NodeOfType("builtin"),
+		NodeOfType("unary_expr"),
+		NodeOfType("initializer_list"),
+		NodeSiblingsWithSequenceOf([]NodeRule{
+			NodeOfType("type"),
+			NodeOfType("initializer_list"),
+		}, "..type_with_initializer_list.."),
+
+		NodeOfType("field_expr"),       // TODO
+		NodeOfType("type_access_expr"), // TODO
+		NodeOfType("paren_expr"),       // TODO
+		NodeOfType("expr_block"),       // TODO
+
+		NodeOfType("$vacount"),
+
+		NodeOfType("$alignof"),
+		NodeOfType("$extnameof"),
+		NodeOfType("$nameof"),
+		NodeOfType("$offsetof"),
+		NodeOfType("$qnameof"),
+
+		NodeOfType("$vaconst"),
+		NodeOfType("$vaarg"),
+		NodeOfType("$varef"),
+		NodeOfType("$vaexpr"),
+
+		NodeOfType("$eval"),
+		NodeOfType("$is_const"),
+		NodeOfType("$sizeof"),
+		NodeOfType("$stringify"),
+
+		NodeOfType("$feature"),
+
+		NodeOfType("$and"),
+		NodeOfType("$append"),
+		NodeOfType("$concat"),
+		NodeOfType("$defined"),
+		NodeOfType("$embed"),
+		NodeOfType("$or"),
+
+		NodeOfType("$assignable"), // TODO
+
+		NodeSiblingsWithSequenceOf([]NodeRule{
+			NodeOfType("lambda_declaration"),
+			NodeOfType("compound_stmt"),
+		}, "..lambda_declaration_with_body.."),
+	}, node, source)
+
+	return expression
 }
 
 func convert_assignment_expr(node *sitter.Node, source []byte) Expression {
@@ -85,6 +158,10 @@ func convert_binary_expr(node *sitter.Node, source []byte) Expression {
 		Operator:    operator,
 		Right:       right,
 	}
+}
+
+func convert_bytes_expr(node *sitter.Node, source []byte) Expression {
+	return convert_literal(node.Child(0), source)
 }
 
 func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
@@ -174,7 +251,7 @@ func convert_subscript_expr(node *sitter.Node, source []byte) Expression {
 func convert_cast_expr(node *sitter.Node, source []byte) Expression {
 	return CastExpression{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
-		Type:        convert_type(node.ChildByFieldName("type"), source),
+		Type:        convert_type(node.ChildByFieldName("type"), source).(TypeInfo),
 		Argument:    convert_expression(node.ChildByFieldName("value"), source),
 	}
 }
@@ -264,145 +341,33 @@ func convert_generic_arguments(node *sitter.Node, source []byte) []Expression {
 	return args
 }
 
-func convert_base_expression(node *sitter.Node, source []byte) Expression {
-	var expression Expression
-	//fmt.Printf("converting_base_expression\n")
-	//debugNode(node, source)
-	nodeType := node.Type()
-	if is_literal(node) {
-		expression = convert_literal(node, source)
-	} else {
-		switch nodeType {
-		case "ident", "ct_ident", "hash_ident", "const_ident", "at_ident":
-			expression = NewIdentifierBuilder().WithName(node.Content(source)).WithSitterPos(node).Build()
+func convert_type_with_initializer_list(node *sitter.Node, source []byte) Expression {
+	baseExpr := convert_base_expression(node.NextNamedSibling(), source)
+	initList, ok := baseExpr.(InitializerList)
+	if !ok {
+		initList = InitializerList{}
+	}
 
-		case "module_ident_expr":
-			expression = NewIdentifierBuilder().
-				WithName(node.ChildByFieldName("ident").Content(source)).
-				WithPath(node.Child(0).Child(0).Content(source)).
-				WithSitterPos(node).Build()
-
-		case "bytes_expr":
-			expression = convert_literal(node.Child(0), source)
-
-		case "builtin":
-			// TODO Improve, generate BuiltinLiteral
-			expression = Literal{Value: node.Content(source)}
-
-		case "unary_expr":
-			expression = convert_unary_expr(node, source)
-
-		case "initializer_list":
-			expression = convert_initializer_list(node, source)
-
-		case "type":
-			baseExpr := convert_base_expression(node.NextNamedSibling(), source)
-			initList, ok := baseExpr.(InitializerList)
-			if !ok {
-				initList = InitializerList{}
-			}
-
-			expression = InlineTypeWithInitizlization{
-				ASTBaseNode: NewBaseNodeBuilder().
-					WithStartEnd(
-						uint(node.StartPoint().Row),
-						uint(node.StartPoint().Column),
-						initList.ASTBaseNode.EndPos.Line,
-						initList.ASTBaseNode.EndPos.Column,
-					).Build(),
-				Type:            convert_type(node, source),
-				InitializerList: initList,
-			}
-
-		case "field_expr":
-		case "type_access_expr":
-		case "paren_expr":
-		case "expr_block":
-
-		case "$vacount": // literally $vacount
-			expression = Literal{Value: "$vacount"}
-
-		// Compile time calls
-		// _ct_call
-		case "$alignof",
-			"$extnameof",
-			"$nameof",
-			"$offsetof",
-			"$qnameof":
-			expression = convert_compile_time_call(node, source)
-
-		// _ct_arg
-		case "$vaconst",
-			"$vaarg",
-			"$varef",
-			"$vaexpr":
-			expression = convert_compile_time_arg(node, source)
-
-		// _ct_analyse
-		case "$eval",
-			"$is_const",
-			"$sizeof",
-			"$stringify":
-			expression = convert_compile_time_analyse(node, source)
-
-		case "$feature":
-			next := node.NextNamedSibling()
-			expression = FunctionCall{
-				ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
-				Identifier: NewIdentifierBuilder().
-					WithName(node.Content(source)).
-					WithSitterPos(node).
-					Build(),
-				Arguments: []Arg{convert_base_expression(next, source)},
-			}
-
-		case "$and",
-			"$append",
-			"$concat",
-			"$defined",
-			"$embed",
-			"$or":
-			next := node.NextNamedSibling()
-
-			expression = FunctionCall{
-				ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
-				Identifier: NewIdentifierBuilder().
-					WithName(node.Content(source)).
-					WithSitterPos(node).
-					Build(),
-				Arguments: cast_expressions_to_args(
-					convert_token_separated(next, ",", source, convert_expression),
-				),
-			}
-
-		case "$assignable":
-			// TODO
-
-		case "lambda_declaration":
-			expression = convert_lambda_declaration(node, source)
-
-			lambda := expression.(LambdaDeclaration)
-			lambda.Body = convert_compound_stmt(node.NextSibling(), source).(CompoundStatement)
-
-			expression = lambda
-
-			// Sequences
-			/*
-				seq($._ct_call, '(', $.flat_path, ')'),
-				seq($._ct_arg, '(', $._expr, ')'),
-				seq($._ct_analyse, '(', $.comma_decl_or_expr, ')'),
-				seq('$feature', '(', $.const_ident, ')'),
-				seq('$and', '(', $.comma_decl_or_expr, ')'),
-				seq('$or', '(', $.comma_decl_or_expr, ')'),
-				seq('$assignable', '(', $._expr, ',', $.type, ')'),
-				seq('$embed', '(', commaSep($._constant_expr), ')'),
-
-				seq($.lambda_declaration, $.compound_stmt),
-			*/
-		}
+	expression := InlineTypeWithInitizlization{
+		ASTBaseNode: NewBaseNodeBuilder().
+			WithStartEnd(
+				uint(node.StartPoint().Row),
+				uint(node.StartPoint().Column),
+				initList.ASTBaseNode.EndPos.Line,
+				initList.ASTBaseNode.EndPos.Column,
+			).Build(),
+		Type:            convert_type(node, source).(TypeInfo),
+		InitializerList: initList,
 	}
 
 	return expression
+}
+
+func convert_module_ident_expr(node *sitter.Node, source []byte) Expression {
+	return NewIdentifierBuilder().
+		WithName(node.ChildByFieldName("ident").Content(source)).
+		WithPath(node.Child(0).Child(0).Content(source)).
+		WithSitterPos(node).Build()
 }
 
 func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
@@ -426,6 +391,10 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 	}
 
 	return literal
+}
+
+func convert_as_literal(node *sitter.Node, source []byte) Expression {
+	return Literal{Value: node.Content(source)}
 }
 
 func convert_initializer_list(node *sitter.Node, source []byte) Expression {
