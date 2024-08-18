@@ -97,7 +97,7 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 		"real_literal":       convert_literal,
 		"rethrow_expr":       convert_rethrow_expr,
 		//"suffix_expr":           convert_dummy,
-		//"subscript_expr":        convert_dummy,
+		"subscript_expr":        convert_subscript_expr,
 		"string_literal":        convert_literal,
 		"ternary_expr":          convert_ternary_expr,
 		"trailing_generic_expr": convert_trailing_generic_expr,

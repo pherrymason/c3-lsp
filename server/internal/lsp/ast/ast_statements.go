@@ -1,5 +1,7 @@
 package ast
 
+import "github.com/pherrymason/c3-lsp/pkg/option"
+
 type Statement interface {
 	ASTNode
 }
@@ -27,6 +29,23 @@ type UpdateExpression struct {
 	ASTBaseNode
 	Operator string
 	Argument Expression
+}
+
+type SubscriptExpression struct {
+	ASTBaseNode
+	Argument Expression
+	Index    Expression // Index can be another expression:
+	//  - IntegerLiteral
+	//  - RangeIndex
+	//  - Identifier
+	//  - CallExpression
+	//  - ...
+}
+type RangeIndex struct {
+	ASTBaseNode
+
+	Start option.Option[uint]
+	End   option.Option[uint]
 }
 
 type Expression interface {
