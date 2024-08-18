@@ -24,8 +24,10 @@ func (p *Parser) nodeToInterface(node *sitter.Node, currentModule *idx.Module, d
 			for i := 0; i < int(n.ChildCount()); i++ {
 				m := n.Child(i)
 				if m.Type() == "func_declaration" {
-					fun := p.nodeToFunction(m, currentModule, docId, sourceCode)
-					methods = append(methods, &fun)
+					fun, err := p.nodeToFunction(m, currentModule, docId, sourceCode)
+					if err == nil {
+						methods = append(methods, &fun)
+					}
 				}
 			}
 		}

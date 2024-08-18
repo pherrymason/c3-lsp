@@ -132,9 +132,11 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				pendingToResolve.AddVariableType(variables, moduleSymbol)
 
 			case "func_definition", "func_declaration":
-				function := p.nodeToFunction(c.Node, moduleSymbol, &doc.URI, sourceCode)
-				moduleSymbol.AddFunction(&function)
-				pendingToResolve.AddFunctionTypes(&function, moduleSymbol)
+				function, err := p.nodeToFunction(c.Node, moduleSymbol, &doc.URI, sourceCode)
+				if err == nil {
+					moduleSymbol.AddFunction(&function)
+					pendingToResolve.AddFunctionTypes(&function, moduleSymbol)
+				}
 
 			case "enum_declaration":
 				enum := p.nodeToEnum(c.Node, moduleSymbol, &doc.URI, sourceCode)

@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"errors"
+
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -20,10 +22,14 @@ import (
 			field('name', $._func_macro_name),
 		),
 */
-func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Function {
+func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Function, error) {
 	var typeIdentifier string
 	funcHeader := node.Child(1)
 	nameNode := funcHeader.ChildByFieldName("name")
+
+	if nameNode == nil || funcHeader == nil {
+		return idx.Function{}, errors.New("child node not found")
+	}
 
 	if funcHeader.ChildByFieldName("method_type") != nil {
 		typeIdentifier = funcHeader.ChildByFieldName("method_type").Content(sourceCode)
@@ -87,7 +93,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 
 	symbol.AddVariables(variables)
 
-	return symbol
+	return symbol, nil
 }
 
 // nodeToArgument Very similar to nodeToVariable, but arguments have optional identifiers (for example when using `self` for struct methods)
