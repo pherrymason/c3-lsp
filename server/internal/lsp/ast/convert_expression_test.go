@@ -1189,3 +1189,83 @@ func TestConvertToAST_update_expr(t *testing.T) {
 		)
 	}
 }
+
+func TestConvertToAST_subscript_expr(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		source   string
+		expected SubscriptExpression
+	}{
+		{
+			source: `module foo;
+			fn void main(){
+				a[0];
+			}`,
+			expected: SubscriptExpression{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 8).Build(),
+				Argument:    NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).Build(),
+				Index:       IntegerLiteral{Value: "0"},
+			},
+		},
+		{
+			source: `module foo;
+				fn void main(){
+					a[0..2];
+				}`,
+			expected: SubscriptExpression{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 5, 2, 12).Build(),
+				Argument:    NewIdentifierBuilder().WithName("a").WithStartEnd(2, 5, 2, 6).Build(),
+				Index: RangeIndex{
+					//ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 6, 2, 9).Build(),
+					Start: option.Some(uint(0)),
+					End:   option.Some(uint(2)),
+				},
+			},
+		},
+		{
+			source: `module foo;
+			fn void main(){
+				a[id];
+			}`,
+			expected: SubscriptExpression{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 9).Build(),
+				Argument:    NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).Build(),
+				Index:       NewIdentifierBuilder().WithName("id").WithStartEnd(2, 6, 2, 8).Build(),
+			},
+		},
+		{
+			source: `module foo;
+			fn void main(){
+				a[call()];
+			}`,
+			expected: SubscriptExpression{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 4, 2, 13).Build(),
+				Argument:    NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).Build(),
+				Index: FunctionCall{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 6, 2, 12).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("call").WithStartEnd(2, 6, 2, 10).Build(),
+					Arguments:   []Arg{},
+				},
+			},
+		},
+	}
+
+	for i, tt := range cases {
+		if tt.skip {
+			continue
+		}
+
+		t.Run(
+			fmt.Sprintf("subscript_expr: %d", i),
+			func(t *testing.T) {
+				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
+
+				assert.Equal(
+					t,
+					tt.expected,
+					ast.Modules[0].Functions[0].(FunctionDecl).Body.(CompoundStatement).Statements[0].(SubscriptExpression),
+				)
+			},
+		)
+	}
+}

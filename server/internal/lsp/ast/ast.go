@@ -19,11 +19,11 @@ type ASTBaseNode struct {
 	Attributes       []string
 }
 
-func (n ASTBaseNode) Start() Position {
+func (n ASTBaseNode) StartPosition() Position {
 	return n.StartPos
 }
 
-func (n ASTBaseNode) End() Position {
+func (n ASTBaseNode) EndPosition() Position {
 	return n.EndPos
 }
 
@@ -33,8 +33,8 @@ func (n *ASTBaseNode) SetPos(start sitter.Point, end sitter.Point) {
 }
 
 type ASTNode interface {
-	Start() Position
-	End() Position
+	StartPosition() Position
+	EndPosition() Position
 }
 
 type File struct {
@@ -294,6 +294,7 @@ type IndexAccess struct {
 	Index string
 }
 
+// TODO Replace by RangeIndex
 type RangeAccess struct {
 	ASTBaseNode
 	Array      Expression

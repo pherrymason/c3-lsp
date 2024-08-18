@@ -143,10 +143,30 @@ func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
 }
+
 func convert_update_expr(node *sitter.Node, source []byte) Expression {
 	return UpdateExpression{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Operator:    node.ChildByFieldName("operator").Content(source),
+		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
+	}
+}
+
+func convert_subscript_expr(node *sitter.Node, source []byte) Expression {
+	var index Expression
+	indexNode := node.ChildByFieldName("index")
+	if indexNode != nil {
+		index = convert_expression(indexNode, source)
+	} else {
+		rangeNode := node.ChildByFieldName("range")
+		if rangeNode != nil {
+			index = convert_range_expr(rangeNode, source)
+		}
+	}
+
+	return SubscriptExpression{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Index:       index,
 		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
 }
@@ -564,6 +584,25 @@ func convert_flat_path(node *sitter.Node, source []byte) Expression {
 	}
 
 	return base_expr
+}
+
+func convert_range_expr(node *sitter.Node, source []byte) Expression {
+	leftNode := node.ChildByFieldName("left")
+	rightNode := node.ChildByFieldName("right")
+
+	left := option.None[uint]()
+	right := option.None[uint]()
+	if leftNode != nil {
+		left = option.Some(utils.StringToUint(leftNode.Content(source)))
+	}
+	if rightNode != nil {
+		right = option.Some(utils.StringToUint(rightNode.Content(source)))
+	}
+
+	return RangeIndex{
+		Start: left,
+		End:   right,
+	}
 }
 
 func cast_expressions_to_args(expressions []Expression) []Arg {
