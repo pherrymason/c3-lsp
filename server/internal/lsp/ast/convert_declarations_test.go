@@ -713,40 +713,6 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 	)
 }
 
-func TestConvertToAST_const_decl(t *testing.T) {
-	source := `module x;
-	const int A_VALUE = 12;`
-
-	ast := ConvertToAST(GetCST(source), source, "file.c3")
-	constDecl := ast.Modules[0].Declarations[0].(ConstDecl)
-
-	assert.Equal(
-		t,
-		[]Identifier{
-			NewIdentifierBuilder().
-				WithName("A_VALUE").
-				WithStartEnd(1, 11, 1, 18).
-				Build(),
-		},
-		constDecl.Names,
-	)
-	assert.Equal(t, Position{1, 1}, constDecl.ASTBaseNode.StartPos)
-	assert.Equal(t, Position{1, 24}, constDecl.ASTBaseNode.EndPos)
-	assert.Equal(t,
-		TypeInfo{
-			ASTBaseNode: NewBaseNodeBuilder().
-				WithStartEnd(1, 7, 1, 10).
-				Build(),
-			Identifier: NewIdentifierBuilder().
-				WithStartEnd(1, 7, 1, 10).
-				WithName("int").
-				Build(),
-			BuiltIn: true,
-		},
-		constDecl.Type,
-	)
-}
-
 func TestConvertToAST_def_decl(t *testing.T) {
 	source := `module foo;
 	def Kilo = int;

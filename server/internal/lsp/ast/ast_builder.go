@@ -113,6 +113,10 @@ func (b *TypeInfoBuilder) IsBuiltin() *TypeInfoBuilder {
 	b.t.BuiltIn = true
 	return b
 }
+func (b *TypeInfoBuilder) IsStatic() *TypeInfoBuilder {
+	b.t.Static = true
+	return b
+}
 func (b *TypeInfoBuilder) IsPointer() *TypeInfoBuilder {
 	b.t.Pointer = 1
 	return b

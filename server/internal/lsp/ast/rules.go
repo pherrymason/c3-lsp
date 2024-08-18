@@ -127,10 +127,12 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 		"at_ident":                         convert_ident,
 		"binary_expr":                      convert_binary_expr,
 		"bytes_expr":                       convert_bytes_expr,
+		"builtin":                          convert_as_literal,
 		"call_expr":                        convert_call_expr,
 		"cast_expr":                        convert_cast_expr,
 		"const_ident":                      convert_ident,
 		"ct_ident":                         convert_ident,
+		"declaration_stmt":                 convert_declaration_stmt,
 		"elvis_orelse_expr":                convert_elvis_orelse_expr,
 		"hash_ident":                       convert_ident,
 		"ident":                            convert_ident,
@@ -143,6 +145,7 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 		"module_ident_expr":  convert_module_ident_expr,
 		"optional_expr":      convert_optional_expr,
 		"rethrow_expr":       convert_rethrow_expr,
+		"return_stmt":        convert_return_stmt,
 		//"suffix_expr":           convert_dummy,
 		"subscript_expr":        convert_subscript_expr,
 		"ternary_expr":          convert_ternary_expr,
@@ -179,6 +182,7 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 
 		"_expr":      convert_expression,
 		"_base_expr": convert_base_expression,
+		"_statement": convert_statement,
 
 		// Literals
 		"string_literal":     convert_literal,
@@ -202,7 +206,8 @@ func nodeTypeConverterMap(nodeType string) NodeConverter {
 
 func anyOf(rules []NodeRule, node *sitter.Node, source []byte) Expression {
 	var converter NodeConverter
-	//debugNode(node, source)
+	fmt.Printf("anyOf: ")
+	debugNode(node, source)
 	if node == nil {
 		panic("Nil node supplied!")
 	}
@@ -221,5 +226,5 @@ func anyOf(rules []NodeRule, node *sitter.Node, source []byte) Expression {
 		}
 	}
 
-	panic(fmt.Sprintf("Could not find method to convert \"%s\" node type.\n", node.Type()))
+	panic(fmt.Sprintf("Unexpected node found: \"%s\" node type.\n", node.Type()))
 }
