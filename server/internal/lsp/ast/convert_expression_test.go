@@ -19,107 +19,87 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		expected ASTNode
 	}{
 		{
-			skip:     true,
 			literal:  "1",
 			expected: IntegerLiteral{Value: "1"},
 		},
 		{
-			skip:     true,
 			literal:  "1.1",
 			expected: RealLiteral{Value: "1.1"},
 		},
 		{
-			skip:     true,
 			literal:  "false",
 			expected: BoolLiteral{Value: false},
 		},
 		{
-			skip:     true,
 			literal:  "true",
 			expected: BoolLiteral{Value: true},
 		},
 		{
-			skip:     true,
 			literal:  "null",
 			expected: Literal{Value: "null"},
 		},
 		{
-			skip:     true,
 			literal:  "\"hello\"",
 			expected: Literal{Value: "\"hello\""},
 		},
 		{
-			skip:     true,
 			literal:  "`hello`",
 			expected: Literal{Value: "`hello`"},
 		},
 		{
-			skip:     true,
 			literal:  "x'FF'",
 			expected: Literal{Value: "x'FF'"},
 		},
 		{
-			skip:     true,
 			literal:  "x\"FF\"",
 			expected: Literal{Value: "x\"FF\""},
 		},
 		{
-			skip:     true,
 			literal:  "x`FF`",
 			expected: Literal{Value: "x`FF`"},
 		},
 		{
-			skip:     true,
 			literal:  "b64'FF'",
 			expected: Literal{Value: "b64'FF'"},
 		},
 		{
-			skip:     true,
 			literal:  "b64\"FF\"",
 			expected: Literal{Value: "b64\"FF\""},
 		},
 		{
-			skip:     true,
 			literal:  "b64`FF`",
 			expected: Literal{Value: "b64`FF`"},
 		},
 		{
-			skip:     true,
 			literal:  "$$builtin",
 			expected: Literal{Value: "$$builtin"},
 		},
 		// _ident_expr
 		// - const_ident
 		{
-			skip:     true,
 			literal:  "A_CONSTANT",
 			expected: NewIdentifierBuilder().WithName("A_CONSTANT").WithStartEnd(2, 13, 2, 23).Build(),
 		},
 		// - ident
 		{
-			skip:     true,
 			literal:  "ident",
 			expected: NewIdentifierBuilder().WithName("ident").WithStartEnd(2, 13, 2, 18).Build(),
 		},
 		// - at_ident
 		{
-			skip:     true,
 			literal:  "@ident",
 			expected: NewIdentifierBuilder().WithName("@ident").WithStartEnd(2, 13, 2, 19).Build(),
 		},
 		// module_ident_expr:
 		{
-			skip:     true,
 			literal:  "path::ident",
 			expected: NewIdentifierBuilder().WithPath("path").WithName("ident").WithStartEnd(2, 13, 2, 24).Build(),
 		},
 		{
-			skip:     true,
 			literal:  "$_abc",
 			expected: NewIdentifierBuilder().WithName("$_abc").WithStartEnd(2, 13, 2, 18).Build(),
 		},
 		{
-			skip:     true,
 			literal:  "#_abc",
 			expected: NewIdentifierBuilder().WithName("#_abc").WithStartEnd(2, 13, 2, 18).Build(),
 		},
@@ -637,7 +617,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 			fmt.Sprintf("lambda_declaration: %s", tt.input),
 			func(t *testing.T) {
 				source := `module foo;
-` + tt.input + `;`
+` + tt.input
 
 				ast := ConvertToAST(GetCST(source), source, "file.c3")
 
