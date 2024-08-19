@@ -255,6 +255,31 @@ func TestConvertToAST_switch_stmt(t *testing.T) {
 				},
 			},
 		},
+		{
+			input: `
+			switch (foo) {
+				case int:
+					hello;
+			}`,
+			expected: SwitchStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 6, 4).Build(),
+				Label:       option.None[string](),
+				Cases: []SwitchCase{
+					{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 4, 5, 11).Build(),
+						Value: NewTypeInfoBuilder().
+							WithName("int").
+							IsBuiltin().
+							WithNameStartEnd(4, 9, 4, 12).
+							WithStartEnd(4, 9, 4, 12).
+							Build(),
+						Statements: []Statement{
+							NewIdentifierBuilder().WithName("hello").WithStartEnd(5, 5, 5, 10).Build(),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range cases {
