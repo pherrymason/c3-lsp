@@ -138,3 +138,56 @@ func convert_break_stmt(node *sitter.Node, source []byte) Expression {
 		Label:       label,
 	}
 }
+
+func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
+	label := option.None[string]()
+	cases := []SwitchCase{}
+	var defaultStatement []Statement
+
+	body := node.ChildByFieldName("body")
+	for i := 0; i < int(body.ChildCount()); i++ {
+		n := body.Child(i)
+		if n.Type() == "case_stmt" {
+			conditionNode := n.ChildByFieldName("value")
+			var caseValue Expression
+			if conditionNode.Type() == "case_range" {
+
+			} else {
+				caseValue = convert_expression(conditionNode, source)
+			}
+
+			colon := conditionNode.NextSibling()
+			debugNode(colon, source)
+			ns := colon.NextSibling()
+			statements := []Statement{}
+			for {
+				if ns == nil {
+					break
+				}
+				statements = append(statements, convert_statement(ns, source))
+				ns = ns.NextSibling()
+			}
+
+			cases = append(cases, SwitchCase{
+				ASTBaseNode: NewBaseNodeFromSitterNode(n),
+				Value:       caseValue,
+				Statements:  statements,
+			})
+		} else {
+			for d := 0; d < int(n.ChildCount()); d++ {
+				dn := n.Child(d)
+				if dn.Type() != "default" && dn.Type() != ":" {
+					defaultStatement = append(defaultStatement, convert_statement(dn, source))
+				}
+			}
+		}
+	}
+
+	return SwitchStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Label:       label,
+		Condition:   convert_expression(node.ChildByFieldName("condition"), source),
+		Cases:       cases,
+		Default:     defaultStatement,
+	}
+}

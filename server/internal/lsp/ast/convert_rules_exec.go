@@ -50,6 +50,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"return_stmt":        {method: convert_return_stmt},
 		//"suffix_expr":           convert_dummy,
 		"subscript_expr":        {method: convert_subscript_expr},
+		"switch_stmt":           {method: convert_switch_stmt},
 		"ternary_expr":          {method: convert_ternary_expr},
 		"trailing_generic_expr": {method: convert_trailing_generic_expr},
 		"type":                  {method: convert_type},
