@@ -123,3 +123,18 @@ func convert_continue_stmt(node *sitter.Node, source []byte) Expression {
 		Label:       label,
 	}
 }
+
+func convert_break_stmt(node *sitter.Node, source []byte) Expression {
+	label := option.None[string]()
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() == "label_target" {
+			label = option.Some(n.Content(source))
+		}
+	}
+
+	return BreakStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Label:       label,
+	}
+}
