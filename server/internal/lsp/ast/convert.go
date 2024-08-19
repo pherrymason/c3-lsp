@@ -671,6 +671,13 @@ func convert_type(node *sitter.Node, sourceCode []byte) Expression {
 	return extTypeNodeToType(node, sourceCode)
 }
 
+func convert_var_decl(node *sitter.Node, source []byte) Expression {
+	//for i := 0; i < int(node.ChildCount()); i++ {
+
+	//}
+	return ASTBaseNode{}
+}
+
 func extTypeNodeToType(
 	node *sitter.Node,
 	sourceCode []byte,

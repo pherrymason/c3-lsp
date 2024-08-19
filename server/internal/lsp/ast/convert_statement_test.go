@@ -134,3 +134,43 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_continue_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected ContinueStatement
+	}{
+		{
+			input: "continue;",
+			expected: ContinueStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 12).Build(),
+				Label:       option.None[string](),
+			},
+		},
+		{
+			input: "continue FOO;", // With label
+			expected: ContinueStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 16).Build(),
+				Label:       option.Some("FOO"),
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("continue_stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(ContinueStatement))
+		})
+	}
+}
