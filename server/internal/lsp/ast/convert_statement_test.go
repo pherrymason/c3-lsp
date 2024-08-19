@@ -214,3 +214,63 @@ func TestConvertToAST_break_stmt(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_switch_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected SwitchStatement
+	}{
+		{
+			input: `
+			switch (foo) {
+				case 1:
+					hello;
+				case 2:
+					bye;
+				default:
+					chirp;
+			}`,
+			expected: SwitchStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 10, 4).Build(),
+				Label:       option.None[string](),
+				Cases: []SwitchCase{
+					{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 4, 5, 11).Build(),
+						Value:       IntegerLiteral{Value: "1"},
+						Statements: []Statement{
+							NewIdentifierBuilder().WithName("hello").WithStartEnd(5, 5, 5, 10).Build(),
+						},
+					},
+					{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(6, 4, 7, 9).Build(),
+						Value:       IntegerLiteral{Value: "2"},
+						Statements: []Statement{
+							NewIdentifierBuilder().WithName("bye").WithStartEnd(7, 5, 7, 8).Build(),
+						},
+					},
+				},
+				Default: []Statement{
+					NewIdentifierBuilder().WithName("chirp").WithStartEnd(9, 5, 9, 10).Build(),
+				},
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("switch_stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(SwitchStatement))
+		})
+	}
+}

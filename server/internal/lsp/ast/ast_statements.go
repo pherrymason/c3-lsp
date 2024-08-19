@@ -28,6 +28,20 @@ type BreakStatement struct {
 	Label option.Option[string]
 }
 
+type SwitchStatement struct {
+	ASTBaseNode
+	Label     option.Option[string]
+	Condition Expression
+	Cases     []SwitchCase
+	Default   []Statement
+}
+
+type SwitchCase struct {
+	ASTBaseNode
+	Value      Expression
+	Statements []Statement
+}
+
 type TernaryExpression struct {
 	ASTBaseNode
 	Condition   Expression
