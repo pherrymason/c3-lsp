@@ -626,7 +626,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 	}
 }
 
-func TestConvertToAST_asignment_expr(t *testing.T) {
+func TestConvertToAST_assignment_expr(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
@@ -662,10 +662,10 @@ func TestConvertToAST_asignment_expr(t *testing.T) {
 		}
 
 		t.Run(
-			fmt.Sprintf("lambda_declaration: %s", tt.input),
+			fmt.Sprintf("assignment_expr: %s", tt.input),
 			func(t *testing.T) {
 				source := `module foo;
-				fn void main(){` + tt.input + `};`
+				fn void main(){` + tt.input + `}`
 
 				ast := ConvertToAST(GetCST(source), source, "file.c3")
 
