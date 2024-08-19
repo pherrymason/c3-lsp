@@ -208,14 +208,11 @@ func convert_lambda_declaration_with_body(node *sitter.Node, source []byte) Expr
 }
 
 func convert_lambda_expr(node *sitter.Node, source []byte) Expression {
-	debugNode(node, source)
 	expr := convert_lambda_declaration(node.Child(0), source)
 
 	lambda := expr.(LambdaDeclaration)
 
-	debugNode(node.Child(1), source)
 	bodyNode := node.Child(1).ChildByFieldName("body")
-	debugNode(bodyNode, source)
 
 	lambda.ASTBaseNode.EndPos.Column = uint(bodyNode.EndPoint().Column)
 	lambda.ASTBaseNode.EndPos.Line = uint(bodyNode.EndPoint().Row)
