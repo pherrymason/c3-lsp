@@ -151,7 +151,11 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
 			conditionNode := n.ChildByFieldName("value")
 			var caseValue Expression
 			if conditionNode.Type() == "case_range" {
-
+				caseValue = SwitchCaseRange{
+					ASTBaseNode: NewBaseNodeFromSitterNode(conditionNode),
+					Start:       convert_expression(conditionNode.Child(0), source),
+					End:         convert_expression(conditionNode.Child(2), source),
+				}
 			} else if conditionNode.Type() == "type" {
 				caseValue = convert_type(conditionNode, source)
 			} else {

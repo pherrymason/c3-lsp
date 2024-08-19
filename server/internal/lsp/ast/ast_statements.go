@@ -41,6 +41,11 @@ type SwitchCase struct {
 	Value      Expression
 	Statements []Statement
 }
+type SwitchCaseRange struct {
+	ASTBaseNode
+	Start Expression
+	End   Expression
+}
 
 type TernaryExpression struct {
 	ASTBaseNode
