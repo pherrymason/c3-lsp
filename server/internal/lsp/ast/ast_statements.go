@@ -18,6 +18,11 @@ type AssignmentStatement struct {
 	Operator string
 }
 
+type ContinueStatement struct {
+	ASTBaseNode
+	Label option.Option[string]
+}
+
 type TernaryExpression struct {
 	ASTBaseNode
 	Condition   Expression

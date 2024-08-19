@@ -32,16 +32,6 @@ func convert_statement(node *sitter.Node, source []byte) Expression {
 		NodeOfType("ct_foreach_stmt"),
 		NodeOfType("ct_for_stmt"),
 	}, node, source)
-
-	switch node.Type() {
-	case "compound_stmt":
-		return convert_compound_stmt(node, source)
-
-	case "expr_stmt":
-		return convert_expression(node.Child(0), source)
-	}
-
-	return nil
 }
 
 func convert_compound_stmt(node *sitter.Node, source []byte) Expression {
@@ -117,4 +107,19 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Expression {
 	}
 
 	return varDecl
+}
+
+func convert_continue_stmt(node *sitter.Node, source []byte) Expression {
+	label := option.None[string]()
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() == "label_target" {
+			label = option.Some(n.Content(source))
+		}
+	}
+
+	return ContinueStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Label:       label,
+	}
 }
