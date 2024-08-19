@@ -152,6 +152,8 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
 			var caseValue Expression
 			if conditionNode.Type() == "case_range" {
 
+			} else if conditionNode.Type() == "type" {
+				caseValue = convert_type(conditionNode, source)
 			} else {
 				caseValue = convert_expression(conditionNode, source)
 			}
