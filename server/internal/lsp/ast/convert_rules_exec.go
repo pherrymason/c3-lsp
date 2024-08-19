@@ -2,7 +2,6 @@ package ast
 
 import (
 	"errors"
-	"fmt"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -24,24 +23,23 @@ func (c ConversionInfo) convert(node *sitter.Node, source []byte) Expression {
 
 func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 	funcMap := map[string]ConversionInfo{
-		"assignment_expr":                  {method: convert_assignment_expr},
-		"at_ident":                         {method: convert_ident},
-		"binary_expr":                      {method: convert_binary_expr},
-		"bytes_expr":                       {method: convert_bytes_expr},
-		"builtin":                          {method: convert_as_literal},
-		"call_expr":                        {method: convert_call_expr},
-		"cast_expr":                        {method: convert_cast_expr},
-		"const_ident":                      {method: convert_ident},
-		"compound_stmt":                    {method: convert_compound_stmt},
-		"ct_ident":                         {method: convert_ident},
-		"declaration_stmt":                 {method: convert_declaration_stmt},
-		"elvis_orelse_expr":                {method: convert_elvis_orelse_expr},
-		"expr_stmt":                        {method: convert_expression, goChild: true},
-		"hash_ident":                       {method: convert_ident},
-		"ident":                            {method: convert_ident},
-		"initializer_list":                 {method: convert_initializer_list},
-		"..type_with_initializer_list..":   {method: convert_type_with_initializer_list},
-		"..lambda_declaration_with_body..": {method: convert_lambda_declaration_with_body},
+		"assignment_expr":   {method: convert_assignment_expr},
+		"at_ident":          {method: convert_ident},
+		"binary_expr":       {method: convert_binary_expr},
+		"bytes_expr":        {method: convert_bytes_expr},
+		"builtin":           {method: convert_as_literal},
+		"call_expr":         {method: convert_call_expr},
+		"continue_stmt":     {method: convert_continue_stmt},
+		"cast_expr":         {method: convert_cast_expr},
+		"const_ident":       {method: convert_ident},
+		"compound_stmt":     {method: convert_compound_stmt},
+		"ct_ident":          {method: convert_ident},
+		"declaration_stmt":  {method: convert_declaration_stmt},
+		"elvis_orelse_expr": {method: convert_elvis_orelse_expr},
+		"expr_stmt":         {method: convert_expression, goChild: true},
+		"hash_ident":        {method: convert_ident},
+		"ident":             {method: convert_ident},
+		"initializer_list":  {method: convert_initializer_list},
 
 		"lambda_declaration": {method: convert_lambda_declaration},
 		"lambda_expr":        {method: convert_lambda_expr},
@@ -56,7 +54,9 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"type":                  {method: convert_type},
 		"unary_expr":            {method: convert_unary_expr},
 		"update_expr":           {method: convert_update_expr},
+		"var_stmt":              {method: convert_var_decl, goChild: true},
 
+		// Builtins ----------------
 		"$vacount": {method: convert_as_literal},
 		"$feature": {method: convert_feature},
 
@@ -97,6 +97,10 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"true":               {method: convert_literal},
 		"false":              {method: convert_literal},
 		"null":               {method: convert_literal},
+
+		// Custom ones ----------------
+		"..type_with_initializer_list..":   {method: convert_type_with_initializer_list},
+		"..lambda_declaration_with_body..": {method: convert_lambda_declaration_with_body},
 	}
 
 	if function, exists := funcMap[nodeType]; exists {
@@ -129,5 +133,4 @@ func anyOf(rules []NodeRule, node *sitter.Node, source []byte) Expression {
 	}
 
 	return nil
-	panic(fmt.Sprintf("Unexpected node found: \"%s\" node type.\n", node.Type()))
 }
