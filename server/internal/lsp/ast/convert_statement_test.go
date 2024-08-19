@@ -174,3 +174,43 @@ func TestConvertToAST_continue_stmt(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_break_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected BreakStatement
+	}{
+		{
+			input: "break;",
+			expected: BreakStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 9).Build(),
+				Label:       option.None[string](),
+			},
+		},
+		{
+			input: "break FOO;", // With label
+			expected: BreakStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 13).Build(),
+				Label:       option.Some("FOO"),
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("break_stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(BreakStatement))
+		})
+	}
+}

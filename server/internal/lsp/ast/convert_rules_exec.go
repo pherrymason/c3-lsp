@@ -26,6 +26,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"assignment_expr":   {method: convert_assignment_expr},
 		"at_ident":          {method: convert_ident},
 		"binary_expr":       {method: convert_binary_expr},
+		"break_stmt":        {method: convert_break_stmt},
 		"bytes_expr":        {method: convert_bytes_expr},
 		"builtin":           {method: convert_as_literal},
 		"call_expr":         {method: convert_call_expr},
