@@ -23,6 +23,11 @@ type ContinueStatement struct {
 	Label option.Option[string]
 }
 
+type BreakStatement struct {
+	ASTBaseNode
+	Label option.Option[string]
+}
+
 type TernaryExpression struct {
 	ASTBaseNode
 	Condition   Expression
