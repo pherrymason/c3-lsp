@@ -323,3 +323,71 @@ func TestConvertToAST_switch_stmt(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_nextcase(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected Nextcase
+	}{
+		{
+			input: `nextcase;`,
+			expected: Nextcase{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 12).Build(),
+				Label:       option.None[string](),
+			},
+		},
+		{
+			input: `nextcase 3;`,
+			expected: Nextcase{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 14).Build(),
+				Label:       option.None[string](),
+				Value:       IntegerLiteral{Value: "3"},
+			},
+		},
+		{
+			input: `nextcase LABEL:3;`,
+			expected: Nextcase{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 20).Build(),
+				Label:       option.Some("LABEL"),
+				Value:       IntegerLiteral{Value: "3"},
+			},
+		},
+		{
+			input: `nextcase rand();`,
+			expected: Nextcase{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 19).Build(),
+				Label:       option.None[string](),
+				Value: FunctionCall{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 12, 2, 18).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("rand").WithStartEnd(2, 12, 2, 16).Build(),
+					Arguments:   []Arg{},
+				},
+			},
+		},
+		{
+			input: `nextcase default;`,
+			expected: Nextcase{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 20).Build(),
+				Label:       option.None[string](),
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("nextcase: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(Nextcase))
+		})
+	}
+}

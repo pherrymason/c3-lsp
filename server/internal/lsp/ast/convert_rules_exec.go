@@ -45,6 +45,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"lambda_declaration": {method: convert_lambda_declaration},
 		"lambda_expr":        {method: convert_lambda_expr},
 		"module_ident_expr":  {method: convert_module_ident_expr},
+		"nextcase_stmt":      {method: convert_nextcase_stmt},
 		"optional_expr":      {method: convert_optional_expr},
 		"rethrow_expr":       {method: convert_rethrow_expr},
 		"return_stmt":        {method: convert_return_stmt},
