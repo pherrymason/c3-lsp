@@ -223,3 +223,19 @@ func convert_nextcase_stmt(node *sitter.Node, source []byte) Expression {
 		Value:       value,
 	}
 }
+
+func convert_if_stmt(node *sitter.Node, source []byte) Expression {
+	stmt := IfStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Label:       option.None[string](),
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() == "label" {
+			stmt.Label = option.Some(n.Child(0).Content(source))
+		}
+	}
+
+	return stmt
+}
