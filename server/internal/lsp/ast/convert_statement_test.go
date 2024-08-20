@@ -391,3 +391,70 @@ func TestConvertToAST_nextcase(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_if_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected IfStatement
+	}{
+		{
+			input: `
+			if (true) {}`,
+			expected: IfStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 15).Build(),
+				Label:       option.None[string](),
+			},
+		},
+		{
+			input: `
+			if (value) {}
+			else {}`,
+			expected: IfStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 4, 10).Build(),
+				Label:       option.None[string](),
+			},
+		},
+		{
+			input: `
+			if (c < 0)
+			{
+			}
+			else if (x > 0)
+			{
+			}`,
+			expected: IfStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 8, 4).Build(),
+				Label:       option.None[string](),
+			},
+		},
+		{
+			// Labeled IF
+			input: `
+			if FOO: (i > 0)
+			{
+			}`,
+			expected: IfStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 4).Build(),
+				Label:       option.Some("FOO"),
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("if stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(IfStatement))
+		})
+	}
+}

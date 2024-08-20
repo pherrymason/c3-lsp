@@ -40,6 +40,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"expr_stmt":         {method: convert_expression, goChild: true},
 		"hash_ident":        {method: convert_ident},
 		"ident":             {method: convert_ident},
+		"if_stmt":           {method: convert_if_stmt},
 		"initializer_list":  {method: convert_initializer_list},
 
 		"lambda_declaration": {method: convert_lambda_declaration},
