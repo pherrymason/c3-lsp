@@ -6,7 +6,7 @@ import (
 )
 
 func convert_statement(node *sitter.Node, source []byte) Expression {
-
+	debugNode(node, source)
 	return anyOf([]NodeRule{
 		NodeOfType("compound_stmt"),
 		NodeOfType("expr_stmt"),
@@ -240,14 +240,29 @@ func convert_if_stmt(node *sitter.Node, source []byte) Expression {
 		case "label":
 			stmt.Label = option.Some(n.Child(0).Content(source))
 		case "else_part":
+			elseStmt := convert_statement(n.Child(1), source)
+			switch elseStmt.(type) {
+			case CompoundStatement:
+				if len(elseStmt.(CompoundStatement).Statements) == 0 {
+					elseStmt = nil
+				}
+			}
 			stmt.Else = ElseStatement{
 				ASTBaseNode: NewBaseNodeFromSitterNode(n),
-				Statement:   convert_statement(n.ChildByFieldName("body"), source).(CompoundStatement),
+				Statement:   elseStmt,
 			}
 		}
 	}
-	ifBody := node.Child(int(node.ChildCount()) - 1)
-	stmt.Statement = convert_statement(ifBody, source)
+	//ifBody := node.Child(int(node.ChildCount()) - 1)
+	ifBody := node.ChildByFieldName("body")
+	bodyStmt := convert_statement(ifBody, source)
+	switch bodyStmt.(type) {
+	case CompoundStatement:
+		if len(bodyStmt.(CompoundStatement).Statements) == 0 {
+			bodyStmt = nil
+		}
+	}
+	stmt.Statement = bodyStmt
 
 	return stmt
 }
