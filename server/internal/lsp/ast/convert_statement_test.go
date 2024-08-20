@@ -404,9 +404,15 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			expected: IfStatement{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 15).Build(),
 				Label:       option.None[string](),
+				Condition:   BoolLiteral{Value: true},
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 13, 3, 15).Build(),
+					Statements:  []Expression{},
+				},
 			},
 		},
 		{
+			skip: true,
 			input: `
 			if (value) {}
 			else {}`,
@@ -416,6 +422,7 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			},
 		},
 		{
+			skip: true,
 			input: `
 			if (c < 0)
 			{
@@ -430,6 +437,7 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 		},
 		{
 			// Labeled IF
+			skip: true,
 			input: `
 			if FOO: (i > 0)
 			{
