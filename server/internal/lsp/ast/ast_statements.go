@@ -56,16 +56,16 @@ type Nextcase struct {
 
 type IfStatement struct {
 	ASTBaseNode
-	Label      option.Option[string]
-	Condition  Expression
-	Statements []Statement
+	Label     option.Option[string]
+	Condition Expression
+	Statement Statement
 
 	Else ElseStatement
 }
 
 type ElseStatement struct {
 	ASTBaseNode
-	Statements []Statement
+	Statement Statement
 }
 
 type TernaryExpression struct {

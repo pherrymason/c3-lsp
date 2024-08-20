@@ -1,6 +1,9 @@
 package ast
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -225,9 +228,13 @@ func convert_nextcase_stmt(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_if_stmt(node *sitter.Node, source []byte) Expression {
+
+	condition := convert_paren_condition(node.ChildByFieldName("condition"), source)
+	fmt.Printf("%s", reflect.TypeOf(condition).String())
 	stmt := IfStatement{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Label:       option.None[string](),
+		Condition:   condition,
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -236,6 +243,67 @@ func convert_if_stmt(node *sitter.Node, source []byte) Expression {
 			stmt.Label = option.Some(n.Child(0).Content(source))
 		}
 	}
+	ifBody := node.Child(int(node.ChildCount()) - 1)
+	stmt.Statement = convert_statement(ifBody, source)
 
 	return stmt
+}
+
+/*
+	    choice(
+		  choice($._try_unwrap_chain, $.catch_unwrap),
+		  seq(
+		    commaSep1($._decl_or_expr),
+		    optional(seq(',', choice($._try_unwrap_chain, $.catch_unwrap))),
+		  ),
+		)
+*/
+func convert_paren_condition(node *sitter.Node, source []byte) Expression {
+	condNode := node.Child(1)
+	var condition Expression
+
+	// Option 1: try_unwrap_chain
+	if condNode.Type() == "try_unwrap_chain" {
+
+	} else if condNode.Type() == "catch_unwrap" { // Option 2: catch_unwrap
+
+	} else {
+		// Option 3:
+		//		(decl_or_expr),* + optional(, try_unwrap | catch_unwrap)
+		condition = anyOf([]NodeRule{
+			NodeOfType("var_decl"),
+			NodeSiblingsWithSequenceOf([]NodeRule{
+				NodeOfType("type"), NodeOfType("local_decl_after_type"),
+			}, "declaration_stmt"),
+			NodeTryConversionFunc("_expr"),
+		}, condNode, source)
+	}
+
+	return condition
+}
+
+func convert_local_declaration_after_type(node *sitter.Node, source []byte) Expression {
+	var init Expression
+
+	if node.Child(1).Type() == "attributes" {
+		// TODO Get attributes
+	}
+
+	right := node.ChildByFieldName("right")
+	if right != nil {
+		init = convert_expression(right, source)
+	}
+
+	varDecl := VariableDecl{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Names: []Identifier{
+			NewIdentifierBuilder().
+				WithName(node.ChildByFieldName("name").Content(source)).
+				WithSitterPos(node.ChildByFieldName("name")).
+				Build(),
+		},
+		Initializer: init,
+	}
+
+	return varDecl
 }
