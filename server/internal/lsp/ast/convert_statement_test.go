@@ -399,12 +399,13 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 		expected IfStatement
 	}{
 		{
+			//skip: true,
 			input: `
 			if (true) {}`,
 			expected: IfStatement{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 15).Build(),
 				Label:       option.None[string](),
-				Condition:   BoolLiteral{Value: true},
+				Condition:   []Expression{BoolLiteral{Value: true}},
 				Statement: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 13, 3, 15).Build(),
 					Statements:  []Expression{},
@@ -412,13 +413,70 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			},
 		},
 		{
-			skip: true,
+			//skip: true,
+			input: `
+			if (c > 0) {}`,
+			expected: IfStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 16).Build(),
+				Label:       option.None[string](),
+				Condition: []Expression{
+					BinaryExpr{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 7, 3, 12).Build(),
+						Left:        NewIdentifierBuilder().WithName("c").WithStartEnd(3, 7, 3, 8).Build(),
+						Operator:    ">",
+						Right:       IntegerLiteral{Value: "0"},
+					},
+				},
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 14, 3, 16).Build(),
+					Statements:  []Expression{},
+				},
+			},
+		},
+		{ // Comma separated conditions
+			input: `
+			if (c > 0, c < 10) {}`,
+			expected: IfStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 24).Build(),
+				Label:       option.None[string](),
+				Condition: []Expression{
+					BinaryExpr{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 7, 3, 12).Build(),
+						Left:        NewIdentifierBuilder().WithName("c").WithStartEnd(3, 7, 3, 8).Build(),
+						Operator:    ">",
+						Right:       IntegerLiteral{Value: "0"},
+					},
+					BinaryExpr{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 14, 3, 20).Build(),
+						Left:        NewIdentifierBuilder().WithName("c").WithStartEnd(3, 14, 3, 15).Build(),
+						Operator:    "<",
+						Right:       IntegerLiteral{Value: "10"},
+					},
+				},
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 22, 3, 24).Build(),
+					Statements:  []Expression{},
+				},
+			},
+		},
+		{
+			//skip: true,
 			input: `
 			if (value) {}
 			else {}`,
 			expected: IfStatement{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 4, 10).Build(),
 				Label:       option.None[string](),
+				Condition: []Expression{
+					NewIdentifierBuilder().WithName("value").WithStartEnd(3, 7, 3, 12).Build(),
+				},
+				Else: ElseStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 3, 4, 10).Build(),
+					Statement: CompoundStatement{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 8, 4, 10).Build(),
+						Statements:  []Expression{},
+					},
+				},
 			},
 		},
 		{
