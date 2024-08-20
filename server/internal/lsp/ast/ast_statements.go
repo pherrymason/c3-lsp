@@ -59,8 +59,7 @@ type IfStatement struct {
 	Label     option.Option[string]
 	Condition []Expression
 	Statement Statement
-
-	Else ElseStatement
+	Else      ElseStatement
 }
 
 type ElseStatement struct {
