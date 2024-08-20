@@ -1,9 +1,6 @@
 package ast
 
 import (
-	"fmt"
-	"reflect"
-
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -228,19 +225,25 @@ func convert_nextcase_stmt(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_if_stmt(node *sitter.Node, source []byte) Expression {
-
-	condition := convert_paren_condition(node.ChildByFieldName("condition"), source)
-	fmt.Printf("%s", reflect.TypeOf(condition).String())
+	debugNode(node, source)
+	conditions := convert_paren_condition(node.ChildByFieldName("condition"), source)
+	//fmt.Printf("%s", reflect.TypeOf(conditions).String())
 	stmt := IfStatement{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 		Label:       option.None[string](),
-		Condition:   condition,
+		Condition:   conditions,
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
-		if n.Type() == "label" {
+		switch n.Type() {
+		case "label":
 			stmt.Label = option.Some(n.Child(0).Content(source))
+		case "else_part":
+			stmt.Else = ElseStatement{
+				ASTBaseNode: NewBaseNodeFromSitterNode(n),
+				Statement:   convert_statement(n.ChildByFieldName("body"), source).(CompoundStatement),
+			}
 		}
 	}
 	ifBody := node.Child(int(node.ChildCount()) - 1)
@@ -258,9 +261,11 @@ func convert_if_stmt(node *sitter.Node, source []byte) Expression {
 		  ),
 		)
 */
-func convert_paren_condition(node *sitter.Node, source []byte) Expression {
+func convert_paren_condition(node *sitter.Node, source []byte) []Expression {
+
+	debugNode(node, source)
 	condNode := node.Child(1)
-	var condition Expression
+	conditions := []Expression{}
 
 	// Option 1: try_unwrap_chain
 	if condNode.Type() == "try_unwrap_chain" {
@@ -270,16 +275,41 @@ func convert_paren_condition(node *sitter.Node, source []byte) Expression {
 	} else {
 		// Option 3:
 		//		(decl_or_expr),* + optional(, try_unwrap | catch_unwrap)
-		condition = anyOf([]NodeRule{
-			NodeOfType("var_decl"),
-			NodeSiblingsWithSequenceOf([]NodeRule{
-				NodeOfType("type"), NodeOfType("local_decl_after_type"),
-			}, "declaration_stmt"),
-			NodeTryConversionFunc("_expr"),
-		}, condNode, source)
+		for {
+			debugNode(condNode, source)
+			condition := anyOf([]NodeRule{
+				NodeOfType("var_decl"),
+				NodeSiblingsWithSequenceOf([]NodeRule{
+					NodeOfType("type"), NodeOfType("local_decl_after_type"),
+				}, "declaration_stmt"),
+				NodeAnonymous("_expr"),
+			}, condNode, source)
+
+			if condition != nil {
+				conditions = append(conditions, condition)
+			} else {
+				break
+			}
+
+			// Search next ','
+			for {
+				if condNode == nil {
+					break
+				} else if condNode.Type() != "," {
+					condNode = condNode.NextSibling()
+				} else if condNode.Type() == "," {
+					condNode = condNode.NextSibling()
+					break
+				}
+			}
+
+			if condNode == nil {
+				break
+			}
+		}
 	}
 
-	return condition
+	return conditions
 }
 
 func convert_local_declaration_after_type(node *sitter.Node, source []byte) Expression {

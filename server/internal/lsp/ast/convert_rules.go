@@ -99,6 +99,25 @@ func NodeSiblingsWithSequenceOf(rules []NodeRule, asType string) SequenceOf {
 }
 
 // -----------------------------------
+// AnonymousNode
+// -----------------------------------
+// This rule is for usage on anonymous nodes that cannot be detected by its type, but
+// one needs to try to convert them, and if does not return nil, it succeeds
+type AnonNode struct {
+	FuncName string
+}
+
+func (a AnonNode) Validate(node *sitter.Node, source []byte) bool {
+	return true
+}
+func (a AnonNode) Type() string {
+	return a.FuncName
+}
+func NodeAnonymous(conversionRule string) AnonNode {
+	return AnonNode{FuncName: conversionRule}
+}
+
+// -----------------------------------
 // TryConversionFunc
 // -----------------------------------
 type TryConversionFunc struct {

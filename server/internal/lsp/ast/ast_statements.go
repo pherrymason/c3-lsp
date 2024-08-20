@@ -57,7 +57,7 @@ type Nextcase struct {
 type IfStatement struct {
 	ASTBaseNode
 	Label     option.Option[string]
-	Condition Expression
+	Condition []Expression
 	Statement Statement
 
 	Else ElseStatement
