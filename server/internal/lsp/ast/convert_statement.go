@@ -197,3 +197,29 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
 		Default:     defaultStatement,
 	}
 }
+
+func convert_nextcase_stmt(node *sitter.Node, source []byte) Expression {
+	label := option.None[string]()
+	var value Expression
+	targetNode := node.ChildByFieldName("target")
+	if targetNode != nil {
+		value = anyOf([]NodeRule{
+			NodeTryConversionFunc("_expr"),
+			NodeOfType("type"),
+			NodeOfType("default"),
+		}, targetNode, source)
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() == "label_target" {
+			label = option.Some(n.Content(source))
+		}
+	}
+
+	return Nextcase{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		Label:       label,
+		Value:       value,
+	}
+}
