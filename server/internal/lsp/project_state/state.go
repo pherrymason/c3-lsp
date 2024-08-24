@@ -17,11 +17,12 @@ import (
 
 // ProjectState will be the center of knowledge of everything parsed.
 type ProjectState struct {
-	_documents      map[string]*document.Document
-	documents       *document.DocumentStore
-	symbolsTable    symbols_table.SymbolsTable
-	indexByFQN      IndexStore // TODO simplify this and use trie.Trie directly!
-	languageVersion Version
+	_documents             map[string]*document.Document
+	documents              *document.DocumentStore
+	symbolsTable           symbols_table.SymbolsTable
+	indexByFQN             IndexStore // TODO simplify this and use trie.Trie directly!
+	languageVersion        Version
+	calculatingDiagnostics bool
 
 	logger       commonlog.Logger
 	debugEnabled bool

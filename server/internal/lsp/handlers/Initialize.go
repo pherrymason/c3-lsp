@@ -6,6 +6,7 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -48,7 +49,7 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 	}
 
 	if params.RootURI != nil {
-		h.state.SetProjectRootURI(*params.RootURI)
+		h.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
 		h.indexWorkspace()
 	}
 
