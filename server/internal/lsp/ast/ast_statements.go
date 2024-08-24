@@ -67,6 +67,15 @@ type ElseStatement struct {
 	Statement Statement
 }
 
+type ForStatement struct {
+	ASTBaseNode
+	Label       option.Option[string]
+	Initializer []Expression
+	Condition   Expression
+	Update      []Expression
+	Statement   Statement
+}
+
 type TernaryExpression struct {
 	ASTBaseNode
 	Condition   Expression
