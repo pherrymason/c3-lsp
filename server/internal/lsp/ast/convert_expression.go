@@ -47,7 +47,7 @@ func convert_expression(node *sitter.Node, source []byte) Expression {
 		NodeOfType("subscript_expr"),
 		NodeOfType("initializer_list"),
 		NodeTryConversionFunc("_base_expr"),
-	}, node, source)
+	}, node, source, false)
 }
 
 func convert_base_expression(node *sitter.Node, source []byte) Expression {
@@ -118,7 +118,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 			NodeOfType("lambda_declaration"),
 			NodeOfType("compound_stmt"),
 		}, "..lambda_declaration_with_body.."),
-	}, node, source)
+	}, node, source, false)
 
 	return expression
 }
@@ -177,7 +177,7 @@ func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
 		NodeOfType("initializer_list"),
 		NodeOfType("_base_expr"),
 	}
-	condition := anyOf(expected, node.ChildByFieldName("condition"), source)
+	condition := anyOf(expected, node.ChildByFieldName("condition"), source, false)
 
 	return TernaryExpression{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),

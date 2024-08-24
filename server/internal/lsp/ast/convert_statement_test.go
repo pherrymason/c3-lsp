@@ -487,7 +487,7 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			},
 		},
 		{
-			// Labeled IF
+			// Labeled IF: TODO
 			skip: true,
 			input: `
 			if FOO: (i > 0)
@@ -514,6 +514,49 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 
 			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(IfStatement))
+		})
+	}
+}
+
+func TestConvertToAST_for_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected ForStatement
+	}{
+		{
+			input: `
+			for (int i=0; true; i++) {}`,
+			expected: ForStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 30).Build(),
+				Label:       option.None[string](),
+				Initializer: []Expression{},
+				Condition:   BoolLiteral{Value: true},
+				Update: []Expression{
+					UpdateExpression{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 23, 3, 26).Build(),
+						Operator:    "++",
+						Argument:    NewIdentifierBuilder().WithName("i").WithStartEnd(3, 23, 3, 24).Build(),
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("for stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(ForStatement))
 		})
 	}
 }
