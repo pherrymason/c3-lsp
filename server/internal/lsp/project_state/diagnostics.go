@@ -68,13 +68,14 @@ func extractErrors(output string) ErrorInfo {
 				if err != nil {
 					continue
 				}
+				line -= 1
 
 				errorInfo = ErrorInfo{
 					File: parts[1],
 					Diagnostic: protocol.Diagnostic{
 						Range: protocol.Range{
 							Start: protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(0)},
-							End:   protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(1)},
+							End:   protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(99)},
 						},
 						Severity: cast.ToPtr(protocol.DiagnosticSeverityError),
 						Source:   cast.ToPtr("c3c build --test"),
