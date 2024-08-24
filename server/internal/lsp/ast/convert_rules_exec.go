@@ -38,6 +38,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"declaration_stmt":  {method: convert_declaration_stmt},
 		"elvis_orelse_expr": {method: convert_elvis_orelse_expr},
 		"expr_stmt":         {method: convert_expression, goChild: true},
+		"for_stmt":          {method: convert_for_stmt},
 		"hash_ident":        {method: convert_ident},
 		"ident":             {method: convert_ident},
 		"if_stmt":           {method: convert_if_stmt},
@@ -116,9 +117,11 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 	//panic(fmt.Sprintf("La función %s no existe\n", nodeType))
 }
 
-func anyOf(rules []NodeRule, node *sitter.Node, source []byte) Expression {
+func anyOf(rules []NodeRule, node *sitter.Node, source []byte, debug bool) Expression {
 	//fmt.Printf("anyOf: ")
-	//debugNode(node, source)
+	if debug {
+		debugNode(node, source)
+	}
 	if node == nil {
 		panic("Nil node supplied!")
 	}
@@ -138,4 +141,36 @@ func anyOf(rules []NodeRule, node *sitter.Node, source []byte) Expression {
 	}
 
 	return nil
+}
+
+func commaSep(convert NodeConverter, node *sitter.Node, source []byte) []Expression {
+	expressions := []Expression{}
+	for {
+		debugNode(node, source)
+		condition := convert(node, source)
+
+		if condition != nil {
+			expressions = append(expressions, condition)
+		} else {
+			break
+		}
+
+		// Search next ','
+		for {
+			if node == nil {
+				break
+			} else if node.Type() != "," {
+				node = node.NextSibling()
+			} else if node.Type() == "," {
+				node = node.NextSibling()
+				break
+			}
+		}
+
+		if node == nil {
+			break
+		}
+	}
+
+	return expressions
 }
