@@ -11,19 +11,24 @@ import (
 
 func cmdLineArguments() (server.ServerOpts, bool) {
 	var showHelp = flag.Bool("help", false, "Shows this help")
-
 	var sendCrashReports = flag.Bool("send-crash-reports", false, "Automatically reports crashes to server.")
 
 	var logFilePath = flag.String("log-path", "", "Enables logs and sets its filepath")
 	var debug = flag.Bool("debug", false, "Enables debug mode")
 
 	var c3Version = flag.String("lang-version", "", "Specify C3 language version.")
+	var c3cPath = flag.String("c3c-path", "", "Path where c3c is located.")
+	var diagnosticsDelay = flag.Int("diagnostics-delay", 2000, "Delay in milliseconds to check diagnostics.")
 
 	flag.Parse()
 
 	c3VersionOpt := option.None[string]()
 	if *c3Version != "" {
 		c3VersionOpt = option.Some(*c3Version)
+	}
+	c3cPathOpt := option.None[string]()
+	if *c3cPath != "" {
+		c3cPathOpt = option.Some(*c3cPath)
 	}
 	logFilePathOpt := option.None[string]()
 	if *logFilePath != "" {
@@ -32,6 +37,8 @@ func cmdLineArguments() (server.ServerOpts, bool) {
 
 	return server.ServerOpts{
 		C3Version:        c3VersionOpt,
+		C3CPath:          c3cPathOpt,
+		DiagnosticsDelay: uint(*diagnosticsDelay),
 		LogFilepath:      logFilePathOpt,
 		Debug:            *debug,
 		SendCrashReports: *sendCrashReports,

@@ -3,7 +3,6 @@ package server
 import (
 	"os"
 
-	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
@@ -13,7 +12,7 @@ import (
 )
 
 // Support "Hover"
-func (h *Server) Initialize(serverName string, serverVersion string, capabilities protocol.ServerCapabilities, context *glsp.Context, params *protocol.InitializeParams) (any, error) {
+func (s *Server) Initialize(serverName string, serverVersion string, capabilities protocol.ServerCapabilities, context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 	//capabilities := handler.CreateServerCapabilities()
 
 	change := protocol.TextDocumentSyncKindIncremental
@@ -50,10 +49,10 @@ func (h *Server) Initialize(serverName string, serverVersion string, capabilitie
 	}
 
 	if params.RootURI != nil {
-		h.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
-		h.indexWorkspace()
+		s.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
+		s.indexWorkspace()
 
-		project_state.RefreshDiagnostics(h.state, context.Notify, false)
+		s.RefreshDiagnostics(s.state, context.Notify, false)
 	}
 
 	return protocol.InitializeResult{

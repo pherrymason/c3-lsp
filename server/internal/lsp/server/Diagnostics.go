@@ -1,4 +1,4 @@
-package project_state
+package server
 
 import (
 	"bytes"
@@ -7,20 +7,24 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func RefreshDiagnostics(state *ProjectState, notify glsp.NotifyFunc, delay bool) {
-	if state.calculatingDiagnostics {
+func (s *Server) RefreshDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool) {
+	if state.IsCalculatingDiagnostics() {
 		return
 	}
 
-	state.calculatingDiagnostics = true
+	state.SetCalculateDiagnostics(true)
 
-	//cmdString := fmt.Sprintf("c3c build --test --path %s", state.GetProjectRootURI())
-	command := exec.Command("c3c", "build", "--test")
+	binary := "c3c"
+	if s.options.C3CPath.IsSome() {
+		binary = s.options.C3CPath.Get()
+	}
+	command := exec.Command(binary, "build", "--test")
 	command.Dir = state.GetProjectRootURI()
 
 	// set var to get the output
@@ -48,6 +52,8 @@ func RefreshDiagnostics(state *ProjectState, notify glsp.NotifyFunc, delay bool)
 				Diagnostics: diagnostics,
 			})
 	}
+
+	state.SetCalculateDiagnostics(false)
 }
 
 type ErrorInfo struct {

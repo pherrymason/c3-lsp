@@ -55,6 +55,14 @@ func (s *ProjectState) SetProjectRootURI(rootURI string) {
 	s.documents.RootURI = rootURI
 }
 
+func (s *ProjectState) IsCalculatingDiagnostics() bool {
+	return s.calculatingDiagnostics
+}
+
+func (s *ProjectState) SetCalculateDiagnostics(running bool) {
+	s.calculatingDiagnostics = running
+}
+
 func (s *ProjectState) GetDocument(docId string) *document.Document {
 	return s._documents[docId]
 }

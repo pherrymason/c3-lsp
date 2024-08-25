@@ -19,6 +19,7 @@ import (
 
 type Server struct {
 	server  *glspserv.Server
+	options ServerOpts
 	version string
 
 	state  *l.ProjectState
@@ -28,8 +29,13 @@ type Server struct {
 
 // ServerOpts holds the options to create a new Server.
 type ServerOpts struct {
-	C3Version        option.Option[string]
-	LogFilepath      option.Option[string]
+	C3Version   option.Option[string]
+	C3CPath     option.Option[string]
+	LogFilepath option.Option[string]
+
+	DiagnosticsDelay   uint
+	DiagnosticsEnabled bool
+
 	SendCrashReports bool
 	Debug            bool
 }
@@ -66,6 +72,7 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 
 	server := &Server{
 		server:  glspServer,
+		options: opts,
 		version: version,
 
 		state:  &state,
