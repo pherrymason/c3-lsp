@@ -52,7 +52,7 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 		s.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
 		s.indexWorkspace()
 
-		s.RefreshDiagnostics(s.state, context.Notify, false)
+		s.RunDiagnostics(s.state, context.Notify, false)
 	}
 
 	return protocol.InitializeResult{

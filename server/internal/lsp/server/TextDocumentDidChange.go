@@ -8,7 +8,7 @@ import (
 func (s *Server) TextDocumentDidChange(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
 	s.state.UpdateDocument(params.TextDocument.URI, params.ContentChanges, s.parser)
 
-	s.RefreshDiagnostics(s.state, context.Notify, false)
+	s.RunDiagnostics(s.state, context.Notify, true)
 
 	return nil
 }

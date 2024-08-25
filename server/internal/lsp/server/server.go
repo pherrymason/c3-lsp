@@ -2,7 +2,9 @@ package server
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/bep/debounce"
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search"
@@ -25,6 +27,8 @@ type Server struct {
 	state  *l.ProjectState
 	parser *p.Parser
 	search search.Search
+
+	diagnosticDebounced func(func())
 }
 
 // ServerOpts holds the options to create a new Server.
@@ -33,7 +37,7 @@ type ServerOpts struct {
 	C3CPath     option.Option[string]
 	LogFilepath option.Option[string]
 
-	DiagnosticsDelay   uint
+	DiagnosticsDelay   time.Duration
 	DiagnosticsEnabled bool
 
 	SendCrashReports bool
@@ -78,6 +82,8 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		state:  &state,
 		parser: &parser,
 		search: search,
+
+		diagnosticDebounced: debounce.New(opts.DiagnosticsDelay * time.Millisecond),
 	}
 
 	handler.Initialized = func(context *glsp.Context, params *protocol.InitializedParams) error {

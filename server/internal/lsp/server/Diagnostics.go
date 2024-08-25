@@ -13,7 +13,7 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (s *Server) RefreshDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool) {
+func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool) {
 	if state.IsCalculatingDiagnostics() {
 		return
 	}
@@ -34,26 +34,35 @@ func (s *Server) RefreshDiagnostics(state *project_state.ProjectState, notify gl
 	// set the output to our variable
 	command.Stdout = &out
 	command.Stderr = &stdErr
-	err := command.Run()
-	log.Println("output:", out.String())
-	log.Println("output:", stdErr.String())
-	if err != nil {
-		log.Println("An error:", err)
-		errorInfo := extractErrors(stdErr.String())
 
-		diagnostics := []protocol.Diagnostic{
-			errorInfo.Diagnostic,
+	runDiagnostics := func() {
+		err := command.Run()
+		log.Println("output:", out.String())
+		log.Println("output:", stdErr.String())
+		if err != nil {
+			log.Println("An error:", err)
+			errorInfo := extractErrors(stdErr.String())
+
+			diagnostics := []protocol.Diagnostic{
+				errorInfo.Diagnostic,
+			}
+
+			go notify(
+				protocol.ServerTextDocumentPublishDiagnostics,
+				protocol.PublishDiagnosticsParams{
+					URI:         state.GetProjectRootURI() + "/src/" + errorInfo.File,
+					Diagnostics: diagnostics,
+				})
 		}
 
-		go notify(
-			protocol.ServerTextDocumentPublishDiagnostics,
-			protocol.PublishDiagnosticsParams{
-				URI:         state.GetProjectRootURI() + "/src/" + errorInfo.File,
-				Diagnostics: diagnostics,
-			})
+		state.SetCalculateDiagnostics(false)
 	}
 
-	state.SetCalculateDiagnostics(false)
+	if delay {
+		s.diagnosticDebounced(runDiagnostics)
+	} else {
+		runDiagnostics()
+	}
 }
 
 type ErrorInfo struct {

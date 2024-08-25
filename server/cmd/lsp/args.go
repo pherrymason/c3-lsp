@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"runtime/debug"
+	"time"
 
 	"github.com/pherrymason/c3-lsp/internal/lsp/server"
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -38,7 +39,7 @@ func cmdLineArguments() (server.ServerOpts, bool) {
 	return server.ServerOpts{
 		C3Version:        c3VersionOpt,
 		C3CPath:          c3cPathOpt,
-		DiagnosticsDelay: uint(*diagnosticsDelay),
+		DiagnosticsDelay: time.Duration(*diagnosticsDelay),
 		LogFilepath:      logFilePathOpt,
 		Debug:            *debug,
 		SendCrashReports: *sendCrashReports,
