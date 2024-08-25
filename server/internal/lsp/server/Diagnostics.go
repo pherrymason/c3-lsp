@@ -78,29 +78,34 @@ func extractErrors(output string) ErrorInfo {
 		if strings.HasPrefix(line, "Error") {
 			// Procesa la línea de error
 			parts := strings.Split(line, "|")
-			if len(parts) == 5 {
-				line, err := strconv.Atoi(parts[2])
-				if err != nil {
-					continue
+			if parts[0] == "Error" {
+				if len(parts) != 5 {
+					// Disable future diagnostics, looks like c3c is an old version.
 				}
-				line -= 1
-				character, err := strconv.Atoi(parts[3])
-				if err != nil {
-					continue
-				}
-				character -= 1
+				if len(parts) == 5 {
+					line, err := strconv.Atoi(parts[2])
+					if err != nil {
+						continue
+					}
+					line -= 1
+					character, err := strconv.Atoi(parts[3])
+					if err != nil {
+						continue
+					}
+					character -= 1
 
-				errorInfo = ErrorInfo{
-					File: parts[1],
-					Diagnostic: protocol.Diagnostic{
-						Range: protocol.Range{
-							Start: protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(character)},
-							End:   protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(99)},
+					errorInfo = ErrorInfo{
+						File: parts[1],
+						Diagnostic: protocol.Diagnostic{
+							Range: protocol.Range{
+								Start: protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(character)},
+								End:   protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(99)},
+							},
+							Severity: cast.ToPtr(protocol.DiagnosticSeverityError),
+							Source:   cast.ToPtr("c3c build --test"),
+							Message:  parts[4],
 						},
-						Severity: cast.ToPtr(protocol.DiagnosticSeverityError),
-						Source:   cast.ToPtr("c3c build --test"),
-						Message:  parts[4],
-					},
+					}
 				}
 			}
 			break
