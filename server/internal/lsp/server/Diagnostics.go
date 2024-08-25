@@ -50,7 +50,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 			go notify(
 				protocol.ServerTextDocumentPublishDiagnostics,
 				protocol.PublishDiagnosticsParams{
-					URI:         state.GetProjectRootURI() + "/src/" + errorInfo.File,
+					URI:         errorInfo.File,
 					Diagnostics: diagnostics,
 				})
 		}
@@ -78,27 +78,32 @@ func extractErrors(output string) ErrorInfo {
 		if strings.HasPrefix(line, "Error") {
 			// Procesa la línea de error
 			parts := strings.Split(line, "|")
-			if len(parts) == 4 {
+			if len(parts) == 5 {
 				line, err := strconv.Atoi(parts[2])
 				if err != nil {
 					continue
 				}
 				line -= 1
+				character, err := strconv.Atoi(parts[3])
+				if err != nil {
+					continue
+				}
+				character -= 1
 
 				errorInfo = ErrorInfo{
 					File: parts[1],
 					Diagnostic: protocol.Diagnostic{
 						Range: protocol.Range{
-							Start: protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(0)},
+							Start: protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(character)},
 							End:   protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(99)},
 						},
 						Severity: cast.ToPtr(protocol.DiagnosticSeverityError),
 						Source:   cast.ToPtr("c3c build --test"),
-						Message:  parts[3],
+						Message:  parts[4],
 					},
 				}
 			}
-			break // Asumimos que solo te interesa el primer error
+			break
 		}
 	}
 
