@@ -3,6 +3,7 @@ package handlers
 import (
 	"os"
 
+	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
@@ -51,6 +52,8 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 	if params.RootURI != nil {
 		h.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
 		h.indexWorkspace()
+
+		project_state.RefreshDiagnostics(h.state, context.Notify, false)
 	}
 
 	return protocol.InitializeResult{
