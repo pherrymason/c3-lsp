@@ -26,6 +26,14 @@ module.exports = {
         args.push('--lang-version '+config.get('c3.version'));
     }
 
+    if (config.get('c3.path')) {
+        args.push('--c3c-path '+config.get('c3.path'));
+    }
+
+    if (config.get('diagnosticsDelay')) {
+        args.push('--diagnostics-delay '+config.get('diagnosticsDelay'));
+    }
+
     const serverOptions = {
       run: {
         command: executable,

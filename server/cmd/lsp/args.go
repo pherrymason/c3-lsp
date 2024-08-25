@@ -18,7 +18,7 @@ func cmdLineArguments() (server.ServerOpts, bool) {
 
 	var c3Version = flag.String("lang-version", "", "Specify C3 language version.")
 	var c3cPath = flag.String("c3c-path", "", "Path where c3c is located.")
-	var diagnosticsDelay = flag.Int("diagnostics-delay", 2000, "Delay in milliseconds to check diagnostics.")
+	var diagnosticsDelay = flag.Int("diagnostics-delay", 2000, "Delay calculation of code diagnostics after modifications in source. In milliseconds, default 2000 ms.")
 
 	flag.Parse()
 
