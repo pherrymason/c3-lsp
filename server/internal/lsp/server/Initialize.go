@@ -55,6 +55,10 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 		s.RunDiagnostics(s.state, context.Notify, false)
 	}
 
+	if *params.Capabilities.TextDocument.PublishDiagnostics.RelatedInformation == false {
+		s.options.DiagnosticsEnabled = false
+	}
+
 	return protocol.InitializeResult{
 		Capabilities: capabilities,
 		ServerInfo: &protocol.InitializeResultServerInfo{

@@ -17,6 +17,9 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 	if state.IsCalculatingDiagnostics() {
 		return
 	}
+	if !s.options.DiagnosticsEnabled {
+		return
+	}
 
 	state.SetCalculateDiagnostics(true)
 
@@ -41,18 +44,22 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		log.Println("output:", stdErr.String())
 		if err != nil {
 			log.Println("An error:", err)
-			errorInfo := extractErrors(stdErr.String())
+			errorInfo, diagnosticsDisabled := extractErrors(stdErr.String())
 
-			diagnostics := []protocol.Diagnostic{
-				errorInfo.Diagnostic,
+			if diagnosticsDisabled {
+				s.options.DiagnosticsEnabled = false
+			} else {
+				diagnostics := []protocol.Diagnostic{
+					errorInfo.Diagnostic,
+				}
+
+				go notify(
+					protocol.ServerTextDocumentPublishDiagnostics,
+					protocol.PublishDiagnosticsParams{
+						URI:         errorInfo.File,
+						Diagnostics: diagnostics,
+					})
 			}
-
-			go notify(
-				protocol.ServerTextDocumentPublishDiagnostics,
-				protocol.PublishDiagnosticsParams{
-					URI:         errorInfo.File,
-					Diagnostics: diagnostics,
-				})
 		}
 
 		state.SetCalculateDiagnostics(false)
@@ -70,8 +77,9 @@ type ErrorInfo struct {
 	Diagnostic protocol.Diagnostic
 }
 
-func extractErrors(output string) ErrorInfo {
+func extractErrors(output string) (ErrorInfo, bool) {
 	var errorInfo ErrorInfo
+	diagnosticsDisabled := false
 
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
@@ -81,8 +89,8 @@ func extractErrors(output string) ErrorInfo {
 			if parts[0] == "Error" {
 				if len(parts) != 5 {
 					// Disable future diagnostics, looks like c3c is an old version.
-				}
-				if len(parts) == 5 {
+					diagnosticsDisabled = true
+				} else {
 					line, err := strconv.Atoi(parts[2])
 					if err != nil {
 						continue
@@ -112,5 +120,5 @@ func extractErrors(output string) ErrorInfo {
 		}
 	}
 
-	return errorInfo
+	return errorInfo, diagnosticsDisabled
 }

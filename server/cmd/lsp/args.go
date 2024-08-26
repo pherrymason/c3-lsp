@@ -37,12 +37,13 @@ func cmdLineArguments() (server.ServerOpts, bool) {
 	}
 
 	return server.ServerOpts{
-		C3Version:        c3VersionOpt,
-		C3CPath:          c3cPathOpt,
-		DiagnosticsDelay: time.Duration(*diagnosticsDelay),
-		LogFilepath:      logFilePathOpt,
-		Debug:            *debug,
-		SendCrashReports: *sendCrashReports,
+		C3Version:          c3VersionOpt,
+		C3CPath:            c3cPathOpt,
+		DiagnosticsDelay:   time.Duration(*diagnosticsDelay),
+		DiagnosticsEnabled: true,
+		LogFilepath:        logFilePathOpt,
+		Debug:              *debug,
+		SendCrashReports:   *sendCrashReports,
 	}, *showHelp
 }
 
