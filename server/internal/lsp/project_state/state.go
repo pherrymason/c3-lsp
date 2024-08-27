@@ -17,12 +17,11 @@ import (
 
 // ProjectState will be the center of knowledge of everything parsed.
 type ProjectState struct {
-	_documents             map[string]*document.Document
-	documents              *document.DocumentStore
-	symbolsTable           symbols_table.SymbolsTable
-	indexByFQN             IndexStore // TODO simplify this and use trie.Trie directly!
-	languageVersion        Version
-	calculatingDiagnostics bool
+	_documents      map[string]*document.Document
+	documents       *document.DocumentStore
+	symbolsTable    symbols_table.SymbolsTable
+	indexByFQN      IndexStore // TODO simplify this and use trie.Trie directly!
+	languageVersion Version
 
 	logger       commonlog.Logger
 	debugEnabled bool
@@ -53,14 +52,6 @@ func (s ProjectState) GetProjectRootURI() string {
 }
 func (s *ProjectState) SetProjectRootURI(rootURI string) {
 	s.documents.RootURI = rootURI
-}
-
-func (s *ProjectState) IsCalculatingDiagnostics() bool {
-	return s.calculatingDiagnostics
-}
-
-func (s *ProjectState) SetCalculateDiagnostics(running bool) {
-	s.calculatingDiagnostics = running
 }
 
 func (s *ProjectState) GetDocument(docId string) *document.Document {

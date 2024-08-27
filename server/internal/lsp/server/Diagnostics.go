@@ -14,14 +14,9 @@ import (
 )
 
 func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool) {
-	if state.IsCalculatingDiagnostics() {
-		return
-	}
 	if !s.options.DiagnosticsEnabled {
 		return
 	}
-
-	state.SetCalculateDiagnostics(true)
 
 	binary := "c3c"
 	if s.options.C3CPath.IsSome() {
@@ -61,8 +56,6 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 					})
 			}
 		}
-
-		state.SetCalculateDiagnostics(false)
 	}
 
 	if delay {
