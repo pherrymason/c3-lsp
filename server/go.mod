@@ -14,6 +14,8 @@ require (
 
 require golang.org/x/mod v0.20.0
 
+require github.com/bep/debounce v1.2.1 // indirect
+
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/dave/jennifer v1.7.0

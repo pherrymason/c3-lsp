@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"os"
@@ -6,12 +6,13 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 // Support "Hover"
-func (h *Handlers) Initialize(serverName string, serverVersion string, capabilities protocol.ServerCapabilities, context *glsp.Context, params *protocol.InitializeParams) (any, error) {
+func (s *Server) Initialize(serverName string, serverVersion string, capabilities protocol.ServerCapabilities, context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 	//capabilities := handler.CreateServerCapabilities()
 
 	change := protocol.TextDocumentSyncKindIncremental
@@ -48,8 +49,14 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 	}
 
 	if params.RootURI != nil {
-		h.state.SetProjectRootURI(*params.RootURI)
-		h.indexWorkspace()
+		s.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
+		s.indexWorkspace()
+
+		s.RunDiagnostics(s.state, context.Notify, false)
+	}
+
+	if *params.Capabilities.TextDocument.PublishDiagnostics.RelatedInformation == false {
+		s.options.DiagnosticsEnabled = false
 	}
 
 	return protocol.InitializeResult{
@@ -61,7 +68,7 @@ func (h *Handlers) Initialize(serverName string, serverVersion string, capabilit
 	}, nil
 }
 
-func (h *Handlers) indexWorkspace() {
+func (h *Server) indexWorkspace() {
 	path, _ := fs.UriToPath(h.state.GetProjectRootURI())
 	files, _ := fs.ScanForC3(fs.GetCanonicalPath(path))
 	//s.server.Log.Debug(fmt.Sprint("Workspace FILES:", len(files), files))

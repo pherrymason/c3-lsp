@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"github.com/pherrymason/c3-lsp/pkg/utils"
@@ -6,11 +6,11 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (h *Handlers) WorkspaceDidChangeWatchedFiles(context *glsp.Context, params *protocol.DidChangeWatchedFilesParams) error {
+func (h *Server) WorkspaceDidChangeWatchedFiles(context *glsp.Context, params *protocol.DidChangeWatchedFilesParams) error {
 	return nil
 }
 
-func (h *Handlers) WorkspaceDidDeleteFiles(context *glsp.Context, params *protocol.DeleteFilesParams) error {
+func (h *Server) WorkspaceDidDeleteFiles(context *glsp.Context, params *protocol.DeleteFilesParams) error {
 	for _, file := range params.Files {
 		// The file has been removed! update our indices
 		docId := utils.NormalizePath(file.URI)
@@ -21,7 +21,7 @@ func (h *Handlers) WorkspaceDidDeleteFiles(context *glsp.Context, params *protoc
 	return nil
 }
 
-func (h *Handlers) WorkspaceDidRenameFiles(context *glsp.Context, params *protocol.RenameFilesParams) error {
+func (h *Server) WorkspaceDidRenameFiles(context *glsp.Context, params *protocol.RenameFilesParams) error {
 	for _, file := range params.Files {
 		//h.documents.Rename(file.OldURI, file.NewURI)
 

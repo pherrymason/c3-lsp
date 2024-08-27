@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	ctx "github.com/pherrymason/c3-lsp/internal/lsp/context"
@@ -9,7 +9,7 @@ import (
 
 // Support "Completion"
 // Returns: []CompletionItem | CompletionList | nil
-func (h *Handlers) TextDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
+func (h *Server) TextDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
 
 	cursorContext := ctx.BuildFromDocumentPosition(
 		params.Position,

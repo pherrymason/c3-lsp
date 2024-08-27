@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	_prot "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
@@ -10,7 +10,7 @@ import (
 )
 
 // Returns: Location | []Location | []LocationLink | nil
-func (h *Handlers) TextDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
+func (h *Server) TextDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
 	identifierOption := h.search.FindSymbolDeclarationInWorkspace(
 		utils.NormalizePath(params.TextDocument.URI),
 		symbols.NewPositionFromLSPPosition(params.Position),

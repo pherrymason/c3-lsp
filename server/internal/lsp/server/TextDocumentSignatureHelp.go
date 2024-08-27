@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"strings"
@@ -12,7 +12,7 @@ import (
 )
 
 // textDocument/signatureHelp: {"context":{"isRetrigger":false,"triggerCharacter":"(","triggerKind":2},"position":{"character":20,"line":8},"textDocument":{"uri":"file:///Volumes/Development/raul/projects/game-dev/raul-game-project/murder-c3/src/main.c3"}}
-func (h *Handlers) TextDocumentSignatureHelp(context *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
+func (h *Server) TextDocumentSignatureHelp(context *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
 	// Rewind position after previous "("
 	docId := utils.NormalizePath(params.TextDocument.URI)
 	doc := h.state.GetDocument(docId)

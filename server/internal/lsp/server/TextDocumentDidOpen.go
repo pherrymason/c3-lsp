@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"github.com/pherrymason/c3-lsp/pkg/document"
@@ -6,7 +6,7 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (h *Handlers) TextDocumentDidOpen(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
+func (h *Server) TextDocumentDidOpen(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
 	/*
 		doc, err := h.documents.Open(*params, context.Notify)
 		if err != nil {

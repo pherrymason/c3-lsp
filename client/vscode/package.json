@@ -2,7 +2,7 @@
   "name": "c3-lsp-client",
   "displayName": "C3 Language Server client",
   "description": "Language Server client for C3. Download C3 server from https://github.com/pherrymason/c3-lsp",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "publisher": "rferras",
   "engines": {
     "vscode": "^1.40.0"
@@ -54,10 +54,20 @@
           "default": false,
           "markdownDescription": "Sends crash reports to server to help fixing bugs."
         },
+        "c3lspclient.lsp.diagnosticsDelay": {
+          "type": "integer",
+          "default": 2000,
+          "markdownDescription": "Delay calculation of code diagnostics after modifications in source. In milliseconds, default 2000 ms."
+        },
         "c3lspclient.lsp.c3.version": {
           "type": "string",
           "default": null,
           "markdownDescription": "Specify C3 language version. If omited, LSP will use the last version it supports."
+        },
+        "c3lspclient.lsp.c3.path": {
+          "type": "string",
+          "default": null,
+          "markdownDescription": "Path to C3C binary. Use it if not defined already in your PATH environment variable or if you want to use a different one."
         }
       }
     }

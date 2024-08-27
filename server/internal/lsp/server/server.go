@@ -1,9 +1,10 @@
-package lsp
+package server
 
 import (
 	"fmt"
+	"time"
 
-	"github.com/pherrymason/c3-lsp/internal/lsp/handlers"
+	"github.com/bep/debounce"
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search"
@@ -19,20 +20,31 @@ import (
 )
 
 type Server struct {
-	server *glspserv.Server
+	server  *glspserv.Server
+	options ServerOpts
+	version string
+
+	state  *l.ProjectState
+	parser *p.Parser
+	search search.Search
+
+	diagnosticDebounced func(func())
 }
 
 // ServerOpts holds the options to create a new Server.
 type ServerOpts struct {
-	Name             string
-	Version          string
-	C3Version        option.Option[string]
-	LogFilepath      option.Option[string]
+	C3Version   option.Option[string]
+	C3CPath     option.Option[string]
+	LogFilepath option.Option[string]
+
+	DiagnosticsDelay   time.Duration
+	DiagnosticsEnabled bool
+
 	SendCrashReports bool
 	Debug            bool
 }
 
-func NewServer(opts ServerOpts) *Server {
+func NewServer(opts ServerOpts, appName string, version string) *Server {
 	var logpath *string
 	if opts.LogFilepath.IsSome() {
 		v := opts.LogFilepath.Get()
@@ -41,7 +53,7 @@ func NewServer(opts ServerOpts) *Server {
 
 	commonlog.Configure(2, logpath) // This increases logging verbosity (optional)
 
-	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", opts.Name))
+	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", appName))
 
 	if opts.SendCrashReports {
 		logger.Debug("Sending crash reports")
@@ -54,14 +66,25 @@ func NewServer(opts ServerOpts) *Server {
 	}
 
 	handler := protocol.Handler{}
-	glspServer := glspserv.NewServer(&handler, opts.Name, true)
+	glspServer := glspserv.NewServer(&handler, appName, true)
 
 	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3Version)
 
 	state := l.NewProjectState(logger, option.Some(requestedLanguageVersion.Number), opts.Debug)
 	parser := p.NewParser(logger)
 	search := search.NewSearch(logger, opts.Debug)
-	handlers := handlers.NewHandlers(&state, &parser, search)
+
+	server := &Server{
+		server:  glspServer,
+		options: opts,
+		version: version,
+
+		state:  &state,
+		parser: &parser,
+		search: search,
+
+		diagnosticDebounced: debounce.New(opts.DiagnosticsDelay * time.Millisecond),
+	}
 
 	handler.Initialized = func(context *glsp.Context, params *protocol.InitializedParams) error {
 		/*
@@ -86,27 +109,27 @@ func NewServer(opts ServerOpts) *Server {
 
 	handler.Initialize = func(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 		capabilities := handler.CreateServerCapabilities()
-		return handlers.Initialize(
-			opts.Name,
-			opts.Version,
+		return server.Initialize(
+			appName,
+			server.version,
 			capabilities,
 			context,
 			params,
 		)
 	}
 
-	handler.TextDocumentDidOpen = handlers.TextDocumentDidOpen
-	handler.TextDocumentDidChange = handlers.TextDocumentDidChange
-	handler.TextDocumentDidClose = handlers.TextDocumentDidClose
-	handler.TextDocumentDidSave = handlers.TextDocumentDidSave
-	handler.TextDocumentHover = handlers.TextDocumentHover
-	handler.TextDocumentDeclaration = handlers.TextDocumentDeclaration
-	handler.TextDocumentDefinition = handlers.TextDocumentDefinition
-	handler.TextDocumentCompletion = handlers.TextDocumentCompletion
-	handler.TextDocumentSignatureHelp = handlers.TextDocumentSignatureHelp
-	handler.WorkspaceDidChangeWatchedFiles = handlers.WorkspaceDidChangeWatchedFiles
-	handler.WorkspaceDidDeleteFiles = handlers.WorkspaceDidDeleteFiles
-	handler.WorkspaceDidRenameFiles = handlers.WorkspaceDidRenameFiles
+	handler.TextDocumentDidOpen = server.TextDocumentDidOpen
+	handler.TextDocumentDidChange = server.TextDocumentDidChange
+	handler.TextDocumentDidClose = server.TextDocumentDidClose
+	handler.TextDocumentDidSave = server.TextDocumentDidSave
+	handler.TextDocumentHover = server.TextDocumentHover
+	handler.TextDocumentDeclaration = server.TextDocumentDeclaration
+	handler.TextDocumentDefinition = server.TextDocumentDefinition
+	handler.TextDocumentCompletion = server.TextDocumentCompletion
+	handler.TextDocumentSignatureHelp = server.TextDocumentSignatureHelp
+	handler.WorkspaceDidChangeWatchedFiles = server.WorkspaceDidChangeWatchedFiles
+	handler.WorkspaceDidDeleteFiles = server.WorkspaceDidDeleteFiles
+	handler.WorkspaceDidRenameFiles = server.WorkspaceDidRenameFiles
 
 	handler.CompletionItemResolve = func(context *glsp.Context, params *protocol.CompletionItem) (*protocol.CompletionItem, error) {
 		return params, nil
@@ -115,10 +138,6 @@ func NewServer(opts ServerOpts) *Server {
 	handler.WorkspaceDidChangeWorkspaceFolders = func(context *glsp.Context, params *protocol.DidChangeWorkspaceFoldersParams) error {
 
 		return nil
-	}
-
-	server := &Server{
-		server: glspServer,
 	}
 
 	return server

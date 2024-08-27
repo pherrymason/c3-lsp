@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
@@ -8,7 +8,7 @@ import (
 )
 
 // Support "Hover"
-func (h *Handlers) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
 	docId := utils.NormalizePath(params.TextDocument.URI)
 	foundSymbolOption := h.search.FindSymbolDeclarationInWorkspace(docId, pos, h.state)

@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	_prot "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
@@ -10,7 +10,7 @@ import (
 )
 
 // Support "Go to declaration"
-func (h *Handlers) TextDocumentDeclaration(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
+func (h *Server) TextDocumentDeclaration(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
 	identifierOption := h.search.FindSymbolDeclarationInWorkspace(
 		utils.NormalizePath(params.TextDocument.URI),
 		symbols.NewPositionFromLSPPosition(params.Position),
