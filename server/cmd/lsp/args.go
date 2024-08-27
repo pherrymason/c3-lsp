@@ -36,6 +36,11 @@ func cmdLineArguments() (server.ServerOpts, bool) {
 		logFilePathOpt = option.Some(*logFilePath)
 	}
 
+	//log.Printf("Version: %s\n", *c3Version)
+	//log.Printf("Logpath: %s\n", *logFilePath)
+	//log.Printf("Delay: %d\n", *diagnosticsDelay)
+	//log.Printf("---------------")
+
 	return server.ServerOpts{
 		C3Version:          c3VersionOpt,
 		C3CPath:            c3cPathOpt,

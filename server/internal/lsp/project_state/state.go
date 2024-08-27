@@ -23,16 +23,20 @@ type ProjectState struct {
 	indexByFQN      IndexStore // TODO simplify this and use trie.Trie directly!
 	languageVersion Version
 
+	diagnostics map[string][]protocol.Diagnostic
+
 	logger       commonlog.Logger
 	debugEnabled bool
 }
 
 func NewProjectState(logger commonlog.Logger, languageVersion option.Option[string], debug bool) ProjectState {
 	projectState := ProjectState{
-		_documents:      map[string]*document.Document{},
-		documents:       document.NewDocumentStore(fs.FileStorage{}),
-		symbolsTable:    symbols_table.NewSymbolsTable(),
-		indexByFQN:      NewIndexStore(),
+		_documents:   map[string]*document.Document{},
+		documents:    document.NewDocumentStore(fs.FileStorage{}),
+		symbolsTable: symbols_table.NewSymbolsTable(),
+		indexByFQN:   NewIndexStore(),
+		diagnostics:  make(map[string][]protocol.Diagnostic),
+
 		logger:          logger,
 		languageVersion: GetVersion(languageVersion),
 		debugEnabled:    debug,
@@ -69,6 +73,20 @@ func (s *ProjectState) GetAllUnitModules() map[protocol.DocumentUri]symbols_tabl
 
 func (s *ProjectState) SearchByFQN(query string) []symbols.Indexable {
 	return s.indexByFQN.SearchByFQN(query)
+}
+
+func (s *ProjectState) GetDocumentDiagnostics() map[string][]protocol.Diagnostic {
+	return s.diagnostics
+}
+
+func (s *ProjectState) SetDocumentDiagnostics(docId string, diagnostics []protocol.Diagnostic) {
+	s.diagnostics[docId] = diagnostics
+}
+
+func (s *ProjectState) ClearDocumentDiagnostics() {
+	for k := range s.diagnostics {
+		delete(s.diagnostics, k)
+	}
 }
 
 func (s *ProjectState) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {

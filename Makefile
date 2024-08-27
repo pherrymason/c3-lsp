@@ -75,3 +75,6 @@ test:
 build-vscode:
 	cd client/vscode && npm run vscode:prepublish
 	cd client/vscode && vsce package
+
+build-vscode-dev:
+	cd client/vscode && npm run vscode:prepublish-dev

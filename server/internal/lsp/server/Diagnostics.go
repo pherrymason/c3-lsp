@@ -37,24 +37,43 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		err := command.Run()
 		log.Println("output:", out.String())
 		log.Println("output:", stdErr.String())
-		if err != nil {
-			log.Println("An error:", err)
-			errorInfo, diagnosticsDisabled := extractErrors(stdErr.String())
+		if err == nil {
+			clearOldDiagnostics(s.state, notify)
+			return
+		}
 
-			if diagnosticsDisabled {
-				s.options.DiagnosticsEnabled = false
-			} else {
-				diagnostics := []protocol.Diagnostic{
-					errorInfo.Diagnostic,
-				}
+		log.Println("An error:", err)
+		errorsInfo, diagnosticsDisabled := extractErrorDiagnostics(stdErr.String())
 
-				go notify(
-					protocol.ServerTextDocumentPublishDiagnostics,
+		if diagnosticsDisabled {
+			s.options.DiagnosticsEnabled = false
+			clearOldDiagnostics(s.state, notify)
+			return
+		}
+
+		// Send empty diagnostics for those files that had previously an error, but not anymore.
+		// If this is not done, the IDE will keep displaying the errors.
+		for k := range s.state.GetDocumentDiagnostics() {
+			if !hasDiagnosticForFile(k, errorsInfo) {
+				go notify(protocol.ServerTextDocumentPublishDiagnostics,
 					protocol.PublishDiagnosticsParams{
-						URI:         errorInfo.File,
-						Diagnostics: diagnostics,
+						URI:         k,
+						Diagnostics: []protocol.Diagnostic{},
 					})
 			}
+		}
+
+		for _, errInfo := range errorsInfo {
+			newDiagnostics := []protocol.Diagnostic{
+				errInfo.Diagnostic,
+			}
+			state.SetDocumentDiagnostics(errInfo.File, newDiagnostics)
+			go notify(
+				protocol.ServerTextDocumentPublishDiagnostics,
+				protocol.PublishDiagnosticsParams{
+					URI:         errInfo.File,
+					Diagnostics: newDiagnostics,
+				})
 		}
 	}
 
@@ -70,8 +89,8 @@ type ErrorInfo struct {
 	Diagnostic protocol.Diagnostic
 }
 
-func extractErrors(output string) (ErrorInfo, bool) {
-	var errorInfo ErrorInfo
+func extractErrorDiagnostics(output string) ([]ErrorInfo, bool) {
+	errorsInfo := []ErrorInfo{}
 	diagnosticsDisabled := false
 
 	lines := strings.Split(output, "\n")
@@ -95,7 +114,7 @@ func extractErrors(output string) (ErrorInfo, bool) {
 					}
 					character -= 1
 
-					errorInfo = ErrorInfo{
+					errorsInfo = append(errorsInfo, ErrorInfo{
 						File: parts[1],
 						Diagnostic: protocol.Diagnostic{
 							Range: protocol.Range{
@@ -106,12 +125,33 @@ func extractErrors(output string) (ErrorInfo, bool) {
 							Source:   cast.ToPtr("c3c build --test"),
 							Message:  parts[4],
 						},
-					}
+					})
 				}
 			}
 			break
 		}
 	}
 
-	return errorInfo, diagnosticsDisabled
+	return errorsInfo, diagnosticsDisabled
+}
+
+func clearOldDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc) {
+	for k := range state.GetDocumentDiagnostics() {
+		go notify(protocol.ServerTextDocumentPublishDiagnostics,
+			protocol.PublishDiagnosticsParams{
+				URI:         k,
+				Diagnostics: []protocol.Diagnostic{},
+			})
+	}
+	state.ClearDocumentDiagnostics()
+}
+
+func hasDiagnosticForFile(file string, errorsInfo []ErrorInfo) bool {
+	for _, v := range errorsInfo {
+		if file == v.File {
+			return true
+		}
+	}
+
+	return false
 }
