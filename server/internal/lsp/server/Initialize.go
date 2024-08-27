@@ -69,13 +69,10 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 }
 
 func (h *Server) indexWorkspace() {
-	path, _ := fs.UriToPath(h.state.GetProjectRootURI())
+	path := h.state.GetProjectRootURI()
 	files, _ := fs.ScanForC3(fs.GetCanonicalPath(path))
-	//s.server.Log.Debug(fmt.Sprint("Workspace FILES:", len(files), files))
 
 	for _, filePath := range files {
-		//h.language.Debug(fmt.Sprint("Parsing ", filePath))
-
 		content, _ := os.ReadFile(filePath)
 		doc := document.NewDocumentFromString(filePath, string(content))
 		h.state.RefreshDocumentIdentifiers(&doc, h.parser)
