@@ -9,18 +9,19 @@ import (
 
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
+	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool) {
-	if !s.options.DiagnosticsEnabled {
+	if !s.options.Diagnostics.Enabled {
 		return
 	}
 
 	binary := "c3c"
-	if s.options.C3CPath.IsSome() {
-		binary = s.options.C3CPath.Get()
+	if s.options.C3.Path.IsSome() {
+		binary = s.options.C3.Path.Get()
 	}
 	command := exec.Command(binary, "build", "--test")
 	command.Dir = state.GetProjectRootURI()
@@ -46,7 +47,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		errorsInfo, diagnosticsDisabled := extractErrorDiagnostics(stdErr.String())
 
 		if diagnosticsDisabled {
-			s.options.DiagnosticsEnabled = false
+			s.options.Diagnostics.Enabled = false
 			clearOldDiagnostics(s.state, notify)
 			return
 		}
@@ -71,7 +72,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 			go notify(
 				protocol.ServerTextDocumentPublishDiagnostics,
 				protocol.PublishDiagnosticsParams{
-					URI:         fs.ConvertPathTOURI(errInfo.File),
+					URI:         fs.ConvertPathToURI(errInfo.File),
 					Diagnostics: newDiagnostics,
 				})
 		}

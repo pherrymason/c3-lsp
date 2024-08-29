@@ -1,0 +1,11 @@
+{ 
+    "C3": {
+        "version": "0.6.2",
+        "path": "c3c",
+        "stdlib-path": ""
+    },
+    "Diagnostics": {
+        "enabled": true,
+        "delay": 2000
+    }
+}
