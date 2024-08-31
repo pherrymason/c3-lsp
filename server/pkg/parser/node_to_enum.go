@@ -58,7 +58,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 								paramNode.Child(1).Content(sourceCode),
 								idx.NewTypeFromString(paramNode.Child(0).Content(sourceCode), currentModule.GetModuleString()),
 								currentModule.GetModuleString(),
-								docId,
+								*docId,
 								idx.NewRangeFromTreeSitterPositions(paramNode.Child(0).StartPoint(), paramNode.Child(0).EndPoint()),
 								idx.NewRangeFromTreeSitterPositions(paramNode.StartPoint(), paramNode.EndPoint()),
 							),
@@ -79,7 +79,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 						associatedParameters,
 						currentModule.GetModuleString(),
 						idx.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
-						docId,
+						*docId,
 					)
 					enumerators = append(enumerators, enumerator)
 				}
@@ -93,7 +93,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 		baseType,
 		[]*idx.Enumerator{},
 		currentModule.GetModuleString(),
-		docId,
+		*docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 	)

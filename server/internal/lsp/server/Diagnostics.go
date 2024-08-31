@@ -72,7 +72,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 			go notify(
 				protocol.ServerTextDocumentPublishDiagnostics,
 				protocol.PublishDiagnosticsParams{
-					URI:         fs.ConvertPathToURI(errInfo.File),
+					URI:         fs.ConvertPathToURI(errInfo.File, s.options.C3.StdlibPath),
 					Diagnostics: newDiagnostics,
 				})
 		}

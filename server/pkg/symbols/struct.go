@@ -14,7 +14,7 @@ type Struct struct {
 	BaseIndexable
 }
 
-func NewStruct(name string, interfaces []string, members []*StructMember, module string, docId *string, idRange Range, docRange Range) Struct {
+func NewStruct(name string, interfaces []string, members []*StructMember, module string, docId string, idRange Range, docRange Range) Struct {
 	strukt := Struct{
 		members:    members,
 		isUnion:    false,
@@ -36,7 +36,7 @@ func NewStruct(name string, interfaces []string, members []*StructMember, module
 	return strukt
 }
 
-func NewUnion(name string, members []*StructMember, module string, docId *string, idRange Range, docRange Range) Struct {
+func NewUnion(name string, members []*StructMember, module string, docId string, idRange Range, docRange Range) Struct {
 	union := Struct{
 		members: members,
 		isUnion: true,
@@ -114,7 +114,7 @@ func (s StructMember) GetHoverInfo() string {
 	return fmt.Sprintf("%s %s", s.baseType, s.name)
 }
 
-func NewStructMember(name string, fieldType Type, bitRanges option.Option[[2]uint], module string, docId *string, idRange Range) StructMember {
+func NewStructMember(name string, fieldType Type, bitRanges option.Option[[2]uint], module string, docId string, idRange Range) StructMember {
 	return StructMember{
 		baseType: fieldType,
 		bitRange: bitRanges,
@@ -129,7 +129,7 @@ func NewStructMember(name string, fieldType Type, bitRanges option.Option[[2]uin
 	}
 }
 
-func NewInlineSubtype(name string, fieldType Type, module string, docId *string, idRange Range) StructMember {
+func NewInlineSubtype(name string, fieldType Type, module string, docId string, idRange Range) StructMember {
 	return StructMember{
 		baseType:             fieldType,
 		bitRange:             option.None[[2]uint](),

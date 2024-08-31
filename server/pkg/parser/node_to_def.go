@@ -25,7 +25,7 @@ define_declaration: $ => seq(
 */
 func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Def {
 	//fmt.Println(node)
-	defBuilder := idx.NewDefBuilder("", currentModule.GetModuleString(), docId).
+	defBuilder := idx.NewDefBuilder("", currentModule.GetModuleString(), *docId).
 		WithDocumentRange(
 			uint(node.StartPoint().Row),
 			uint(node.StartPoint().Column),

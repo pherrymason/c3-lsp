@@ -22,12 +22,12 @@ func (h *Server) TextDocumentDeclaration(context *glsp.Context, params *protocol
 	}
 
 	symbol := identifierOption.Get()
-	if !symbol.HasSourceCode() {
+	if !symbol.HasSourceCode() && h.options.C3.StdlibPath.IsNone() {
 		return nil, nil
 	}
 
 	return protocol.Location{
-		URI:   fs.ConvertPathToURI(symbol.GetDocumentURI()),
+		URI:   fs.ConvertPathToURI(symbol.GetDocumentURI(), h.options.C3.StdlibPath),
 		Range: _prot.Lsp_NewRangeFromRange(symbol.GetIdRange()),
 	}, nil
 }

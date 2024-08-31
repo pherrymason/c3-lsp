@@ -6,7 +6,7 @@ type FunctionBuilder struct {
 	function Function
 }
 
-func NewFunctionBuilder(name string, returnType Type, module string, docId *string) *FunctionBuilder {
+func NewFunctionBuilder(name string, returnType Type, module string, docId string) *FunctionBuilder {
 	return &FunctionBuilder{
 		function: Function{
 			fType:       UserDefined,

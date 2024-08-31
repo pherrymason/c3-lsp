@@ -43,10 +43,7 @@ func NewProjectState(logger commonlog.Logger, languageVersion option.Option[stri
 	}
 
 	// Install stdlib symbols
-	stdlibModules := projectState.languageVersion.stdLibSymbols()
-	projectState.indexParsedSymbols(stdlibModules, stdlibModules.DocId())
-
-	projectState.symbolsTable.Register(stdlibModules, symbols_table.PendingToResolve{})
+	projectState.SetLanguageVersion(projectState.languageVersion)
 
 	return projectState
 }
@@ -77,6 +74,14 @@ func (s *ProjectState) SearchByFQN(query string) []symbols.Indexable {
 
 func (s *ProjectState) GetDocumentDiagnostics() map[string][]protocol.Diagnostic {
 	return s.diagnostics
+}
+
+func (s *ProjectState) SetLanguageVersion(languageVersion Version) {
+	s.languageVersion = languageVersion
+	stdlibModules := languageVersion.stdLibSymbols()
+	s.indexParsedSymbols(stdlibModules, stdlibModules.DocId())
+
+	s.symbolsTable.Register(stdlibModules, symbols_table.PendingToResolve{})
 }
 
 func (s *ProjectState) SetDocumentDiagnostics(docId string, diagnostics []protocol.Diagnostic) {

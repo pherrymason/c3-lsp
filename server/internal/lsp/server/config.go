@@ -31,6 +31,19 @@ type ServerOpts struct {
 	Debug            bool
 }
 
+type ServerOptsJson struct {
+	C3 struct {
+		Version    *string `json:"version,omitempty"`
+		Path       *string `json:"path,omitempty"`
+		StdlibPath *string `json:"stdlib-path,omitempty"`
+	}
+
+	Diagnostics struct {
+		Enabled bool          `json:"enabled"`
+		Delay   time.Duration `json:"delay"`
+	}
+}
+
 func (s *Server) loadServerConfigurationForWorkspace(path string) {
 	file, err := os.Open(path + "/c3lsp.json")
 	if err != nil {
@@ -47,14 +60,29 @@ func (s *Server) loadServerConfigurationForWorkspace(path string) {
 	if err != nil {
 		log.Fatalf("Error reading config json: %v", err)
 	}
+	log.Printf("%s", data)
 
-	var options ServerOpts
+	var options ServerOptsJson
 	err = json.Unmarshal(data, &options)
 	if err != nil {
 		log.Fatalf("Error deserializing config json: %v", err)
 	}
 
-	s.options = options
+	if options.C3.StdlibPath != nil {
+		s.options.C3.StdlibPath = option.Some(*options.C3.StdlibPath)
+		log.Printf("Stdlib:%s", *options.C3.StdlibPath)
+		log.Printf("Setted Stdlib:%s", s.options.C3.StdlibPath.Get())
+	}
+
+	if options.C3.Version != nil {
+		s.options.C3.Version = option.Some(*options.C3.Version)
+	}
+	if options.C3.Path != nil {
+		s.options.C3.Path = option.Some(*options.C3.Path)
+	}
+
+	requestedLanguageVersion := checkRequestedLanguageVersion(s.options.C3.Version)
+	s.state.SetLanguageVersion(requestedLanguageVersion)
 
 	// Change log filepath?
 	// Should be able to do that form c3lsp.json?

@@ -37,7 +37,7 @@ func (p *Parser) nodeToInterface(node *sitter.Node, currentModule *idx.Module, d
 	_interface := idx.NewInterface(
 		nameNode.Content(sourceCode),
 		currentModule.GetModuleString(),
-		docId,
+		*docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 	)

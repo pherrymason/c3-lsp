@@ -6,7 +6,7 @@ type GenericParameter struct {
 	BaseIndexable
 }
 
-func NewGenericParameter(name string, module string, docId *string, idRange Range, docRange Range) *GenericParameter {
+func NewGenericParameter(name string, module string, docId string, idRange Range, docRange Range) *GenericParameter {
 	return &GenericParameter{
 		BaseIndexable: NewBaseIndexable(
 			name,

@@ -36,7 +36,7 @@ func (ps *UnitModules) GetOrInitModule(moduleName string, docId *string, rootNod
 	if !exists {
 		module = idx.NewModule(
 			moduleName,
-			docId,
+			*docId,
 			idx.NewRangeFromTreeSitterPositions(
 				rootNode.StartPoint(),
 				rootNode.EndPoint(),

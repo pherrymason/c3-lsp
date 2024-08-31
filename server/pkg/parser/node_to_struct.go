@@ -129,7 +129,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 					fieldType, // TODO <--- this type parsing is too simple
 					option.None[[2]uint](),
 					currentModule.GetModuleString(),
-					docId,
+					*docId,
 					identifiersRange[y],
 				)
 				structFields = append(structFields, &structMember)
@@ -141,7 +141,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 				identifier,
 				fieldType,
 				currentModule.GetModuleString(),
-				docId,
+				*docId,
 				identifiersRange[0],
 			)
 			structFields = append(structFields, &structMember)
@@ -151,7 +151,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 				fieldType,
 				option.None[[2]uint](),
 				currentModule.GetModuleString(),
-				docId,
+				*docId,
 				identifiersRange[0],
 			)
 
@@ -165,7 +165,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 			name,
 			structFields,
 			currentModule.GetModuleString(),
-			docId,
+			*docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 			idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 		)
@@ -175,7 +175,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 			interfaces,
 			structFields,
 			currentModule.GetModuleString(),
-			docId,
+			*docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 			idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 		)

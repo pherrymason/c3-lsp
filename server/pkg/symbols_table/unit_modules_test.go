@@ -10,7 +10,7 @@ import (
 func TestParserModules_should_get_scopes_of_given_module(t *testing.T) {
 	docId := "a-doc"
 	pm := NewParsedModules(&docId)
-	module := symbols.NewModuleBuilder("xxx", &docId).Build()
+	module := symbols.NewModuleBuilder("xxx", docId).Build()
 	pm.modules.Set("foo", module)
 
 	assert.Equal(t, module, pm.Get("foo"))
@@ -19,11 +19,11 @@ func TestParserModules_should_get_scopes_of_given_module(t *testing.T) {
 func TestParserModules_GetLoadableModules_should_get_scopes_that_are_children_of_given_module(t *testing.T) {
 	docId := "a-doc"
 	pm := NewParsedModules(&docId)
-	loadableModule := symbols.NewModuleBuilder("foo::bar", &docId).Build()
+	loadableModule := symbols.NewModuleBuilder("foo::bar", docId).Build()
 	pm.modules.Set("foo::bar", loadableModule)
-	loadableModule2 := symbols.NewModuleBuilder("foo", &docId).Build()
+	loadableModule2 := symbols.NewModuleBuilder("foo", docId).Build()
 	pm.modules.Set("foo", loadableModule2)
-	notLoadableModule := symbols.NewModuleBuilder("yyy", &docId).Build()
+	notLoadableModule := symbols.NewModuleBuilder("yyy", docId).Build()
 	pm.modules.Set("yyy", notLoadableModule)
 
 	modules := pm.GetLoadableModules(symbols.NewModulePathFromString("foo"))
@@ -36,13 +36,13 @@ func TestParserModules_GetLoadableModules_should_get_scopes_that_are_children_of
 func TestParserModules_GetLoadableModules_should_get_scopes_that_are_parent_of_given_module(t *testing.T) {
 	docId := "a-doc"
 	pm := NewParsedModules(&docId)
-	loadableModule := symbols.NewModuleBuilder("foo::bar", &docId).Build()
+	loadableModule := symbols.NewModuleBuilder("foo::bar", docId).Build()
 	pm.modules.Set("foo::bar", loadableModule)
-	loadableModule2 := symbols.NewModuleBuilder("foo", &docId).Build()
+	loadableModule2 := symbols.NewModuleBuilder("foo", docId).Build()
 	pm.modules.Set("foo", loadableModule2)
-	notLoadableModule := symbols.NewModuleBuilder("yyy", &docId).Build()
+	notLoadableModule := symbols.NewModuleBuilder("yyy", docId).Build()
 	pm.modules.Set("yyy", notLoadableModule)
-	notLoadableModule2 := symbols.NewModuleBuilder("foo::circle", &docId).Build()
+	notLoadableModule2 := symbols.NewModuleBuilder("foo::circle", docId).Build()
 	pm.modules.Set("foo::circle", notLoadableModule2)
 
 	modules := pm.GetLoadableModules(symbols.NewModulePathFromString("foo::bar::line"))
@@ -66,7 +66,7 @@ func TestParserModules_HasImplicitLoadableModules_should_return_false_when_there
 			module := symbols.NewModulePathFromString(tt.searchingModule)
 			docId := "a-doc"
 			pm := NewParsedModules(&docId)
-			loadableModule := symbols.NewModuleBuilder(tt.existingModule, &docId).Build()
+			loadableModule := symbols.NewModuleBuilder(tt.existingModule, docId).Build()
 			pm.modules.Set(tt.existingModule, loadableModule)
 
 			assert.False(t, pm.HasImplicitLoadableModules(module))
@@ -79,7 +79,7 @@ func TestParserModules_HasImplicitLoadableModules_should_return_true_when_there_
 
 	docId := "a-doc"
 	pm := NewParsedModules(&docId)
-	loadableModule := symbols.NewModuleBuilder("foo", &docId).Build()
+	loadableModule := symbols.NewModuleBuilder("foo", docId).Build()
 	pm.modules.Set("foo", loadableModule)
 
 	assert.True(t, pm.HasImplicitLoadableModules(module))
@@ -89,7 +89,7 @@ func TestParserModules_HasImplicitLoadableModules_should_return_true_when_there_
 	module := symbols.NewModulePathFromString("foo")
 	docId := "a-doc"
 	pm := NewParsedModules(&docId)
-	loadableModule := symbols.NewModuleBuilder("foo::bar", &docId).Build()
+	loadableModule := symbols.NewModuleBuilder("foo::bar", docId).Build()
 	pm.modules.Set("foo::bar", loadableModule)
 
 	assert.True(t, pm.HasImplicitLoadableModules(module))
@@ -99,7 +99,7 @@ func TestParserModules_HasImplicitLoadableModules_should_return_true_when_there_
 	module := symbols.NewModulePathFromString("foo::bar")
 	docId := "a-doc"
 	pm := NewParsedModules(&docId)
-	loadableModule := symbols.NewModuleBuilder("foo", &docId).Build()
+	loadableModule := symbols.NewModuleBuilder("foo", docId).Build()
 	pm.modules.Set("foo", loadableModule)
 
 	assert.True(t, pm.HasImplicitLoadableModules(module))

@@ -16,8 +16,7 @@ func Generate_variable(variable *s.Variable, module *s.Module) jen.Code {
 			jen.Lit(variable.GetName()),
 			jen.Lit(variable.GetType().GetName()),
 			jen.Lit(module.GetName()),
-			//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-			jen.Op("&").Id("docId"),
+			jen.Lit(module.GetDocumentURI()),
 		).
 		Dot("Build").Call()
 }
@@ -28,8 +27,7 @@ func Generate_struct(strukt *s.Struct, module *s.Module) jen.Code {
 		Call(
 			jen.Lit(strukt.GetName()),
 			jen.Lit(module.GetName()),
-			//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-			jen.Op("&").Id("docId"),
+			jen.Lit(module.GetDocumentURI()),
 		)
 
 	for _, member := range strukt.GetMembers() {
@@ -38,8 +36,7 @@ func Generate_struct(strukt *s.Struct, module *s.Module) jen.Code {
 				jen.Lit(member.GetName()),
 				jen.Lit(member.GetType().GetName()),
 				jen.Lit(module.GetName()),
-				//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-				jen.Op("&").Id("docId"),
+				jen.Lit(module.GetDocumentURI()),
 			)
 	}
 
@@ -57,8 +54,7 @@ func Generate_bitstruct(bitstruct *s.Bitstruct, module *s.Module) jen.Code {
 			jen.Lit(bitstruct.GetName()),
 			jen.Lit(bitstruct.Type().GetName()),
 			jen.Lit(module.GetName()),
-			//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-			jen.Op("&").Id("docId"),
+			jen.Lit(module.GetDocumentURI()),
 		)
 
 	for _, member := range bitstruct.Members() {
@@ -67,8 +63,7 @@ func Generate_bitstruct(bitstruct *s.Bitstruct, module *s.Module) jen.Code {
 				jen.Lit(member.GetName()),
 				jen.Lit(member.GetType().GetName()),
 				jen.Lit(module.GetName()),
-				//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-				jen.Op("&").Id("docId"),
+				jen.Lit(module.GetDocumentURI()),
 			)
 	}
 
@@ -85,8 +80,7 @@ func Generate_definition(def *s.Def, module *s.Module) jen.Code {
 		Call(
 			jen.Lit(def.GetName()),
 			jen.Lit(module.GetName()),
-			//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-			jen.Op("&").Id("docId"),
+			jen.Lit(module.GetDocumentURI()),
 		).
 		Dot("WithResolvesTo").
 		Call(
@@ -99,15 +93,13 @@ func Generate_definition(def *s.Def, module *s.Module) jen.Code {
 }
 
 func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
-	// NewEnumBuilder(name string, baseType string, module string, docId string)
 	enumDef := jen.
 		Qual(PackageName+"symbols", "NewEnumBuilder").
 		Call(
 			jen.Lit(enum.GetName()),
 			jen.Lit(enum.GetType()),
 			jen.Lit(module.GetName()),
-			//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-			jen.Op("&").Id("docId"),
+			jen.Lit(module.GetDocumentURI()),
 		)
 
 	for _, enumerator := range enum.GetEnumerators() {
@@ -121,8 +113,7 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 							jen.Lit(asv.GetName()),
 							jen.Lit(asv.GetType().GetName()),
 							jen.Lit(asv.GetModuleString()),
-							//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-							jen.Op("&").Id("docId"),
+							jen.Lit(module.GetDocumentURI()),
 						).
 						Dot("Build").Call(),
 				)
@@ -136,8 +127,7 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 				jen.Qual(PackageName+"symbols", "NewEnumeratorBuilder").
 					Call(
 						jen.Lit(enumerator.GetName()),
-						//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-						jen.Op("&").Id("docId"),
+						jen.Lit(module.GetDocumentURI()),
 					).
 					Dot("WithAssociativeValues").Call(associativeValues).
 					Dot("Build").Call(),
@@ -150,15 +140,13 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 }
 
 func Generate_fault(fault *s.Fault, module *s.Module) jen.Code {
-	// NewEnumBuilder(name string, baseType string, module string, docId string)
 	faultDef := jen.
 		Qual(PackageName+"symbols", "NewFaultBuilder").
 		Call(
 			jen.Lit(fault.GetName()),
 			jen.Lit(fault.GetType()),
 			jen.Lit(module.GetName()),
-			//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-			jen.Op("&").Id("docId"),
+			jen.Lit(module.GetDocumentURI()),
 		)
 
 	for _, enumerator := range fault.GetConstants() {
@@ -168,7 +156,7 @@ func Generate_fault(fault *s.Fault, module *s.Module) jen.Code {
 				jen.Qual(PackageName+"symbols", "NewFaultConstantBuilder").
 					Call(
 						jen.Lit(enumerator.GetName()),
-						jen.Op("&").Id("docId"), //(enumerator.GetDocumentURI()),
+						jen.Lit(enumerator.GetDocumentURI()),
 					).
 					Dot("Build").Call(),
 			)
@@ -192,8 +180,7 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 						jen.Lit(mod.GetName()),
 					),
 				jen.Lit(mod.GetName()),
-				//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-				jen.Op("&").Id("docId"),
+				jen.Lit(mod.GetDocumentURI()),
 			).
 			Dot("WithTypeIdentifier").
 			Call(jen.Lit(fun.GetTypeIdentifier()))
@@ -208,8 +195,7 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 						jen.Lit(mod.GetName()),
 					),
 				jen.Lit(mod.GetName()),
-				//jen.Lit(buildStdDocId(mod.GetDocumentURI())),
-				jen.Op("&").Id("docId"),
+				jen.Lit(mod.GetDocumentURI()),
 			)
 	}
 

@@ -55,7 +55,7 @@ func (p *Parser) nodeToFault(node *sitter.Node, currentModule *idx.Module, docId
 		baseType,
 		constants,
 		currentModule.GetModuleString(),
-		docId,
+		*docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 	)

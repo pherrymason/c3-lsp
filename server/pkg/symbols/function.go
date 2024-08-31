@@ -26,19 +26,19 @@ type Function struct {
 	BaseIndexable
 }
 
-func NewFunction(name string, returnType Type, argumentIds []string, module string, docId *string, idRange Range, docRange Range) Function {
+func NewFunction(name string, returnType Type, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
 	return newFunctionType(UserDefined, "", name, returnType, argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
 }
 
-func NewTypeFunction(typeIdentifier string, name string, returnType Type, argumentIds []string, module string, docId *string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
+func NewTypeFunction(typeIdentifier string, name string, returnType Type, argumentIds []string, module string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return newFunctionType(Method, typeIdentifier, name, returnType, argumentIds, module, docId, idRange, docRange, kind)
 }
 
-func NewMacro(name string, argumentIds []string, module string, docId *string, idRange Range, docRange Range) Function {
+func NewMacro(name string, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
 	return newFunctionType(Macro, "", name, NewTypeFromString("", module), argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
 }
 
-func newFunctionType(fType FunctionType, typeIdentifier string, name string, returnType Type, argumentIds []string, module string, docId *string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
+func newFunctionType(fType FunctionType, typeIdentifier string, name string, returnType Type, argumentIds []string, module string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
 	return Function{
 		fType:          fType,
 		returnType:     returnType,
@@ -57,7 +57,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 }
 
 func (f Function) Id() string {
-	return *f.documentURI + f.module.GetName()
+	return f.documentURI + f.module.GetName()
 }
 
 func (f Function) FunctionType() FunctionType {

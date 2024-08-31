@@ -258,7 +258,7 @@ func Test_SourceCode_SymbolInPosition_should_resolve_full_module_paths(t *testin
 
 	// Resolves full name of module, even if sentence uses short name
 	docId := "doc"
-	module := symbols.NewModule("file", &docId, symbols.NewRange(0, 0, 0, 0), symbols.NewRange(0, 0, 1, 13))
+	module := symbols.NewModule("file", docId, symbols.NewRange(0, 0, 0, 0), symbols.NewRange(0, 0, 1, 13))
 	module.AddImports([]string{"std::io"})
 
 	unitModule := symbols_table.NewParsedModules(&docId)

@@ -6,7 +6,7 @@ type StructBuilder struct {
 	strukt Struct
 }
 
-func NewStructBuilder(name string, module string, docId *string) *StructBuilder {
+func NewStructBuilder(name string, module string, docId string) *StructBuilder {
 	return &StructBuilder{
 		strukt: NewStruct(name, []string{}, []*StructMember{}, module, docId, Range{}, Range{}),
 	}
@@ -17,7 +17,7 @@ func (sb *StructBuilder) WithoutSourceCode() *StructBuilder {
 	return sb
 }
 
-func (b *StructBuilder) WithStructMember(name string, baseType string, module string, docId *string) *StructBuilder {
+func (b *StructBuilder) WithStructMember(name string, baseType string, module string, docId string) *StructBuilder {
 	member := NewStructMember(
 		name,
 		NewTypeFromString(baseType, module),
@@ -30,7 +30,7 @@ func (b *StructBuilder) WithStructMember(name string, baseType string, module st
 	return b
 }
 
-func (b *StructBuilder) WithSubStructMember(name string, baseType string, module string, docId *string) *StructBuilder {
+func (b *StructBuilder) WithSubStructMember(name string, baseType string, module string, docId string) *StructBuilder {
 	member := NewStructMember(
 		name,
 		NewTypeFromString(baseType, module),
