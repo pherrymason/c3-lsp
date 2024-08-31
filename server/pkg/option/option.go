@@ -51,7 +51,6 @@ func (s Option[T]) String() string {
 }
 
 func (o *Option[T]) UnmarshalJSON(data []byte) error {
-	fmt.Printf("Unmarshalling %s", data)
 	if string(data) == "null" {
 		*o = None[T]()
 		return nil
@@ -59,10 +58,8 @@ func (o *Option[T]) UnmarshalJSON(data []byte) error {
 
 	var value T
 	if err := json.Unmarshal(data, &value); err != nil {
-		fmt.Printf("error unmarshalling: %s", err)
 		return err
 	}
-	fmt.Printf("unmarshalled value: %s", value)
 
 	*o = Some(value)
 	return nil
