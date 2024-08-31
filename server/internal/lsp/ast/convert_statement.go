@@ -357,7 +357,7 @@ func convert_for_stmt(node *sitter.Node, source []byte) Expression {
 func convert_decl_or_expression(node *sitter.Node, source []byte) Expression {
 	declOrExpr := anyOf([]NodeRule{
 		NodeOfType("var_decl"),
-		NodeSiblingsWithSequenceOf([]NodeRule{
+		NodeChildWithSequenceOf([]NodeRule{
 			NodeOfType("type"), NodeOfType("local_decl_after_type"),
 		}, "declaration_stmt"),
 		NodeAnonymous("_expr"),
