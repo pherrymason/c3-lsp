@@ -53,7 +53,7 @@ type BaseIndexable struct {
 	name          string
 	moduleString  string
 	module        ModulePath
-	documentURI   *string
+	documentURI   string
 	hasSourceCode bool
 	idRange       Range
 	docRange      Range
@@ -93,7 +93,7 @@ func (b BaseIndexable) IsSubModuleOf(module ModulePath) bool {
 }
 
 func (b BaseIndexable) GetDocumentURI() string {
-	return *b.documentURI
+	return b.documentURI
 }
 
 func (b BaseIndexable) GetDocumentRange() Range {
@@ -115,6 +115,10 @@ func (b BaseIndexable) IsPrivate() bool {
 		}
 	}
 	return false
+}
+
+func (b *BaseIndexable) SetDocumentURI(docId string) {
+	b.documentURI = docId
 }
 
 func (b *BaseIndexable) GetAttributes() []string {
@@ -149,7 +153,7 @@ func (b BaseIndexable) formatSource(source string) string {
 	return fmt.Sprintf("```c3\n%s```", source)
 }
 
-func NewBaseIndexable(name string, module string, docId *protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
+func NewBaseIndexable(name string, module string, docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
 	return BaseIndexable{
 		name:          name,
 		module:        NewModulePathFromString(module),

@@ -21,8 +21,8 @@ func buildPosition(line uint, character uint) idx.Position {
 func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_symbol_at_cursor_position(t *testing.T) {
 	sourceCode := "module system; int emu;"
 	doc := d.NewDocument("filename", sourceCode)
-	docId := &doc.URI
-	parsedModules := symbols_table.NewParsedModules(docId)
+	docId := doc.URI
+	parsedModules := symbols_table.NewParsedModules(&docId)
 	parsedModules.RegisterModule(idx.NewModule("system", docId, idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 0, 23)))
 
 	// position at int e|mu
@@ -43,7 +43,7 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_all_parent_symbols(t 
 system.cpu.init();`
 	doc := d.NewDocument("filename", sourceCode)
 	parsedModules := symbols_table.NewParsedModules(&doc.URI)
-	parsedModules.RegisterModule(idx.NewModule("system", &doc.URI, idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 1, 18)))
+	parsedModules.RegisterModule(idx.NewModule("system", doc.URI, idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 1, 18)))
 
 	// Cursor at "i|init"
 	sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, buildPosition(2, 12))
@@ -100,7 +100,7 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_full_module_path(t *t
 		t.Run(fmt.Sprintf("Test %d", i), func(t *testing.T) {
 			doc := d.NewDocument("filename", tt.source)
 			parsedModules := symbols_table.NewParsedModules(&doc.URI)
-			parsedModules.RegisterModule(idx.NewModule("system", &doc.URI, idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 10, 30)))
+			parsedModules.RegisterModule(idx.NewModule("system", doc.URI, idx.NewRange(0, 0, 0, 0), idx.NewRange(0, 0, 10, 30)))
 
 			sp := BuildSearchBySymbolUnderCursor(&doc, parsedModules, tt.position)
 

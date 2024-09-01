@@ -28,7 +28,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 				vType,
 				//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
 				currentModule.GetModuleString(),
-				docId,
+				*docId,
 				idx.NewRangeFromTreeSitterPositions(
 					n.StartPoint(),
 					n.EndPoint(),
@@ -51,7 +51,7 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 				vType,
 				//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
 				currentModule.GetModuleString(),
-				docId,
+				*docId,
 				idx.NewRangeFromTreeSitterPositions(
 					sub.StartPoint(),
 					sub.EndPoint(),
@@ -93,7 +93,7 @@ func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.
 				vType,
 				//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
 				currentModule.GetModuleString(),
-				docId,
+				*docId,
 				idx.NewRangeFromTreeSitterPositions(
 					identifier.StartPoint(),
 					identifier.EndPoint(),
@@ -143,7 +143,7 @@ func (p *Parser) nodeToConstant(node *sitter.Node, currentModule *idx.Module, do
 		idNode.Content(sourceCode),
 		idx.NewTypeFromString(typeNodeContent, currentModule.GetModuleString()), // <-- moduleName is potentially wrong
 		currentModule.GetModuleString(),
-		docId,
+		*docId,
 		idx.NewRangeFromTreeSitterPositions(
 			idNode.StartPoint(),
 			idNode.EndPoint(),

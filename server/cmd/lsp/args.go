@@ -42,13 +42,17 @@ func cmdLineArguments() (server.ServerOpts, bool) {
 	//log.Printf("---------------")
 
 	return server.ServerOpts{
-		C3Version:          c3VersionOpt,
-		C3CPath:            c3cPathOpt,
-		DiagnosticsDelay:   time.Duration(*diagnosticsDelay),
-		DiagnosticsEnabled: true,
-		LogFilepath:        logFilePathOpt,
-		Debug:              *debug,
-		SendCrashReports:   *sendCrashReports,
+		C3: server.C3Opts{
+			Version: c3VersionOpt,
+			Path:    c3cPathOpt,
+		},
+		Diagnostics: server.DiagnosticsOpts{
+			Delay:   time.Duration(*diagnosticsDelay),
+			Enabled: true,
+		},
+		LogFilepath:      logFilePathOpt,
+		Debug:            *debug,
+		SendCrashReports: *sendCrashReports,
 	}, *showHelp
 }
 

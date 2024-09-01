@@ -68,11 +68,14 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 	dict := jen.Dict{}
 
 	uniqueModuleNames := map[string]bool{}
-	for _, ps := range symbolsTable.All() {
+	for docId, ps := range symbolsTable.All() {
 		for _, mod := range ps.Modules() {
 			if mod.IsPrivate() {
 				continue
 			}
+
+			// Rewrite its docId
+			mod.SetDocumentURI(strings.ReplaceAll(docId, "../../../assets/c3c/lib/std", "<stdlib-path>"))
 
 			_, ok := uniqueModuleNames[mod.GetName()]
 			if !ok {
@@ -83,7 +86,7 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 						Qual(PackageName+"symbols", "NewModuleBuilder").
 						Call(
 							jen.Lit(mod.GetName()),
-							jen.Op("&").Id("docId"),
+							jen.Lit(mod.GetDocumentURI()),
 						).
 						Dot("WithoutSourceCode").Call().
 						Dot("Build").Call()
@@ -100,7 +103,6 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 			jen.Id("_").Op(",").Id("mod").Op(":=").Range().
 				Id("moduleCollection"),
 		).Block(
-			//jen.Qual("fmt", "Println").Call(jen.Id("i")),
 			jen.Id("parsedModules").Dot("RegisterModule").Call(jen.Id("mod")),
 		),
 		jen.Var().Id("module").Add(jen.Op("*")).Qual(PackageName+"symbols", "Module"),
@@ -122,7 +124,7 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 							Call(
 								jen.Lit(gen.GetName()),
 								jen.Lit(mod.GetName()),
-								jen.Op("&").Id("docId"),
+								jen.Lit(mod.GetDocumentURI()),
 								jen.Qual(PackageName+"symbols", "NewRange").Call(
 									jen.Lit(0), jen.Lit(0), jen.Lit(0), jen.Lit(0),
 								),

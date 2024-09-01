@@ -50,13 +50,15 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 
 	if params.RootURI != nil {
 		s.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
+		path, _ := fs.UriToPath(*params.RootURI)
+		s.loadServerConfigurationForWorkspace(path)
 		s.indexWorkspace()
 
 		s.RunDiagnostics(s.state, context.Notify, false)
 	}
 
 	if *params.Capabilities.TextDocument.PublishDiagnostics.RelatedInformation == false {
-		s.options.DiagnosticsEnabled = false
+		s.options.Diagnostics.Enabled = false
 	}
 
 	return protocol.InitializeResult{

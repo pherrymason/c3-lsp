@@ -13,18 +13,18 @@ func TestSymbolsTable_should_expand_substructs(t *testing.T) {
 	symbolsTable := NewSymbolsTable()
 
 	um := NewParsedModules(&docId)
-	module := symbols.NewModuleBuilder(mod, &docId).Build()
+	module := symbols.NewModuleBuilder(mod, docId).Build()
 	// Add Struct to be inlined
 	module.AddStruct(
-		symbols.NewStructBuilder("ToInline", mod, &docId).
-			WithStructMember("a", "int", mod, &docId).
-			WithStructMember("b", "char", mod, &docId).
+		symbols.NewStructBuilder("ToInline", mod, docId).
+			WithStructMember("a", "int", mod, docId).
+			WithStructMember("b", "char", mod, docId).
 			Build(),
 	)
 	module.AddStruct(
-		symbols.NewStructBuilder("ToProcess", mod, &docId).
-			WithStructMember("c", "int", mod, &docId).
-			WithSubStructMember("x", "ToInline", mod, &docId).
+		symbols.NewStructBuilder("ToProcess", mod, docId).
+			WithStructMember("c", "int", mod, docId).
+			WithSubStructMember("x", "ToInline", mod, docId).
 			Build(),
 	)
 	um.modules.Set("xx", module)
@@ -53,12 +53,12 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		symbolsTable := NewSymbolsTable()
 
 		um := NewParsedModules(&docId)
-		module := symbols.NewModuleBuilder(mod, &docId).Build()
+		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddVariable(
-			symbols.NewVariableBuilder("value", "Ref", mod, &docId).Build(),
+			symbols.NewVariableBuilder("value", "Ref", mod, docId).Build(),
 		)
 		module.AddDef(
-			symbols.NewDefBuilder("Ref", mod, &docId).Build(),
+			symbols.NewDefBuilder("Ref", mod, docId).Build(),
 		)
 		um.modules.Set("xx", module)
 
@@ -75,9 +75,9 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		symbolsTable := NewSymbolsTable()
 
 		um := NewParsedModules(&docId)
-		module := symbols.NewModuleBuilder(mod, &docId).Build()
+		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddVariable(
-			symbols.NewVariableBuilder("value", "Ref", mod, &docId).Build(),
+			symbols.NewVariableBuilder("value", "Ref", mod, docId).Build(),
 		)
 		module.AddImports([]string{"yy"})
 
@@ -89,9 +89,9 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		docBId := "aDocBId"
 		modB := "yy"
 		umB := NewParsedModules(&docBId)
-		moduleB := symbols.NewModuleBuilder(modB, &docBId).Build()
+		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
 		moduleB.AddDef(
-			symbols.NewDefBuilder("Ref", modB, &docBId).Build(),
+			symbols.NewDefBuilder("Ref", modB, docBId).Build(),
 		)
 		umB.modules.Set(mod, moduleB)
 		symbolsTable.Register(umB, NewPendingToResolve())
@@ -105,11 +105,11 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		symbolsTable := NewSymbolsTable()
 
 		um := NewParsedModules(&docId)
-		module := symbols.NewModuleBuilder(mod, &docId).Build()
+		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddStruct(
-			symbols.NewStructBuilder("CustomStruct", mod, &docId).
-				WithStructMember("a", "Ref", mod, &docId).
-				WithStructMember("b", "char", mod, &docId).
+			symbols.NewStructBuilder("CustomStruct", mod, docId).
+				WithStructMember("a", "Ref", mod, docId).
+				WithStructMember("b", "char", mod, docId).
 				Build(),
 		)
 		module.AddImports([]string{"yy"})
@@ -122,9 +122,9 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		docBId := "aDocBId"
 		modB := "yy"
 		umB := NewParsedModules(&docBId)
-		moduleB := symbols.NewModuleBuilder(modB, &docBId).Build()
+		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
 		moduleB.AddDef(
-			symbols.NewDefBuilder("Ref", modB, &docBId).Build(),
+			symbols.NewDefBuilder("Ref", modB, docBId).Build(),
 		)
 		umB.modules.Set(mod, moduleB)
 		symbolsTable.Register(umB, NewPendingToResolve())
@@ -139,11 +139,11 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		symbolsTable := NewSymbolsTable()
 
 		um := NewParsedModules(&docId)
-		module := symbols.NewModuleBuilder(mod, &docId).Build()
+		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddFunction(
-			symbols.NewFunctionBuilder("foo", symbols.NewTypeFromString("Ref", mod), mod, &docId).
+			symbols.NewFunctionBuilder("foo", symbols.NewTypeFromString("Ref", mod), mod, docId).
 				WithArgument(
-					symbols.NewVariableBuilder("zoo", "Ref", mod, &docId).Build(),
+					symbols.NewVariableBuilder("zoo", "Ref", mod, docId).Build(),
 				).
 				Build(),
 		)
@@ -157,9 +157,9 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		docBId := "aDocBId"
 		modB := "yy"
 		umB := NewParsedModules(&docBId)
-		moduleB := symbols.NewModuleBuilder(modB, &docBId).Build()
+		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
 		moduleB.AddDef(
-			symbols.NewDefBuilder("Ref", modB, &docBId).Build(),
+			symbols.NewDefBuilder("Ref", modB, docBId).Build(),
 		)
 		umB.modules.Set(mod, moduleB)
 		symbolsTable.Register(umB, NewPendingToResolve())
@@ -175,9 +175,9 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		symbolsTable := NewSymbolsTable()
 
 		um := NewParsedModules(&docId)
-		module := symbols.NewModuleBuilder(mod, &docId).Build()
+		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddDef(
-			symbols.NewDefBuilder("foo", mod, &docId).
+			symbols.NewDefBuilder("foo", mod, docId).
 				WithResolvesToType(symbols.NewTypeFromString("HashMap", mod)).
 				Build(),
 		)
@@ -191,9 +191,9 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		docBId := "aDocBId"
 		modB := "std::collections::map"
 		umB := NewParsedModules(&docBId)
-		moduleB := symbols.NewModuleBuilder(modB, &docBId).Build()
+		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
 		moduleB.AddStruct(
-			symbols.NewStructBuilder("HashMap", modB, &docBId).Build(),
+			symbols.NewStructBuilder("HashMap", modB, docBId).Build(),
 		)
 		umB.modules.Set(mod, moduleB)
 		symbolsTable.Register(umB, NewPendingToResolve())

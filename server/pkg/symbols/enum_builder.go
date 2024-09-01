@@ -6,7 +6,7 @@ type EnumBuilder struct {
 	enum Enum
 }
 
-func NewEnumBuilder(name string, baseType string, module string, docId *string) *EnumBuilder {
+func NewEnumBuilder(name string, baseType string, module string, docId string) *EnumBuilder {
 	return &EnumBuilder{
 		enum: Enum{
 			baseType: baseType,
@@ -52,7 +52,7 @@ type EnumeratorBuilder struct {
 	enumerator Enumerator
 }
 
-func NewEnumeratorBuilder(name string, docId *string) *EnumeratorBuilder {
+func NewEnumeratorBuilder(name string, docId string) *EnumeratorBuilder {
 	return &EnumeratorBuilder{
 		enumerator: Enumerator{
 			value: "",

@@ -1,6 +1,9 @@
 package option
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type Option[T any] struct {
 	value  T
@@ -45,4 +48,19 @@ func (s Option[T]) String() string {
 	} else {
 		return "None"
 	}
+}
+
+func (o *Option[T]) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*o = None[T]()
+		return nil
+	}
+
+	var value T
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	*o = Some(value)
+	return nil
 }

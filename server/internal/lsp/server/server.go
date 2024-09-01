@@ -32,7 +32,7 @@ type Server struct {
 }
 
 // ServerOpts holds the options to create a new Server.
-type ServerOpts struct {
+/*type ServerOpts struct {
 	C3Version   option.Option[string]
 	C3CPath     option.Option[string]
 	LogFilepath option.Option[string]
@@ -42,7 +42,7 @@ type ServerOpts struct {
 
 	SendCrashReports bool
 	Debug            bool
-}
+}*/
 
 func NewServer(opts ServerOpts, appName string, version string) *Server {
 	var logpath *string
@@ -61,14 +61,14 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		logger.Debug("No crash reports")
 	}
 
-	if opts.C3Version.IsSome() {
-		logger.Debug(fmt.Sprintf("C3 Language version specified: %s", opts.C3Version.Get()))
+	if opts.C3.Version.IsSome() {
+		logger.Debug(fmt.Sprintf("C3 Language version specified: %s", opts.C3.Version.Get()))
 	}
 
 	handler := protocol.Handler{}
 	glspServer := glspserv.NewServer(&handler, appName, true)
 
-	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3Version)
+	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3.Version)
 
 	state := l.NewProjectState(logger, option.Some(requestedLanguageVersion.Number), opts.Debug)
 	parser := p.NewParser(logger)
@@ -83,7 +83,7 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		parser: &parser,
 		search: search,
 
-		diagnosticDebounced: debounce.New(opts.DiagnosticsDelay * time.Millisecond),
+		diagnosticDebounced: debounce.New(opts.Diagnostics.Delay * time.Millisecond),
 	}
 
 	handler.Initialized = func(context *glsp.Context, params *protocol.InitializedParams) error {

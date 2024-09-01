@@ -43,7 +43,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, currentModule *idx.Module, d
 		interfaces,
 		structFields,
 		currentModule.GetModuleString(),
-		docId,
+		*docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 	)
@@ -87,7 +87,7 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, currentModule *idx.Mo
 				memberType,
 				option.Some(bitRanges),
 				currentModule.GetModuleString(),
-				docId,
+				*docId,
 				idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
 			)
 			structFields = append(structFields, &member)

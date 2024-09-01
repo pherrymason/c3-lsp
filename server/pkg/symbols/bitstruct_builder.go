@@ -6,7 +6,7 @@ type BitstructBuilder struct {
 	bitstruct Bitstruct
 }
 
-func NewBitstructBuilder(name string, backingType string, module string, docId *string) *BitstructBuilder {
+func NewBitstructBuilder(name string, backingType string, module string, docId string) *BitstructBuilder {
 	return &BitstructBuilder{
 		bitstruct: NewBitstruct(name, NewTypeFromString(backingType, module), []string{}, []*StructMember{}, module, docId, Range{}, Range{}),
 	}
@@ -17,7 +17,7 @@ func (sb *BitstructBuilder) WithoutSourceCode() *BitstructBuilder {
 	return sb
 }
 
-func (b *BitstructBuilder) WithStructMember(name string, baseType string, module string, docId *string) *BitstructBuilder {
+func (b *BitstructBuilder) WithStructMember(name string, baseType string, module string, docId string) *BitstructBuilder {
 	member := NewStructMember(name, NewTypeFromString(baseType, module), option.None[[2]uint](), module, docId, NewRange(0, 0, 0, 0))
 	b.bitstruct.members = append(b.bitstruct.members, &member)
 	return b

@@ -9,7 +9,7 @@ type DefBuilder struct {
 	def Def
 }
 
-func NewDefBuilder(name string, module string, docId *string) *DefBuilder {
+func NewDefBuilder(name string, module string, docId string) *DefBuilder {
 	return &DefBuilder{
 		def: Def{
 			BaseIndexable: NewBaseIndexable(
