@@ -6,8 +6,7 @@ import (
 )
 
 func convert_statement(node *sitter.Node, source []byte) Expression {
-	debugNode(node, source)
-	return anyOf([]NodeRule{
+	return anyOf("statement", []NodeRule{
 		NodeOfType("compound_stmt"),
 		NodeOfType("expr_stmt"),
 		NodeOfType("declaration_stmt"),
@@ -66,6 +65,10 @@ func convert_return_stmt(node *sitter.Node, source []byte) Expression {
 	}
 }
 
+func convert_split_declaration_stmt(node *sitter.Node, source []byte) Expression {
+	return convert_declaration_stmt(node.Parent(), source)
+}
+
 func convert_declaration_stmt(node *sitter.Node, source []byte) Expression {
 	if node.Type() == "const_declaration" {
 		return convert_const_declaration(node, source)
@@ -78,6 +81,7 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Expression {
 	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
+		debugNode(n, source, "dd")
 
 		switch n.Type() {
 		case "local_decl_storage":
@@ -163,7 +167,6 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
 			}
 
 			colon := conditionNode.NextSibling()
-			debugNode(colon, source)
 			ns := colon.NextSibling()
 			statements := []Statement{}
 			for {
@@ -203,7 +206,7 @@ func convert_nextcase_stmt(node *sitter.Node, source []byte) Expression {
 	var value Expression
 	targetNode := node.ChildByFieldName("target")
 	if targetNode != nil {
-		value = anyOf([]NodeRule{
+		value = anyOf("nextcase_stmt", []NodeRule{
 			NodeTryConversionFunc("_expr"),
 			NodeOfType("type"),
 			NodeOfType("default"),
@@ -225,8 +228,7 @@ func convert_nextcase_stmt(node *sitter.Node, source []byte) Expression {
 }
 
 func convert_if_stmt(node *sitter.Node, source []byte) Expression {
-	debugNode(node, source)
-	conditions := convert_paren_condition(node.ChildByFieldName("condition"), source)
+	conditions := convert_paren_conditions(node.ChildByFieldName("condition"), source)
 	//fmt.Printf("%s", reflect.TypeOf(conditions).String())
 	stmt := IfStatement{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
@@ -276,13 +278,11 @@ func convert_if_stmt(node *sitter.Node, source []byte) Expression {
 		  ),
 		)
 */
-func convert_paren_condition(node *sitter.Node, source []byte) []Expression {
-
-	debugNode(node, source)
-	return convert_condition(node.Child(1), source)
+func convert_paren_conditions(node *sitter.Node, source []byte) []Expression {
+	return convert_conditions(node.Child(1), source)
 }
 
-func convert_condition(node *sitter.Node, source []byte) []Expression {
+func convert_conditions(node *sitter.Node, source []byte) []Expression {
 	conditions := []Expression{}
 
 	// Option 1: try_unwrap_chain
@@ -335,18 +335,17 @@ func convert_for_stmt(node *sitter.Node, source []byte) Expression {
 		if n.Type() == "for_cond" {
 			initNode := n.ChildByFieldName("initializer")
 			if initNode != nil {
-				forStmt.Initializer = commaSep(convert_decl_or_expression, initNode, source)
+				forStmt.Initializer = convert_comma_decl_or_expression(initNode, source)
 			}
 
 			condNode := n.ChildByFieldName("condition")
 			if condNode != nil {
-				forStmt.Condition = convert_condition(condNode, source)[0]
+				forStmt.Condition = convert_conditions(condNode, source)[0]
 			}
 
 			updateNode := n.ChildByFieldName("update")
 			if updateNode != nil {
-				debugNode(updateNode, source)
-				forStmt.Update = commaSep(convert_decl_or_expression, updateNode.Child(0), source)
+				forStmt.Update = convert_comma_decl_or_expression(updateNode, source)
 			}
 		}
 	}
@@ -354,14 +353,17 @@ func convert_for_stmt(node *sitter.Node, source []byte) Expression {
 	return forStmt
 }
 
+func convert_comma_decl_or_expression(node *sitter.Node, source []byte) []Expression {
+	return commaSep(convert_decl_or_expression, node.Child(0), source)
+}
+
+// This takes anon nodes
 func convert_decl_or_expression(node *sitter.Node, source []byte) Expression {
-	declOrExpr := anyOf([]NodeRule{
+	return anyOf("decl_or_expression", []NodeRule{
 		NodeOfType("var_decl"),
-		NodeChildWithSequenceOf([]NodeRule{
+		NodeSiblingsWithSequenceOf([]NodeRule{
 			NodeOfType("type"), NodeOfType("local_decl_after_type"),
-		}, "declaration_stmt"),
+		}, "split_declaration_stmt"),
 		NodeAnonymous("_expr"),
 	}, node, source, true)
-
-	return declOrExpr
 }

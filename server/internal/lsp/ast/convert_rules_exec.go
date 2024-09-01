@@ -23,26 +23,27 @@ func (c ConversionInfo) convert(node *sitter.Node, source []byte) Expression {
 
 func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 	funcMap := map[string]ConversionInfo{
-		"assignment_expr":   {method: convert_assignment_expr},
-		"at_ident":          {method: convert_ident},
-		"binary_expr":       {method: convert_binary_expr},
-		"break_stmt":        {method: convert_break_stmt},
-		"bytes_expr":        {method: convert_bytes_expr},
-		"builtin":           {method: convert_as_literal},
-		"call_expr":         {method: convert_call_expr},
-		"continue_stmt":     {method: convert_continue_stmt},
-		"cast_expr":         {method: convert_cast_expr},
-		"const_ident":       {method: convert_ident},
-		"compound_stmt":     {method: convert_compound_stmt},
-		"ct_ident":          {method: convert_ident},
-		"declaration_stmt":  {method: convert_declaration_stmt},
-		"elvis_orelse_expr": {method: convert_elvis_orelse_expr},
-		"expr_stmt":         {method: convert_expression, goChild: true},
-		"for_stmt":          {method: convert_for_stmt},
-		"hash_ident":        {method: convert_ident},
-		"ident":             {method: convert_ident},
-		"if_stmt":           {method: convert_if_stmt},
-		"initializer_list":  {method: convert_initializer_list},
+		"assignment_expr":        {method: convert_assignment_expr},
+		"at_ident":               {method: convert_ident},
+		"binary_expr":            {method: convert_binary_expr},
+		"break_stmt":             {method: convert_break_stmt},
+		"bytes_expr":             {method: convert_bytes_expr},
+		"builtin":                {method: convert_as_literal},
+		"call_expr":              {method: convert_call_expr},
+		"continue_stmt":          {method: convert_continue_stmt},
+		"cast_expr":              {method: convert_cast_expr},
+		"const_ident":            {method: convert_ident},
+		"compound_stmt":          {method: convert_compound_stmt},
+		"ct_ident":               {method: convert_ident},
+		"declaration_stmt":       {method: convert_declaration_stmt},
+		"split_declaration_stmt": {method: convert_split_declaration_stmt},
+		"elvis_orelse_expr":      {method: convert_elvis_orelse_expr},
+		"expr_stmt":              {method: convert_expression, goChild: true},
+		"for_stmt":               {method: convert_for_stmt},
+		"hash_ident":             {method: convert_ident},
+		"ident":                  {method: convert_ident},
+		"if_stmt":                {method: convert_if_stmt},
+		"initializer_list":       {method: convert_initializer_list},
 
 		"lambda_declaration":    {method: convert_lambda_declaration},
 		"lambda_expr":           {method: convert_lambda_expr},
@@ -117,10 +118,10 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 	//panic(fmt.Sprintf("La función %s no existe\n", nodeType))
 }
 
-func anyOf(rules []NodeRule, node *sitter.Node, source []byte, debug bool) Expression {
+func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) Expression {
 	//fmt.Printf("anyOf: ")
 	if debug {
-		debugNode(node, source)
+		debugNode(node, source, "AnyOf["+name+"]")
 	}
 	if node == nil {
 		panic("Nil node supplied!")
@@ -146,7 +147,7 @@ func anyOf(rules []NodeRule, node *sitter.Node, source []byte, debug bool) Expre
 func commaSep(convert NodeConverter, node *sitter.Node, source []byte) []Expression {
 	expressions := []Expression{}
 	for {
-		debugNode(node, source)
+		debugNode(node, source, "commaSep")
 		condition := convert(node, source)
 
 		if condition != nil {

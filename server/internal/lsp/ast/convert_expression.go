@@ -28,7 +28,7 @@ $._base_expr,
 func convert_expression(node *sitter.Node, source []byte) Expression {
 	//fmt.Print("convert_expression:\n")
 	//debugNode(node, source)
-	return anyOf([]NodeRule{
+	return anyOf("_expr", []NodeRule{
 		NodeOfType("assignment_expr"),
 		NodeOfType("ternary_expr"),
 		NodeChildWithSequenceOf([]NodeRule{
@@ -54,7 +54,7 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 	var expression Expression
 	//debugNode(node, source)
 
-	return anyOf([]NodeRule{
+	return anyOf("_base_expr", []NodeRule{
 		NodeOfType("string_literal"),
 		NodeOfType("char_literal"),
 		NodeOfType("raw_string_literal"),
@@ -177,7 +177,7 @@ func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
 		NodeOfType("initializer_list"),
 		NodeOfType("_base_expr"),
 	}
-	condition := anyOf(expected, node.ChildByFieldName("condition"), source, false)
+	condition := anyOf("ternary_expr", expected, node.ChildByFieldName("condition"), source, false)
 
 	return TernaryExpression{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
@@ -619,11 +619,11 @@ func convert_dummy(node *sitter.Node, source []byte) Expression {
 	return nil
 }
 
-func debugNode(node *sitter.Node, source []byte) {
+func debugNode(node *sitter.Node, source []byte, tag string) {
 	if node == nil {
 		fmt.Printf("Node is nil\n")
 		return
 	}
 
-	fmt.Printf("%s: %s\n----- %s\n", node.Type(), node.Content(source), node)
+	fmt.Printf("%s: %s: %s\n----- %s\n", tag, node.Type(), node.Content(source), node)
 }
