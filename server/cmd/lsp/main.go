@@ -10,7 +10,7 @@ import (
 )
 
 const version = "0.3.0"
-const prerelease = true
+const prerelease = false
 const appName = "C3-LSP"
 
 func getVersion() string {
