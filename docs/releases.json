@@ -1,7 +1,12 @@
 {
     "releases": [
         {
-            "version": "0.3.0"
+            "version": "0.3.0",
+            "artifacts": {
+                "win32": "https://github.com/pherrymason/c3-lsp/releases/download/v0.3.0/c3-lsp-windows-amd64.zip",
+                "darwin": "https://github.com/pherrymason/c3-lsp/releases/download/v0.3.0/c3-lsp-darwin-arm64.zip",
+                "linux": "https://github.com/pherrymason/c3-lsp/releases/download/v0.3.0/c3-lsp-linux-amd64.zip"
+            }
         }
     ]
 }
