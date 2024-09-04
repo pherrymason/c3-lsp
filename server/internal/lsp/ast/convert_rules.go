@@ -73,7 +73,7 @@ func (r SequenceOf) Validate(node *sitter.Node, source []byte) bool {
 			siblings++
 		}
 
-		if siblings != len(r.ExpectedSequence) {
+		if siblings < len(r.ExpectedSequence) {
 			return false
 		}
 
