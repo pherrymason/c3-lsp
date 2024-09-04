@@ -567,7 +567,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 			},
 		},
 		{
-			skip: true,
+			skip: false,
 			input: `
 			for (int i=0, j=0; true; i++) {}`,
 			expected: ForStatement{
@@ -575,7 +575,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 				Label:       option.None[string](),
 				Initializer: []Expression{
 					VariableDecl{
-						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 8, 3, 15).Build(),
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 8, 3, 20).Build(),
 						Names: []Identifier{
 							NewIdentifierBuilder().
 								WithName("i").
@@ -591,6 +591,15 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 						Initializer: IntegerLiteral{
 							Value: "0",
 						},
+					},
+					AssignmentStatement{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 17, 3, 20).Build(),
+						Left: NewIdentifierBuilder().
+							WithName("j").
+							WithStartEnd(3, 17, 3, 18).
+							Build(),
+						Right:    IntegerLiteral{Value: "0"},
+						Operator: "=",
 					},
 				},
 				Condition: BoolLiteral{Value: true},
