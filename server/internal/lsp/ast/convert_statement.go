@@ -79,7 +79,8 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Expression {
 	varDecl := VariableDecl{
 		ASTBaseNode: NewBaseNodeFromSitterNode(node),
 	}
-	for i := 0; i < int(node.ChildCount()); i++ {
+	end := false
+	for i := 0; i < int(node.ChildCount()) && !end; i++ {
 		n := node.Child(i)
 		debugNode(n, source, "dd")
 
