@@ -57,7 +57,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		for k := range s.state.GetDocumentDiagnostics() {
 			if !hasDiagnosticForFile(k, errorsInfo) {
 				s.state.RemoveDocumentDiagnostics(k)
-				go notify(protocol.ServerTextDocumentPublishDiagnostics,
+				notify(protocol.ServerTextDocumentPublishDiagnostics,
 					protocol.PublishDiagnosticsParams{
 						URI:         k,
 						Diagnostics: []protocol.Diagnostic{},
@@ -70,7 +70,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 				errInfo.Diagnostic,
 			}
 			state.SetDocumentDiagnostics(errInfo.File, newDiagnostics)
-			go notify(
+			notify(
 				protocol.ServerTextDocumentPublishDiagnostics,
 				protocol.PublishDiagnosticsParams{
 					URI:         fs.ConvertPathToURI(errInfo.File, s.options.C3.StdlibPath),
