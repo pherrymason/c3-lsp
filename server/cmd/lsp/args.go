@@ -10,14 +10,15 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/option"
 )
 
-func cmdLineArguments() (server.ServerOpts, bool) {
+func cmdLineArguments() (server.ServerOpts, bool, bool) {
 	var showHelp = flag.Bool("help", false, "Shows this help")
 	var sendCrashReports = flag.Bool("send-crash-reports", false, "Automatically reports crashes to server.")
+	var showVersion = flag.Bool("version", false, "Shows server version")
 
 	var logFilePath = flag.String("log-path", "", "Enables logs and sets its filepath")
 	var debug = flag.Bool("debug", false, "Enables debug mode")
 
-	var c3Version = flag.String("lang-version", "", "Specify C3 language version.")
+	var c3Version = flag.String("lang-version", "0.6.2", "Specify C3 language version.")
 	var c3cPath = flag.String("c3c-path", "", "Path where c3c is located.")
 	var diagnosticsDelay = flag.Int("diagnostics-delay", 2000, "Delay calculation of code diagnostics after modifications in source. In milliseconds, default 2000 ms.")
 
@@ -53,7 +54,7 @@ func cmdLineArguments() (server.ServerOpts, bool) {
 		LogFilepath:      logFilePathOpt,
 		Debug:            *debug,
 		SendCrashReports: *sendCrashReports,
-	}, *showHelp
+	}, *showHelp, *showVersion
 }
 
 func printAppGreet(appName string, version string, commit string) {

@@ -93,6 +93,9 @@ func (s *ProjectState) ClearDocumentDiagnostics() {
 		delete(s.diagnostics, k)
 	}
 }
+func (s *ProjectState) RemoveDocumentDiagnostics(docId string) {
+	delete(s.diagnostics, docId)
+}
 
 func (s *ProjectState) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
 	parsedModules, pendingTypes := parser.ParseSymbols(doc)

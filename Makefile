@@ -38,34 +38,34 @@ endif
 # cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
 
 build:
-	go build -C server/cmd/lsp -o ../../bin/c3-lsp
+	go build -C server/cmd/lsp -o ../../bin/c3lsp
 
 build-dev:
-	go build -C server/cmd/lsp -gcflags="all=-N -l" -o ../../bin/c3-lsp
+	go build -C server/cmd/lsp -gcflags="all=-N -l" -o ../../bin/c3lsp
 
 build-all: build-darwin build-linux
 
 # Build darwin-amd64
 build-darwin:
 	@echo "Building darwin-amd64"
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3-lsp
-	cd server/bin && zip ./darwin-amd64-c3lsp.zip c3-lsp
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3lsp
+	cd server/bin && zip ./darwin-amd64-c3lsp.zip c3lsp
 	echo "darwin-amd64 built"
 
 # Build linux
 build-linux:
 	@echo "Building linux-amd64"
 ifeq ($(shell uname -s), Darwin)
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" go build -C server/cmd/lsp -o ../../bin/c3-lsp
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" go build -C server/cmd/lsp -o ../../bin/c3lsp
 else 
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3-lsp
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3lsp
 endif
-	cd server/bin && zip ./linux-amd64-c3lsp.zip c3-lsp
+	cd server/bin && zip ./linux-amd64-c3lsp.zip c3lsp
 	@echo "linux-amd64 built"
 
 
 #attach-process:
-#	dlv attach --headless --listen=:2345 $(pgrep c3-lsp) ./server/c3-lsp --log
+#	dlv attach --headless --listen=:2345 $(pgrep c3lsp) ./server/c3lsp --log
 
 test:
 	cd server && go test ./...

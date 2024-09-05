@@ -56,6 +56,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		// If this is not done, the IDE will keep displaying the errors.
 		for k := range s.state.GetDocumentDiagnostics() {
 			if !hasDiagnosticForFile(k, errorsInfo) {
+				s.state.RemoveDocumentDiagnostics(k)
 				go notify(protocol.ServerTextDocumentPublishDiagnostics,
 					protocol.PublishDiagnosticsParams{
 						URI:         k,

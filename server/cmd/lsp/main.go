@@ -9,7 +9,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/server"
 )
 
-const version = "0.3.0"
+const version = "0.3.1"
 const prerelease = false
 const appName = "C3-LSP"
 
@@ -22,11 +22,16 @@ func getVersion() string {
 }
 
 func main() {
-	options, showHelp := cmdLineArguments()
+	options, showHelp, showVersion := cmdLineArguments()
 	commitHash := buildInfo()
 	if showHelp {
 		printHelp(appName, getVersion(), commitHash)
 
+		return
+	}
+
+	if showVersion {
+		fmt.Printf("%s\n", version)
 		return
 	}
 
