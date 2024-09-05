@@ -3,6 +3,9 @@ title: C3LSP
 description: Language server for C3 language
 ---
 
+- [Configuration](/config.html)
+- [Editor integration](/editors.html)
+
 # Project Goals
 
 Writing a Language Server Protocol (LSP) can be a complex and challenging task. To manage this complexity, our initial focus is on covering the basic yet essential needs of a typical LSP implementation.
