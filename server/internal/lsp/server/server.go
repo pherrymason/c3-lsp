@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/bep/debounce"
@@ -176,5 +177,8 @@ func checkRequestedLanguageVersion(version option.Option[string]) project_state.
 		}
 	}
 
-	panic("c3 language version not supported")
+	selectedVersion := supportedVersions[len(supportedVersions)-1]
+	log.Printf("Specified c3 language version %s not supported. Default to %s", version.Get(), selectedVersion.Number)
+
+	return selectedVersion
 }

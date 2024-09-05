@@ -1,10 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log"
 	"os"
+	"os/exec"
+	"regexp"
 	"time"
 
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -79,6 +82,33 @@ func (s *Server) loadServerConfigurationForWorkspace(path string) {
 	}
 	if options.C3.Path != nil {
 		s.options.C3.Path = option.Some(*options.C3.Path)
+		// Get version from binary
+	}
+
+	binary := "c3c"
+	if s.options.C3.Path.IsSome() {
+		binary = s.options.C3.Path.Get()
+	}
+	command := exec.Command(binary, "--version")
+	var out bytes.Buffer
+	var stdErr bytes.Buffer
+
+	// set the output to our variable
+	command.Stdout = &out
+	command.Stderr = &stdErr
+	err = command.Run()
+	if err != nil {
+		// Could not get version from c3c
+		log.Printf("Could not get c3c version")
+	} else {
+		re := regexp.MustCompile(`C3 Compiler Version:\s+(\d+\.\d+\.\d+)`)
+		match := re.FindStringSubmatch(out.String())
+		if len(match) > 1 {
+			log.Printf("C3 Version found: %s", match[1])
+			s.options.C3.Version = option.Some(match[1])
+		} else {
+			log.Printf("C3 Version not found")
+		}
 	}
 
 	requestedLanguageVersion := checkRequestedLanguageVersion(s.options.C3.Version)
