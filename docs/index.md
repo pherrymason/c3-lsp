@@ -3,8 +3,8 @@ title: C3LSP
 description: Language server for C3 language
 ---
 
-- [Configuration](/config.html)
-- [Editor integration](/editors.html)
+- [Configuration](/c3-lsp/configuration.html)
+- [Editor integration](/c3-lsp/editors.html)
 
 # Project Goals
 
