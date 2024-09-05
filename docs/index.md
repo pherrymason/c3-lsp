@@ -5,6 +5,7 @@ description: Language server for C3 language
 
 - [Configuration](/c3-lsp/configuration.html)
 - [Editor integration](/c3-lsp/editors.html)
+- [Downloads](https://github.com/pherrymason/c3-lsp/releases)
 
 # Project Goals
 
