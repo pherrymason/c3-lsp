@@ -564,6 +564,10 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 						Argument:    NewIdentifierBuilder().WithName("i").WithStartEnd(3, 23, 3, 24).Build(),
 					},
 				},
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 28, 3, 30).Build(),
+					Statements:  []Expression{},
+				},
 			},
 		},
 		{
@@ -610,6 +614,10 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 						Argument:    NewIdentifierBuilder().WithName("i").WithStartEnd(3, 28, 3, 29).Build(),
 					},
 				},
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 33, 3, 35).Build(),
+					Statements:  []Expression{},
+				},
 			},
 		},
 		{
@@ -649,6 +657,40 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 24, 3, 27).Build(),
 						Operator:    "++",
 						Argument:    NewIdentifierBuilder().WithName("i").WithStartEnd(3, 24, 3, 25).Build(),
+					},
+				},
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 29, 3, 31).Build(),
+					Statements:  []Expression{},
+				},
+			},
+		},
+		{
+			// Testing body
+			skip: false,
+			input: `
+			for (;;) {
+				int i = 0;
+			}`,
+			expected: ForStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 4).Build(),
+				Label:       option.None[string](),
+				Initializer: nil,
+				Condition:   nil,
+				Update:      nil,
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 12, 5, 4).Build(),
+					Statements: []Expression{
+						VariableDecl{
+							ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 4, 4, 14).Build(),
+							Names: []Identifier{
+								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
+							},
+							Type: NewTypeInfoBuilder().WithName("int").IsBuiltin().
+								WithStartEnd(4, 4, 4, 7).
+								WithNameStartEnd(4, 4, 4, 7).Build(),
+							Initializer: IntegerLiteral{Value: "0"},
+						},
 					},
 				},
 			},
