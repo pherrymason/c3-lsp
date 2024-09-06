@@ -13,19 +13,11 @@ const version = "0.3.1"
 const prerelease = false
 const appName = "C3-LSP"
 
-func getVersion() string {
-	if prerelease {
-		return version + "-pre"
-	}
-
-	return version
-}
-
 func main() {
 	options, showHelp, showVersion := cmdLineArguments()
 	commitHash := buildInfo()
 	if showHelp {
-		printHelp(appName, getVersion(), commitHash)
+		printHelp(appName, getLSPVersion(), commitHash)
 
 		return
 	}
@@ -38,7 +30,7 @@ func main() {
 	if options.SendCrashReports {
 		err := sentry.Init(sentry.ClientOptions{
 			Dsn:              "https://76f9fe6a1d3e2be7c9083891a644b0a3@o124652.ingest.us.sentry.io/4507278372110336",
-			Release:          fmt.Sprintf("c3.lsp@%s+%s", getVersion(), commitHash),
+			Release:          fmt.Sprintf("c3.lsp@%s+%s", getLSPVersion(), commitHash),
 			Debug:            false,
 			AttachStacktrace: true,
 		})
@@ -53,4 +45,12 @@ func main() {
 
 	server := server.NewServer(options, appName, version)
 	server.Run()
+}
+
+func getLSPVersion() string {
+	if prerelease {
+		return version + "-pre"
+	}
+
+	return version
 }

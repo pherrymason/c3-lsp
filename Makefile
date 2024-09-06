@@ -63,6 +63,20 @@ endif
 	cd server/bin && zip ./linux-amd64-c3lsp.zip c3lsp
 	@echo "linux-amd64 built"
 
+# Unzips github artifact + zips linux, windows and mac binaries
+BIN_PATH = server/bin
+DARWIN_PREFIX = darwin-arm64
+LINUX_PREFIX = linux-amd64
+WIN_PREFIX = windows-amd64
+pack-release:
+	unzip $(BIN_PATH)/c3-lsp.zip -d $(BIN_PATH)/release
+	mv $(BIN_PATH)/release/c3-lsp-$(DARWIN_PREFIX) $(BIN_PATH)/release/c3lsp
+	rm $(BIN_PATH)/c3lsp-$(DARWIN_PREFIX).zip ; zip $(BIN_PATH)/c3lsp-$(DARWIN_PREFIX).zip $(BIN_PATH)/release/c3lsp
+	mv $(BIN_PATH)/release/c3-lsp-$(LINUX_PREFIX) $(BIN_PATH)/release/c3lsp
+	rm $(BIN_PATH)/c3lsp-$(LINUX_PREFIX).zip; zip $(BIN_PATH)/c3lsp-$(LINUX_PREFIX).zip $(BIN_PATH)/release/c3lsp
+	mv $(BIN_PATH)/release/c3-lsp-$(WIN_PREFIX).exe $(BIN_PATH)/release/c3lsp.exe
+	rm $(BIN_PATH)/release/c3-lsp-$(WIN_PREFIX).zip; zip $(BIN_PATH)/c3lsp-$(WIN_PREFIX).zip $(BIN_PATH)/release/c3lsp.exe
+	
 
 #attach-process:
 #	dlv attach --headless --listen=:2345 $(pgrep c3lsp) ./server/c3lsp --log
@@ -72,6 +86,7 @@ test:
 
 
 ## VS Code extension
+## -----------------
 build-vscode:
 	cd client/vscode && npm run vscode:prepublish
 	cd client/vscode && vsce package
