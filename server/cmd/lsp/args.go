@@ -18,16 +18,12 @@ func cmdLineArguments() (server.ServerOpts, bool, bool) {
 	var logFilePath = flag.String("log-path", "", "Enables logs and sets its filepath")
 	var debug = flag.Bool("debug", false, "Enables debug mode")
 
-	var c3Version = flag.String("lang-version", "0.6.2", "Specify C3 language version.")
+	flag.String("lang-version", "0.6.2", "Specify C3 language version. Deprecated.")
 	var c3cPath = flag.String("c3c-path", "", "Path where c3c is located.")
 	var diagnosticsDelay = flag.Int("diagnostics-delay", 2000, "Delay calculation of code diagnostics after modifications in source. In milliseconds, default 2000 ms.")
 
 	flag.Parse()
 
-	c3VersionOpt := option.None[string]()
-	if *c3Version != "" {
-		c3VersionOpt = option.Some(*c3Version)
-	}
 	c3cPathOpt := option.None[string]()
 	if *c3cPath != "" {
 		c3cPathOpt = option.Some(*c3cPath)
@@ -44,7 +40,7 @@ func cmdLineArguments() (server.ServerOpts, bool, bool) {
 
 	return server.ServerOpts{
 		C3: server.C3Opts{
-			Version: c3VersionOpt,
+			Version: option.None[string](),
 			Path:    c3cPathOpt,
 		},
 		Diagnostics: server.DiagnosticsOpts{
