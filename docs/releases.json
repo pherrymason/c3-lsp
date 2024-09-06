@@ -14,6 +14,21 @@
                     "url":"https://github.com/pherrymason/c3-lsp/releases/download/v0.3.0/c3-lsp-linux-amd64.zip"
                 }
             }
+        },
+        {
+            "version": "0.3.1",
+            "date": "2024-09-06",
+            "artifacts": {
+                "x86_64-win32": {
+                    "url": "https://github.com/pherrymason/c3-lsp/releases/download/v0.3.1/c3lsp-windows-amd64.zip"
+                },
+                "arm64-darwin": {
+                    "url":"https://github.com/pherrymason/c3-lsp/releases/download/v0.3.1/c3lsp-darwin-arm64.zip"
+                },
+                "x86_64-linux": {
+                    "url":"https://github.com/pherrymason/c3-lsp/releases/download/v0.3.1/c3lsp-linux-amd64.zip"
+                }
+            }
         }
     ]
 }
