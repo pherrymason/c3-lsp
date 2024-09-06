@@ -352,6 +352,9 @@ func convert_for_stmt(node *sitter.Node, source []byte) Expression {
 		}
 	}
 
+	nodeBody := node.ChildByFieldName("body")
+	forStmt.Statement = convert_statement(nodeBody, source)
+
 	return forStmt
 }
 
