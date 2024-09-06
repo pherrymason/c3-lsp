@@ -612,6 +612,47 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 				},
 			},
 		},
+		{
+			skip: false,
+			input: `
+			for (int i=0; foo(); i++) {}`,
+			expected: ForStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 31).Build(),
+				Label:       option.None[string](),
+				Initializer: []Expression{
+					VariableDecl{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 8, 3, 15).Build(),
+						Names: []Identifier{
+							NewIdentifierBuilder().
+								WithName("i").
+								WithStartEnd(3, 12, 3, 13).
+								Build(),
+						},
+						Type: NewTypeInfoBuilder().
+							WithName("int").
+							WithStartEnd(3, 8, 3, 11).
+							WithNameStartEnd(3, 8, 3, 11).
+							IsBuiltin().
+							Build(),
+						Initializer: IntegerLiteral{
+							Value: "0",
+						},
+					},
+				},
+				Condition: FunctionCall{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 17, 3, 22).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 17, 3, 20).Build(),
+					Arguments:   []Arg{},
+				},
+				Update: []Expression{
+					UpdateExpression{
+						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 24, 3, 27).Build(),
+						Operator:    "++",
+						Argument:    NewIdentifierBuilder().WithName("i").WithStartEnd(3, 24, 3, 25).Build(),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range cases {
