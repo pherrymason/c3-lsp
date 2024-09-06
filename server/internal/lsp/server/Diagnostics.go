@@ -1,12 +1,11 @@
 package server
 
 import (
-	"bytes"
 	"log"
-	"os/exec"
 	"strconv"
 	"strings"
 
+	"github.com/pherrymason/c3-lsp/internal/c3c"
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
@@ -19,23 +18,8 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		return
 	}
 
-	binary := "c3c"
-	if s.options.C3.Path.IsSome() {
-		binary = s.options.C3.Path.Get()
-	}
-	command := exec.Command(binary, "build", "--test")
-	command.Dir = state.GetProjectRootURI()
-
-	// set var to get the output
-	var out bytes.Buffer
-	var stdErr bytes.Buffer
-
-	// set the output to our variable
-	command.Stdout = &out
-	command.Stderr = &stdErr
-
 	runDiagnostics := func() {
-		err := command.Run()
+		out, stdErr, err := c3c.CheckC3ErrorsCommand(s.options.C3.Path, state.GetProjectRootURI())
 		log.Println("output:", out.String())
 		log.Println("output:", stdErr.String())
 		if err == nil {
