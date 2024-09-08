@@ -714,3 +714,42 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_foreach_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected ForeachStatement
+	}{
+		{
+			skip: false,
+			input: `
+			foreach (int x : a) {}`,
+			expected: ForeachStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 25).Build(),
+				Value: ForeachValue{
+					Type:       NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
+					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).Build(),
+				},
+				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).Build(),
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("for stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(ForeachStatement))
+		})
+	}
+}

@@ -76,6 +76,19 @@ type ForStatement struct {
 	Statement   Statement
 }
 
+type ForeachStatement struct {
+	ASTBaseNode
+	Value      ForeachValue
+	Index      ForeachValue
+	Collection Expression
+	Statement  Statement
+}
+
+type ForeachValue struct {
+	Type       TypeInfo
+	Identifier Identifier
+}
+
 type TernaryExpression struct {
 	ASTBaseNode
 	Condition   Expression
