@@ -732,6 +732,10 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).Build(),
 				},
 				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).Build(),
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 23, 3, 25).Build(),
+					Statements:  []Expression{},
+				},
 			},
 		},
 		{
@@ -745,6 +749,10 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 17, 3, 18).Build(),
 				},
 				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 21, 3, 22).Build(),
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 24, 3, 26).Build(),
+					Statements:  []Expression{},
+				},
 			},
 		},
 		{
@@ -763,6 +771,39 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 					Identifier: NewIdentifierBuilder().WithName("value").WithStartEnd(3, 26, 3, 31).Build(),
 				},
 				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 34, 3, 35).Build(),
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 37, 3, 39).Build(),
+					Statements:  []Expression{},
+				},
+			},
+		},
+		{
+			skip: false,
+			input: `
+			foreach (int x : a) {
+				int i;
+			}`,
+			expected: ForeachStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 4).Build(),
+				Value: ForeachValue{
+					Type:       NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
+					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).Build(),
+				},
+				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).Build(),
+				Statement: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 23, 5, 4).Build(),
+					Statements: []Expression{
+						VariableDecl{
+							ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 4, 4, 10).Build(),
+							Names: []Identifier{
+								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
+							},
+							Type: NewTypeInfoBuilder().WithName("int").IsBuiltin().
+								WithStartEnd(4, 4, 4, 7).
+								WithNameStartEnd(4, 4, 4, 7).Build(),
+						},
+					},
+				},
 			},
 		},
 	}
