@@ -1022,3 +1022,52 @@ func TestConvertToAST_defer_stmt(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_assert_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected AssertStatement
+	}{
+		{
+			skip: false,
+			input: `
+			assert(true);`,
+			expected: AssertStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 16).Build(),
+				Assertions: []Expression{
+					BoolLiteral{Value: true},
+				},
+			},
+		},
+		{
+			skip: false,
+			input: `
+			assert(true,1);`,
+			expected: AssertStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 18).Build(),
+				Assertions: []Expression{
+					BoolLiteral{Value: true},
+					IntegerLiteral{Value: "1"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("assert stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(AssertStatement))
+		})
+	}
+}

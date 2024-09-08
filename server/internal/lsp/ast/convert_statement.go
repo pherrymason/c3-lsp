@@ -507,3 +507,13 @@ func convert_defer_stmt(node *sitter.Node, source []byte) Expression {
 
 	return stmt
 }
+
+func convert_assert_stmt(node *sitter.Node, source []byte) Expression {
+	stmt := AssertStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+	}
+
+	stmt.Assertions = commaSep(convert_expression, node.Child(2), source)
+
+	return stmt
+}
