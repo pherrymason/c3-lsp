@@ -426,6 +426,11 @@ func convert_foreach_stmt(node *sitter.Node, source []byte) Expression {
 		}
 	}
 
+	bodyN := node.ChildByFieldName("body")
+	if bodyN != nil {
+		stmt.Statement = convert_statement(bodyN, source)
+	}
+
 	return stmt
 }
 
