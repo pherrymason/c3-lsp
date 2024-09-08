@@ -106,6 +106,11 @@ type DeferStatement struct {
 	Statement Statement
 }
 
+type AssertStatement struct {
+	ASTBaseNode
+	Assertions []Expression
+}
+
 type TernaryExpression struct {
 	ASTBaseNode
 	Condition   Expression

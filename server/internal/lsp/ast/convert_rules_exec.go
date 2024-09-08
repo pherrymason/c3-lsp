@@ -24,6 +24,7 @@ func (c ConversionInfo) convert(node *sitter.Node, source []byte) Expression {
 func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 	funcMap := map[string]ConversionInfo{
 		"assignment_expr":        {method: convert_assignment_expr},
+		"assert_stmt":            {method: convert_assert_stmt},
 		"at_ident":               {method: convert_ident},
 		"binary_expr":            {method: convert_binary_expr},
 		"break_stmt":             {method: convert_break_stmt},
