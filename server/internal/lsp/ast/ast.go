@@ -212,6 +212,7 @@ type TypeInfo struct {
 	Optional      bool
 	BuiltIn       bool
 	Static        bool
+	Reference     bool
 	TLocal        bool
 	Generics      []TypeInfo
 }
