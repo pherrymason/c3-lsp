@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"fmt"
+
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -429,6 +431,21 @@ func convert_foreach_stmt(node *sitter.Node, source []byte) Expression {
 
 func convert_foreach_var(node *sitter.Node, source []byte) ForeachValue {
 	value := ForeachValue{}
+
+	debugNode(node, source, fmt.Sprint(node.ChildCount()))
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "type":
+			value.Type = convert_type(n, source).(TypeInfo)
+
+		case "&":
+			// ??
+
+		case "ident":
+			value.Identifier = convert_ident(n, source).(Identifier)
+		}
+	}
 
 	return value
 }
