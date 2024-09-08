@@ -1,8 +1,10 @@
 package parser
 
 import (
+	"strconv"
 	"strings"
 
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -23,8 +25,11 @@ func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, currentMo
 	modulePath := currentModule.GetModuleString()
 	generic_arguments := []symbols.Type{}
 
-	//fmt.Println(node.Type(), node.Content(sourceCode), node.ChildCount())
+	parsedType := symbols.Type{}
 
+	//fmt.Println(node.Type(), node.Content(sourceCode), node.ChildCount())
+	isCollection := false
+	collectionSize := option.None[int]()
 	pointerCount := 0
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -62,6 +67,15 @@ func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, currentMo
 			suffix := n.Content(sourceCode)
 			if suffix == "*" {
 				pointerCount = 1
+			} else if suffix[0] == '[' {
+				isCollection = true
+				if n.ChildCount() > 2 && n.Child(1).Type() == "integer_literal" {
+					sizeStr := n.Child(1).Content(sourceCode)
+					i, err := strconv.Atoi(sizeStr)
+					if err == nil {
+						collectionSize = option.Some(i)
+					}
+				}
 			}
 		}
 	}
@@ -74,12 +88,12 @@ func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, currentMo
 		}
 	}
 
-	var parsedType symbols.Type
+	//var parsedType symbols.Type
 	if len(generic_arguments) == 0 {
 		if isOptional {
-			parsedType = symbols.NewOptionalType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, modulePath)
+			parsedType = symbols.NewOptionalType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, isCollection, collectionSize, modulePath)
 		} else {
-			parsedType = symbols.NewType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, modulePath)
+			parsedType = symbols.NewType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, isCollection, collectionSize, modulePath)
 		}
 	} else {
 		// TODO Can a type with generic be itself a generic argument?

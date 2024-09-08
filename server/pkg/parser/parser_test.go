@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/pkg/document"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/stretchr/testify/assert"
 	"github.com/tliron/commonlog"
@@ -291,7 +292,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefKilo := idx.NewDefBuilder("Kilo", mod, doc.URI).
 		WithResolvesToType(
-			idx.NewType(true, "int", 0, false, "mod"),
+			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
 		).
 		WithIdentifierRange(1, 5, 1, 9).
 		WithDocumentRange(1, 1, 1, 16).
@@ -301,7 +302,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefKiloPtr := idx.NewDefBuilder("KiloPtr", mod, doc.URI).
 		WithResolvesToType(
-			idx.NewType(false, "Kilo", 1, false, "mod"),
+			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
 		).
 		WithIdentifierRange(2, 5, 2, 12).
 		WithDocumentRange(2, 1, 2, 21).
@@ -326,8 +327,8 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 				"HashMap",
 				0,
 				[]idx.Type{
-					idx.NewType(false, "String", 0, false, "mod"),
-					idx.NewType(false, "Feature", 0, false, "mod"),
+					idx.NewType(false, "String", 0, false, false, option.None[int](), "mod"),
+					idx.NewType(false, "Feature", 0, false, false, option.None[int](), "mod"),
 				}, "mod"),
 		).
 		WithIdentifierRange(4, 5, 4, 10).
@@ -339,7 +340,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefTypeWithModulePath := idx.NewDefBuilder("Camera", mod, doc.URI).
 		WithResolvesToType(
-			idx.NewType(false, "Camera", 0, false, "raylib"),
+			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
 		).
 		WithIdentifierRange(5, 5, 5, 11).
 		WithDocumentRange(5, 1, 5, 29).

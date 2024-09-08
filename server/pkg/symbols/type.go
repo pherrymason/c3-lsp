@@ -3,6 +3,8 @@ package symbols
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pherrymason/c3-lsp/pkg/option"
 )
 
 type Type struct {
@@ -14,6 +16,8 @@ type Type struct {
 	// TODO This should be a map to properly know which module generic parameter is refering to.
 	module            string
 	isGenericArgument bool // When true, this is a module generic argument.
+	isCollection      bool
+	collectionSize    option.Option[int]
 }
 
 func (t Type) GetName() string {
@@ -55,7 +59,16 @@ func (t Type) String() string {
 		optionalStr = "!"
 	}
 
-	return fmt.Sprintf("%s%s%s", t.name, pointerStr, optionalStr)
+	collectionStr := ""
+	if t.isCollection {
+		collectionStr += "["
+		if t.collectionSize.IsSome() {
+			collectionStr += fmt.Sprintf("%d", t.collectionSize.Get())
+		}
+		collectionStr += "]"
+	}
+
+	return fmt.Sprintf("%s%s%s%s", t.name, pointerStr, collectionStr, optionalStr)
 }
 
 func NewTypeFromString(_type string, modulePath string) Type {
@@ -69,7 +82,7 @@ func NewTypeFromString(_type string, modulePath string) Type {
 	}
 }
 
-func NewType(baseTypeLanguage bool, baseType string, pointerCount int, isGenericArgument bool, modulePath string) Type {
+func NewType(baseTypeLanguage bool, baseType string, pointerCount int, isGenericArgument bool, isCollection bool, collectionSize option.Option[int], modulePath string) Type {
 	return Type{
 		baseTypeLanguage:  baseTypeLanguage,
 		name:              baseType,
@@ -77,10 +90,12 @@ func NewType(baseTypeLanguage bool, baseType string, pointerCount int, isGeneric
 		optional:          false,
 		isGenericArgument: isGenericArgument,
 		module:            modulePath,
+		isCollection:      isCollection,
+		collectionSize:    collectionSize,
 	}
 }
 
-func NewOptionalType(baseTypeLanguage bool, baseType string, pointerCount int, isGenericArgument bool, modulePath string) Type {
+func NewOptionalType(baseTypeLanguage bool, baseType string, pointerCount int, isGenericArgument bool, isCollection bool, collectionSize option.Option[int], modulePath string) Type {
 	return Type{
 		baseTypeLanguage:  baseTypeLanguage,
 		name:              baseType,
@@ -88,6 +103,9 @@ func NewOptionalType(baseTypeLanguage bool, baseType string, pointerCount int, i
 		optional:          true,
 		isGenericArgument: isGenericArgument,
 		module:            modulePath,
+
+		isCollection:   isCollection,
+		collectionSize: collectionSize,
 	}
 }
 
