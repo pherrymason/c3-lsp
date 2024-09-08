@@ -36,6 +36,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"compound_stmt":          {method: convert_compound_stmt},
 		"ct_ident":               {method: convert_ident},
 		"declaration_stmt":       {method: convert_declaration_stmt},
+		"do_stmt":                {method: convert_do_stmt},
 		"split_declaration_stmt": {method: convert_split_declaration_stmt},
 		"elvis_orelse_expr":      {method: convert_elvis_orelse_expr},
 		"expr_stmt":              {method: convert_expression, goChild: true},

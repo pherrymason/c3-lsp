@@ -95,6 +95,12 @@ type WhileStatement struct {
 	Body      Statement
 }
 
+type DoStatement struct {
+	ASTBaseNode
+	Condition Expression
+	Body      Statement
+}
+
 type TernaryExpression struct {
 	ASTBaseNode
 	Condition   Expression
