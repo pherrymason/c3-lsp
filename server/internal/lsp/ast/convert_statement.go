@@ -355,7 +355,7 @@ func convert_for_stmt(node *sitter.Node, source []byte) Expression {
 	}
 
 	nodeBody := node.ChildByFieldName("body")
-	forStmt.Statement = convert_statement(nodeBody, source)
+	forStmt.Body = convert_statement(nodeBody, source)
 
 	return forStmt
 }
@@ -428,7 +428,7 @@ func convert_foreach_stmt(node *sitter.Node, source []byte) Expression {
 
 	bodyN := node.ChildByFieldName("body")
 	if bodyN != nil {
-		stmt.Statement = convert_statement(bodyN, source)
+		stmt.Body = convert_statement(bodyN, source)
 	}
 
 	return stmt
@@ -454,4 +454,25 @@ func convert_foreach_var(node *sitter.Node, source []byte) ForeachValue {
 	}
 
 	return value
+}
+
+func convert_while_stmt(node *sitter.Node, source []byte) Expression {
+	stmt := WhileStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "paren_cond":
+			stmt.Condition = convert_paren_conditions(n, source)
+		}
+	}
+
+	bodyN := node.ChildByFieldName("body")
+	if bodyN != nil {
+		stmt.Body = convert_statement(bodyN, source)
+	}
+
+	return stmt
 }

@@ -63,6 +63,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"unary_expr":            {method: convert_unary_expr},
 		"update_expr":           {method: convert_update_expr},
 		"var_stmt":              {method: convert_var_decl, goChild: true},
+		"while_stmt":            {method: convert_while_stmt},
 
 		// Builtins ----------------
 		"$vacount": {method: convert_as_literal},
