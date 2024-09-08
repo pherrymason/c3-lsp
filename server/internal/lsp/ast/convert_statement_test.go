@@ -893,3 +893,80 @@ func TestConvertToAST_while_stmt(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_do_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected DoStatement
+	}{
+		{
+			skip: false,
+			input: `
+			do {};`,
+			expected: DoStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 9).Build(),
+				Condition:   nil,
+				Body: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 6, 3, 8).Build(),
+					Statements:  []Expression{},
+				},
+			},
+		},
+		{
+			skip: false,
+			input: `
+			do {} while(true);`,
+			expected: DoStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 21).Build(),
+				Condition:   BoolLiteral{Value: true},
+				Body: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 6, 3, 8).Build(),
+					Statements:  []Expression{},
+				},
+			},
+		},
+		{
+			skip: false,
+			input: `
+			do {
+				int i;
+			} while(true);`,
+			expected: DoStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 17).Build(),
+				Condition:   BoolLiteral{Value: true},
+				Body: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 6, 5, 4).Build(),
+					Statements: []Expression{
+						VariableDecl{
+							ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 4, 4, 10).Build(),
+							Names: []Identifier{
+								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
+							},
+							Type: NewTypeInfoBuilder().WithName("int").IsBuiltin().
+								WithStartEnd(4, 4, 4, 7).
+								WithNameStartEnd(4, 4, 4, 7).Build(),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("do stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(DoStatement))
+		})
+	}
+}

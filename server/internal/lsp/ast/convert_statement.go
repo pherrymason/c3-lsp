@@ -476,3 +476,21 @@ func convert_while_stmt(node *sitter.Node, source []byte) Expression {
 
 	return stmt
 }
+
+func convert_do_stmt(node *sitter.Node, source []byte) Expression {
+	stmt := DoStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "compound_stmt":
+			stmt.Body = convert_statement(n, source)
+		case "paren_expr":
+			stmt.Condition = convert_expression(n.Child(1), source)
+		}
+	}
+
+	return stmt
+}
