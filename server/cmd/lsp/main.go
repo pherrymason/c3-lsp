@@ -9,8 +9,8 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/server"
 )
 
-const version = "0.3.1"
-const prerelease = false
+const version = "0.3.2"
+const prerelease = true
 const appName = "C3-LSP"
 
 func main() {
