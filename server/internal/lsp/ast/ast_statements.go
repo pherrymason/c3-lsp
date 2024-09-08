@@ -101,6 +101,11 @@ type DoStatement struct {
 	Body      Statement
 }
 
+type DeferStatement struct {
+	ASTBaseNode
+	Statement Statement
+}
+
 type TernaryExpression struct {
 	ASTBaseNode
 	Condition   Expression

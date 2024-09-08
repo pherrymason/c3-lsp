@@ -494,3 +494,16 @@ func convert_do_stmt(node *sitter.Node, source []byte) Expression {
 
 	return stmt
 }
+
+func convert_defer_stmt(node *sitter.Node, source []byte) Expression {
+	stmt := DeferStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+	}
+
+	stmt.Statement = convert_statement(
+		node.Child(int(node.ChildCount()-1)),
+		source,
+	)
+
+	return stmt
+}

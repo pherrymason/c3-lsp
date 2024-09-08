@@ -970,3 +970,55 @@ func TestConvertToAST_do_stmt(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertToAST_defer_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected DeferStatement
+	}{
+		{
+			skip: false,
+			input: `
+			defer foo();`,
+			expected: DeferStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 15).Build(),
+				Statement: FunctionCall{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 9, 3, 14).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 9, 3, 12).Build(),
+					Arguments:   []Arg{},
+				},
+			},
+		},
+		{
+			skip: false,
+			input: `
+			defer try foo();`,
+			expected: DeferStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 19).Build(),
+				Statement: FunctionCall{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 13, 3, 18).Build(),
+					Identifier:  NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 13, 3, 16).Build(),
+					Arguments:   []Arg{},
+				},
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("defer stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(DeferStatement))
+		})
+	}
+}
