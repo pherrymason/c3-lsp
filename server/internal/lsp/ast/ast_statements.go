@@ -73,7 +73,7 @@ type ForStatement struct {
 	Initializer []Expression
 	Condition   Expression
 	Update      []Expression
-	Statement   Statement
+	Body        Statement
 }
 
 type ForeachStatement struct {
@@ -81,12 +81,18 @@ type ForeachStatement struct {
 	Value      ForeachValue
 	Index      ForeachValue
 	Collection Expression
-	Statement  Statement
+	Body       Statement
 }
 
 type ForeachValue struct {
 	Type       TypeInfo
 	Identifier Identifier
+}
+
+type WhileStatement struct {
+	ASTBaseNode
+	Condition []Expression
+	Body      Statement
 }
 
 type TernaryExpression struct {

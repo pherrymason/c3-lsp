@@ -564,7 +564,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 						Argument:    NewIdentifierBuilder().WithName("i").WithStartEnd(3, 23, 3, 24).Build(),
 					},
 				},
-				Statement: CompoundStatement{
+				Body: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 28, 3, 30).Build(),
 					Statements:  []Expression{},
 				},
@@ -614,7 +614,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 						Argument:    NewIdentifierBuilder().WithName("i").WithStartEnd(3, 28, 3, 29).Build(),
 					},
 				},
-				Statement: CompoundStatement{
+				Body: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 33, 3, 35).Build(),
 					Statements:  []Expression{},
 				},
@@ -659,7 +659,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 						Argument:    NewIdentifierBuilder().WithName("i").WithStartEnd(3, 24, 3, 25).Build(),
 					},
 				},
-				Statement: CompoundStatement{
+				Body: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 29, 3, 31).Build(),
 					Statements:  []Expression{},
 				},
@@ -678,7 +678,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 				Initializer: nil,
 				Condition:   nil,
 				Update:      nil,
-				Statement: CompoundStatement{
+				Body: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 12, 5, 4).Build(),
 					Statements: []Expression{
 						VariableDecl{
@@ -732,7 +732,7 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).Build(),
 				},
 				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).Build(),
-				Statement: CompoundStatement{
+				Body: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 23, 3, 25).Build(),
 					Statements:  []Expression{},
 				},
@@ -749,7 +749,7 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 17, 3, 18).Build(),
 				},
 				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 21, 3, 22).Build(),
-				Statement: CompoundStatement{
+				Body: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 24, 3, 26).Build(),
 					Statements:  []Expression{},
 				},
@@ -771,7 +771,7 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 					Identifier: NewIdentifierBuilder().WithName("value").WithStartEnd(3, 26, 3, 31).Build(),
 				},
 				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 34, 3, 35).Build(),
-				Statement: CompoundStatement{
+				Body: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 37, 3, 39).Build(),
 					Statements:  []Expression{},
 				},
@@ -790,7 +790,7 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).Build(),
 				},
 				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).Build(),
-				Statement: CompoundStatement{
+				Body: CompoundStatement{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 23, 5, 4).Build(),
 					Statements: []Expression{
 						VariableDecl{
@@ -812,7 +812,7 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 		if tt.skip {
 			continue
 		}
-		t.Run(fmt.Sprintf("for stmt: %s", tt.input), func(t *testing.T) {
+		t.Run(fmt.Sprintf("foreach stmt: %s", tt.input), func(t *testing.T) {
 			source := `module foo;
 			fn void main(){
 			` + tt.input + `
@@ -822,6 +822,74 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 
 			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(ForeachStatement))
+		})
+	}
+}
+
+func TestConvertToAST_while_stmt(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected WhileStatement
+	}{
+		{
+			skip: false,
+			input: `
+			while (true) {}`,
+			expected: WhileStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 18).Build(),
+				Condition: []Expression{
+					BoolLiteral{Value: true},
+				},
+				Body: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 16, 3, 18).Build(),
+					Statements:  []Expression{},
+				},
+			},
+		},
+		{
+			skip: false,
+			input: `
+			while (true) {
+				int i;
+			}`,
+			expected: WhileStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 4).Build(),
+				Condition: []Expression{
+					BoolLiteral{Value: true},
+				},
+				Body: CompoundStatement{
+					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 16, 5, 4).Build(),
+					Statements: []Expression{
+						VariableDecl{
+							ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(4, 4, 4, 10).Build(),
+							Names: []Identifier{
+								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
+							},
+							Type: NewTypeInfoBuilder().WithName("int").IsBuiltin().
+								WithStartEnd(4, 4, 4, 7).
+								WithNameStartEnd(4, 4, 4, 7).Build(),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("while stmt: %s", tt.input), func(t *testing.T) {
+			source := `module foo;
+			fn void main(){
+			` + tt.input + `
+			}`
+
+			ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+			funcDecl := ast.Modules[0].Functions[0].(FunctionDecl)
+			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStatement).Statements[0].(WhileStatement))
 		})
 	}
 }
