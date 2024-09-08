@@ -40,6 +40,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"elvis_orelse_expr":      {method: convert_elvis_orelse_expr},
 		"expr_stmt":              {method: convert_expression, goChild: true},
 		"for_stmt":               {method: convert_for_stmt},
+		"foreach_stmt":           {method: convert_foreach_stmt},
 		"hash_ident":             {method: convert_ident},
 		"ident":                  {method: convert_ident},
 		"if_stmt":                {method: convert_if_stmt},

@@ -372,3 +372,63 @@ func convert_decl_or_expression(node *sitter.Node, source []byte) Expression {
 		NodeAnonymous("_expr"),
 	}, node, source, true)
 }
+
+func convert_foreach_stmt(node *sitter.Node, source []byte) Expression {
+	/*
+		foreach_stmt: $ => seq(
+		      choice('foreach', 'foreach_r'),
+		      optional($.label),
+		      $.foreach_cond,
+		      field('body', $._statement)
+		    )
+
+		foreach_cond: $ => seq(
+			'(',
+			optional(seq(field('index', $.foreach_var), ',')),
+			field('value', $.foreach_var),
+			':',
+			field('collection', $._expr),
+			')',
+		),
+
+		foreach_var: $ => choice(
+			seq(optional($._type_or_optional_type), optional('&'), $.ident),
+		),
+	*/
+	stmt := ForeachStatement{
+		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+	}
+	foreachVar := ForeachValue{}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() == "foreach_cond" {
+			for c := 0; c < int(n.ChildCount()); c++ {
+				cn := n.Child(c)
+				switch cn.Type() {
+				case ",":
+					stmt.Index = foreachVar
+
+				case ":":
+					stmt.Value = foreachVar
+
+				case "foreach_var":
+					foreachVar = convert_foreach_var(cn, source)
+
+				case ")", "(":
+
+				default:
+					stmt.Collection = convert_expression(cn, source)
+				}
+			}
+		}
+	}
+
+	return stmt
+}
+
+func convert_foreach_var(node *sitter.Node, source []byte) ForeachValue {
+	value := ForeachValue{}
+
+	return value
+}
