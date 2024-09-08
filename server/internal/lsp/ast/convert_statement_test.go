@@ -734,6 +734,37 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).Build(),
 			},
 		},
+		{
+			skip: false,
+			input: `
+			foreach (int &x : a) {}`,
+			expected: ForeachStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 26).Build(),
+				Value: ForeachValue{
+					Type:       NewTypeInfoBuilder().WithName("int").IsBuiltin().IsReference().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
+					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 17, 3, 18).Build(),
+				},
+				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 21, 3, 22).Build(),
+			},
+		},
+		{
+			skip: false,
+			input: `
+			foreach (int idx, char value : a) {}`,
+			expected: ForeachStatement{
+				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 39).Build(),
+
+				Index: ForeachValue{
+					Type:       NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
+					Identifier: NewIdentifierBuilder().WithName("idx").WithStartEnd(3, 16, 3, 19).Build(),
+				},
+				Value: ForeachValue{
+					Type:       NewTypeInfoBuilder().WithName("char").IsBuiltin().WithNameStartEnd(3, 21, 3, 25).WithStartEnd(3, 21, 3, 25).Build(),
+					Identifier: NewIdentifierBuilder().WithName("value").WithStartEnd(3, 26, 3, 31).Build(),
+				},
+				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 34, 3, 35).Build(),
+			},
+		},
 	}
 
 	for _, tt := range cases {
