@@ -18,8 +18,11 @@ func cmdLineArguments() (server.ServerOpts, bool, bool) {
 	var logFilePath = flag.String("log-path", "", "Enables logs and sets its filepath")
 	var debug = flag.Bool("debug", false, "Enables debug mode")
 
+	// C3 Options
 	flag.String("lang-version", "0.6.2", "Specify C3 language version. Deprecated.")
 	var c3cPath = flag.String("c3c-path", "", "Path where c3c is located.")
+	var stdlibPath = flag.String("stdlib-path", "", "Path to stdlib sources. Allows stdlib inspections.")
+
 	var diagnosticsDelay = flag.Int("diagnostics-delay", 2000, "Delay calculation of code diagnostics after modifications in source. In milliseconds, default 2000 ms.")
 
 	flag.Parse()
@@ -28,6 +31,11 @@ func cmdLineArguments() (server.ServerOpts, bool, bool) {
 	if *c3cPath != "" {
 		c3cPathOpt = option.Some(*c3cPath)
 	}
+	stdlibPathOpt := option.None[string]()
+	if *stdlibPath != "" {
+		stdlibPathOpt = option.Some(*stdlibPath)
+	}
+
 	logFilePathOpt := option.None[string]()
 	if *logFilePath != "" {
 		logFilePathOpt = option.Some(*logFilePath)
@@ -40,8 +48,9 @@ func cmdLineArguments() (server.ServerOpts, bool, bool) {
 
 	return server.ServerOpts{
 		C3: server.C3Opts{
-			Version: option.None[string](),
-			Path:    c3cPathOpt,
+			Version:    option.None[string](),
+			Path:       c3cPathOpt,
+			StdlibPath: stdlibPathOpt,
 		},
 		Diagnostics: server.DiagnosticsOpts{
 			Delay:   time.Duration(*diagnosticsDelay),
