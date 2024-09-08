@@ -441,6 +441,7 @@ func convert_foreach_var(node *sitter.Node, source []byte) ForeachValue {
 
 		case "&":
 			// ??
+			value.Type.Reference = true
 
 		case "ident":
 			value.Identifier = convert_ident(n, source).(Identifier)
