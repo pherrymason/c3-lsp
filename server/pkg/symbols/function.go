@@ -147,7 +147,7 @@ func (f Function) GetHoverInfo() string {
 
 	args := []string{}
 	for _, arg := range f.argumentIds {
-		args = append(args, f.Variables[arg].Type.name+" "+f.Variables[arg].name)
+		args = append(args, f.Variables[arg].Type.String()+" "+f.Variables[arg].name)
 	}
 
 	source := fmt.Sprintf("%s %s(%s)", f.GetReturnType(), f.GetFullName(), strings.Join(args, ", "))
