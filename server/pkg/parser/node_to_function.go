@@ -2,7 +2,7 @@ package parser
 
 import (
 	"errors"
-
+	"fmt"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -35,9 +35,13 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 		typeIdentifier = funcHeader.ChildByFieldName("method_type").Content(sourceCode)
 	}
 
+	functionName := nameNode.Content(sourceCode)
+
 	var argumentIds []string
-	arguments := []*idx.Variable{}
+	var arguments []*idx.Variable
 	parameters := node.Child(2)
+	parameterIndex := 0
+
 	if parameters.ChildCount() > 2 {
 		for i := uint32(0); i < parameters.ChildCount(); i++ {
 			argNode := parameters.Child(int(i))
@@ -45,12 +49,14 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 				continue
 			}
 
-			argument := p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode)
+			argument := p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode, parameterIndex)
 			arguments = append(
 				arguments,
 				argument,
 			)
+
 			argumentIds = append(argumentIds, argument.GetName())
+			parameterIndex += 1
 		}
 	}
 
@@ -58,7 +64,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 	if typeIdentifier != "" {
 		symbol = idx.NewTypeFunction(
 			typeIdentifier,
-			nameNode.Content(sourceCode),
+			functionName,
 			p.typeNodeToType(funcHeader.ChildByFieldName("return_type"), currentModule, sourceCode),
 			//funcHeader.ChildByFieldName("return_type").Content(sourceCode),
 			argumentIds,
@@ -72,7 +78,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 		)
 	} else {
 		symbol = idx.NewFunction(
-			nameNode.Content(sourceCode),
+			functionName,
 			p.typeNodeToType(funcHeader.ChildByFieldName("return_type"), currentModule, sourceCode),
 			argumentIds,
 			currentModule.GetModuleString(),
@@ -116,8 +122,8 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
       seq($.ct_ident, '...'),								// 2
     ),
 */
-func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, currentModule *idx.Module, docId *string, sourceCode []byte) *idx.Variable {
-	var identifier string = ""
+func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, currentModule *idx.Module, docId *string, sourceCode []byte, parameterIndex int) *idx.Variable {
+	var identifier = ""
 	var idRange idx.Range
 	var argType idx.Type
 
@@ -135,6 +141,11 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 				argType = idx.NewTypeFromString(methodIdentifier, currentModule.GetModuleString())
 			}
 		}
+	}
+
+	// if identifier is empty (unnamed argument), then use generic $arg{parameterIndex} name
+	if len(identifier) == 0 {
+		identifier = fmt.Sprintf("$arg%d", parameterIndex)
 	}
 
 	variable := idx.NewVariable(
@@ -191,6 +202,8 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 	var argumentIds []string
 	arguments := []*idx.Variable{}
 	parameters := node.Child(2)
+	parameterIndex := 0
+
 	if parameters.ChildCount() > 2 {
 		for i := uint32(0); i < parameters.ChildCount(); i++ {
 			argNode := parameters.Child(int(i))
@@ -198,12 +211,13 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 				continue
 			}
 
-			argument := p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode)
+			argument := p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode, parameterIndex)
 			arguments = append(
 				arguments,
 				argument,
 			)
 			argumentIds = append(argumentIds, argument.GetName())
+			parameterIndex += 1
 		}
 	}
 

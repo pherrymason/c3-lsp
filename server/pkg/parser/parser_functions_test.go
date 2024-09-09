@@ -64,6 +64,56 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		assert.Equal(t, idx.NewRange(0, 8, 0, 19), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 0, 78), fn.Get().GetDocumentRange())
 	})
+
+	t.Run("Resolves function with unnamed parameters correctly", func(t *testing.T) {
+		source := `fn void init_window(int, int, char*) @extern("InitWindow");`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("init_window")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
+
+		arg0 := fn.Get().Variables["$arg0"]
+		assert.Equal(t, "$arg0", arg0.GetName())
+		assert.Equal(t, "int", arg0.GetType().String())
+
+		arg1 := fn.Get().Variables["$arg1"]
+		assert.Equal(t, "$arg1", arg1.GetName())
+		assert.Equal(t, "int", arg1.GetType().String())
+
+		arg2 := fn.Get().Variables["$arg2"]
+		assert.Equal(t, "$arg2", arg2.GetName())
+		assert.Equal(t, "char*", arg2.GetType().String())
+	})
+
+	t.Run("Resolves function with some unnamed parameters correctly", func(t *testing.T) {
+		source := `fn void init_window(int width, int height, char*) @extern("InitWindow");`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("init_window")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
+
+		arg0 := fn.Get().Variables["width"]
+		assert.Equal(t, "width", arg0.GetName())
+		assert.Equal(t, "int", arg0.GetType().String())
+
+		arg1 := fn.Get().Variables["height"]
+		assert.Equal(t, "height", arg1.GetName())
+		assert.Equal(t, "int", arg1.GetType().String())
+
+		arg2 := fn.Get().Variables["$arg2"]
+		assert.Equal(t, "$arg2", arg2.GetName())
+		assert.Equal(t, "char*", arg2.GetType().String())
+	})
 }
 
 func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
