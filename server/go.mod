@@ -14,11 +14,11 @@ require (
 
 require golang.org/x/mod v0.20.0
 
-require github.com/bep/debounce v1.2.1 // indirect
+require github.com/bep/debounce v1.2.1
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/dave/jennifer v1.7.0
+	github.com/dave/jennifer v1.7.1
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/getsentry/sentry-go v0.28.1
 	github.com/gorilla/websocket v1.5.1 // indirect
@@ -33,7 +33,6 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
-	github.com/spf13/pflag v1.0.5
 	github.com/tliron/kutil v0.3.25 // indirect
 	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
