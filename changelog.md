@@ -1,5 +1,10 @@
 # C3LSP Release Notes
 
+## 0.3.2
+
+- Fix function unnamed argument types not being resolved correctly. Thanks to @insertt
+- Fix not displaying correctly collection types on hover.
+
 ## 0.3.1
 
 - Added compatibility with stdlib symbols for C3 0.6.2.
