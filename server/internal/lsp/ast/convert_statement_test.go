@@ -416,7 +416,7 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 16).Build(),
 				Label:       option.None[string](),
 				Condition: []Expression{
-					BinaryExpr{
+					BinaryExpression{
 						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 7, 3, 12).Build(),
 						Left:        NewIdentifierBuilder().WithName("c").WithStartEnd(3, 7, 3, 8).Build(),
 						Operator:    ">",
@@ -433,13 +433,13 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 24).Build(),
 				Label:       option.None[string](),
 				Condition: []Expression{
-					BinaryExpr{
+					BinaryExpression{
 						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 7, 3, 12).Build(),
 						Left:        NewIdentifierBuilder().WithName("c").WithStartEnd(3, 7, 3, 8).Build(),
 						Operator:    ">",
 						Right:       IntegerLiteral{Value: "0"},
 					},
-					BinaryExpr{
+					BinaryExpression{
 						ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 14, 3, 20).Build(),
 						Left:        NewIdentifierBuilder().WithName("c").WithStartEnd(3, 14, 3, 15).Build(),
 						Operator:    "<",
@@ -551,7 +551,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 						},
 					},
 				},
-				Condition: BinaryExpr{
+				Condition: BinaryExpression{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(3, 17, 3, 21).Build(),
 					Left:        NewIdentifierBuilder().WithName("i").WithStartEnd(3, 17, 3, 18).Build(),
 					Right:       IntegerLiteral{Value: "10"},
