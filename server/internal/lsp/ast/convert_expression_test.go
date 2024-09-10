@@ -685,7 +685,7 @@ func TestConvertToAST_ternary_expr(t *testing.T) {
 			input: "i > 10 ? a:b;",
 			expected: TernaryExpression{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 19+12).Build(),
-				Condition: BinaryExpr{
+				Condition: BinaryExpression{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 19, 1, 25).Build(),
 					Left:        NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).Build(),
 					Operator:    ">",
@@ -799,7 +799,7 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 			expected: OptionalExpression{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 17).Build(),
 				Operator:    "?",
-				Argument: BinaryExpr{
+				Argument: BinaryExpression{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 16).Build(),
 					Left:        NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).Build(),
 					Right:       NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).Build(),
@@ -813,7 +813,7 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 			expected: OptionalExpression{
 				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 18).Build(),
 				Operator:    "?!",
-				Argument: BinaryExpr{
+				Argument: BinaryExpression{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 11, 1, 16).Build(),
 					Left:        NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).Build(),
 					Right:       NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).Build(),

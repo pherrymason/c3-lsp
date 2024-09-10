@@ -525,8 +525,8 @@ type UnaryExpression struct {
 	Argument Expression
 }
 
-// BinaryExpr representa una expresión binaria (como suma, resta, etc.)
-type BinaryExpr struct {
+// BinaryExpression representa una expresión binaria (como suma, resta, etc.)
+type BinaryExpression struct {
 	ASTBaseNode
 	Left     ASTNode
 	Operator string
