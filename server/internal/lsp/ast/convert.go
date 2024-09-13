@@ -63,7 +63,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 			lastMod.Imports = append(lastMod.Imports, convert_imports(node, source).(Import))
 
 		case "global_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, convert_global_declaration(node, source))
+			lastMod.Variables = append(lastMod.Variables, convert_global_declaration(node, source))
 
 		case "enum_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_enum_declaration(node, source))
@@ -139,7 +139,7 @@ func convert_imports(node *sitter.Node, source []byte) Expression {
 	return imports
 }
 
-func convert_global_declaration(node *sitter.Node, source []byte) Expression {
+func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 	variable := VariableDecl{
 		Names: []Identifier{},
 		ASTBaseNode: NewBaseNodeBuilder().

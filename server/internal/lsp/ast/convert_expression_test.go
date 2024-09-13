@@ -150,8 +150,7 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-			varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
-			assert.Equal(t, tt.expected, varDecl.Initializer)
+			assert.Equal(t, tt.expected, ast.Modules[0].Variables[0].Initializer)
 		})
 	}
 }
@@ -290,8 +289,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-			varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
-			assert.Equal(t, tt.expected, varDecl.Initializer)
+			assert.Equal(t, tt.expected, ast.Modules[0].Variables[0].Initializer)
 		})
 	}
 }
@@ -409,8 +407,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 					source := `module foo;
 	int x = ` + input + `;`
 					ast := ConvertToAST(GetCST(source), source, "file.c3")
-					varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
-					initializer := varDecl.Initializer.(FunctionCall)
+					initializer := ast.Modules[0].Variables[0].Initializer.(FunctionCall)
 
 					assert.Equal(t, method, initializer.Identifier.(Identifier).Name)
 
@@ -480,8 +477,7 @@ func TestConvertToAST_compile_time_argument_call(t *testing.T) {
 				int x = ` + method + `(id);`
 
 				ast := ConvertToAST(GetCST(source), source, "file.c3")
-				varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
-				initializer := varDecl.Initializer.(FunctionCall)
+				initializer := ast.Modules[0].Variables[0].Initializer.(FunctionCall)
 
 				assert.Equal(t, FunctionCall{
 					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 12, 1, 16+length).Build(),
@@ -545,7 +541,7 @@ func TestConvertToAST_compile_time_analyse(t *testing.T) {
 
 				ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-				assert.Equal(t, tt.expected, ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(FunctionCall))
+				assert.Equal(t, tt.expected, ast.Modules[0].Variables[0].Initializer.(FunctionCall))
 			})
 	}
 }
@@ -621,7 +617,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 
 				ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-				assert.Equal(t, tt.expected, ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(LambdaDeclaration))
+				assert.Equal(t, tt.expected, ast.Modules[0].Variables[0].Initializer.(LambdaDeclaration))
 			})
 	}
 }
@@ -738,7 +734,7 @@ func TestConvertToAST_lambda_expr(t *testing.T) {
 		},
 	}
 
-	lambda := ast.Modules[0].Declarations[0].(VariableDecl).Initializer.(LambdaDeclaration)
+	lambda := ast.Modules[0].Variables[0].Initializer.(LambdaDeclaration)
 	assert.Equal(t, expected, lambda)
 
 }
@@ -781,8 +777,7 @@ func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
 			func(t *testing.T) {
 				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
-				varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
-				assert.Equal(t, tt.expected, varDecl.Initializer.(TernaryExpression))
+				assert.Equal(t, tt.expected, ast.Modules[0].Variables[0].Initializer.(TernaryExpression))
 			})
 	}
 }
@@ -833,8 +828,7 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 			func(t *testing.T) {
 				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
-				varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
-				assert.Equal(t, tt.expected, varDecl.Initializer.(OptionalExpression))
+				assert.Equal(t, tt.expected, ast.Modules[0].Variables[0].Initializer.(OptionalExpression))
 			})
 	}
 }
@@ -931,8 +925,7 @@ func TestConvertToAST_rethrow_expr(t *testing.T) {
 			func(t *testing.T) {
 				ast := ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
-				varDecl := ast.Modules[0].Declarations[0].(VariableDecl)
-				assert.Equal(t, tt.expected, varDecl.Initializer.(RethrowExpression))
+				assert.Equal(t, tt.expected, ast.Modules[0].Variables[0].Initializer.(RethrowExpression))
 			})
 	}
 }
