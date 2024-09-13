@@ -52,7 +52,6 @@ func CheckC3ErrorsCommand(c3Options C3Opts, projectPath string) (bytes.Buffer, b
 	if len(c3Options.CompileArgs) > 0 {
 		args = append(args, c3Options.CompileArgs...)
 	}
-	log.Printf("C3C arguments used:", args)
 
 	command := exec.Command(binary, args...)
 	command.Dir = projectPath
