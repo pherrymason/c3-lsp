@@ -162,7 +162,7 @@ func TestConvertToAST_global_variables(t *testing.T) {
 		},
 		Initializer: IntegerLiteral{Value: "3"},
 	}
-	assert.Equal(t, expectedHello, ast.Modules[0].Declarations[0])
+	assert.Equal(t, expectedHello, ast.Modules[0].Variables[0])
 
 	expectedAnimals := VariableDecl{
 		ASTBaseNode: aWithPos(2, 1, 2, 24),
@@ -186,7 +186,7 @@ func TestConvertToAST_global_variables(t *testing.T) {
 			ASTBaseNode: aWithPos(2, 1, 2, 4),
 		},
 	}
-	assert.Equal(t, expectedAnimals, ast.Modules[0].Declarations[1])
+	assert.Equal(t, expectedAnimals, ast.Modules[0].Variables[1])
 }
 
 func TestConvertToAST_enum_decl(t *testing.T) {
