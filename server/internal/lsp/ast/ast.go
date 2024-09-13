@@ -50,6 +50,7 @@ type Module struct {
 	Functions         []Declaration
 	Macros            []Declaration
 	Declarations      []Declaration
+	Variables         []VariableDecl
 	Imports           []Import
 }
 
