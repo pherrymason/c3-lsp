@@ -45,9 +45,16 @@ func GetC3Version(c3Path option.Option[string]) option.Option[string] {
 	return option.None[string]()
 }
 
-func CheckC3ErrorsCommand(c3Path option.Option[string], projectPath string) (bytes.Buffer, bytes.Buffer, error) {
-	binary := binaryPath(c3Path)
-	command := exec.Command(binary, "build", "--test")
+func CheckC3ErrorsCommand(c3Options C3Opts, projectPath string) (bytes.Buffer, bytes.Buffer, error) {
+	binary := binaryPath(c3Options.Path)
+
+	args := []string{"build", "--test"}
+	if len(c3Options.CompileArgs) > 0 {
+		args = append(args, c3Options.CompileArgs...)
+	}
+	log.Printf("C3C arguments used:", args)
+
+	command := exec.Command(binary, args...)
 	command.Dir = projectPath
 
 	// set var to get the output

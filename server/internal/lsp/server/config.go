@@ -11,12 +11,6 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/option"
 )
 
-type C3Opts struct {
-	Version    option.Option[string] `json:"version"`
-	Path       option.Option[string] `json:"path"`
-	StdlibPath option.Option[string] `json:"stdlib-path"`
-}
-
 type DiagnosticsOpts struct {
 	Enabled bool          `json:"enabled"`
 	Delay   time.Duration `json:"delay"`
@@ -24,7 +18,7 @@ type DiagnosticsOpts struct {
 
 // ServerOpts holds the options to create a new Server.
 type ServerOpts struct {
-	C3          C3Opts          `json:"C3Opts"`
+	C3          c3c.C3Opts      `json:"C3Opts"`
 	Diagnostics DiagnosticsOpts `json:"Diagnostics"`
 
 	LogFilepath      option.Option[string]
@@ -34,9 +28,10 @@ type ServerOpts struct {
 
 type ServerOptsJson struct {
 	C3 struct {
-		Version    *string `json:"version,omitempty"`
-		Path       *string `json:"path,omitempty"`
-		StdlibPath *string `json:"stdlib-path,omitempty"`
+		Version     *string  `json:"version,omitempty"`
+		Path        *string  `json:"path,omitempty"`
+		StdlibPath  *string  `json:"stdlib-path,omitempty"`
+		CompileArgs []string `json:"compile-args"`
 	}
 
 	Diagnostics struct {
@@ -78,9 +73,14 @@ func (s *Server) loadServerConfigurationForWorkspace(path string) {
 	if options.C3.Version != nil {
 		s.options.C3.Version = option.Some(*options.C3.Version)
 	}
+
 	if options.C3.Path != nil {
 		s.options.C3.Path = option.Some(*options.C3.Path)
 		// Get version from binary
+	}
+
+	if len(options.C3.CompileArgs) > 0 {
+		s.options.C3.CompileArgs = options.C3.CompileArgs
 	}
 
 	c3Version := c3c.GetC3Version(s.options.C3.Path)

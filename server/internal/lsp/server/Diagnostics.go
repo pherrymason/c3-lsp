@@ -19,7 +19,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 	}
 
 	runDiagnostics := func() {
-		out, stdErr, err := c3c.CheckC3ErrorsCommand(s.options.C3.Path, state.GetProjectRootURI())
+		out, stdErr, err := c3c.CheckC3ErrorsCommand(s.options.C3, state.GetProjectRootURI())
 		log.Println("output:", out.String())
 		log.Println("output:", stdErr.String())
 		if err == nil {

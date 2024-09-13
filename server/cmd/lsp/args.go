@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/pherrymason/c3-lsp/internal/c3c"
 	"github.com/pherrymason/c3-lsp/internal/lsp/server"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 )
@@ -47,10 +48,11 @@ func cmdLineArguments() (server.ServerOpts, bool, bool) {
 	//log.Printf("---------------")
 
 	return server.ServerOpts{
-		C3: server.C3Opts{
-			Version:    option.None[string](),
-			Path:       c3cPathOpt,
-			StdlibPath: stdlibPathOpt,
+		C3: c3c.C3Opts{
+			Version:     option.None[string](),
+			Path:        c3cPathOpt,
+			StdlibPath:  stdlibPathOpt,
+			CompileArgs: []string{},
 		},
 		Diagnostics: server.DiagnosticsOpts{
 			Delay:   time.Duration(*diagnosticsDelay),
