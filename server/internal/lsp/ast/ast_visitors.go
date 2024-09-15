@@ -1,5 +1,9 @@
 package ast
 
+import (
+	"log"
+)
+
 type ASTVisitor interface {
 	VisitFile(node *File)
 	VisitModule(node *Module)
@@ -29,18 +33,21 @@ type VisitableNode interface {
 // ----------------------------------------
 
 func Visit[T any](node T, v ASTVisitor) {
-	switch any(node).(type) {
+	anyNode := any(node)
+	switch anyNode.(type) {
 	case *File:
-		v.VisitFile(any(node).(*File))
+		v.VisitFile(anyNode.(*File))
 	case *Module:
-		v.VisitModule(any(node).(*Module))
+		v.VisitModule(anyNode.(*Module))
 	case *VariableDecl:
-		v.VisitVariableDeclaration(any(node).(*VariableDecl))
+		v.VisitVariableDeclaration(anyNode.(*VariableDecl))
 	case *LambdaDeclaration:
-		v.VisitLambdaDeclaration(any(node).(*LambdaDeclaration))
+		v.VisitLambdaDeclaration(anyNode.(*LambdaDeclaration))
 	case *IntegerLiteral:
-		v.VisitIntegerLiteral(any(node).(*IntegerLiteral))
+		v.VisitIntegerLiteral(anyNode.(*IntegerLiteral))
 	case *TypeInfo:
-		v.VisitType(any(node).(*TypeInfo))
+		v.VisitType(anyNode.(*TypeInfo))
+	default:
+		log.Print("type not found")
 	}
 }
