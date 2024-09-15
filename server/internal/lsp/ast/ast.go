@@ -14,6 +14,11 @@ const (
 	ResolveStatusDone
 )
 
+type ASTNode interface {
+	StartPosition() Position
+	EndPosition() Position
+}
+
 type ASTBaseNode struct {
 	StartPos, EndPos Position
 	Attributes       []string
@@ -22,7 +27,6 @@ type ASTBaseNode struct {
 func (n ASTBaseNode) StartPosition() Position {
 	return n.StartPos
 }
-
 func (n ASTBaseNode) EndPosition() Position {
 	return n.EndPos
 }
@@ -30,11 +34,6 @@ func (n ASTBaseNode) EndPosition() Position {
 func (n *ASTBaseNode) SetPos(start sitter.Point, end sitter.Point) {
 	n.StartPos = Position{Line: uint(start.Row), Column: uint(start.Column)}
 	n.EndPos = Position{Line: uint(end.Row), Column: uint(end.Column)}
-}
-
-type ASTNode interface {
-	StartPosition() Position
-	EndPosition() Position
 }
 
 type File struct {
