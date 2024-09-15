@@ -221,8 +221,13 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 		}
 	}
 
+	macroName := "??"
+	if nameNode != nil {
+		macroName = nameNode.Content(sourceCode)
+	}
+
 	symbol := idx.NewMacro(
-		nameNode.Content(sourceCode),
+		macroName,
 		argumentIds,
 		currentModule.GetModuleString(),
 		*docId,
