@@ -31,12 +31,11 @@ func (v *JSONVisitor) VisitFile(node *File) {
 }
 
 func (v *JSONVisitor) VisitModule(node *Module) {
-
 	declarationsV := JSONVisitor{}
 	declarations := []interface{}{}
 	for _, decl := range node.Declarations {
-		vdecl := decl.(*VariableDecl)
-		Visit(vdecl, &declarationsV)
+		vdecl := decl.(VariableDecl)
+		Visit(&vdecl, &declarationsV)
 		if declarationsV.Result != nil {
 			declarations = append(declarations, declarationsV.Result)
 		}
