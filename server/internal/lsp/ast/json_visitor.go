@@ -34,8 +34,7 @@ func (v *JSONVisitor) VisitModule(node *Module) {
 	declarationsV := JSONVisitor{}
 	declarations := []interface{}{}
 	for _, decl := range node.Declarations {
-		vdecl := decl.(VariableDecl)
-		Visit(&vdecl, &declarationsV)
+		Visit(decl, &declarationsV)
 		if declarationsV.Result != nil {
 			declarations = append(declarations, declarationsV.Result)
 		}

@@ -32,7 +32,7 @@ func convert_compile_time_call(node *sitter.Node, source []byte) Expression {
 	endNode = flatPath.NextSibling()
 
 	funcCall := FunctionCall{
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeFunctionCallExpr).
 			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().
@@ -62,7 +62,7 @@ func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
 	expr := convert_expression(insideParenths, source)
 
 	funcCall := FunctionCall{
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeFunctionCallExpr).
 			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().
@@ -108,7 +108,7 @@ func convert_compile_time_analyse(node *sitter.Node, source []byte) Expression {
 	//expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
 
 	funcCall := FunctionCall{
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeFunctionCallExpr).
 			WithSitterPosRange(node.StartPoint(), decl_or_expr_node.NextSibling().EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().
@@ -126,7 +126,7 @@ func convert_compile_time_analyse(node *sitter.Node, source []byte) Expression {
 func convert_compile_time_call_unk(node *sitter.Node, source []byte) Expression {
 	next := node.NextNamedSibling()
 	return FunctionCall{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeFunctionCallExpr).WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
 		Identifier: NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
@@ -140,7 +140,7 @@ func convert_compile_time_call_unk(node *sitter.Node, source []byte) Expression 
 func convert_feature(node *sitter.Node, source []byte) Expression {
 	next := node.NextNamedSibling()
 	return FunctionCall{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeFunctionCallExpr).WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
 		Identifier: NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).

@@ -32,21 +32,21 @@ type VisitableNode interface {
 
 // ----------------------------------------
 
-func Visit[T any](node T, v ASTVisitor) {
-	anyNode := any(node)
-	switch anyNode.(type) {
+func Visit(node ASTNode, v ASTVisitor) {
+	switch node.(type) {
 	case *File:
-		v.VisitFile(anyNode.(*File))
+		v.VisitFile(node.(*File))
 	case *Module:
-		v.VisitModule(anyNode.(*Module))
+		v.VisitModule(node.(*Module))
+
 	case *VariableDecl:
-		v.VisitVariableDeclaration(anyNode.(*VariableDecl))
+		v.VisitVariableDeclaration(node.(*VariableDecl))
 	case *LambdaDeclaration:
-		v.VisitLambdaDeclaration(anyNode.(*LambdaDeclaration))
+		v.VisitLambdaDeclaration(node.(*LambdaDeclaration))
 	case *IntegerLiteral:
-		v.VisitIntegerLiteral(anyNode.(*IntegerLiteral))
+		v.VisitIntegerLiteral(node.(*IntegerLiteral))
 	case *TypeInfo:
-		v.VisitType(anyNode.(*TypeInfo))
+		v.VisitType(node.(*TypeInfo))
 	default:
 		log.Print("type not found")
 	}

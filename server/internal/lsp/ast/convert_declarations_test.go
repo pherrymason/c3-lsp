@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func aWithPos(startRow uint, startCol uint, endRow uint, endCol uint) ASTBaseNode {
-	return NewBaseNodeBuilder().
+func aWithPos(kind NodeType, startRow uint, startCol uint, endRow uint, endCol uint) ASTBaseNode {
+	return NewBaseNodeBuilder(kind).
 		WithStartEnd(startRow, startCol, endRow, endCol).
 		Build()
 }
@@ -19,12 +19,12 @@ func TestConvertToAST_module(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	expectedAst := File{
-		ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(0, 0, 0, 11).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeFile).WithStartEnd(0, 0, 0, 11).Build(),
 		Name:        "file.c3",
 		Modules: []Module{
 			{
 				Name:        "foo",
-				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(0, 0, 0, 11).Build(),
+				ASTBaseNode: NewBaseNodeBuilder(TypeModule).WithStartEnd(0, 0, 0, 11).Build(),
 			},
 		},
 	}
@@ -41,10 +41,10 @@ func TestConvertToAST_module_implicit(t *testing.T) {
 
 	expected := Module{
 		Name:        "path_file_xxx",
-		ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 1, 2, 1).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeModule).WithStartEnd(1, 1, 2, 1).Build(),
 		Declarations: []Declaration{
 			VariableDecl{
-				ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 1, 1, 18).Build(),
+				ASTBaseNode: NewBaseNodeBuilder(TypeVariableDecl).WithStartEnd(1, 1, 1, 18).Build(),
 				Names: []Identifier{
 					NewIdentifierBuilder().WithName("variable").WithStartEnd(1, 5, 1, 13).Build(),
 				},
@@ -60,7 +60,7 @@ func TestConvertToAST_module_implicit(t *testing.T) {
 
 	expected = Module{
 		Name:        "foo",
-		ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 1, 2, 12).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeModule).WithStartEnd(2, 1, 2, 12).Build(),
 	}
 	assert.Equal(t, expected, ast.Modules[1])
 }
@@ -142,13 +142,13 @@ func TestConvertToAST_global_variables(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	expectedHello := VariableDecl{
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeVariableDecl).
 			WithStartEnd(1, 1, 1, 15).
 			Build(),
 		Names: []Identifier{
 			{
 				Name: "hello",
-				ASTBaseNode: NewBaseNodeBuilder().
+				ASTBaseNode: NewBaseNodeBuilder(TypeIdentifier).
 					WithStartEnd(1, 5, 1, 10).
 					Build(),
 			},
@@ -156,7 +156,7 @@ func TestConvertToAST_global_variables(t *testing.T) {
 		Type: TypeInfo{
 			Identifier: NewIdentifierBuilder().WithName("int").WithStartEnd(1, 1, 1, 4).Build(),
 			BuiltIn:    true,
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeTypeInfo).
 				WithStartEnd(1, 1, 1, 4).
 				Build(),
 		},
@@ -165,25 +165,25 @@ func TestConvertToAST_global_variables(t *testing.T) {
 	assert.Equal(t, expectedHello, ast.Modules[0].Variables[0])
 
 	expectedAnimals := VariableDecl{
-		ASTBaseNode: aWithPos(2, 1, 2, 24),
+		ASTBaseNode: aWithPos(TypeVariableDecl, 2, 1, 2, 24),
 		Names: []Identifier{
 			{
 				Name:        "dog",
-				ASTBaseNode: aWithPos(2, 5, 2, 8),
+				ASTBaseNode: aWithPos(TypeIdentifier, 2, 5, 2, 8),
 			},
 			{
 				Name:        "cat",
-				ASTBaseNode: aWithPos(2, 10, 2, 13),
+				ASTBaseNode: aWithPos(TypeIdentifier, 2, 10, 2, 13),
 			},
 			{
 				Name:        "elephant",
-				ASTBaseNode: aWithPos(2, 15, 2, 23),
+				ASTBaseNode: aWithPos(TypeIdentifier, 2, 15, 2, 23),
 			},
 		},
 		Type: TypeInfo{
 			Identifier:  NewIdentifierBuilder().WithName("int").WithStartEnd(2, 1, 2, 4).Build(),
 			BuiltIn:     true,
-			ASTBaseNode: aWithPos(2, 1, 2, 4),
+			ASTBaseNode: aWithPos(TypeTypeInfo, 2, 1, 2, 4),
 		},
 	}
 	assert.Equal(t, expectedAnimals, ast.Modules[0].Variables[1])
@@ -200,40 +200,40 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	row := uint(1)
 	expected := EnumDecl{
 		Name: "Colors",
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeEnumDecl).
 			WithStartEnd(1, 1, 1, 33).
 			Build(),
 		Members: []EnumMember{
 			{
 				Name: Identifier{
 					Name: "RED",
-					ASTBaseNode: NewBaseNodeBuilder().
+					ASTBaseNode: NewBaseNodeBuilder(TypeIdentifier).
 						WithStartEnd(1, 15, 1, 18).
 						Build(),
 				},
-				ASTBaseNode: NewBaseNodeBuilder().
+				ASTBaseNode: NewBaseNodeBuilder(TypeEnumProperty).
 					WithStartEnd(1, 15, 1, 18).
 					Build(),
 			},
 			{
 				Name: Identifier{
 					Name: "BLUE",
-					ASTBaseNode: NewBaseNodeBuilder().
+					ASTBaseNode: NewBaseNodeBuilder(TypeIdentifier).
 						WithStartEnd(1, 20, 1, 24).
 						Build(),
 				},
-				ASTBaseNode: NewBaseNodeBuilder().
+				ASTBaseNode: NewBaseNodeBuilder(TypeEnumProperty).
 					WithStartEnd(1, 20, 1, 24).
 					Build(),
 			},
 			{
 				Name: Identifier{
 					Name: "GREEN",
-					ASTBaseNode: NewBaseNodeBuilder().
+					ASTBaseNode: NewBaseNodeBuilder(TypeIdentifier).
 						WithStartEnd(1, 26, 1, 31).
 						Build(),
 				},
-				ASTBaseNode: NewBaseNodeBuilder().
+				ASTBaseNode: NewBaseNodeBuilder(TypeEnumProperty).
 					WithStartEnd(1, 26, 1, 31).
 					Build(),
 			},
@@ -249,30 +249,30 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 			Identifier:  NewIdentifierBuilder().WithName("int").WithStartEnd(2, 18, 2, 21).Build(),
 			BuiltIn:     true,
 			Optional:    false,
-			ASTBaseNode: aWithPos(row, 18, row, 21),
+			ASTBaseNode: aWithPos(TypeTypeInfo, row, 18, row, 21),
 		},
-		ASTBaseNode: aWithPos(row, 1, row, 42),
+		ASTBaseNode: aWithPos(TypeEnumDecl, row, 1, row, 42),
 		Members: []EnumMember{
 			{
 				Name: Identifier{
 					Name:        "RED",
-					ASTBaseNode: aWithPos(row, 24, row, 27),
+					ASTBaseNode: aWithPos(TypeIdentifier, row, 24, row, 27),
 				},
-				ASTBaseNode: aWithPos(row, 24, row, 27),
+				ASTBaseNode: aWithPos(TypeEnumProperty, row, 24, row, 27),
 			},
 			{
 				Name: Identifier{
 					Name:        "BLUE",
-					ASTBaseNode: aWithPos(row, 29, row, 33),
+					ASTBaseNode: aWithPos(TypeIdentifier, row, 29, row, 33),
 				},
-				ASTBaseNode: aWithPos(row, 29, row, 33),
+				ASTBaseNode: aWithPos(TypeEnumProperty, row, 29, row, 33),
 			},
 			{
 				Name: Identifier{
 					Name:        "GREEN",
-					ASTBaseNode: aWithPos(row, 35, row, 40),
+					ASTBaseNode: aWithPos(TypeIdentifier, row, 35, row, 40),
 				},
-				ASTBaseNode: aWithPos(row, 35, row, 40),
+				ASTBaseNode: aWithPos(TypeEnumProperty, row, 35, row, 40),
 			},
 		},
 	}
@@ -296,55 +296,55 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 			Identifier:  NewIdentifierBuilder().WithName("int").WithStartEnd(1, 14, 1, 17).Build(),
 			BuiltIn:     true,
 			Optional:    false,
-			ASTBaseNode: aWithPos(row, 14, row, 17),
+			ASTBaseNode: aWithPos(TypeTypeInfo, row, 14, row, 17),
 		},
 		Properties: []EnumProperty{
 			{
 				Name: Identifier{
 					Name:        "desc",
-					ASTBaseNode: aWithPos(row, 26, row, 30),
+					ASTBaseNode: aWithPos(TypeIdentifier, row, 26, row, 30),
 				},
 				Type: TypeInfo{
 					Identifier:  NewIdentifierBuilder().WithName("String").WithStartEnd(1, 19, 1, 25).Build(),
 					BuiltIn:     false,
 					Optional:    false,
-					ASTBaseNode: aWithPos(row, 19, row, 25),
+					ASTBaseNode: aWithPos(TypeEnumProperty, row, 19, row, 25),
 				},
-				ASTBaseNode: aWithPos(row, 19, row, 30),
+				ASTBaseNode: aWithPos(TypeEnumProperty, row, 19, row, 30),
 			},
 			{
 				Name: Identifier{
 					Name:        "active",
-					ASTBaseNode: aWithPos(row, 37, row, 43),
+					ASTBaseNode: aWithPos(TypeIdentifier, row, 37, row, 43),
 				},
 				Type: TypeInfo{
 					Identifier:  NewIdentifierBuilder().WithName("bool").WithStartEnd(1, 32, 1, 36).Build(),
 					BuiltIn:     true,
 					Optional:    false,
-					ASTBaseNode: aWithPos(row, 32, row, 36),
+					ASTBaseNode: aWithPos(TypeTypeInfo, row, 32, row, 36),
 				},
-				ASTBaseNode: aWithPos(row, 32, row, 43),
+				ASTBaseNode: aWithPos(TypeEnumProperty, row, 32, row, 43),
 			},
 			{
 				Name: Identifier{
 					Name:        "ke",
-					ASTBaseNode: aWithPos(row, 50, row, 52),
+					ASTBaseNode: aWithPos(TypeIdentifier, row, 50, row, 52),
 				},
 				Type: TypeInfo{
 					Identifier:  NewIdentifierBuilder().WithName("char").WithStartEnd(1, 45, 1, 49).Build(),
 					BuiltIn:     true,
 					Optional:    false,
-					ASTBaseNode: aWithPos(row, 45, row, 49),
+					ASTBaseNode: aWithPos(TypeTypeInfo, row, 45, row, 49),
 				},
-				ASTBaseNode: aWithPos(row, 45, row, 52),
+				ASTBaseNode: aWithPos(TypeEnumProperty, row, 45, row, 52),
 			},
 		},
-		ASTBaseNode: aWithPos(row, 1, row+3, 2),
+		ASTBaseNode: aWithPos(TypeEnumDecl, row, 1, row+3, 2),
 		Members: []EnumMember{
 			{
 				Name: Identifier{
 					Name:        "PENDING",
-					ASTBaseNode: aWithPos(row+1, 2, row+1, 9),
+					ASTBaseNode: aWithPos(TypeIdentifier, row+1, 2, row+1, 9),
 				},
 				Value: CompositeLiteral{
 					Values: []Expression{
@@ -353,12 +353,12 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 						Literal{Value: "'c'"},
 					},
 				},
-				ASTBaseNode: aWithPos(row+1, 2, row+1, 41),
+				ASTBaseNode: aWithPos(TypeEnumMember, row+1, 2, row+1, 41),
 			},
 			{
 				Name: Identifier{
 					Name:        "RUNNING",
-					ASTBaseNode: aWithPos(row+2, 2, row+2, 9),
+					ASTBaseNode: aWithPos(TypeIdentifier, row+2, 2, row+2, 9),
 				},
 				Value: CompositeLiteral{
 					Values: []Expression{
@@ -367,7 +367,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 						Literal{Value: "'e'"},
 					},
 				},
-				ASTBaseNode: aWithPos(row+2, 2, row+2, 34),
+				ASTBaseNode: aWithPos(TypeEnumMember, row+2, 2, row+2, 34),
 			},
 		},
 	}
@@ -385,52 +385,52 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	expected := StructDecl{
-		ASTBaseNode: aWithPos(1, 1, 5, 2),
+		ASTBaseNode: aWithPos(TypeStructDecl, 1, 1, 5, 2),
 		Name:        "MyStruct",
 		StructType:  StructTypeNormal,
 		Members: []StructMemberDecl{
 			{
-				ASTBaseNode: aWithPos(2, 2, 2, 11),
+				ASTBaseNode: aWithPos(TypeStructMemberDecl, 2, 2, 2, 11),
 				Names: []Identifier{
 					{
-						ASTBaseNode: aWithPos(2, 6, 2, 10),
+						ASTBaseNode: aWithPos(TypeIdentifier, 2, 6, 2, 10),
 						Name:        "data",
 					},
 				},
 				Type: TypeInfo{
-					ASTBaseNode: aWithPos(2, 2, 2, 5),
+					ASTBaseNode: aWithPos(TypeTypeInfo, 2, 2, 2, 5),
 					Identifier:  NewIdentifierBuilder().WithName("int").WithStartEnd(2, 2, 2, 5).Build(),
 					BuiltIn:     true,
 				},
 			},
 			{
-				ASTBaseNode: aWithPos(3, 2, 3, 11),
+				ASTBaseNode: aWithPos(TypeStructMemberDecl, 3, 2, 3, 11),
 				Names: []Identifier{
 					{
-						ASTBaseNode: aWithPos(3, 7, 3, 10),
+						ASTBaseNode: aWithPos(TypeIdentifier, 3, 7, 3, 10),
 						Name:        "key",
 					},
 				},
 				Type: TypeInfo{
-					ASTBaseNode: aWithPos(3, 2, 3, 6),
+					ASTBaseNode: aWithPos(TypeTypeInfo, 3, 2, 3, 6),
 					Identifier:  NewIdentifierBuilder().WithName("char").WithStartEnd(3, 2, 3, 6).Build(),
 					BuiltIn:     true,
 				},
 			},
 			{
-				ASTBaseNode: aWithPos(4, 2, 4, 24),
+				ASTBaseNode: aWithPos(TypeStructMemberDecl, 4, 2, 4, 24),
 				Names: []Identifier{
 					{
-						ASTBaseNode: aWithPos(4, 17, 4, 23),
+						ASTBaseNode: aWithPos(TypeIdentifier, 4, 17, 4, 23),
 						Name:        "camera",
 					},
 				},
 				Type: TypeInfo{
-					ASTBaseNode: aWithPos(4, 2, 4, 16),
+					ASTBaseNode: aWithPos(TypeTypeInfo, 4, 2, 4, 16),
 					Identifier: Identifier{
 						Path:        "raylib",
 						Name:        "Camera",
-						ASTBaseNode: aWithPos(4, 2, 4, 16),
+						ASTBaseNode: aWithPos(TypeIdentifier, 4, 2, 4, 16),
 					},
 					BuiltIn: false,
 				},
@@ -478,7 +478,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 	assert.Equal(
 		t,
 		StructMemberDecl{
-			ASTBaseNode: aWithPos(4, 3, 4, 25),
+			ASTBaseNode: aWithPos(TypeStructMemberDecl, 4, 3, 4, 25),
 			Names: []Identifier{
 				NewIdentifierBuilder().
 					WithName("bc").
@@ -486,7 +486,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 					Build(),
 			},
 			Type: TypeInfo{
-				ASTBaseNode: aWithPos(4, 3, 4, 13),
+				ASTBaseNode: aWithPos(TypeTypeInfo, 4, 3, 4, 13),
 				Identifier: NewIdentifierBuilder().
 					WithName("Register16").
 					WithStartEnd(4, 3, 4, 13).
@@ -500,7 +500,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 	assert.Equal(
 		t,
 		StructMemberDecl{
-			ASTBaseNode: aWithPos(5, 3, 5, 22),
+			ASTBaseNode: aWithPos(TypeStructMemberDecl, 5, 3, 5, 22),
 			Names: []Identifier{
 				NewIdentifierBuilder().
 					WithName("b").
@@ -508,7 +508,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 					Build(),
 			},
 			Type: TypeInfo{
-				ASTBaseNode: aWithPos(5, 3, 5, 11),
+				ASTBaseNode: aWithPos(TypeTypeInfo, 5, 3, 5, 11),
 				Identifier: NewIdentifierBuilder().
 					WithName("Register").
 					WithStartEnd(5, 3, 5, 11).
@@ -522,7 +522,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 	assert.Equal(
 		t,
 		StructMemberDecl{
-			ASTBaseNode: aWithPos(6, 3, 6, 21),
+			ASTBaseNode: aWithPos(TypeStructMemberDecl, 6, 3, 6, 21),
 			Names: []Identifier{
 				NewIdentifierBuilder().
 					WithName("c").
@@ -530,7 +530,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 					Build(),
 			},
 			Type: TypeInfo{
-				ASTBaseNode: aWithPos(6, 3, 6, 11),
+				ASTBaseNode: aWithPos(TypeTypeInfo, 6, 3, 6, 11),
 				Identifier: NewIdentifierBuilder().
 					WithName("Register").
 					WithStartEnd(6, 3, 6, 11).
@@ -544,7 +544,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 	assert.Equal(
 		t,
 		StructMemberDecl{
-			ASTBaseNode: aWithPos(8, 2, 8, 16),
+			ASTBaseNode: aWithPos(TypeStructMemberDecl, 8, 2, 8, 16),
 			Names: []Identifier{
 				NewIdentifierBuilder().
 					WithName("sp").
@@ -552,7 +552,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 					Build(),
 			},
 			Type: TypeInfo{
-				ASTBaseNode: aWithPos(8, 2, 8, 12),
+				ASTBaseNode: aWithPos(TypeTypeInfo, 8, 2, 8, 12),
 				Identifier: NewIdentifierBuilder().
 					WithName("Register16").
 					WithStartEnd(8, 2, 8, 12).
@@ -565,7 +565,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 	assert.Equal(
 		t,
 		StructMemberDecl{
-			ASTBaseNode: aWithPos(9, 2, 9, 16),
+			ASTBaseNode: aWithPos(TypeStructMemberDecl, 9, 2, 9, 16),
 			Names: []Identifier{
 				NewIdentifierBuilder().
 					WithName("pc").
@@ -573,7 +573,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 					Build(),
 			},
 			Type: TypeInfo{
-				ASTBaseNode: aWithPos(9, 2, 9, 12),
+				ASTBaseNode: aWithPos(TypeTypeInfo, 9, 2, 9, 12),
 				Identifier: NewIdentifierBuilder().
 					WithName("Register16").
 					WithStartEnd(9, 2, 9, 12).
@@ -630,7 +630,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 	assert.Equal(t, true, bitstructDecl.BackingType.IsSome())
 
 	expectedType := TypeInfo{
-		ASTBaseNode: aWithPos(1, 32, 1, 36),
+		ASTBaseNode: aWithPos(TypeTypeInfo, 1, 32, 1, 36),
 		BuiltIn:     true,
 		Identifier: NewIdentifierBuilder().
 			WithName("uint").
@@ -641,7 +641,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 	assert.Equal(t, []string{"AnInterface"}, bitstructDecl.Implements)
 
 	expect := StructMemberDecl{
-		ASTBaseNode: aWithPos(3, 2, 3, 19),
+		ASTBaseNode: aWithPos(TypeStructMemberDecl, 3, 2, 3, 19),
 		Names: []Identifier{
 			NewIdentifierBuilder().
 				WithName("a").
@@ -649,7 +649,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 				Build(),
 		},
 		Type: TypeInfo{
-			ASTBaseNode: aWithPos(3, 2, 3, 8),
+			ASTBaseNode: aWithPos(TypeTypeInfo, 3, 2, 3, 8),
 			BuiltIn:     true,
 			Identifier: NewIdentifierBuilder().
 				WithName("ushort").
@@ -692,7 +692,7 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 				WithName("IO_ERROR").
 				WithStartEnd(3, 3, 3, 11).
 				Build(),
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeFaultMemberDecl).
 				WithStartEnd(3, 3, 3, 11).
 				Build(),
 		},
@@ -705,7 +705,7 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 				WithName("PARSE_ERROR").
 				WithStartEnd(4, 3, 4, 14).
 				Build(),
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeFaultMemberDecl).
 				WithStartEnd(4, 3, 4, 14).
 				Build(),
 		},
@@ -725,7 +725,7 @@ func TestConvertToAST_def_decl(t *testing.T) {
 
 	assert.Equal(t,
 		DefDecl{
-			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 1, 1, 16).Build(),
+			ASTBaseNode: NewBaseNodeBuilder(TypeDefDecl).WithStartEnd(1, 1, 1, 16).Build(),
 			Name:        NewIdentifierBuilder().WithName("Kilo").WithStartEnd(1, 5, 1, 9).Build(),
 			resolvesToType: option.Some(
 				NewTypeInfoBuilder().
@@ -738,7 +738,7 @@ func TestConvertToAST_def_decl(t *testing.T) {
 
 	assert.Equal(t,
 		DefDecl{
-			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(2, 1, 2, 21).Build(),
+			ASTBaseNode: NewBaseNodeBuilder(TypeDefDecl).WithStartEnd(2, 1, 2, 21).Build(),
 			Name:        NewIdentifierBuilder().WithName("KiloPtr").WithStartEnd(2, 5, 2, 12).Build(),
 			resolvesToType: option.Some(
 				NewTypeInfoBuilder().
@@ -753,7 +753,7 @@ func TestConvertToAST_def_decl(t *testing.T) {
 	row = 4
 	assert.Equal(t,
 		DefDecl{
-			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(row, 1, row, 40).Build(),
+			ASTBaseNode: NewBaseNodeBuilder(TypeDefDecl).WithStartEnd(row, 1, row, 40).Build(),
 			Name:        NewIdentifierBuilder().WithName("MyMap").WithStartEnd(row, 5, row, 10).Build(),
 			resolvesToType: option.Some(
 				NewTypeInfoBuilder().
@@ -769,7 +769,7 @@ func TestConvertToAST_def_decl(t *testing.T) {
 	row = 5
 	assert.Equal(t,
 		DefDecl{
-			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(row, 1, row, 29).Build(),
+			ASTBaseNode: NewBaseNodeBuilder(TypeDefDecl).WithStartEnd(row, 1, row, 29).Build(),
 			Name:        NewIdentifierBuilder().WithName("Camera").WithStartEnd(row, 5, row, 11).Build(),
 			resolvesToType: option.Some(
 				NewTypeInfoBuilder().
@@ -845,7 +845,7 @@ func TestConvertToAST_function_with_arguments_declaration(t *testing.T) {
 				IsBuiltin().
 				WithStartEnd(1, 14, 1, 17).
 				Build(),
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeFunctionParameter).
 				WithStartEnd(1, 14, 1, 24).Build(),
 		},
 		fnDecl.Signature.Parameters[0],
@@ -858,7 +858,7 @@ func TestConvertToAST_function_with_arguments_declaration(t *testing.T) {
 				IsBuiltin().
 				WithStartEnd(1, 26, 1, 30).
 				Build(),
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeFunctionParameter).
 				WithStartEnd(1, 26, 1, 33).Build(),
 		},
 		fnDecl.Signature.Parameters[1],
@@ -872,7 +872,7 @@ func TestConvertToAST_function_with_arguments_declaration(t *testing.T) {
 				IsPointer().
 				WithStartEnd(1, 35, 1, 38).
 				Build(),
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeFunctionParameter).
 				WithStartEnd(1, 35, 1, 47).Build(),
 		},
 		fnDecl.Signature.Parameters[2],
@@ -909,7 +909,7 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 				WithName("UserStruct").WithNameStartEnd(1, 30, 1, 34).
 				WithStartEnd(1, 30, 1, 34).
 				Build(),
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeFunctionParameter).
 				WithStartEnd(1, 30, 1, 34).Build(),
 		},
 		methodDecl.Signature.Parameters[0],
@@ -923,7 +923,7 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 				IsPointer().
 				WithStartEnd(1, 36, 1, 39).
 				Build(),
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeFunctionParameter).
 				WithStartEnd(1, 36, 1, 48).Build(),
 		},
 		methodDecl.Signature.Parameters[1],
@@ -946,7 +946,7 @@ func TestConvertToAST_method_declaration_mutable(t *testing.T) {
 				WithStartEnd(1, 30, 1, 35).
 				IsPointer().
 				Build(),
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeFunctionParameter).
 				WithStartEnd(1, 30, 1, 35).Build(),
 		},
 		methodDecl.Signature.Parameters[0],
@@ -986,7 +986,7 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 	assert.Equal(
 		t,
 		FunctionParameter{
-			ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 10).Build(),
+			ASTBaseNode: NewBaseNodeBuilder(TypeFunctionParameter).WithStartEnd(1, 9, 1, 10).Build(),
 			Name:        NewIdentifierBuilder().WithName("x").WithStartEnd(1, 9, 1, 10).Build(),
 		},
 		macroDecl.Signature.Parameters[0],
