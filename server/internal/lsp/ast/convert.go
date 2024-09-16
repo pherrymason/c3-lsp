@@ -26,7 +26,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 	if cstNode.Type() == "source_file" {
 		prg = File{
 			Name:        fileName,
-			ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(cstNode).Build(),
+			ASTBaseNode: NewBaseNodeBuilder(TypeFile).WithSitterPos(cstNode).Build(),
 		}
 	}
 
@@ -38,7 +38,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 			anonymousModule = true
 			prg.Modules = append(prg.Modules,
 				Module{
-					ASTBaseNode: NewBaseNodeBuilder().WithStartEnd(uint(node.StartPoint().Row), uint(node.StartPoint().Column), 0, 0).Build(),
+					ASTBaseNode: NewBaseNodeBuilder(TypeModule).WithStartEnd(uint(node.StartPoint().Row), uint(node.StartPoint().Column), 0, 0).Build(),
 					Name:        symbols.NormalizeModuleName(fileName),
 				},
 			)
@@ -63,7 +63,8 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 			lastMod.Imports = append(lastMod.Imports, convert_imports(node, source).(Import))
 
 		case "global_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, convert_global_declaration(node, source))
+			variable := convert_global_declaration(node, source)
+			lastMod.Declarations = append(lastMod.Declarations, &variable)
 
 		case "enum_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_enum_declaration(node, source))
@@ -142,7 +143,7 @@ func convert_imports(node *sitter.Node, source []byte) Expression {
 func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 	variable := VariableDecl{
 		Names: []Identifier{},
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeVariableDecl).
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
 	}
@@ -194,7 +195,7 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 func convert_enum_declaration(node *sitter.Node, sourceCode []byte) Expression {
 	enumDecl := EnumDecl{
 		Name: node.ChildByFieldName("name").Content(sourceCode),
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeEnumDecl).
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
 	}
@@ -212,15 +213,19 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) Expression {
 						enumDecl.Properties = append(
 							enumDecl.Properties,
 							EnumProperty{
-								ASTBaseNode: NewBaseNodeBuilder().
+								ASTBaseNode: NewBaseNodeBuilder(TypeEnumProperty).
 									WithSitterPosRange(paramNode.StartPoint(), paramNode.EndPoint()).
 									Build(),
-								Name: Identifier{
+								Name: NewIdentifierBuilder().
+									WithName(paramNode.Child(1).Content(sourceCode)).
+									WithSitterPos(paramNode).
+									Build(),
+								/*Identifier{
 									Name: paramNode.Child(1).Content(sourceCode),
 									ASTBaseNode: NewBaseNodeBuilder().
 										WithSitterPosRange(paramNode.Child(1).StartPoint(), paramNode.Child(1).EndPoint()).
 										Build(),
-								},
+								},*/
 								Type: convert_type(paramNode.Child(0), sourceCode).(TypeInfo),
 							},
 						)
@@ -264,14 +269,18 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) Expression {
 				name := enumeratorNode.ChildByFieldName("name")
 				enumDecl.Members = append(enumDecl.Members,
 					EnumMember{
-						Name: Identifier{
+						Name: NewIdentifierBuilder().
+							WithName(name.Content(sourceCode)).
+							WithSitterPos(name).
+							Build(),
+						/*Identifier{
 							Name: name.Content(sourceCode),
 							ASTBaseNode: NewBaseNodeBuilder().
 								WithSitterPosRange(name.StartPoint(), name.EndPoint()).
 								Build(),
-						},
+						},*/
 						Value: compositeLiteral,
-						ASTBaseNode: NewBaseNodeBuilder().
+						ASTBaseNode: NewBaseNodeBuilder(TypeEnumProperty).
 							WithSitterPosRange(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()).
 							Build(),
 					},
@@ -286,7 +295,7 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) Expression {
 
 func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression {
 	structDecl := StructDecl{
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeStructDecl).
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
 		StructType: StructTypeNormal,
@@ -326,7 +335,7 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression
 
 		fieldType := TypeInfo{}
 		member := StructMemberDecl{
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeStructMemberDecl).
 				WithSitterPosRange(memberNode.StartPoint(), memberNode.EndPoint()).
 				Build(),
 		}
@@ -374,7 +383,7 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) Expression
 
 func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) Expression {
 	structDecl := StructDecl{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), node.EndPoint()).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeStructDecl).WithSitterPosRange(node.StartPoint(), node.EndPoint()).Build(),
 		StructType:  StructTypeBitStruct,
 	}
 
@@ -416,7 +425,7 @@ func convert_bitstruct_members(node *sitter.Node, source []byte) []StructMemberD
 		//debugNode(bdefnode, source)
 		bType := bdefnode.Type()
 		member := StructMemberDecl{
-			ASTBaseNode: NewBaseNodeBuilder().
+			ASTBaseNode: NewBaseNodeBuilder(TypeStructMemberDecl).
 				WithSitterPosRange(bdefnode.StartPoint(), bdefnode.EndPoint()).
 				Build(),
 		}
@@ -485,7 +494,7 @@ func convert_fault_declaration(node *sitter.Node, sourceCode []byte) Expression 
 								WithName(constantNode.Content(sourceCode)).
 								WithSitterPos(constantNode).
 								Build(),
-							ASTBaseNode: NewBaseNodeBuilder().
+							ASTBaseNode: NewBaseNodeBuilder(TypeFaultMemberDecl).
 								WithSitterPosRange(constantNode.StartPoint(), constantNode.EndPoint()).
 								Build(),
 						},
@@ -503,8 +512,8 @@ func convert_fault_declaration(node *sitter.Node, sourceCode []byte) Expression 
 			Build(),
 		BackingType: baseType,
 		Members:     constants,
-		ASTBaseNode: NewBaseNodeBuilder().
-			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+		ASTBaseNode: NewBaseNodeBuilder(TypeFaultDecl).
+			WithSitterPos(node).
 			Build(),
 	}
 
@@ -514,8 +523,8 @@ func convert_fault_declaration(node *sitter.Node, sourceCode []byte) Expression 
 func convert_const_declaration(node *sitter.Node, source []byte) Expression {
 	constant := ConstDecl{
 		Names: []Identifier{},
-		ASTBaseNode: NewBaseNodeBuilder().
-			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+		ASTBaseNode: NewBaseNodeBuilder(TypeConstDecl).
+			WithSitterPos(node).
 			Build(),
 	}
 
@@ -609,7 +618,7 @@ func convert_interface_declaration(node *sitter.Node, sourceCode []byte) Express
 
 	nameNode := node.ChildByFieldName("name")
 	_interface := InterfaceDecl{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeInterfaceDecl).WithSitterPos(node).Build(),
 		Name:        NewIdentifierBuilder().WithName(nameNode.Content(sourceCode)).WithSitterPos(nameNode).Build(),
 		Methods:     methods,
 	}
@@ -638,7 +647,7 @@ func convert_macro_declaration(node *sitter.Node, sourceCode []byte) Expression 
 
 	nameNode = node.Child(1).ChildByFieldName("name")
 	macro := MacroDecl{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeMacroDecl).WithSitterPos(node).Build(),
 		Signature: MacroSignature{
 			Name: NewIdentifierBuilder().
 				WithName(nameNode.Content(sourceCode)).
@@ -677,12 +686,10 @@ func is_literal(node *sitter.Node) bool {
 }
 
 func convert_ident(node *sitter.Node, source []byte) Expression {
-	return Identifier{
-		Name: node.Content(source),
-		ASTBaseNode: NewBaseNodeBuilder().
-			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
-			Build(),
-	}
+	return NewIdentifierBuilder().
+		WithName(node.Content(source)).
+		WithSitterPos(node).
+		Build()
 }
 
 func convert_type(node *sitter.Node, sourceCode []byte) Expression {
@@ -712,7 +719,7 @@ func extTypeNodeToType(
 
 	typeInfo := TypeInfo{
 		Optional: false,
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeTypeInfo).
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
 		Pointer: uint(0),
@@ -723,7 +730,7 @@ func extTypeNodeToType(
 		//fmt.Println(n.Type(), n.Content(sourceCode))
 		switch n.Type() {
 		case "base_type":
-			typeInfo.ASTBaseNode = NewBaseNodeBuilder().
+			typeInfo.ASTBaseNode = NewBaseNodeBuilder(TypeTypeInfo).
 				WithSitterPosRange(n.StartPoint(), n.EndPoint()).
 				Build()
 
@@ -814,7 +821,7 @@ func convert_function_declaration(node *sitter.Node, source []byte) Expression {
 	}
 
 	funcDecl := FunctionDecl{
-		ASTBaseNode:  NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode:  NewBaseNodeBuilder(TypeFunctionDecl).WithSitterPos(node).Build(),
 		ParentTypeId: typeIdentifier,
 		Signature:    signature,
 		Body:         body,
@@ -852,7 +859,7 @@ func convert_function_signature(node *sitter.Node, sourceCode []byte) FunctionSi
 			Build(),
 		ReturnType: convert_type(funcHeader.ChildByFieldName("return_type"), sourceCode).(TypeInfo),
 		Parameters: convert_function_parameter_list(node.Child(2), typeIdentifier, sourceCode),
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeFunctionSignature).
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
 	}
@@ -938,7 +945,7 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 						WithSitterPos(n).
 						Build(),
 					Pointer:     pointer,
-					ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
+					ASTBaseNode: NewBaseNodeBuilder(TypeTypeInfo).WithSitterPos(argNode).Build(),
 				}
 			}
 		}
@@ -947,7 +954,7 @@ func convert_function_parameter(argNode *sitter.Node, methodIdentifier option.Op
 	variable := FunctionParameter{
 		Name:        identifier,
 		Type:        argType,
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(argNode).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeFunctionParameter).WithSitterPos(argNode).Build(),
 	}
 
 	return variable
@@ -971,7 +978,7 @@ func convert_lambda_declaration(node *sitter.Node, source []byte) Expression {
 	}
 
 	return LambdaDeclaration{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(node).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeLambdaDecl).WithSitterPos(node).Build(),
 		ReturnType:  rType,
 		Parameters:  parameters,
 	}
@@ -996,7 +1003,7 @@ func convert_lambda_expr(node *sitter.Node, source []byte) Expression {
 	lambda.ASTBaseNode.EndPos.Column = uint(bodyNode.EndPoint().Column)
 	lambda.ASTBaseNode.EndPos.Line = uint(bodyNode.EndPoint().Row)
 	lambda.Body = ReturnStatement{
-		ASTBaseNode: NewBaseNodeBuilder().WithSitterPos(bodyNode).Build(),
+		ASTBaseNode: NewBaseNodeBuilder(TypeLambdaExpr).WithSitterPos(bodyNode).Build(),
 		Return:      option.Some(convert_expression(bodyNode, source)),
 	}
 
@@ -1135,7 +1142,7 @@ func convert_assignment_expr(node *sitter.Node, source []byte) Expression {
 	}
 
 	return AssignmentStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeAssignmentStatement, node),
 		Left:        left,
 		Right:       right,
 		Operator:    operator,
@@ -1148,7 +1155,7 @@ func convert_binary_expr(node *sitter.Node, source []byte) Expression {
 	right := convert_expression(node.ChildByFieldName("right"), source)
 
 	return BinaryExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeBinaryExpr, node),
 		Left:        left,
 		Operator:    operator,
 		Right:       right,
@@ -1175,7 +1182,7 @@ func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
 	condition := anyOf("ternary_expr", expected, node.ChildByFieldName("condition"), source, false)
 
 	return TernaryExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeTernaryExpr, node),
 		Condition:   condition,
 		Consequence: convert_expression(node.ChildByFieldName("consequence"), source),
 		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
@@ -1186,7 +1193,7 @@ func convert_elvis_orelse_expr(node *sitter.Node, source []byte) Expression {
 	conditionNode := node.ChildByFieldName("condition")
 
 	return TernaryExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeElvisOrElseExpr, node),
 		Condition:   convert_expression(conditionNode, source),
 		Consequence: convert_ident(conditionNode, source),
 		Alternative: convert_expression(node.ChildByFieldName("alternative"), source),
@@ -1202,7 +1209,7 @@ func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 
 	argumentNode := node.ChildByFieldName("argument")
 	return OptionalExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeOptionalExpr, node),
 		Operator:    operator,
 		Argument:    convert_expression(argumentNode, source),
 	}
@@ -1210,7 +1217,7 @@ func convert_optional_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 	return UnaryExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeUnaryExpr, node),
 		Operator:    node.ChildByFieldName("operator").Content(source),
 		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -1218,7 +1225,7 @@ func convert_unary_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_update_expr(node *sitter.Node, source []byte) Expression {
 	return UpdateExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeUpdateExpr, node),
 		Operator:    node.ChildByFieldName("operator").Content(source),
 		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -1237,7 +1244,7 @@ func convert_subscript_expr(node *sitter.Node, source []byte) Expression {
 	}
 
 	return SubscriptExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeSubscriptExpr, node),
 		Index:       index,
 		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -1245,7 +1252,7 @@ func convert_subscript_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_cast_expr(node *sitter.Node, source []byte) Expression {
 	return CastExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeCastExpr, node),
 		Type:        convert_type(node.ChildByFieldName("type"), source).(TypeInfo),
 		Argument:    convert_expression(node.ChildByFieldName("value"), source),
 	}
@@ -1253,7 +1260,7 @@ func convert_cast_expr(node *sitter.Node, source []byte) Expression {
 
 func convert_rethrow_expr(node *sitter.Node, source []byte) Expression {
 	return RethrowExpression{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeRethrowExpr, node),
 		Operator:    node.ChildByFieldName("operator").Content(source),
 		Argument:    convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -1289,7 +1296,7 @@ func convert_call_expr(node *sitter.Node, source []byte) Expression {
 	}
 
 	return FunctionCall{
-		ASTBaseNode:      NewBaseNodeFromSitterNode(node),
+		ASTBaseNode:      NewBaseNodeFromSitterNode(TypeCallExpr, node),
 		Identifier:       identifier,
 		GenericArguments: genericArguments,
 		Arguments:        args,
@@ -1310,7 +1317,7 @@ func convert_trailing_generic_expr(node *sitter.Node, source []byte) Expression 
 	operator := convert_generic_arguments(node.ChildByFieldName("operator"), source)
 
 	return TrailingGenericsExpr{
-		ASTBaseNode:      NewBaseNodeFromSitterNode(node),
+		ASTBaseNode:      NewBaseNodeFromSitterNode(TypeTrailingGenericExpr, node),
 		Identifier:       expr.(Identifier),
 		GenericArguments: operator,
 	}
@@ -1343,7 +1350,7 @@ func convert_type_with_initializer_list(node *sitter.Node, source []byte) Expres
 	}
 
 	expression := InlineTypeWithInitizlization{
-		ASTBaseNode: NewBaseNodeBuilder().
+		ASTBaseNode: NewBaseNodeBuilder(TypeInlineTypeWithInitExpr).
 			WithStartEnd(
 				uint(node.StartPoint().Row),
 				uint(node.StartPoint().Column),
@@ -1393,7 +1400,7 @@ func convert_as_literal(node *sitter.Node, source []byte) Expression {
 
 func convert_initializer_list(node *sitter.Node, source []byte) Expression {
 	initList := InitializerList{
-		ASTBaseNode: NewBaseNodeFromSitterNode(node),
+		ASTBaseNode: NewBaseNodeFromSitterNode(TypeInitializerList, node),
 	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)

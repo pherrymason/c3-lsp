@@ -14,7 +14,65 @@ const (
 	ResolveStatusDone
 )
 
+type NodeType int
+
+const (
+	TypeFile = iota
+	TypeModule
+	TypeIdentifier
+	TypeTypeInfo
+	TypeDefDecl
+	TypeVariableDecl
+	TypeEnumDecl
+	TypeEnumProperty
+	TypeEnumMember
+	TypeStructDecl
+	TypeStructMemberDecl
+	TypeFaultDecl
+	TypeFaultMemberDecl
+	TypeConstDecl
+	TypeInterfaceDecl
+	TypeMacroDecl
+	TypeFunctionDecl
+	TypeFunctionSignature
+	TypeFunctionParameter
+	TypeLambdaDecl
+	TypeLambdaExpr
+	TypeAssignmentStatement
+	TypeBinaryExpr
+	TypeTernaryExpr
+	TypeElvisOrElseExpr
+	TypeOptionalExpr
+	TypeUnaryExpr
+	TypeUpdateExpr
+	TypeSubscriptExpr
+	TypeCastExpr
+	TypeRethrowExpr
+	TypeCallExpr
+	TypeTrailingGenericExpr
+	TypeInlineTypeWithInitExpr
+	TypeInitializerList
+	TypeReturnStatement
+	TypeCompoundStatement
+	TypeContinueStatement
+	TypeBreakStatement
+	TypeSwitchStatement
+	TypeSwitchCaseStatement
+	TypeSwitchCaseRangeExpr
+	TypeNextCaseStatement
+	TypeIfStatement
+	TypeElseStatement
+	TypeForStatement
+	TypeForeachStatement
+	TypeWhileStatement
+	TypeDoStatement
+	TypeDeferStatement
+	TypeAssertStatement
+	TypeFunctionCallExpr
+)
+
 type ASTNode interface {
+	TypeNode() NodeType
 	StartPosition() Position
 	EndPosition() Position
 }
@@ -22,6 +80,11 @@ type ASTNode interface {
 type ASTBaseNode struct {
 	StartPos, EndPos Position
 	Attributes       []string
+	Kind             NodeType
+}
+
+func (n ASTBaseNode) TypeNode() NodeType {
+	return n.Kind
 }
 
 func (n ASTBaseNode) StartPosition() Position {
