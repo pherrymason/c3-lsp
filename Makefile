@@ -70,10 +70,12 @@ LINUX_PREFIX = linux-amd64
 WIN_PREFIX = windows-amd64
 pack-release:
 	unzip $(BIN_PATH)/c3-lsp.zip -d $(BIN_PATH)/release
-	mv $(BIN_PATH)/release/c3-lsp-$(DARWIN_PREFIX) $(BIN_PATH)/release/c3lsp
-	rm  -f $(BIN_PATH)/c3lsp-$(DARWIN_PREFIX).zip ; zip $(BIN_PATH)/c3lsp-$(DARWIN_PREFIX).zip $(BIN_PATH)/release/c3lsp
+	mv $(BIN_PATH)/release/c3-lsp-$(DARWIN_PREFIX) $(BIN_PATH)/release/c3lsp; chmod 0555 $(BIN_PATH)/release/c3lsp
+	rm  -f $(BIN_PATH)/c3lsp-$(DARWIN_PREFIX).zip ; zip $(BIN_PATH)/c3lsp-$(DARWIN_PREFIX).zip $(BIN_PATH)/release/c3lsp	
+	
 	mv $(BIN_PATH)/release/c3-lsp-$(LINUX_PREFIX) $(BIN_PATH)/release/c3lsp; chmod 0555 $(BIN_PATH)/release/c3lsp
 	rm -f $(BIN_PATH)/c3lsp-$(LINUX_PREFIX).tar.gz; tar -czvf $(BIN_PATH)/c3lsp-$(LINUX_PREFIX).tar.gz $(BIN_PATH)/release/c3lsp
+	
 	mv $(BIN_PATH)/release/c3-lsp-$(WIN_PREFIX).exe $(BIN_PATH)/release/c3lsp.exe
 	rm  -f $(BIN_PATH)/release/c3-lsp-$(WIN_PREFIX).zip; zip $(BIN_PATH)/c3lsp-$(WIN_PREFIX).zip $(BIN_PATH)/release/c3lsp.exe
 	
