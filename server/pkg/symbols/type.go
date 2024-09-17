@@ -52,6 +52,10 @@ func (t *Type) SetModule(module string) {
 	t.module = module
 }
 
+func (t *Type) IsPointer() bool {
+	return t.pointer > 0
+}
+
 func (t Type) String() string {
 	pointerStr := strings.Repeat("*", t.pointer)
 	optionalStr := ""
