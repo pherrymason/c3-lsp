@@ -26,7 +26,6 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 		// Find current module
 		for _, module := range state.GetUnitModulesByDoc(params.docId).Modules() {
 			if module.GetDocumentRange().HasPosition(params.position.Get()) {
-
 				// Only include current module in the search if there is no scopedToModule
 				if params.scopedToModulePath.IsNone() {
 					currentContextModules = append(currentContextModules, module.GetModule())
@@ -37,7 +36,7 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 		}
 	}
 
-	if params.scopedToModulePath.IsSome() {
+	if params.scopedToModulePath.IsSome() && currentModule != nil {
 		// We must take into account that scopedModule path might be a partial path module
 		for _, importedModule := range currentModule.Imports {
 			if strings.HasSuffix(importedModule, params.scopedToModulePath.Get().GetName()) {
