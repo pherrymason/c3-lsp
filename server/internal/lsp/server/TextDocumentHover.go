@@ -52,33 +52,67 @@ func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hover
 	return &hover, nil
 }
 
-func hasSize(symbol symbols.Indexable) bool {
+const (
+	UNKNOWN = iota
+	VAR
+	STRUCT
+	STRUCT_MEMBER
+	BITSTRUCT
+	FAULT
+	ENUM
+)
+
+func typeOfSymbol(symbol symbols.Indexable) uint {
 	_, isVariable := symbol.(*symbols.Variable)
 	if isVariable {
-		return true
+		return VAR
 	}
 
 	_, isMember := symbol.(*symbols.StructMember)
 	if isMember {
-		return true
+		return STRUCT_MEMBER
 	}
 
 	_, isStruct := symbol.(*symbols.Struct)
 	if isStruct {
-		return true
+		return STRUCT
 	}
 
 	_, isBitStruct := symbol.(*symbols.Bitstruct)
 	if isBitStruct {
-		return true
+		return BITSTRUCT
+	}
+
+	_, isFault := symbol.(*symbols.Fault)
+	if isFault {
+		return FAULT
+	}
+	_, isEnum := symbol.(*symbols.Enum)
+	if isEnum {
+		return ENUM
+	}
+
+	return UNKNOWN
+}
+
+func hasSize(symbol symbols.Indexable) bool {
+	kind := typeOfSymbol(symbol)
+
+	sizeableKinds := []uint{VAR, STRUCT, STRUCT_MEMBER, BITSTRUCT, FAULT, ENUM}
+	for _, v := range sizeableKinds {
+		if v == kind {
+			return true
+		}
 	}
 
 	return false
 }
 
 func calculateSize(symbol symbols.Indexable) string {
-	variable, isVariable := symbol.(*symbols.Variable)
-	if isVariable {
+
+	switch typeOfSymbol(symbol) {
+	case VAR:
+		variable := symbol.(*symbols.Variable)
 		if variable.Type.IsPointer() {
 			return fmt.Sprintf("%d", utils.PointerSize())
 		}
@@ -86,10 +120,9 @@ func calculateSize(symbol symbols.Indexable) string {
 		if variable.Type.IsBaseTypeLanguage() {
 			return fmt.Sprintf("%d", getLanguageTypeSize(variable.Type.GetName()))
 		}
-	}
 
-	member, isMember := symbol.(*symbols.StructMember)
-	if isMember {
+	case STRUCT_MEMBER:
+		member := symbol.(*symbols.StructMember)
 		if member.GetType().IsPointer() {
 			return fmt.Sprintf("%d", utils.PointerSize())
 		}
@@ -112,16 +145,18 @@ func getLanguageTypeSize(typeName string) uint {
 	case "bool":
 		size = 1
 	case "ichar", "char":
-		size = 8
+		size = 1
 	case "short", "ushort":
-		size = 16
+		size = 16 / 8
 	case "int", "uint":
-		size = 32
+		size = 32 / 8
 	case "long", "ulong":
-		size = 64
+		size = 64 / 8
 	case "int128", "uint128":
-		size = 128
-	case "iptr", "uptr", "isz", "usz":
+		size = 128 / 8
+	case "iptr", "uptr":
+		size = utils.PointerSize()
+	case "isz", "usz":
 		size = 0
 	}
 
