@@ -69,6 +69,8 @@ const (
 	TypeDeferStatement
 	TypeAssertStatement
 	TypeFunctionCallExpr
+
+	TypeIntegerLiteral
 )
 
 type ASTNode interface {
@@ -231,7 +233,7 @@ type FunctionDecl struct {
 	ASTBaseNode
 	ParentTypeId option.Option[Identifier]
 	Signature    FunctionSignature
-	Body         Expression
+	Body         ASTNode
 }
 
 type FunctionSignature struct {

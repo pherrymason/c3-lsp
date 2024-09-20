@@ -2,6 +2,8 @@ package ast
 
 import "encoding/json"
 
+type JSONObject map[string]interface{}
+
 type JSONVisitor struct {
 	Result map[string]interface{}
 }
@@ -40,11 +42,21 @@ func (v *JSONVisitor) VisitModule(node *Module) {
 		}
 	}
 
+	functionsV := JSONVisitor{}
+	functions := []interface{}{}
+	for _, fun := range node.Functions {
+		Visit(fun, &functionsV)
+		if functionsV.Result != nil {
+			functions = append(functions, functionsV.Result)
+		}
+	}
+
 	v.Result = map[string]interface{}{
 		"type":         "Module",
 		"name":         node.Name,
 		"pos":          serialize_pos(node),
 		"declarations": declarations,
+		"functions":    functions,
 	}
 }
 
@@ -62,7 +74,7 @@ func (v *JSONVisitor) VisitVariableDeclaration(node *VariableDecl) {
 	}
 
 	typeV := JSONVisitor{}
-	Visit(node.Type, &typeV)
+	Visit(&node.Type, &typeV)
 
 	initV := JSONVisitor{}
 	Visit(node.Initializer, &initV)
@@ -104,7 +116,40 @@ func (v *JSONVisitor) VisitLambdaDeclaration(node *LambdaDeclaration) {
 }
 
 func (v *JSONVisitor) VisitFunctionDecl(node *FunctionDecl) {
+	typeV := JSONVisitor{}
+	Visit(&node.Signature.ReturnType, &typeV)
+	var returnType interface{}
+	if typeV.Result != nil {
+		returnType = typeV.Result
+	}
 
+	parameters := []interface{}{}
+	for _, p := range node.Signature.Parameters {
+		parameters = append(parameters, VisitFunctionParameter(&p))
+	}
+
+	bodyV := JSONVisitor{}
+	Visit(node.Body, &bodyV)
+
+	v.Result = map[string]interface{}{
+		"type":       "FunctionDecl",
+		"name":       node.Signature.Name.Name,
+		"returnType": returnType,
+		"parameters": parameters,
+		"body":       bodyV.Result,
+	}
+}
+
+func (v *JSONVisitor) VisitFunctionParameter(node *FunctionParameter) {
+
+}
+
+func VisitFunctionParameter(node *FunctionParameter) JSONObject {
+	return map[string]interface{}{
+		"type":          "FunctionParameter",
+		"name":          node.Name.Name,
+		"parameterType": VisitType(&node.Type),
+	}
 }
 
 func (v *JSONVisitor) VisitFunctionCall(node *FunctionCall) {
@@ -115,13 +160,29 @@ func (v *JSONVisitor) VisitInterfaceDecl(node *InterfaceDecl) {
 
 }
 
+func (v *JSONVisitor) VisitCompounStatement(node *CompoundStatement) {
+	visitor := JSONVisitor{}
+	statements := []JSONObject{}
+	for _, s := range node.Statements {
+		Visit(s, &visitor)
+		statements = append(statements, visitor.Result)
+	}
+	visitor.Result = JSONObject{
+		"statements": statements,
+	}
+}
+
 func (v *JSONVisitor) VisitType(node *TypeInfo) {
+	v.Result = VisitType(node)
+}
+
+func VisitType(node *TypeInfo) JSONObject {
 
 	collection := map[string]interface{}{
 		"isCollection": false,
 	}
 
-	v.Result = map[string]interface{}{
+	return map[string]interface{}{
 		"type":       "Type",
 		"name":       node.Identifier.Name,
 		"builtin":    node.BuiltIn,
