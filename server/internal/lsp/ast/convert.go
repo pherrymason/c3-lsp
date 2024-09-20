@@ -106,7 +106,7 @@ func convertSourceFile(node *sitter.Node, source []byte) File {
 }
 
 func convert_module(node *sitter.Node, source []byte) Module {
-	module := Module{}
+	module := Module{ASTBaseNode: NewBaseNodeBuilder(TypeModule).Build()}
 	module.Name = node.ChildByFieldName("path").Content(source)
 	module.SetPos(node.StartPoint(), node.EndPoint())
 
@@ -1351,7 +1351,7 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 	case "string_literal", "char_literal", "raw_string_literal", "bytes_literal":
 		literal = Literal{Value: node.Content(sourceCode)}
 	case "integer_literal":
-		literal = IntegerLiteral{Value: node.Content(sourceCode)}
+		literal = IntegerLiteral{ASTBaseNode: ASTBaseNode{Kind: TypeIntegerLiteral}, Value: node.Content(sourceCode)}
 	case "real_literal":
 		literal = RealLiteral{Value: node.Content(sourceCode)}
 	case "false":

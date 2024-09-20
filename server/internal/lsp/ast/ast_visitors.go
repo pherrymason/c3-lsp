@@ -17,8 +17,10 @@ type ASTVisitor interface {
 	VisitMacroDecl(node *MacroDecl)
 	VisitLambdaDeclaration(node *LambdaDeclaration)
 	VisitFunctionDecl(node *FunctionDecl)
+	VisitFunctionParameter(node *FunctionParameter)
 	VisitFunctionCall(node *FunctionCall)
 	VisitInterfaceDecl(node *InterfaceDecl)
+	VisitCompounStatement(node *CompoundStatement)
 	VisitType(node *TypeInfo)
 	VisitIdentifier(node *Identifier)
 	VisitBinaryExpression(node *BinaryExpression)
@@ -33,20 +35,43 @@ type VisitableNode interface {
 // ----------------------------------------
 
 func Visit(node ASTNode, v ASTVisitor) {
-	switch node.(type) {
-	case *File:
+	switch node.TypeNode() {
+	case TypeFile:
 		v.VisitFile(node.(*File))
-	case *Module:
+	case TypeModule:
 		v.VisitModule(node.(*Module))
 
-	case *VariableDecl:
+	case TypeVariableDecl:
 		v.VisitVariableDeclaration(node.(*VariableDecl))
-	case *LambdaDeclaration:
+	case TypeFunctionDecl:
+		n := node.(FunctionDecl)
+		v.VisitFunctionDecl(&n)
+
+	case TypeFunctionParameter:
+		n := node.(FunctionParameter)
+		v.VisitFunctionParameter(&n)
+
+	case TypeLambdaDecl:
 		v.VisitLambdaDeclaration(node.(*LambdaDeclaration))
-	case *IntegerLiteral:
-		v.VisitIntegerLiteral(node.(*IntegerLiteral))
-	case *TypeInfo:
-		v.VisitType(node.(*TypeInfo))
+
+	case TypeCompoundStatement:
+		var arg *CompoundStatement
+		switch node.(type) {
+		case CompoundStatement:
+			n := node.(CompoundStatement)
+			arg = &n
+		case *CompoundStatement:
+			arg = node.(*CompoundStatement)
+		}
+		v.VisitCompounStatement(arg)
+
+	case TypeTypeInfo:
+		n := node.(*TypeInfo)
+		v.VisitType(n)
+
+	case TypeIntegerLiteral:
+		n := node.(IntegerLiteral)
+		v.VisitIntegerLiteral(&n)
 	default:
 		log.Print("type not found")
 	}
