@@ -1,3 +1,5 @@
+.PHONY: *
+
 ASSETS_DIR = assets
 TREE_SITTER_DIR = $(ASSETS_DIR)/tree-sitter-c3
 TREE_SITTER_GIT = git@github.com:c3lang/tree-sitter-c3.git
@@ -29,11 +31,7 @@ build-parser:
 	cp $(TREE_SITTER_DIR)/src/scanner.c server/internal/lsp/cst/scanner.c
 
 index-c3-std:
-ifndef VERSION
-	$(error VERSION is not set. Usage: make index-c3-std VERSION=x.y.z)
-endif
-	cd $(C3C_DIR) && git fetch --all && git reset --hard origin/master && git checkout tags/v$(VERSION)
-	cd server/cmd/stdlib_indexer && go run main.go blurp.go --$(VERSION)
+	./bin/build_index.sh
 
 # cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
 
@@ -54,14 +52,7 @@ build-darwin:
 
 # Build linux
 build-linux:
-	@echo "Building linux-amd64"
-ifeq ($(shell uname -s), Darwin)
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" go build -C server/cmd/lsp -o ../../bin/c3lsp
-else 
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3lsp
-endif
-	cd server/bin && zip ./linux-amd64-c3lsp.zip c3lsp
-	@echo "linux-amd64 built"
+	bin/build_linux.sh
 
 # Unzips github artifact + zips linux, windows and mac binaries
 BIN_PATH = server/bin
