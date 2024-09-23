@@ -36,7 +36,7 @@ index-c3-std:
 # cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
 
 build:
-	go build -C server/cmd/lsp -o ../../bin/c3lsp
+	bin/build.sh
 
 build-dev:
 	go build -C server/cmd/lsp -gcflags="all=-N -l" -o ../../bin/c3lsp
@@ -47,6 +47,7 @@ build-all: build-darwin build-linux
 build-darwin:
 	@echo "Building darwin-amd64"
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3lsp
+	chmod +x server/bin/c3lsp
 	cd server/bin && zip ./darwin-amd64-c3lsp.zip c3lsp
 	echo "darwin-amd64 built"
 
