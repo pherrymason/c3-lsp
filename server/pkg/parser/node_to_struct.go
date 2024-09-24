@@ -38,8 +38,6 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
 	isUnion := false
-	membersNeedingSubtypingResolve := []idx.Type{}
-	//fmt.Println(node)
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
@@ -63,101 +61,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 	bodyNode := node.ChildByFieldName("body")
 	structFields := make([]*idx.StructMember, 0)
 
-	// Search Struct members
-	for i := 0; i < int(bodyNode.ChildCount()); i++ {
-		memberNode := bodyNode.Child(i)
-		isInline := false
-
-		//fmt.Println("body child:", memberNode.Type())
-		if memberNode.Type() != "struct_member_declaration" {
-			continue
-		}
-
-		var fieldType idx.Type
-		var identifiers []string
-		var identifier string
-		var identifiersRange []idx.Range
-
-		/*
-			struct_member_declaration: $ => choice(
-				seq(field('type', $.type), $.identifier_list, optional($.attributes), ';'),
-				seq($._struct_or_union, optional($.ident), optional($.attributes), field('body', $.struct_body)),
-				seq('bitstruct', optional($.ident), ':', $.type, optional($.attributes), field('body', $.bitstruct_body)),
-				seq('inline', field('type', $.type), optional($.ident), optional($.attributes), ';'),
-			),
-		*/
-
-		for x := 0; x < int(memberNode.ChildCount()); x++ {
-			n := memberNode.Child(x)
-			//fmt.Println("child:", n.Type(), "::", memberNode.Content(sourceCode))
-			switch n.Type() {
-			case "type":
-				fieldType = p.typeNodeToType(n, currentModule, sourceCode)
-				//fmt.Println(fieldType, n.Content(sourceCode))
-
-				//fieldType = n.Content(sourceCode)
-				if isInline {
-					identifier = "dummy-subtyping"
-				}
-			case "identifier_list":
-				for j := 0; j < int(n.ChildCount()); j++ {
-					identifiers = append(identifiers, n.Child(j).Content(sourceCode))
-					identifiersRange = append(identifiersRange,
-						idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
-					)
-				}
-			case "attributes":
-				// TODO
-			case "bitstruct_body":
-				bitStructsMembers := p.nodeToBitStructMembers(n, currentModule, docId, sourceCode)
-				structFields = append(structFields, bitStructsMembers...)
-			case "inline":
-				isInline = true
-
-			case "ident":
-				identifier = n.Content(sourceCode)
-				identifiersRange = append(identifiersRange,
-					idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
-				)
-			}
-		}
-
-		if len(identifiers) > 0 {
-			for y := 0; y < len(identifiers); y++ {
-				structMember := idx.NewStructMember(
-					identifiers[y],
-					fieldType, // TODO <--- this type parsing is too simple
-					option.None[[2]uint](),
-					currentModule.GetModuleString(),
-					*docId,
-					identifiersRange[y],
-				)
-				structFields = append(structFields, &structMember)
-			}
-		} else if isInline {
-			var structMember idx.StructMember
-			membersNeedingSubtypingResolve = append(membersNeedingSubtypingResolve, fieldType)
-			structMember = idx.NewInlineSubtype(
-				identifier,
-				fieldType,
-				currentModule.GetModuleString(),
-				*docId,
-				identifiersRange[0],
-			)
-			structFields = append(structFields, &structMember)
-		} else if len(identifier) > 0 {
-			structMember := idx.NewStructMember(
-				identifier,
-				fieldType,
-				option.None[[2]uint](),
-				currentModule.GetModuleString(),
-				*docId,
-				identifiersRange[0],
-			)
-
-			structFields = append(structFields, &structMember)
-		}
-	}
+	structFields, membersNeedingSubtypingResolve := p.parse_struct_body(bodyNode, currentModule, docId, sourceCode)
 
 	var _struct idx.Struct
 	if isUnion {
@@ -182,4 +86,116 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 	}
 
 	return _struct, membersNeedingSubtypingResolve
+}
+
+func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) ([]*idx.StructMember, []idx.Type) {
+	structFields := make([]*idx.StructMember, 0)
+	membersNeedingSubtypingResolve := []idx.Type{}
+
+	// Search Struct members
+	for i := 0; i < int(bodyNode.ChildCount()); i++ {
+		memberNode := bodyNode.Child(i)
+		isInline := false
+		isSubStruct := false
+
+		//fmt.Println("body child:", memberNode.Type())
+		if memberNode.Type() != "struct_member_declaration" {
+			continue
+		}
+
+		var fieldType idx.Type
+		var identifiers []string
+		var identifier string
+		var identifiersRange []idx.Range
+
+		/*
+			struct_member_declaration: $ => choice(
+				seq(field('type', $.type), $.identifier_list, optional($.attributes), ';'),
+				seq($._struct_or_union, optional($.ident), optional($.attributes), field('body', $.struct_body)),
+				seq('bitstruct', optional($.ident), ':', $.type, optional($.attributes), field('body', $.bitstruct_body)),
+				seq('inline', field('type', $.type), optional($.ident), optional($.attributes), ';'),
+			),
+		*/
+		var innerStructBody []*idx.StructMember
+		var innerMembersNeedingSubtypingResolve []idx.Type
+
+		for x := 0; x < int(memberNode.ChildCount()); x++ {
+			n := memberNode.Child(x)
+			//fmt.Println("child:", n.Type(), "::", memberNode.Content(sourceCode))
+			switch n.Type() {
+			case "type":
+				fieldType = p.typeNodeToType(n, currentModule, sourceCode)
+				if isInline {
+					identifier = "dummy-subtyping"
+				}
+			case "identifier_list":
+				for j := 0; j < int(n.ChildCount()); j++ {
+					identifiers = append(identifiers, n.Child(j).Content(sourceCode))
+					identifiersRange = append(identifiersRange,
+						idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
+					)
+				}
+			case "attributes":
+				// TODO
+			case "bitstruct_body":
+				bitStructsMembers := p.nodeToBitStructMembers(n, currentModule, docId, sourceCode)
+				structFields = append(structFields, bitStructsMembers...)
+
+			case "struct_body":
+				isSubStruct = true
+				innerStructBody, innerMembersNeedingSubtypingResolve = p.parse_struct_body(n, currentModule, docId, sourceCode)
+				membersNeedingSubtypingResolve = append(membersNeedingSubtypingResolve, innerMembersNeedingSubtypingResolve...)
+
+			case "inline":
+				isInline = true
+
+			case "ident":
+				identifier = n.Content(sourceCode)
+				identifiersRange = append(identifiersRange,
+					idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint()),
+				)
+			}
+		}
+
+		if isSubStruct {
+			structMember := idx.NewSubstructMember(identifier, innerStructBody, currentModule.GetModuleString(), *docId, identifiersRange[0])
+			structFields = append(structFields, &structMember)
+
+		} else if len(identifiers) > 0 {
+			for y := 0; y < len(identifiers); y++ {
+				structMember := idx.NewStructMember(
+					identifiers[y],
+					fieldType, // TODO <--- this type parsing is too simple
+					option.None[[2]uint](),
+					currentModule.GetModuleString(),
+					*docId,
+					identifiersRange[y],
+				)
+				structFields = append(structFields, &structMember)
+			}
+		} else if isInline {
+			membersNeedingSubtypingResolve = append(membersNeedingSubtypingResolve, fieldType)
+			structMember := idx.NewInlineSubtype(
+				identifier,
+				fieldType,
+				currentModule.GetModuleString(),
+				*docId,
+				identifiersRange[0],
+			)
+			structFields = append(structFields, &structMember)
+		} else if len(identifier) > 0 {
+			structMember := idx.NewStructMember(
+				identifier,
+				fieldType,
+				option.None[[2]uint](),
+				currentModule.GetModuleString(),
+				*docId,
+				identifiersRange[0],
+			)
+
+			structFields = append(structFields, &structMember)
+		}
+	}
+
+	return structFields, membersNeedingSubtypingResolve
 }

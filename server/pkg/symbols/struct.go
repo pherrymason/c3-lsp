@@ -91,6 +91,8 @@ type StructMember struct {
 	bitRange             option.Option[[2]uint]
 	inlinePendingResolve bool
 	expandedInline       bool
+	isStruct             bool
+	subStruct            option.Option[Struct]
 	BaseIndexable
 }
 
@@ -100,6 +102,14 @@ func (m StructMember) IsInlinePendingToResolve() bool {
 
 func (m StructMember) IsExpandedInline() bool {
 	return m.expandedInline
+}
+
+func (m StructMember) IsStruct() bool {
+	return m.isStruct
+}
+
+func (m StructMember) Substruct() option.Option[Struct] {
+	return m.subStruct
 }
 
 func (m *StructMember) GetType() *Type {
@@ -134,6 +144,31 @@ func NewInlineSubtype(name string, fieldType Type, module string, docId string, 
 		baseType:             fieldType,
 		bitRange:             option.None[[2]uint](),
 		inlinePendingResolve: true,
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			NewRange(0, 0, 0, 0),
+			protocol.CompletionItemKindField,
+		),
+	}
+}
+
+func NewSubstructMember(name string, members []*StructMember, module string, docId string, idRange Range) StructMember {
+	return StructMember{
+		bitRange:             option.None[[2]uint](),
+		inlinePendingResolve: false,
+		isStruct:             true,
+		subStruct: option.Some(NewStruct(
+			name,
+			[]string{},
+			members,
+			module,
+			docId,
+			idRange,
+			NewRange(0, 0, 0, 0),
+		)),
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
