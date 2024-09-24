@@ -31,11 +31,11 @@ If they don't include it, they might allow you to specify the path to the lsp bi
 Read more in the [wiki](https://github.com/pherrymason/c3-lsp/wiki/Integration-with-editors).
 
 ### Standalone usage
-Simply run `c3-lsp` to start the server.  
+Simply run `c3lsp` to start the server.  
 It supports the following options:
 - **help:** Display accepted options.
 - **send-reports:** If enabled (disabled by default) will send __crash__ reports to Sentry so bugs can be debugged easily.
-- **lang-version:** Use it to specify a specific c3 language version. By default `c3-lsp` will select the last version supported.
+- **lang-version:** Use it to specify a specific c3 language version. By default `c3lsp` will select the last version supported.
 
 
 ## Installation
@@ -48,7 +48,7 @@ You can also build from source:
 
 - Download and install golang: https://go.dev/
 - Clone this repo
-- Run `make build`: This will create `c3-lsp` in `server/bin` folder.
+- Run `make build`: This will create `c3lsp` in `server/bin` folder.
 
 
 ## Project Goals
