@@ -23,7 +23,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		log.Println("output:", out.String())
 		log.Println("output:", stdErr.String())
 		if err == nil {
-			clearOldDiagnostics(s.state, notify)
+			s.clearOldDiagnostics(s.state, notify)
 			return
 		}
 
@@ -32,7 +32,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 
 		if diagnosticsDisabled {
 			s.options.Diagnostics.Enabled = false
-			clearOldDiagnostics(s.state, notify)
+			s.clearOldDiagnostics(s.state, notify)
 			return
 		}
 
@@ -121,11 +121,11 @@ func extractErrorDiagnostics(output string) ([]ErrorInfo, bool) {
 	return errorsInfo, diagnosticsDisabled
 }
 
-func clearOldDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc) {
+func (s *Server) clearOldDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc) {
 	for k := range state.GetDocumentDiagnostics() {
 		go notify(protocol.ServerTextDocumentPublishDiagnostics,
 			protocol.PublishDiagnosticsParams{
-				URI:         k,
+				URI:         fs.ConvertPathToURI(k, s.options.C3.StdlibPath),
 				Diagnostics: []protocol.Diagnostic{},
 			})
 	}
