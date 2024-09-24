@@ -24,39 +24,39 @@ treesitter-playground:
 
 build-parser:
 	cd $(TREE_SITTER_DIR) && git fetch --all && git checkout $(TREE_SITTER_COMMIT) && tree-sitter generate
-	rm -rf server/internal/lsp/cst/tree_sitter
-	rm -f server/internal/lsp/cst/parser.c
-	cp -r $(TREE_SITTER_DIR)/src/tree_sitter server/internal/lsp/cst
-	cp $(TREE_SITTER_DIR)/src/parser.c server/internal/lsp/cst/parser.c
-	cp $(TREE_SITTER_DIR)/src/scanner.c server/internal/lsp/cst/scanner.c
+	rm -rf ./server/internal/lsp/cst/tree_sitter
+	rm -f ./server/internal/lsp/cst/parser.c
+	cp -r $(TREE_SITTER_DIR)/src/tree_sitter ./server/internal/lsp/cst
+	cp $(TREE_SITTER_DIR)/src/parser.c ./server/internal/lsp/cst/parser.c
+	cp $(TREE_SITTER_DIR)/src/scanner.c ./server/internal/lsp/cst/scanner.c
 
 index-c3-std:
-	./bin/build_index.sh
+	bash ./bin/build_index.sh
 
 # cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
 
 build:
-	bin/build.sh
+	bash ./bin/build.sh
 
 build-dev:
-	go build -C server/cmd/lsp -gcflags="all=-N -l" -o ../../bin/c3lsp
+	go build -C ./server/cmd/lsp -gcflags="all=-N -l" -o ../../bin/c3lsp
 
 build-all: build-darwin build-linux
 
 # Build darwin-amd64
 build-darwin:
 	@echo "Building darwin-amd64"
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C server/cmd/lsp -o ../../bin/c3lsp
-	chmod +x server/bin/c3lsp
-	cd server/bin && zip ./darwin-amd64-c3lsp.zip c3lsp
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -C ./server/cmd/lsp -o ../../bin/c3lsp
+	chmod +x ./server/bin/c3lsp
+	cd ./server/bin && zip ./darwin-amd64-c3lsp.zip c3lsp
 	echo "darwin-amd64 built"
 
 # Build linux
 build-linux:
-	bin/build_linux.sh
+	./bin/build_linux.sh
 
 # Unzips github artifact + zips linux, windows and mac binaries
-BIN_PATH = server/bin
+BIN_PATH = ./server/bin
 DARWIN_PREFIX = darwin-arm64
 LINUX_PREFIX = linux-amd64
 WIN_PREFIX = windows-amd64
