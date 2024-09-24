@@ -23,7 +23,7 @@
             "type": "go",
             "request":"attach",
             "mode": "local",
-            "processId": "c3-lsp"
+            "processId": "c3lsp"
         }
     ]
 }
