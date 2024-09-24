@@ -1,5 +1,3 @@
-#!/bin/bash
-
 go build -C server/cmd/lsp -o ../../bin/c3lsp
 
 OS="$(uname -s)"

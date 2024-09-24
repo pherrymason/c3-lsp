@@ -1,5 +1,3 @@
-#!/bin/bash
-
 if [ -z "$VERSION" ]; then
   echo "VERSION is not set. Usage: make index-c3-std VERSION=x.y.z"
   exit 1

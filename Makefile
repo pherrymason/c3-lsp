@@ -53,7 +53,7 @@ build-darwin:
 
 # Build linux
 build-linux:
-	./bin/build_linux.sh
+	bash ./bin/build_linux.sh
 
 # Unzips github artifact + zips linux, windows and mac binaries
 BIN_PATH = ./server/bin

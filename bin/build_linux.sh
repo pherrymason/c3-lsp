@@ -1,5 +1,3 @@
-#!/bin/bash
-
 echo "Building linux-amd64"
 
 # Are we in macOS?
