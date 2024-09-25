@@ -160,7 +160,6 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 		if isSubStruct {
 			structMember := idx.NewSubstructMember(identifier, innerStructBody, currentModule.GetModuleString(), *docId, identifiersRange[0])
 			structFields = append(structFields, &structMember)
-
 		} else if len(identifiers) > 0 {
 			for y := 0; y < len(identifiers); y++ {
 				structMember := idx.NewStructMember(

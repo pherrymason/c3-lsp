@@ -1,8 +1,6 @@
 package search
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
@@ -186,7 +184,8 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 		if len(symbol) > 0 {
 			return symbol[0]
 		} else {
-			panic(fmt.Sprintf("Could not resolve structmember symbol: %s, with query: %s", elm.GetName(), sm.GetType().GetFullQualifiedName()))
+			return nil
+			//panic(fmt.Sprintf("Could not resolve structmember symbol: %s, with query: %s", elm.GetName(), sm.GetType().GetFullQualifiedName()))
 		}
 
 	case *symbols.Function:

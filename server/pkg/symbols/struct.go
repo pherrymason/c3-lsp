@@ -92,7 +92,7 @@ type StructMember struct {
 	inlinePendingResolve bool
 	expandedInline       bool
 	isStruct             bool
-	subStruct            option.Option[Struct]
+	subStruct            option.Option[*Struct]
 	BaseIndexable
 }
 
@@ -108,7 +108,7 @@ func (m StructMember) IsStruct() bool {
 	return m.isStruct
 }
 
-func (m StructMember) Substruct() option.Option[Struct] {
+func (m StructMember) Substruct() option.Option[*Struct] {
 	return m.subStruct
 }
 
@@ -156,19 +156,21 @@ func NewInlineSubtype(name string, fieldType Type, module string, docId string, 
 }
 
 func NewSubstructMember(name string, members []*StructMember, module string, docId string, idRange Range) StructMember {
-	return StructMember{
+	substruct := NewStruct(
+		name,
+		[]string{},
+		members,
+		module,
+		docId,
+		idRange,
+		NewRange(0, 0, 0, 0),
+	)
+
+	sm := StructMember{
 		bitRange:             option.None[[2]uint](),
 		inlinePendingResolve: false,
 		isStruct:             true,
-		subStruct: option.Some(NewStruct(
-			name,
-			[]string{},
-			members,
-			module,
-			docId,
-			idRange,
-			NewRange(0, 0, 0, 0),
-		)),
+		subStruct:            option.Some(&substruct),
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
@@ -178,4 +180,8 @@ func NewSubstructMember(name string, members []*StructMember, module string, doc
 			protocol.CompletionItemKindField,
 		),
 	}
+
+	sm.Insert(&substruct)
+
+	return sm
 }
