@@ -180,12 +180,17 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 		symbol = sourcecode.NewWord(variable.GetType().GetName(), variable.GetIdRange())
 	case *symbols.StructMember:
 		sm, _ := elm.(*symbols.StructMember)
-		symbol := projState.SearchByFQN(sm.GetType().GetFullQualifiedName())
-		if len(symbol) > 0 {
-			return symbol[0]
+		if sm.IsStruct() {
+			// TODO anonymous substructs are not searchable in SearchByFQN
+			return sm.Substruct().Get()
 		} else {
-			return nil
-			//panic(fmt.Sprintf("Could not resolve structmember symbol: %s, with query: %s", elm.GetName(), sm.GetType().GetFullQualifiedName()))
+			symbol := projState.SearchByFQN(sm.GetType().GetFullQualifiedName())
+			if len(symbol) > 0 {
+				return symbol[0]
+			} else {
+				return nil
+				//panic(fmt.Sprintf("Could not resolve structmember symbol: %s, with query: %s", elm.GetName(), sm.GetType().GetFullQualifiedName()))
+			}
 		}
 
 	case *symbols.Function:
