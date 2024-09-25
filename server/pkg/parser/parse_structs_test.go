@@ -88,6 +88,50 @@ module x;
 struct Foo {
   struct data {
     int print;
+	char name;
+  }
+}
+`
+	docId := "docId"
+	doc := document.NewDocument(docId, source)
+	parser := createParser()
+
+	symbols, _ := parser.ParseSymbols(&doc)
+
+	found := symbols.Get("x").Structs["Foo"]
+	assert.Same(t, symbols.Get("x").Children()[0], found)
+	assert.Equal(t, "Foo", found.GetName())
+	assert.False(t, found.IsUnion())
+	assert.Equal(t, idx.NewRange(2, 0, 7, 1), found.GetDocumentRange())
+	assert.Equal(t, idx.NewRange(2, 7, 2, 10), found.GetIdRange())
+
+	member := found.GetMembers()[0]
+	assert.Equal(t, "data", member.GetName())
+	assert.Equal(t, true, member.IsStruct())
+	assert.Equal(t, idx.NewRange(3, 9, 3, 13), member.GetIdRange())
+	assert.Same(t, found.Children()[0], member)
+
+	// Check inner subtype struct members
+	substruct := member.Substruct().Get()
+	member = substruct.GetMembers()[0]
+	assert.Equal(t, "print", member.GetName())
+	assert.Equal(t, "int", member.GetType().GetName())
+	assert.Equal(t, idx.NewRange(4, 8, 4, 13), member.GetIdRange())
+	assert.Same(t, substruct.Children()[0], member)
+
+	member = substruct.GetMembers()[1]
+	assert.Equal(t, "name", member.GetName())
+	assert.Equal(t, "char", member.GetType().GetName())
+	assert.Equal(t, idx.NewRange(5, 6, 5, 10), member.GetIdRange())
+	assert.Same(t, substruct.Children()[1], member)
+}
+
+func TestParses_anonymous_substructs(t *testing.T) {
+	source := `
+module x;
+struct Foo {
+  struct {
+    int print;
   }
 }
 `
@@ -105,18 +149,10 @@ struct Foo {
 	assert.Equal(t, idx.NewRange(2, 7, 2, 10), found.GetIdRange())
 
 	member := found.GetMembers()[0]
-	assert.Equal(t, "data", member.GetName())
-	assert.Equal(t, true, member.IsStruct())
-	assert.Equal(t, idx.NewRange(3, 9, 3, 13), member.GetIdRange())
-	assert.Same(t, found.Children()[0], member)
-
-	// Check inner subtype struct members
-	substruct := member.Substruct().Get()
-	member = substruct.GetMembers()[0]
 	assert.Equal(t, "print", member.GetName())
 	assert.Equal(t, "int", member.GetType().GetName())
 	assert.Equal(t, idx.NewRange(4, 8, 4, 13), member.GetIdRange())
-	assert.Same(t, substruct.Children()[0], member)
+	assert.Same(t, found.Children()[0], member)
 }
 
 func TestParse_struct_with_anonymous_bitstructs(t *testing.T) {

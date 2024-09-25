@@ -181,7 +181,7 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 	case *symbols.StructMember:
 		sm, _ := elm.(*symbols.StructMember)
 		if sm.IsStruct() {
-			// TODO anonymous substructs are not searchable in SearchByFQN
+			// This is an inline struct definition, just return it
 			return sm.Substruct().Get()
 		} else {
 			symbol := projState.SearchByFQN(sm.GetType().GetFullQualifiedName())
