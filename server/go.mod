@@ -12,7 +12,7 @@ require (
 	github.com/tliron/glsp v0.2.3-0.20240511204206-c63625272e79
 )
 
-require golang.org/x/mod v0.21.0
+require golang.org/x/mod v0.22.0
 
 require github.com/bep/debounce v1.2.1
 
