@@ -23,7 +23,8 @@ func findDeepFirst(identifier string, position symbols.Position, node symbols.In
 				continue
 			}
 
-			if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode); result != nil {
+			result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode)
+			if result != nil {
 				return result, resultDepth
 			}
 		}
@@ -31,7 +32,8 @@ func findDeepFirst(identifier string, position symbols.Position, node symbols.In
 
 	if depth == 0 || (scopeMode == search_params.InScope) {
 		for _, child := range node.ChildrenWithoutScopes() {
-			if result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode); result != nil {
+			result, resultDepth := findDeepFirst(identifier, position, child, depth+1, limitSearchInScope, scopeMode)
+			if result != nil {
 				return result, resultDepth
 			}
 		}

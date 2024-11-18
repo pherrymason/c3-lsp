@@ -8,14 +8,14 @@ import (
 
 type Enumerator struct {
 	value            string
-	associatedValues []Variable
+	AssociatedValues []Variable
 	BaseIndexable
 }
 
 func NewEnumerator(name string, value string, associatedValues []Variable, module string, idRange Range, docId string) *Enumerator {
 	enumerator := &Enumerator{
 		value:            value,
-		associatedValues: associatedValues,
+		AssociatedValues: associatedValues,
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
@@ -31,10 +31,6 @@ func NewEnumerator(name string, value string, associatedValues []Variable, modul
 	}
 
 	return enumerator
-}
-
-func (e Enumerator) GetAssociatedValues() []Variable {
-	return e.associatedValues
 }
 
 func (e Enumerator) GetHoverInfo() string {

@@ -56,7 +56,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		switch elm.(type) {
 		case *symbols.Enumerator:
 			enumerator := elm.(*symbols.Enumerator)
-			assocValues := enumerator.GetAssociatedValues()
+			assocValues := enumerator.AssociatedValues
 			searchingSymbol := state.GetNextSymbol()
 			for i := 0; i < len(assocValues); i++ {
 				if assocValues[i].GetName() == searchingSymbol.Text() {

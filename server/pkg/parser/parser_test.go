@@ -97,11 +97,11 @@ func TestParses_TypedEnums(t *testing.T) {
 		assert.Equal(t, idx.NewRange(3, 3, 3, 10), e.GetIdRange())
 		assert.Same(t, enum.Children()[0], e)
 
-		assert.Equal(t, "state_desc", e.GetAssociatedValues()[0].GetName())
-		assert.Equal(t, "String", e.GetAssociatedValues()[0].GetType().GetName())
+		assert.Equal(t, "state_desc", e.AssociatedValues[0].GetName())
+		assert.Equal(t, "String", e.AssociatedValues[0].GetType().GetName())
 
-		assert.Equal(t, "active", e.GetAssociatedValues()[1].GetName())
-		assert.Equal(t, "bool", e.GetAssociatedValues()[1].GetType().GetName())
+		assert.Equal(t, "active", e.AssociatedValues[1].GetName())
+		assert.Equal(t, "bool", e.AssociatedValues[1].GetType().GetName())
 
 		e = enum.GetEnumerator("RUNNING")
 		assert.Equal(t, "RUNNING", e.GetName())

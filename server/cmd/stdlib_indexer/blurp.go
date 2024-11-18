@@ -104,21 +104,20 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 
 	for _, enumerator := range enum.GetEnumerators() {
 		var assvalues []jen.Code
-		if len(enumerator.GetAssociatedValues()) > 0 {
-			for _, asv := range enumerator.GetAssociatedValues() {
-				assvalues = append(
-					assvalues,
-					jen.Add(jen.Op("*")).Qual(PackageName+"symbols", "NewVariableBuilder").
-						Call(
-							jen.Lit(asv.GetName()),
-							jen.Lit(asv.GetType().GetName()),
-							jen.Lit(asv.GetModuleString()),
-							jen.Lit(module.GetDocumentURI()),
-						).
-						Dot("Build").Call(),
-				)
-			}
+		for _, asv := range enumerator.AssociatedValues {
+			assvalues = append(
+				assvalues,
+				jen.Add(jen.Op("*")).Qual(PackageName+"symbols", "NewVariableBuilder").
+					Call(
+						jen.Lit(asv.GetName()),
+						jen.Lit(asv.GetType().GetName()),
+						jen.Lit(asv.GetModuleString()),
+						jen.Lit(module.GetDocumentURI()),
+					).
+					Dot("Build").Call(),
+			)
 		}
+
 		associativeValues := jen.Index().Qual(PackageName+"symbols", "Variable").Values(assvalues...)
 
 		enumDef.

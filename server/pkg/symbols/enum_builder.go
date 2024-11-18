@@ -79,7 +79,7 @@ func (eb *EnumeratorBuilder) WithIdentifierRange(lineStart uint, CharStart uint,
 }
 
 func (eb *EnumeratorBuilder) WithAssociativeValues(associativeValues []Variable) *EnumeratorBuilder {
-	eb.enumerator.associatedValues = associativeValues
+	eb.enumerator.AssociatedValues = associativeValues
 
 	return eb
 }
