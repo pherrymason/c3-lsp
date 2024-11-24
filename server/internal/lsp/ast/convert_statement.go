@@ -7,8 +7,8 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func convert_statement(node *sitter.Node, source []byte) Expression {
-	return anyOf("statement", []NodeRule{
+func convert_statement(node *sitter.Node, source []byte) Statement {
+	dd := anyOf("statement", []NodeRule{
 		NodeOfType("compound_stmt"),
 		NodeOfType("expr_stmt"),
 		NodeOfType("declaration_stmt"),
@@ -32,13 +32,15 @@ func convert_statement(node *sitter.Node, source []byte) Expression {
 		NodeOfType("ct_switch_stmt"),
 		NodeOfType("ct_foreach_stmt"),
 		NodeOfType("ct_for_stmt"),
-	}, node, source, false)
+	}, node, source, true)
+
+	return dd.(Statement)
 }
 
-func convert_compound_stmt(node *sitter.Node, source []byte) Expression {
-	cmpStatement := CompoundStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeCompoundStatement, node),
-		Statements:  []Expression{},
+func convert_compound_stmt(node *sitter.Node, source []byte) Statement {
+	cmpStatement := &CompoundStmt{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		Statements:     []Statement{},
 	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -53,25 +55,25 @@ func convert_compound_stmt(node *sitter.Node, source []byte) Expression {
 	return cmpStatement
 }
 
-func convert_return_stmt(node *sitter.Node, source []byte) Expression {
+func convert_return_stmt(node *sitter.Node, source []byte) Statement {
 	expr := option.None[Expression]()
 
 	argNode := node.Child(0).NextSibling()
 	if argNode.Type() != ";" {
-		expr = option.Some(convert_expression(argNode, source))
+		expr = option.Some(convert_expression(argNode, source).(Expression))
 	}
 
-	return ReturnStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeReturnStatement, node),
-		Return:      expr,
+	return &ReturnStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		Return:         expr,
 	}
 }
 
-func convert_split_declaration_stmt(node *sitter.Node, source []byte) Expression {
+func convert_split_declaration_stmt(node *sitter.Node, source []byte) Declaration {
 	return convert_declaration_stmt(node.Parent(), source)
 }
 
-func convert_declaration_stmt(node *sitter.Node, source []byte) Expression {
+func convert_declaration_stmt(node *sitter.Node, source []byte) Declaration {
 	if node.Type() == "const_declaration" {
 		return convert_const_declaration(node, source)
 	}
@@ -79,7 +81,7 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Expression {
 	isStatic := false
 	isTlocal := false
 	varDecl := VariableDecl{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeVariableDecl, node),
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
 	end := false
 	for i := 0; i < int(node.ChildCount()) && !end; i++ {
@@ -95,7 +97,7 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Expression {
 			}
 
 		case "type":
-			varDecl.Type = convert_type(n, source).(TypeInfo)
+			varDecl.Type = convert_type(n, source)
 			varDecl.Type.Static = isStatic
 			varDecl.Type.TLocal = isTlocal
 
@@ -108,16 +110,16 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Expression {
 
 			right := n.ChildByFieldName("right")
 			if right != nil {
-				varDecl.Initializer = convert_expression(right, source)
+				varDecl.Initializer = convert_expression(right, source).(Expression)
 			}
 			end = true
 		}
 	}
 
-	return varDecl
+	return &varDecl
 }
 
-func convert_continue_stmt(node *sitter.Node, source []byte) Expression {
+func convert_continue_stmt(node *sitter.Node, source []byte) Statement {
 	label := option.None[string]()
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -126,13 +128,13 @@ func convert_continue_stmt(node *sitter.Node, source []byte) Expression {
 		}
 	}
 
-	return ContinueStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeContinueStatement, node),
-		Label:       label,
+	return &ContinueStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		Label:          label,
 	}
 }
 
-func convert_break_stmt(node *sitter.Node, source []byte) Expression {
+func convert_break_stmt(node *sitter.Node, source []byte) Statement {
 	label := option.None[string]()
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -141,15 +143,15 @@ func convert_break_stmt(node *sitter.Node, source []byte) Expression {
 		}
 	}
 
-	return BreakStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeBreakStatement, node),
-		Label:       label,
+	return &BreakStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		Label:          label,
 	}
 }
 
-func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
+func convert_switch_stmt(node *sitter.Node, source []byte) Statement {
 	label := option.None[string]()
-	cases := []SwitchCase{}
+	var cases []SwitchCase
 	var defaultStatement []Statement
 
 	body := node.ChildByFieldName("body")
@@ -157,22 +159,27 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
 		n := body.Child(i)
 		if n.Type() == "case_stmt" {
 			conditionNode := n.ChildByFieldName("value")
-			var caseValue Expression
+			var caseValue Statement
 			if conditionNode.Type() == "case_range" {
-				caseValue = SwitchCaseRange{
-					ASTBaseNode: NewBaseNodeFromSitterNode(TypeSwitchCaseRangeExpr, conditionNode),
-					Start:       convert_expression(conditionNode.Child(0), source),
-					End:         convert_expression(conditionNode.Child(2), source),
+				caseValue = &SwitchCaseRange{
+					NodeAttributes: NewBaseNodeFromSitterNode(conditionNode),
+					Start:          convert_expression(conditionNode.Child(0), source).(Expression),
+					End:            convert_expression(conditionNode.Child(2), source).(Expression),
 				}
 			} else if conditionNode.Type() == "type" {
-				caseValue = convert_type(conditionNode, source)
+				caseValue = &ExpressionStmt{
+					Expr: convert_type(conditionNode, source),
+				}
 			} else {
-				caseValue = convert_expression(conditionNode, source)
+				caseValue = &ExpressionStmt{
+					Expr: convert_expression(conditionNode, source).(Expression),
+				}
+
 			}
 
 			colon := conditionNode.NextSibling()
 			ns := colon.NextSibling()
-			statements := []Statement{}
+			var statements []Statement
 			for {
 				if ns == nil {
 					break
@@ -182,9 +189,9 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
 			}
 
 			cases = append(cases, SwitchCase{
-				ASTBaseNode: NewBaseNodeFromSitterNode(TypeSwitchStatement, n),
-				Value:       caseValue,
-				Statements:  statements,
+				NodeAttributes: NewBaseNodeFromSitterNode(n),
+				Value:          caseValue,
+				Statements:     statements,
 			})
 		} else {
 			for d := 0; d < int(n.ChildCount()); d++ {
@@ -196,18 +203,18 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Expression {
 		}
 	}
 
-	return SwitchStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeSwitchStatement, node),
-		Label:       label,
-		Condition:   convert_expression(node.ChildByFieldName("condition"), source),
-		Cases:       cases,
-		Default:     defaultStatement,
+	return &SwitchStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		Label:          label,
+		Condition:      convert_expression(node.ChildByFieldName("condition"), source).(Expression),
+		Cases:          cases,
+		Default:        defaultStatement,
 	}
 }
 
-func convert_nextcase_stmt(node *sitter.Node, source []byte) Expression {
+func convert_nextcase_stmt(node *sitter.Node, source []byte) Statement {
 	label := option.None[string]()
-	var value Expression
+	var value Node
 	targetNode := node.ChildByFieldName("target")
 	if targetNode != nil {
 		value = anyOf("nextcase_stmt", []NodeRule{
@@ -224,20 +231,20 @@ func convert_nextcase_stmt(node *sitter.Node, source []byte) Expression {
 		}
 	}
 
-	return Nextcase{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeNextCaseStatement, node),
-		Label:       label,
-		Value:       value,
+	return &Nextcase{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		Label:          label,
+		Value:          value.(Expression),
 	}
 }
 
-func convert_if_stmt(node *sitter.Node, source []byte) Expression {
+func convert_if_stmt(node *sitter.Node, source []byte) Statement {
 	conditions := convert_paren_conditions(node.ChildByFieldName("condition"), source)
 	//fmt.Printf("%s", reflect.TypeOf(conditions).String())
-	stmt := IfStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeIfStatement, node),
-		Label:       option.None[string](),
-		Condition:   conditions,
+	stmt := &IfStmt{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		Label:          option.None[string](),
+		Condition:      conditions,
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -248,14 +255,14 @@ func convert_if_stmt(node *sitter.Node, source []byte) Expression {
 		case "else_part":
 			elseStmt := convert_statement(n.Child(1), source)
 			switch elseStmt.(type) {
-			case CompoundStatement:
-				if len(elseStmt.(CompoundStatement).Statements) == 0 {
+			case *CompoundStmt:
+				if len(elseStmt.(*CompoundStmt).Statements) == 0 {
 					elseStmt = nil
 				}
 			}
 			stmt.Else = ElseStatement{
-				ASTBaseNode: NewBaseNodeFromSitterNode(TypeElseStatement, n),
-				Statement:   elseStmt,
+				NodeAttributes: NewBaseNodeFromSitterNode(n),
+				Statement:      elseStmt,
 			}
 		}
 	}
@@ -263,8 +270,8 @@ func convert_if_stmt(node *sitter.Node, source []byte) Expression {
 	ifBody := node.ChildByFieldName("body")
 	bodyStmt := convert_statement(ifBody, source)
 	switch bodyStmt.(type) {
-	case CompoundStatement:
-		if len(bodyStmt.(CompoundStatement).Statements) == 0 {
+	case *CompoundStmt:
+		if len(bodyStmt.(*CompoundStmt).Statements) == 0 {
 			bodyStmt = nil
 		}
 	}
@@ -297,13 +304,16 @@ func convert_conditions(node *sitter.Node, source []byte) []Expression {
 	} else {
 		// Option 3:
 		//		(decl_or_expr),* + optional(, try_unwrap | catch_unwrap)
-		conditions = commaSep(convert_decl_or_expression, node, source)
+		nodes := commaSep(convert_decl_or_expression, node, source)
+		for _, n := range nodes {
+			conditions = append(conditions, n.(Expression))
+		}
 	}
 
 	return conditions
 }
 
-func convert_local_declaration_after_type(node *sitter.Node, source []byte) Expression {
+func convert_local_declaration_after_type(node *sitter.Node, source []byte) Declaration {
 	var init Expression
 
 	if node.Child(1).Type() == "attributes" {
@@ -312,12 +322,12 @@ func convert_local_declaration_after_type(node *sitter.Node, source []byte) Expr
 
 	right := node.ChildByFieldName("right")
 	if right != nil {
-		init = convert_expression(right, source)
+		init = convert_expression(right, source).(Expression)
 	}
 
-	varDecl := VariableDecl{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeVariableDecl, node),
-		Names: []Identifier{
+	varDecl := &VariableDecl{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		Names: []Ident{
 			NewIdentifierBuilder().
 				WithName(node.ChildByFieldName("name").Content(source)).
 				WithSitterPos(node.ChildByFieldName("name")).
@@ -329,9 +339,9 @@ func convert_local_declaration_after_type(node *sitter.Node, source []byte) Expr
 	return varDecl
 }
 
-func convert_for_stmt(node *sitter.Node, source []byte) Expression {
-	forStmt := ForStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeForStatement, node),
+func convert_for_stmt(node *sitter.Node, source []byte) Statement {
+	forStmt := &ForStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -360,22 +370,43 @@ func convert_for_stmt(node *sitter.Node, source []byte) Expression {
 	return forStmt
 }
 
-func convert_comma_decl_or_expression(node *sitter.Node, source []byte) []Expression {
-	return commaSep(convert_decl_or_expression, node.Child(0), source)
+func convert_comma_decl_or_expression(node *sitter.Node, source []byte) []Statement {
+	nodes := commaSep(convert_decl_or_expression, node.Child(0), source)
+
+	stmts := []Statement{}
+	for _, n := range nodes {
+		stmts = append(stmts, n.(Statement))
+	}
+	return stmts
 }
 
 // This takes anon nodes
-func convert_decl_or_expression(node *sitter.Node, source []byte) Expression {
-	return anyOf("decl_or_expression", []NodeRule{
+func convert_decl_or_expression(node *sitter.Node, source []byte) Node {
+	found := anyOf("decl_or_expression", []NodeRule{
 		NodeOfType("var_decl"),
 		NodeSiblingsWithSequenceOf([]NodeRule{
 			NodeOfType("type"), NodeOfType("local_decl_after_type"),
 		}, "split_declaration_stmt"),
 		NodeAnonymous("_expr"),
 	}, node, source, true)
+
+	switch found.(type) {
+	case Expression:
+		return &ExpressionStmt{
+			Expr: found.(Expression),
+		}
+
+	case Declaration:
+		return &DeclarationStmt{
+			Decl: found.(Declaration),
+		}
+
+	default:
+		panic("Did not find type")
+	}
 }
 
-func convert_foreach_stmt(node *sitter.Node, source []byte) Expression {
+func convert_foreach_stmt(node *sitter.Node, source []byte) Statement {
 	/*
 		foreach_stmt: $ => seq(
 		      choice('foreach', 'foreach_r'),
@@ -397,8 +428,8 @@ func convert_foreach_stmt(node *sitter.Node, source []byte) Expression {
 			seq(optional($._type_or_optional_type), optional('&'), $.ident),
 		),
 	*/
-	stmt := ForeachStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeForeachStatement, node),
+	stmt := &ForeachStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
 	foreachVar := ForeachValue{}
 
@@ -420,7 +451,7 @@ func convert_foreach_stmt(node *sitter.Node, source []byte) Expression {
 				case ")", "(":
 
 				default:
-					stmt.Collection = convert_expression(cn, source)
+					stmt.Collection = convert_expression(cn, source).(Expression)
 				}
 			}
 		}
@@ -442,23 +473,23 @@ func convert_foreach_var(node *sitter.Node, source []byte) ForeachValue {
 		n := node.Child(i)
 		switch n.Type() {
 		case "type":
-			value.Type = convert_type(n, source).(TypeInfo)
+			value.Type = convert_type(n, source)
 
 		case "&":
 			// ??
 			value.Type.Reference = true
 
 		case "ident":
-			value.Identifier = convert_ident(n, source).(Identifier)
+			value.Identifier = convert_ident(n, source).(Ident)
 		}
 	}
 
 	return value
 }
 
-func convert_while_stmt(node *sitter.Node, source []byte) Expression {
-	stmt := WhileStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeWhileStatement, node),
+func convert_while_stmt(node *sitter.Node, source []byte) Statement {
+	stmt := &WhileStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -477,9 +508,9 @@ func convert_while_stmt(node *sitter.Node, source []byte) Expression {
 	return stmt
 }
 
-func convert_do_stmt(node *sitter.Node, source []byte) Expression {
-	stmt := DoStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeDoStatement, node),
+func convert_do_stmt(node *sitter.Node, source []byte) Statement {
+	stmt := &DoStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -488,16 +519,16 @@ func convert_do_stmt(node *sitter.Node, source []byte) Expression {
 		case "compound_stmt":
 			stmt.Body = convert_statement(n, source)
 		case "paren_expr":
-			stmt.Condition = convert_expression(n.Child(1), source)
+			stmt.Condition = convert_expression(n.Child(1), source).(Expression)
 		}
 	}
 
 	return stmt
 }
 
-func convert_defer_stmt(node *sitter.Node, source []byte) Expression {
-	stmt := DeferStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeDeferStatement, node),
+func convert_defer_stmt(node *sitter.Node, source []byte) Statement {
+	stmt := &DeferStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
 
 	stmt.Statement = convert_statement(
@@ -508,12 +539,19 @@ func convert_defer_stmt(node *sitter.Node, source []byte) Expression {
 	return stmt
 }
 
-func convert_assert_stmt(node *sitter.Node, source []byte) Expression {
-	stmt := AssertStatement{
-		ASTBaseNode: NewBaseNodeFromSitterNode(TypeAssertStatement, node),
+func convert_assert_stmt(node *sitter.Node, source []byte) Statement {
+	stmt := &AssertStatement{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
-
-	stmt.Assertions = commaSep(convert_expression, node.Child(2), source)
-
+	/*
+		nodes := commaSep(
+			convert_expression,
+			node.Child(2),
+			source,
+		)
+		for _, node := range nodes {
+			stmt.Assertions = append(stmt.Assertions, node.(Expression))
+		}
+	*/
 	return stmt
 }

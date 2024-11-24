@@ -9,22 +9,22 @@ import (
 // ASTBaseNodeBuilder
 // --
 type ASTBaseNodeBuilder struct {
-	bn ASTBaseNode
+	bn NodeAttributes
 }
 
-func NewBaseNodeBuilder(kind NodeType) *ASTBaseNodeBuilder {
+func NewBaseNodeBuilder() *ASTBaseNodeBuilder {
 	return &ASTBaseNodeBuilder{
-		bn: ASTBaseNode{Kind: kind},
+		bn: NodeAttributes{},
 	}
 }
 
-func NewBaseNodeFromSitterNode(kind NodeType, node *sitter.Node) ASTBaseNode {
-	builder := NewBaseNodeBuilder(kind).
+func NewBaseNodeFromSitterNode(node *sitter.Node) NodeAttributes {
+	builder := NewBaseNodeBuilder().
 		WithSitterPos(node)
 
 	return builder.Build()
 }
-func (d *ASTBaseNodeBuilder) Build() ASTBaseNode {
+func (d *ASTBaseNodeBuilder) Build() NodeAttributes {
 	return d.bn
 }
 
@@ -55,14 +55,14 @@ func (d *ASTBaseNodeBuilder) WithStartEnd(startRow uint, startCol uint, endRow u
 // IdentifierBuilder
 // --
 type IdentifierBuilder struct {
-	bi Identifier
+	bi *Ident
 	bn ASTBaseNodeBuilder
 }
 
 func NewIdentifierBuilder() *IdentifierBuilder {
 	return &IdentifierBuilder{
-		bi: Identifier{},
-		bn: *NewBaseNodeBuilder(TypeIdentifier),
+		bi: &Ident{},
+		bn: *NewBaseNodeBuilder(),
 	}
 }
 
@@ -71,7 +71,7 @@ func (i *IdentifierBuilder) WithName(name string) *IdentifierBuilder {
 	return i
 }
 func (i *IdentifierBuilder) WithPath(path string) *IdentifierBuilder {
-	i.bi.Path = path
+	i.bi.ModulePath = path
 	return i
 }
 
@@ -85,11 +85,11 @@ func (i *IdentifierBuilder) WithStartEnd(startRow uint, startCol uint, endRow ui
 	return i
 }
 
-func (i *IdentifierBuilder) Build() Identifier {
+func (i *IdentifierBuilder) Build() Ident {
 	ident := i.bi
-	ident.ASTBaseNode = i.bn.Build()
+	ident.NodeAttributes = i.bn.Build()
 
-	return ident
+	return *ident
 }
 
 // --
@@ -102,7 +102,7 @@ type TypeInfoBuilder struct {
 func NewTypeInfoBuilder() *TypeInfoBuilder {
 	return &TypeInfoBuilder{
 		t: TypeInfo{
-			ASTBaseNode: ASTBaseNode{Kind: TypeTypeInfo},
+			NodeAttributes: NodeAttributes{},
 		},
 	}
 }
@@ -149,7 +149,7 @@ func (b *TypeInfoBuilder) WithName(name string) *TypeInfoBuilder {
 }
 
 func (b *TypeInfoBuilder) WithPath(path string) *TypeInfoBuilder {
-	b.t.Identifier.Path = path
+	b.t.Identifier.ModulePath = path
 
 	return b
 }
@@ -161,8 +161,8 @@ func (b *TypeInfoBuilder) WithNameStartEnd(startRow uint, startCol uint, endRow 
 }
 
 func (b *TypeInfoBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.ASTBaseNode.StartPos = Position{startRow, startCol}
-	b.t.ASTBaseNode.EndPos = Position{endRow, endCol}
+	b.t.NodeAttributes.StartPos = Position{startRow, startCol}
+	b.t.NodeAttributes.EndPos = Position{endRow, endCol}
 	return b
 }
 
@@ -181,7 +181,7 @@ type DefDeclBuilder struct {
 func NewDefDeclBuilder() *DefDeclBuilder {
 	return &DefDeclBuilder{
 		d: DefDecl{},
-		a: *NewBaseNodeBuilder(TypeDefDecl),
+		a: *NewBaseNodeBuilder(),
 	}
 }
 
@@ -213,7 +213,7 @@ func (b *DefDeclBuilder) WithIdentifierSitterPos(node *sitter.Node) *DefDeclBuil
 
 func (b *DefDeclBuilder) Build() DefDecl {
 	def := b.d
-	def.ASTBaseNode = b.a.Build()
+	def.NodeAttributes = b.a.Build()
 
 	return def
 }
