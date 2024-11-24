@@ -2,6 +2,22 @@ package ast
 
 import "encoding/json"
 
+// ---------------------------------------------------------------
+// Visitor that generates a JSON representation of the AST program
+//
+// Schema ---------
+// All objects representing a node have following properties
+//    - "node_type": string.
+//    - "doc_pos": array[uint,uint]. Represents start and end positions in the file.
+//
+// FileObject
+//  	- "modules": [ModuleObject]
+//		- "name": string
+// 		- "node_type": "File"
+
+const PNodeType = "node_type"
+const PDocPos = "doc_pos"
+
 type JSONObject map[string]interface{}
 
 type JSONVisitor struct {
@@ -26,37 +42,24 @@ func (v *JSONVisitor) VisitFile(node *File) {
 	}
 
 	v.Result = map[string]interface{}{
-		"type":    "File",
+		PNodeType: "File",
 		"name":    node.Name,
 		"modules": jsonModules,
 	}
 }
 
 func (v *JSONVisitor) VisitModule(node *Module) {
-	declarationsV := JSONVisitor{}
-	declarations := []interface{}{}
+	var declarations []interface{}
 	for _, decl := range node.Declarations {
-		Visit(decl, &declarationsV)
-		if declarationsV.Result != nil {
-			declarations = append(declarations, declarationsV.Result)
-		}
-	}
-
-	functionsV := JSONVisitor{}
-	functions := []interface{}{}
-	for _, fun := range node.Declarations {
-		Visit(fun, &functionsV)
-		if functionsV.Result != nil {
-			functions = append(functions, functionsV.Result)
-		}
+		v.VisitDeclaration(decl)
+		declarations = append(declarations, v.Result)
 	}
 
 	v.Result = map[string]interface{}{
-		"type":         "Module",
+		PNodeType:      "Module",
 		"name":         node.Name,
-		"pos":          serialize_pos(node),
+		PDocPos:        serialize_pos(node),
 		"declarations": declarations,
-		"functions":    functions,
 	}
 }
 
@@ -64,12 +67,21 @@ func (v *JSONVisitor) VisitImport(node *Import) {
 
 }
 
+func (v *JSONVisitor) VisitDeclaration(node Declaration) {
+	switch node.(type) {
+	case *VariableDecl:
+		v.VisitVariableDeclaration(node.(*VariableDecl))
+	case *FunctionDecl:
+		v.VisitFunctionDecl(node.(*FunctionDecl))
+	}
+}
+
 func (v *JSONVisitor) VisitVariableDeclaration(node *VariableDecl) {
 	names := []map[string]interface{}{}
 	for _, name := range node.Names {
 		names = append(names, map[string]interface{}{
-			"name": name.Name,
-			"pos":  serialize_pos(name),
+			"name":  name.Name,
+			PDocPos: serialize_pos(name),
 		})
 	}
 
@@ -80,9 +92,9 @@ func (v *JSONVisitor) VisitVariableDeclaration(node *VariableDecl) {
 	Visit(node.Initializer, &initV)
 
 	v.Result = map[string]interface{}{
-		"type":           "VariableDeclaration",
+		PNodeType:        "VariableDeclaration",
 		"names":          names,
-		"kind":           typeV.Result,
+		"variable_type":  typeV.Result,
 		"initialization": initV.Result,
 	}
 }
@@ -132,7 +144,7 @@ func (v *JSONVisitor) VisitFunctionDecl(node *FunctionDecl) {
 	Visit(node.Body, &bodyV)
 
 	v.Result = map[string]interface{}{
-		"type":       "FunctionDecl",
+		PNodeType:    "FunctionDecl",
 		"name":       node.Signature.Name.Name,
 		"returnType": returnType,
 		"parameters": parameters,
@@ -146,7 +158,7 @@ func (v *JSONVisitor) VisitFunctionParameter(node *FunctionParameter) {
 
 func VisitFunctionParameter(node *FunctionParameter) JSONObject {
 	return map[string]interface{}{
-		"type":          "FunctionParameter",
+		PNodeType:       "FunctionParameter",
 		"name":          node.Name.Name,
 		"parameterType": VisitType(&node.Type),
 	}
@@ -160,7 +172,7 @@ func (v *JSONVisitor) VisitInterfaceDecl(node *InterfaceDecl) {
 
 }
 
-func (v *JSONVisitor) VisitCompounStatement(node *CompoundStmt) {
+func (v *JSONVisitor) VisitCompoundStatement(node *CompoundStmt) {
 	visitor := JSONVisitor{}
 	statements := []JSONObject{}
 	for _, s := range node.Statements {
@@ -183,7 +195,7 @@ func VisitType(node *TypeInfo) JSONObject {
 	}
 
 	return map[string]interface{}{
-		"type":       "Type",
+		PNodeType:    "Type",
 		"name":       node.Identifier.Name,
 		"builtin":    node.BuiltIn,
 		"optional":   node.Optional,
@@ -205,8 +217,8 @@ func (v *JSONVisitor) VisitIfStatement(node *IfStmt) {
 
 func (v *JSONVisitor) VisitIntegerLiteral(node *IntegerLiteral) {
 	v.Result = map[string]interface{}{
-		"type":  "IntegerLiteral",
-		"value": node.Value,
+		PNodeType: "IntegerLiteral",
+		"value":   node.Value,
 	}
 }
 

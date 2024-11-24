@@ -5,5 +5,6 @@ assets
 tree-sitter-c3
 parser/chumsky
 server/internal/parser
+server/internal/lsp/ast/ast.json
 server/bin
 dist/

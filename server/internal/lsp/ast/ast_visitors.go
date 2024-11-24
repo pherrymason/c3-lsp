@@ -20,7 +20,7 @@ type ASTVisitor interface {
 	VisitFunctionParameter(node *FunctionParameter)
 	VisitFunctionCall(node *FunctionCall)
 	VisitInterfaceDecl(node *InterfaceDecl)
-	VisitCompounStatement(node *CompoundStmt)
+	VisitCompoundStatement(node *CompoundStmt)
 	VisitType(node *TypeInfo)
 	VisitIdentifier(node *Ident)
 	VisitBinaryExpression(node *BinaryExpression)
@@ -55,7 +55,7 @@ func Visit(node Node, v ASTVisitor) {
 		v.VisitLambdaDeclaration(node.(*LambdaDeclarationExpr))
 
 	case *CompoundStmt:
-		v.VisitCompounStatement(node.(*CompoundStmt))
+		v.VisitCompoundStatement(node.(*CompoundStmt))
 
 	case *TypeInfo:
 		v.VisitType(node.(*TypeInfo))
