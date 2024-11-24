@@ -342,8 +342,28 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 					EndPos:   Position{Line: 3, Column: 16},
 				},
 				Identifier: &SelectorExpr{
-					X:   Ident{Name: "object"},
-					Sel: Ident{Name: "call"},
+					X:   NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).Build(),
+					Sel: NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).Build(),
+				},
+				Arguments: []Expression{
+					&IntegerLiteral{Value: "1"},
+				},
+			},
+		},
+		{
+			skip:  false,
+			input: "object.prop.call(1);",
+			expected: &FunctionCall{
+				NodeAttributes: NodeAttributes{
+					StartPos: Position{Line: 3, Column: 2},
+					EndPos:   Position{Line: 3, Column: 21},
+				},
+				Identifier: &SelectorExpr{
+					X: &SelectorExpr{
+						X:   NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).Build(),
+						Sel: NewIdentifierBuilder().WithName("prop").WithStartEnd(3, 9, 3, 13).Build(),
+					},
+					Sel: NewIdentifierBuilder().WithName("call").WithStartEnd(3, 14, 3, 18).Build(),
 				},
 				Arguments: []Expression{
 					&IntegerLiteral{Value: "1"},
@@ -356,7 +376,7 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 		if tt.skip {
 			continue
 		}
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("function_statements_call_chain[%d]", i), func(t *testing.T) {
 			source := `
 	module foo;
 	fn void main() {

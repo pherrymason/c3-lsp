@@ -1194,7 +1194,7 @@ func convert_field_expr(node *sitter.Node, source []byte) Expression {
 			WithSitterPos(argument).
 			Build()
 	} else {
-
+		argumentNode = convert_field_expr(argument, source)
 	}
 	field := node.ChildByFieldName("field")
 
