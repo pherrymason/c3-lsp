@@ -15,16 +15,16 @@ type ASTVisitor interface {
 	VisitFaultDecl(node *FaultDecl)
 	VisitDefDecl(node *DefDecl)
 	VisitMacroDecl(node *MacroDecl)
-	VisitLambdaDeclaration(node *LambdaDeclaration)
+	VisitLambdaDeclaration(node *LambdaDeclarationExpr)
 	VisitFunctionDecl(node *FunctionDecl)
 	VisitFunctionParameter(node *FunctionParameter)
 	VisitFunctionCall(node *FunctionCall)
 	VisitInterfaceDecl(node *InterfaceDecl)
-	VisitCompounStatement(node *CompoundStatement)
+	VisitCompounStatement(node *CompoundStmt)
 	VisitType(node *TypeInfo)
-	VisitIdentifier(node *Identifier)
+	VisitIdentifier(node *Ident)
 	VisitBinaryExpression(node *BinaryExpression)
-	VisitIfStatement(node *IfStatement)
+	VisitIfStatement(node *IfStmt)
 	VisitIntegerLiteral(node *IntegerLiteral)
 }
 
@@ -34,44 +34,34 @@ type VisitableNode interface {
 
 // ----------------------------------------
 
-func Visit(node ASTNode, v ASTVisitor) {
-	switch node.TypeNode() {
-	case TypeFile:
+func Visit(node Node, v ASTVisitor) {
+	switch node.(type) {
+	case *File:
 		v.VisitFile(node.(*File))
-	case TypeModule:
+	case *Module:
 		v.VisitModule(node.(*Module))
 
-	case TypeVariableDecl:
+	case *VariableDecl:
 		v.VisitVariableDeclaration(node.(*VariableDecl))
-	case TypeFunctionDecl:
-		n := node.(FunctionDecl)
-		v.VisitFunctionDecl(&n)
+	case *FunctionDecl:
+		n := node.(*FunctionDecl)
+		v.VisitFunctionDecl(n)
 
-	case TypeFunctionParameter:
-		n := node.(FunctionParameter)
-		v.VisitFunctionParameter(&n)
+	case *FunctionParameter:
+		n := node.(*FunctionParameter)
+		v.VisitFunctionParameter(n)
 
-	case TypeLambdaDecl:
-		v.VisitLambdaDeclaration(node.(*LambdaDeclaration))
+	case *LambdaDeclarationExpr:
+		v.VisitLambdaDeclaration(node.(*LambdaDeclarationExpr))
 
-	case TypeCompoundStatement:
-		var arg *CompoundStatement
-		switch node.(type) {
-		case CompoundStatement:
-			n := node.(CompoundStatement)
-			arg = &n
-		case *CompoundStatement:
-			arg = node.(*CompoundStatement)
-		}
-		v.VisitCompounStatement(arg)
+	case *CompoundStmt:
+		v.VisitCompounStatement(node.(*CompoundStmt))
 
-	case TypeTypeInfo:
-		n := node.(*TypeInfo)
-		v.VisitType(n)
+	case *TypeInfo:
+		v.VisitType(node.(*TypeInfo))
 
-	case TypeIntegerLiteral:
-		n := node.(IntegerLiteral)
-		v.VisitIntegerLiteral(&n)
+	case *IntegerLiteral:
+		v.VisitIntegerLiteral(node.(*IntegerLiteral))
 	default:
 		log.Print("type not found")
 	}

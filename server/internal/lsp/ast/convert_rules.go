@@ -137,7 +137,7 @@ func (t TryConversionFunc) Validate(node *sitter.Node, source []byte) bool {
 				expr = nil
 			}
 		}()
-		expr = conversion.convert(node, source)
+		expr = conversion.convert(node, source).(Expression)
 	}()
 
 	return expr != nil

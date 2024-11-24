@@ -8,7 +8,7 @@ type JSONVisitor struct {
 	Result map[string]interface{}
 }
 
-func serialize_pos(node ASTNode) map[string]interface{} {
+func serialize_pos(node Node) map[string]interface{} {
 	return map[string]interface{}{
 		"start": []uint{node.StartPosition().Line, node.StartPosition().Column},
 		"end":   []uint{node.EndPosition().Line, node.EndPosition().Column},
@@ -44,7 +44,7 @@ func (v *JSONVisitor) VisitModule(node *Module) {
 
 	functionsV := JSONVisitor{}
 	functions := []interface{}{}
-	for _, fun := range node.Functions {
+	for _, fun := range node.Declarations {
 		Visit(fun, &functionsV)
 		if functionsV.Result != nil {
 			functions = append(functions, functionsV.Result)
@@ -111,7 +111,7 @@ func (v *JSONVisitor) VisitMacroDecl(node *MacroDecl) {
 
 }
 
-func (v *JSONVisitor) VisitLambdaDeclaration(node *LambdaDeclaration) {
+func (v *JSONVisitor) VisitLambdaDeclaration(node *LambdaDeclarationExpr) {
 
 }
 
@@ -160,7 +160,7 @@ func (v *JSONVisitor) VisitInterfaceDecl(node *InterfaceDecl) {
 
 }
 
-func (v *JSONVisitor) VisitCompounStatement(node *CompoundStatement) {
+func (v *JSONVisitor) VisitCompounStatement(node *CompoundStmt) {
 	visitor := JSONVisitor{}
 	statements := []JSONObject{}
 	for _, s := range node.Statements {
@@ -191,7 +191,7 @@ func VisitType(node *TypeInfo) JSONObject {
 	}
 }
 
-func (v *JSONVisitor) VisitIdentifier(node *Identifier) {
+func (v *JSONVisitor) VisitIdentifier(node *Ident) {
 
 }
 
@@ -199,7 +199,7 @@ func (v *JSONVisitor) VisitBinaryExpression(node *BinaryExpression) {
 
 }
 
-func (v *JSONVisitor) VisitIfStatement(node *IfStatement) {
+func (v *JSONVisitor) VisitIfStatement(node *IfStmt) {
 
 }
 
