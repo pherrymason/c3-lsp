@@ -57,7 +57,7 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 		s.RunDiagnostics(s.state, context.Notify, false)
 	}
 
-	if *params.Capabilities.TextDocument.PublishDiagnostics.RelatedInformation == false {
+	if params.Capabilities.TextDocument.PublishDiagnostics.RelatedInformation == nil || *params.Capabilities.TextDocument.PublishDiagnostics.RelatedInformation == false {
 		s.options.Diagnostics.Enabled = false
 	}
 
