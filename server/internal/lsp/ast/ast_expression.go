@@ -2,7 +2,6 @@ package ast
 
 import (
 	"github.com/pherrymason/c3-lsp/pkg/option"
-	"go/token"
 )
 
 // -------------------------------------------------------------------------
@@ -15,6 +14,11 @@ import (
 // An expression is represented by a tree consisting of one
 // or more of the following concrete expression nodes.
 type (
+	// Ident Represent a defined element.
+	// myValue
+	// myObject.property
+	// myObject.subobject.property
+	// It can be built
 	Ident struct {
 		NodeAttributes
 		Name       string // Identifier name
@@ -32,43 +36,15 @@ type (
 	SelectorExpr struct {
 		NodeAttributes
 		X   Expression
-		Sel Ident
+		Sel *Ident
 	}
 
 	// Ellipsis TODO
 
-	// Literal
-	// Deprecated use BasicLit
-	Literal struct {
-		NodeAttributes
-		Value string
-	}
-
-	// IntegerLiteral
-	// Deprecated use BasicLit
-	IntegerLiteral struct {
-		NodeAttributes
-		Value string
-	}
-
-	// RealLiteral
-	// Deprecated use BasicLit
-	RealLiteral struct {
-		NodeAttributes
-		Value string
-	}
-
-	// BoolLiteral
-	// Deprecated use BasicLit
-	BoolLiteral struct {
-		NodeAttributes
-		Value bool
-	}
-
 	BasicLit struct {
 		NodeAttributes
-		Kind  token.Token // token.INT, token.FLOAT, token.IMAG, token.CHAR, or token.STRING
-		Value string      // literal string
+		Kind  Token  // ast.INT, ast.FLOAT, ast.IMAG, ast.CHAR, or ast.STRING, ast.BOOLEAN
+		Value string // literal string
 	}
 
 	CompositeLiteral struct {
@@ -103,7 +79,6 @@ type (
 		NodeAttributes
 		Argument Expression
 		Index    Expression // Index can be another expression:
-		//  - IntegerLiteral
 		//  - RangeIndexExpr
 		//  - Ident
 		//  - CallExpression
@@ -115,6 +90,13 @@ type (
 		NodeAttributes
 		Object Expression
 		Field  Expression
+	}
+
+	AssignmentExpression struct {
+		NodeAttributes
+		Left     Expression
+		Right    Expression
+		Operator string
 	}
 
 	// A FunctionCall node represents an expression followed by an argument list.
@@ -267,21 +249,18 @@ type (
 	// It is decomposed and its info extracted to build other ast nodes.
 	TrailingGenericsExpr struct {
 		NodeAttributes
-		Identifier       Ident
+		Identifier       *Ident
 		GenericArguments []Expression
 	}
 )
 
 func (*ArgFieldSet) exprNode()             {}
 func (*ArgParamPathSet) exprNode()         {}
+func (e *AssignmentExpression) exprNode()  {}
 func (Ident) exprNode()                    {}
 func (SelectorExpr) exprNode()             {}
 func (Path) exprNode()                     {}
 func (e *BasicLit) exprNode()              {}
-func (l *Literal) exprNode()               {}
-func (l *IntegerLiteral) exprNode()        {}
-func (l *RealLiteral) exprNode()           {}
-func (l *BoolLiteral) exprNode()           {}
 func (l *CompositeLiteral) exprNode()      {}
 func (l *IndexAccessExpr) exprNode()       {}
 func (l *RangeAccessExpr) exprNode()       {}

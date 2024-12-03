@@ -2,12 +2,13 @@ package server
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp/projectDocuments"
 	"log"
 	"time"
 
 	"github.com/bep/debounce"
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
-	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
+	ps "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	p "github.com/pherrymason/c3-lsp/pkg/parser"
@@ -25,34 +26,24 @@ type Server struct {
 	options ServerOpts
 	version string
 
-	state  *l.ProjectState
+	project projectDocuments.ProjectDocuments
+	dbIntel projectDocuments.DBIntel
+
+	state  *ps.ProjectState
 	parser *p.Parser
 	search search.Search
 
 	diagnosticDebounced func(func())
 }
 
-// ServerOpts holds the options to create a new Server.
-/*type ServerOpts struct {
-	C3Version   option.Option[string]
-	C3CPath     option.Option[string]
-	LogFilepath option.Option[string]
-
-	DiagnosticsDelay   time.Duration
-	DiagnosticsEnabled bool
-
-	SendCrashReports bool
-	Debug            bool
-}*/
-
 func NewServer(opts ServerOpts, appName string, version string) *Server {
-	var logpath *string
+	var logPath *string
 	if opts.LogFilepath.IsSome() {
 		v := opts.LogFilepath.Get()
-		logpath = &v
+		logPath = &v
 	}
 
-	commonlog.Configure(2, logpath) // This increases logging verbosity (optional)
+	commonlog.Configure(2, logPath) // This increases logging verbosity (optional)
 
 	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", appName))
 
@@ -71,7 +62,7 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 
 	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3.Version)
 
-	state := l.NewProjectState(logger, option.Some(requestedLanguageVersion.Number), opts.Debug)
+	state := ps.NewProjectState(logger, option.Some(requestedLanguageVersion.Number), opts.Debug)
 	parser := p.NewParser(logger)
 	search := search.NewSearch(logger, opts.Debug)
 
@@ -145,8 +136,8 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 }
 
 // Run starts the Language Server in stdio mode.
-func (s *Server) Run() error {
-	return errors.Wrap(s.server.RunStdio(), "lsp")
+func (srv *Server) Run() error {
+	return errors.Wrap(srv.server.RunStdio(), "lsp")
 }
 
 func shutdown(context *glsp.Context) error {

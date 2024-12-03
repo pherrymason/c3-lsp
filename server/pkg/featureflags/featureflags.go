@@ -1,7 +1,9 @@
 package featureflags
 
+const UseGeneratedAST = "UseGeneratedAST"
+
 var features = map[string]bool{
-	"UseGeneratedAST": false,
+	UseGeneratedAST: true,
 }
 
 func IsActive(feature string) bool {

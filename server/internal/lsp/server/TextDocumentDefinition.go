@@ -10,11 +10,11 @@ import (
 )
 
 // Returns: Location | []Location | []LocationLink | nil
-func (h *Server) TextDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
-	identifierOption := h.search.FindSymbolDeclarationInWorkspace(
+func (srv *Server) TextDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
+	identifierOption := srv.search.FindSymbolDeclarationInWorkspace(
 		utils.NormalizePath(params.TextDocument.URI),
 		symbols.NewPositionFromLSPPosition(params.Position),
-		h.state,
+		srv.state,
 	)
 
 	if identifierOption.IsNone() {
@@ -22,12 +22,12 @@ func (h *Server) TextDocumentDefinition(context *glsp.Context, params *protocol.
 	}
 
 	symbol := identifierOption.Get()
-	if !symbol.HasSourceCode() && h.options.C3.StdlibPath.IsNone() {
+	if !symbol.HasSourceCode() && srv.options.C3.StdlibPath.IsNone() {
 		return nil, nil
 	}
 
 	return protocol.Location{
-		URI:   fs.ConvertPathToURI(symbol.GetDocumentURI(), h.options.C3.StdlibPath),
+		URI:   fs.ConvertPathToURI(symbol.GetDocumentURI(), srv.options.C3.StdlibPath),
 		Range: _prot.Lsp_NewRangeFromRange(symbol.GetIdRange()),
 	}, nil
 }

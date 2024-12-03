@@ -74,8 +74,11 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, currentModule *idx.Mo
 			}
 
 			bitRanges := [2]uint{}
-			lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
-			bitRanges[0] = uint(lowBit)
+			child := bdefnode.Child(3)
+			if child != nil {
+				lowBit, _ := strconv.ParseInt(child.Content(sourceCode), 10, 32)
+				bitRanges[0] = uint(lowBit)
+			}
 
 			if bdefnode.ChildCount() >= 6 {
 				highBit, _ := strconv.ParseInt(bdefnode.Child(5).Content(sourceCode), 10, 32)

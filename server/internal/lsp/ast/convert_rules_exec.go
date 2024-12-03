@@ -7,16 +7,20 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type NodeConverter func(node *sitter.Node, source []byte) Node
-type ConversionInfo struct {
-	method  NodeConverter
+type nodeConverter func(node *sitter.Node, source []byte) Node
+type conversionInfo struct {
+	method  nodeConverter
 	goChild bool
 }
 
-func (c ConversionInfo) convert(node *sitter.Node, source []byte) Node {
+func (c conversionInfo) convert(node *sitter.Node, source []byte, debug bool) Node {
 	n := node
 	if c.goChild {
 		n = node.Child(0)
+	}
+
+	if debug {
+		//debugNode()
 	}
 
 	return c.method(n, source)
@@ -26,27 +30,27 @@ type StatementConverter func(node *sitter.Node, source []byte) Statement
 type ExpressionConverter func(node *sitter.Node, source []byte) Expression
 type DeclarationConverter func(node *sitter.Node, source []byte) Declaration
 
-func cv_stmt_fn(fn StatementConverter) NodeConverter {
+func cv_stmt_fn(fn StatementConverter) nodeConverter {
 	return func(node *sitter.Node, source []byte) Node {
 		return fn(node, source).(Node)
 	}
 }
 
-func cv_expr_fn(fn ExpressionConverter) NodeConverter {
+func cv_expr_fn(fn ExpressionConverter) nodeConverter {
 	return func(node *sitter.Node, source []byte) Node {
 		return fn(node, source).(Node)
 	}
 }
 
-func cv_decl_fn(fn DeclarationConverter) NodeConverter {
+func cv_decl_fn(fn DeclarationConverter) nodeConverter {
 	return func(node *sitter.Node, source []byte) Node {
 		return fn(node, source).(Node)
 	}
 }
 
-func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
-	funcMap := map[string]ConversionInfo{
-		"assignment_expr":        {method: cv_stmt_fn(convert_assignment_expr)},
+func nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
+	funcMap := map[string]conversionInfo{
+		"assignment_expr":        {method: cv_expr_fn(convert_assignment_expr)},
 		"assert_stmt":            {method: cv_stmt_fn(convert_assert_stmt)},
 		"at_ident":               {method: cv_expr_fn(convert_ident)},
 		"binary_expr":            {method: cv_expr_fn(convert_binary_expr)},
@@ -59,10 +63,10 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		"const_ident":            {method: cv_expr_fn(convert_ident)},
 		"compound_stmt":          {method: cv_stmt_fn(convert_compound_stmt)},
 		"ct_ident":               {method: cv_expr_fn(convert_ident)},
-		"declaration_stmt":       {method: cv_decl_fn(convert_declaration_stmt)},
+		"declaration_stmt":       {method: cv_stmt_fn(convert_declaration_stmt)},
 		"defer_stmt":             {method: cv_stmt_fn(convert_defer_stmt)},
 		"do_stmt":                {method: cv_stmt_fn(convert_do_stmt)},
-		"split_declaration_stmt": {method: cv_decl_fn(convert_split_declaration_stmt)},
+		"split_declaration_stmt": {method: cv_stmt_fn(convert_split_declaration_stmt)},
 		"elvis_orelse_expr":      {method: cv_expr_fn(convert_elvis_orelse_expr)},
 		"expr_stmt":              {method: cv_stmt_fn(convert_expr_stmt), goChild: true},
 		"for_stmt":               {method: cv_stmt_fn(convert_for_stmt)},
@@ -146,7 +150,7 @@ func nodeTypeConverterMap(nodeType string) (ConversionInfo, error) {
 		return function, nil
 	}
 
-	return ConversionInfo{}, errors.New("conversion not found")
+	return conversionInfo{}, errors.New("conversion not found")
 	//panic(fmt.Sprintf("La función %s no existe\n", nodeType))
 }
 
@@ -169,7 +173,7 @@ func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debu
 				continue
 			}
 
-			expr := conversion.convert(node, source)
+			expr := conversion.convert(node, source, debug)
 			if expr != nil {
 				return expr
 			}
@@ -179,7 +183,7 @@ func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debu
 	return nil
 }
 
-func commaSep(convert NodeConverter, node *sitter.Node, source []byte) []Node {
+func commaSep(convert nodeConverter, node *sitter.Node, source []byte) []Node {
 	var nodes []Node
 	for {
 		debugNode(node, source, "commaSep")

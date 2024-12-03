@@ -31,7 +31,7 @@ build-parser:
 	cp $(TREE_SITTER_DIR)/src/scanner.c ./server/internal/lsp/cst/scanner.c
 
 index-c3-std:
-	bash ./bin/build_index.sh
+	export C3C_DIR=$(C3C_DIR) && bash ./bin/build_index.sh
 
 # cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
 

@@ -12,14 +12,14 @@ type ASTBaseNodeBuilder struct {
 	bn NodeAttributes
 }
 
-func NewBaseNodeBuilder() *ASTBaseNodeBuilder {
+func NewNodeAttributesBuilder() *ASTBaseNodeBuilder {
 	return &ASTBaseNodeBuilder{
 		bn: NodeAttributes{},
 	}
 }
 
 func NewBaseNodeFromSitterNode(node *sitter.Node) NodeAttributes {
-	builder := NewBaseNodeBuilder().
+	builder := NewNodeAttributesBuilder().
 		WithSitterPos(node)
 
 	return builder.Build()
@@ -62,7 +62,7 @@ type IdentifierBuilder struct {
 func NewIdentifierBuilder() *IdentifierBuilder {
 	return &IdentifierBuilder{
 		bi: &Ident{},
-		bn: *NewBaseNodeBuilder(),
+		bn: *NewNodeAttributesBuilder(),
 	}
 }
 
@@ -90,6 +90,12 @@ func (i *IdentifierBuilder) Build() Ident {
 	ident.NodeAttributes = i.bn.Build()
 
 	return *ident
+}
+func (i *IdentifierBuilder) BuildPtr() *Ident {
+	ident := i.bi
+	ident.NodeAttributes = i.bn.Build()
+
+	return ident
 }
 
 // --
@@ -181,7 +187,7 @@ type DefDeclBuilder struct {
 func NewDefDeclBuilder() *DefDeclBuilder {
 	return &DefDeclBuilder{
 		d: DefDecl{},
-		a: *NewBaseNodeBuilder(),
+		a: *NewNodeAttributesBuilder(),
 	}
 }
 

@@ -5,7 +5,10 @@ import (
 )
 
 func convert_ct_type_ident(node *sitter.Node, source []byte) Expression {
-	return &Literal{Value: node.Content(source)}
+	return &BasicLit{
+		NodeAttributes: NewNodeAttributesBuilder().WithSitterPos(node).Build(),
+		Kind:           STRING,
+		Value:          node.Content(source)}
 }
 
 /*
@@ -32,13 +35,13 @@ func convert_compile_time_call(node *sitter.Node, source []byte) Expression {
 	endNode = flatPath.NextSibling()
 
 	funcCall := &FunctionCall{
-		NodeAttributes: NewBaseNodeBuilder().
+		NodeAttributes: NewNodeAttributesBuilder().
 			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			Build(),
+			BuildPtr(),
 		Arguments: []Expression{convert_flat_path(flatPath, source)},
 	}
 
@@ -62,13 +65,13 @@ func convert_compile_time_arg(node *sitter.Node, source []byte) Expression {
 	expr := convert_expression(insideParenths, source)
 
 	funcCall := &FunctionCall{
-		NodeAttributes: NewBaseNodeBuilder().
+		NodeAttributes: NewNodeAttributesBuilder().
 			WithSitterPosRange(node.StartPoint(), endNode.EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			Build(),
+			BuildPtr(),
 		Arguments: []Expression{expr.(Expression)},
 	}
 
@@ -108,13 +111,13 @@ func convert_compile_time_analyse(node *sitter.Node, source []byte) Expression {
 	//expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
 
 	funcCall := &FunctionCall{
-		NodeAttributes: NewBaseNodeBuilder().
+		NodeAttributes: NewNodeAttributesBuilder().
 			WithSitterPosRange(node.StartPoint(), decl_or_expr_node.NextSibling().EndPoint()).
 			Build(),
 		Identifier: NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			Build(),
+			BuildPtr(),
 		Arguments: []Expression{
 			convert_expression(decl_or_expr_node, source).(Expression),
 		},
@@ -132,11 +135,11 @@ func convert_compile_time_call_unk(node *sitter.Node, source []byte) Expression 
 	}
 
 	return &FunctionCall{
-		NodeAttributes: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+		NodeAttributes: NewNodeAttributesBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
 		Identifier: NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			Build(),
+			BuildPtr(),
 		Arguments: cast_expressions_to_args(
 			args,
 		),
@@ -146,11 +149,11 @@ func convert_compile_time_call_unk(node *sitter.Node, source []byte) Expression 
 func convert_feature(node *sitter.Node, source []byte) Expression {
 	next := node.NextNamedSibling()
 	return &FunctionCall{
-		NodeAttributes: NewBaseNodeBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
+		NodeAttributes: NewNodeAttributesBuilder().WithSitterPosRange(node.StartPoint(), next.EndPoint()).Build(),
 		Identifier: NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			Build(),
+			BuildPtr(),
 		Arguments: []Expression{convert_base_expression(next, source)},
 	}
 }

@@ -16,9 +16,9 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 	}{
 		{
 			input: "const int I;",
-			expected: ConstDecl{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(1, 3, 1, 15).Build(),
-				Names:          []Ident{NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).Build()},
+			expected: &ConstDecl{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 3, 1, 15).Build(),
+				Names:          []*Ident{NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).BuildPtr()},
 				Type: option.Some(NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
@@ -29,23 +29,27 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 		},
 		{
 			input: "const int I = 1;", // With initialization
-			expected: ConstDecl{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(1, 3, 1, 19).Build(),
-				Names:          []Ident{NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).Build()},
+			expected: &ConstDecl{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 3, 1, 19).Build(),
+				Names:          []*Ident{NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).BuildPtr()},
 				Type: option.Some(NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
 					WithStartEnd(1, 9, 1, 12).
 					WithNameStartEnd(1, 9, 1, 12).
 					Build()),
-				Initializer: &IntegerLiteral{Value: "1"},
+				Initializer: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 17, 1, 18).Build(),
+					Kind:           INT,
+					Value:          "1",
+				},
 			},
 		},
 		{
 			input: "const I;", // Without type
-			expected: ConstDecl{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(1, 3, 1, 11).Build(),
-				Names:          []Ident{NewIdentifierBuilder().WithName("I").WithStartEnd(1, 9, 1, 10).Build()},
+			expected: &ConstDecl{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 3, 1, 11).Build(),
+				Names:          []*Ident{NewIdentifierBuilder().WithName("I").WithStartEnd(1, 9, 1, 10).BuildPtr()},
 				Type:           option.None[TypeInfo](),
 			},
 		},
@@ -75,9 +79,9 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 	}{
 		{
 			input: "int i;",
-			expected: VariableDecl{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 9).Build(),
-				Names:          []Ident{NewIdentifierBuilder().WithName("i").WithStartEnd(2, 7, 2, 8).Build()},
+			expected: &VariableDecl{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 9).Build(),
+				Names:          []*Ident{NewIdentifierBuilder().WithName("i").WithStartEnd(2, 7, 2, 8).BuildPtr()},
 				Type: NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
@@ -88,23 +92,27 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 		},
 		{
 			input: "int i = 1;", // With initialization
-			expected: VariableDecl{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 13).Build(),
-				Names:          []Ident{NewIdentifierBuilder().WithName("i").WithStartEnd(2, 7, 2, 8).Build()},
+			expected: &VariableDecl{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 13).Build(),
+				Names:          []*Ident{NewIdentifierBuilder().WithName("i").WithStartEnd(2, 7, 2, 8).BuildPtr()},
 				Type: NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
 					WithStartEnd(2, 3, 2, 6).
 					WithNameStartEnd(2, 3, 2, 6).
 					Build(),
-				Initializer: &IntegerLiteral{Value: "1"},
+				Initializer: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 11, 2, 12).Build(),
+					Kind:           INT,
+					Value:          "1",
+				},
 			},
 		},
 		{
 			input: "static int i = 1;", // With initialization
-			expected: VariableDecl{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 20).Build(),
-				Names:          []Ident{NewIdentifierBuilder().WithName("i").WithStartEnd(2, 14, 2, 15).Build()},
+			expected: &VariableDecl{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 20).Build(),
+				Names:          []*Ident{NewIdentifierBuilder().WithName("i").WithStartEnd(2, 14, 2, 15).BuildPtr()},
 				Type: NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
@@ -112,7 +120,11 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 					WithStartEnd(2, 10, 2, 13).
 					WithNameStartEnd(2, 10, 2, 13).
 					Build(),
-				Initializer: &IntegerLiteral{Value: "1"},
+				Initializer: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 18, 2, 19).Build(),
+					Kind:           INT,
+					Value:          "1",
+				},
 			},
 		},
 	}
@@ -130,7 +142,7 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*DeclarationStmt).Decl) //(VariableDecl))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*DeclarationStmt).Decl) //(VariableDecl))
 		})
 	}
 }
@@ -139,19 +151,19 @@ func TestConvertToAST_continue_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected ContinueStatement
+		expected *ContinueStatement
 	}{
 		{
 			input: "continue;",
-			expected: ContinueStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 12).Build(),
+			expected: &ContinueStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 12).Build(),
 				Label:          option.None[string](),
 			},
 		},
 		{
 			input: "continue FOO;", // With label
-			expected: ContinueStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 16).Build(),
+			expected: &ContinueStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 16).Build(),
 				Label:          option.Some("FOO"),
 			},
 		},
@@ -170,7 +182,7 @@ func TestConvertToAST_continue_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*ContinueStatement))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*ContinueStatement))
 		})
 	}
 }
@@ -179,19 +191,19 @@ func TestConvertToAST_break_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected BreakStatement
+		expected *BreakStatement
 	}{
 		{
 			input: "break;",
-			expected: BreakStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 9).Build(),
+			expected: &BreakStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 9).Build(),
 				Label:          option.None[string](),
 			},
 		},
 		{
 			input: "break FOO;", // With label
-			expected: BreakStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 13).Build(),
+			expected: &BreakStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 13).Build(),
 				Label:          option.Some("FOO"),
 			},
 		},
@@ -210,19 +222,55 @@ func TestConvertToAST_break_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*BreakStatement))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*BreakStatement))
 		})
 	}
 }
 
 func TestConvertToAST_switch_stmt(t *testing.T) {
-	cases := []struct {
-		skip     bool
-		input    string
-		expected SwitchStatement
-	}{
-		{
-			input: `
+
+	expected := &SwitchStatement{
+		NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 10, 4).Build(),
+		Label:          option.None[string](),
+		Condition: []*DeclOrExpr{
+			{Expr: NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 11, 3, 14).BuildPtr()},
+		},
+		Cases: []SwitchCase{
+			{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 4, 5, 11).Build(),
+				Value: &ExpressionStmt{
+					Expr: &BasicLit{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 9, 4, 10).Build(),
+						Kind:           INT,
+						Value:          "1",
+					},
+				},
+				Statements: []Statement{
+					&ExpressionStmt{
+						Expr: NewIdentifierBuilder().WithName("hello").WithStartEnd(5, 5, 5, 10).BuildPtr(),
+					},
+				},
+			},
+			{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(6, 4, 7, 9).Build(),
+				Value: &ExpressionStmt{Expr: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(6, 9, 6, 10).Build(),
+					Kind:           INT,
+					Value:          "2",
+				}},
+				Statements: []Statement{
+					&ExpressionStmt{Expr: NewIdentifierBuilder().WithName("bye").WithStartEnd(7, 5, 7, 8).BuildPtr()},
+				},
+			},
+		},
+		Default: []Statement{
+			&ExpressionStmt{Expr: NewIdentifierBuilder().WithName("chirp").WithStartEnd(9, 5, 9, 10).BuildPtr()},
+		},
+	}
+
+	source := `module foo;
+			fn void main(){
+			
 			switch (foo) {
 				case 1:
 					hello;
@@ -230,150 +278,119 @@ func TestConvertToAST_switch_stmt(t *testing.T) {
 					bye;
 				default:
 					chirp;
-			}`,
-			expected: SwitchStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 10, 4).Build(),
-				Label:          option.None[string](),
-				Cases: []SwitchCase{
-					{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 4, 5, 11).Build(),
-						Value: &ExpressionStmt{
-							Expr: &IntegerLiteral{Value: "1"},
-						},
-						Statements: []Statement{
-							&ExpressionStmt{
-								Expr: NewIdentifierBuilder().WithName("hello").WithStartEnd(5, 5, 5, 10).Build(),
-							},
-						},
-					},
-					{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(6, 4, 7, 9).Build(),
-						Value:          &ExpressionStmt{Expr: &IntegerLiteral{Value: "2"}},
-						Statements: []Statement{
-							&ExpressionStmt{Expr: NewIdentifierBuilder().WithName("bye").WithStartEnd(7, 5, 7, 8).Build()},
-						},
-					},
-				},
-				Default: []Statement{
-					&ExpressionStmt{Expr: NewIdentifierBuilder().WithName("chirp").WithStartEnd(9, 5, 9, 10).Build()},
-				},
-			},
-		},
-		{
-			input: `
-			switch (foo) {
-				case int:
-					hello;
-			}`,
-			expected: SwitchStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 6, 4).Build(),
-				Label:          option.None[string](),
-				Cases: []SwitchCase{
-					{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 4, 5, 11).Build(),
-						Value: &ExpressionStmt{Expr: NewTypeInfoBuilder().
-							WithName("int").
-							IsBuiltin().
-							WithNameStartEnd(4, 9, 4, 12).
-							WithStartEnd(4, 9, 4, 12).
-							Build(),
-						},
-						Statements: []Statement{
-							&ExpressionStmt{Expr: NewIdentifierBuilder().WithName("hello").WithStartEnd(5, 5, 5, 10).Build()},
-						},
-					},
-				},
-			},
-		},
-		{
-			input: `
-			switch (foo) {
-				case 1..10:
-					hello;
-			}`,
-			expected: SwitchStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 6, 4).Build(),
-				Label:          option.None[string](),
-				Cases: []SwitchCase{
-					{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 4, 5, 11).Build(),
-						Value: &SwitchCaseRange{
-							NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 9, 4, 14).Build(),
-							Start:          &IntegerLiteral{Value: "1"},
-							End:            &IntegerLiteral{Value: "10"},
-						},
-						Statements: []Statement{
-							&ExpressionStmt{Expr: NewIdentifierBuilder().WithName("hello").WithStartEnd(5, 5, 5, 10).Build()},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range cases {
-		if tt.skip {
-			continue
-		}
-		t.Run(fmt.Sprintf("switch_stmt: %s", tt.input), func(t *testing.T) {
-			source := `module foo;
-			fn void main(){
-			` + tt.input + `
+			}
 			}`
 
-			ast := ConvertToAST(GetCST(source), source, "file.c3")
+	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*SwitchStatement))
-		})
+	funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
+	assert.Equal(t, expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*SwitchStatement))
+}
+
+func TestConvertToAST_switch_with_ident_in_case(t *testing.T) {
+	source := `module foo;
+			fn void main(){
+				switch (foo) {
+					case int:
+						hello;
+				}
+			}`
+
+	ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+	funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
+
+	expected := NewTypeInfoBuilder().
+		WithName("int").
+		IsBuiltin().
+		WithNameStartEnd(3, 10, 3, 13).
+		WithStartEnd(3, 10, 3, 13).
+		Build()
+
+	assert.Equal(t, expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*SwitchStatement).Cases[0].Value.(*ExpressionStmt).Expr)
+}
+
+func TestConvertToAST_switch_with_range_in_case(t *testing.T) {
+	source := `module foo;
+			fn void main(){
+				switch (foo) {
+					case 1..10:
+						hello;
+				}
+			}`
+
+	ast := ConvertToAST(GetCST(source), source, "file.c3")
+
+	funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
+
+	expected := &SwitchCaseRange{
+		NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 10, 3, 15).Build(),
+		Start: &BasicLit{
+			NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 10, 3, 11).Build(),
+			Kind:           INT, Value: "1"},
+		End: &BasicLit{
+			NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 13, 3, 15).Build(),
+			Kind:           INT, Value: "10"},
 	}
+
+	assert.Equal(t, expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*SwitchStatement).Cases[0].Value.(*SwitchCaseRange))
 }
 
 func TestConvertToAST_nextcase(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected Nextcase
+		expected *Nextcase
 	}{
 		{
+			skip:  true,
 			input: `nextcase;`,
-			expected: Nextcase{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 12).Build(),
+			expected: &Nextcase{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 12).Build(),
 				Label:          option.None[string](),
 			},
 		},
 		{
+			skip:  true,
 			input: `nextcase 3;`,
-			expected: Nextcase{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 14).Build(),
+			expected: &Nextcase{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 14).Build(),
 				Label:          option.None[string](),
-				Value:          &IntegerLiteral{Value: "3"},
+				Value: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 12, 2, 13).Build(),
+					Kind:           INT,
+					Value:          "3"},
 			},
 		},
 		{
+			skip:  true,
 			input: `nextcase LABEL:3;`,
-			expected: Nextcase{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 20).Build(),
+			expected: &Nextcase{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 20).Build(),
 				Label:          option.Some("LABEL"),
-				Value:          &IntegerLiteral{Value: "3"},
+				Value: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 18, 2, 19).Build(),
+					Kind:           INT,
+					Value:          "3",
+				},
 			},
 		},
 		{
 			input: `nextcase rand();`,
-			expected: Nextcase{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 19).Build(),
+			expected: &Nextcase{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 19).Build(),
 				Label:          option.None[string](),
 				Value: &FunctionCall{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 12, 2, 18).Build(),
-					Identifier:     NewIdentifierBuilder().WithName("rand").WithStartEnd(2, 12, 2, 16).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 12, 2, 18).Build(),
+					Identifier:     NewIdentifierBuilder().WithName("rand").WithStartEnd(2, 12, 2, 16).BuildPtr(),
 					Arguments:      []Expression{},
 				},
 			},
 		},
 		{
 			input: `nextcase default;`,
-			expected: Nextcase{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 3, 2, 20).Build(),
+			expected: &Nextcase{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 3, 2, 20).Build(),
 				Label:          option.None[string](),
 			},
 		},
@@ -392,7 +409,7 @@ func TestConvertToAST_nextcase(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*Nextcase))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*Nextcase))
 		})
 	}
 }
@@ -401,55 +418,72 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected IfStmt
+		expected *IfStmt
 	}{
 		{
 			//skip: true,
 			input: `
 			if (true) {}`,
-			expected: IfStmt{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 15).Build(),
+			expected: &IfStmt{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 15).Build(),
 				Label:          option.None[string](),
-				Condition:      []Expression{&BoolLiteral{Value: true}},
+				Condition: []*DeclOrExpr{{Expr: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 7, 3, 11).Build(),
+					Kind:           BOOLEAN,
+					Value:          "true",
+				}}},
 			},
 		},
 		{
-			skip: true,
+			skip: false,
 			input: `
 			if (c > 0) {}`,
-			expected: IfStmt{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 16).Build(),
+			expected: &IfStmt{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 16).Build(),
 				Label:          option.None[string](),
-				Condition: []Expression{
-					&BinaryExpression{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 7, 3, 12).Build(),
-						Left:           NewIdentifierBuilder().WithName("c").WithStartEnd(3, 7, 3, 8).Build(),
+				Condition: []*DeclOrExpr{
+					{Expr: &BinaryExpression{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 7, 3, 12).Build(),
+						Left:           NewIdentifierBuilder().WithName("c").WithStartEnd(3, 7, 3, 8).BuildPtr(),
 						Operator:       ">",
-						Right:          IntegerLiteral{Value: "0"},
+						Right: &BasicLit{
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 11, 3, 12).Build(),
+							Kind:           INT,
+							Value:          "0",
+						},
+					},
 					},
 				},
 			},
 		},
 		{ // Comma separated conditions
-			skip: true,
+			skip: false,
 			input: `
 			if (c > 0, c < 10) {}`,
-			expected: IfStmt{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 24).Build(),
+			expected: &IfStmt{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 24).Build(),
 				Label:          option.None[string](),
-				Condition: []Expression{
-					&BinaryExpression{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 7, 3, 12).Build(),
-						Left:           NewIdentifierBuilder().WithName("c").WithStartEnd(3, 7, 3, 8).Build(),
+				Condition: []*DeclOrExpr{
+					{Expr: &BinaryExpression{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 7, 3, 12).Build(),
+						Left:           NewIdentifierBuilder().WithName("c").WithStartEnd(3, 7, 3, 8).BuildPtr(),
 						Operator:       ">",
-						Right:          IntegerLiteral{Value: "0"},
-					},
-					&BinaryExpression{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 14, 3, 20).Build(),
-						Left:           NewIdentifierBuilder().WithName("c").WithStartEnd(3, 14, 3, 15).Build(),
+						Right: &BasicLit{
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 11, 3, 12).Build(),
+							Kind:           INT,
+							Value:          "0",
+						},
+					}},
+					{Expr: &BinaryExpression{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 14, 3, 20).Build(),
+						Left:           NewIdentifierBuilder().WithName("c").WithStartEnd(3, 14, 3, 15).BuildPtr(),
 						Operator:       "<",
-						Right:          IntegerLiteral{Value: "10"},
-					},
+						Right: &BasicLit{
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 18, 3, 20).Build(),
+							Kind:           INT,
+							Value:          "10",
+						},
+					}},
 				},
 			},
 		},
@@ -458,14 +492,14 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			input: `
 			if (value) {}
 			else {}`,
-			expected: IfStmt{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 4, 10).Build(),
+			expected: &IfStmt{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 4, 10).Build(),
 				Label:          option.None[string](),
-				Condition: []Expression{
-					NewIdentifierBuilder().WithName("value").WithStartEnd(3, 7, 3, 12).Build(),
+				Condition: []*DeclOrExpr{
+					{Expr: NewIdentifierBuilder().WithName("value").WithStartEnd(3, 7, 3, 12).BuildPtr()},
 				},
 				Else: ElseStatement{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 3, 4, 10).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 3, 4, 10).Build(),
 				},
 			},
 		},
@@ -473,19 +507,19 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			input: `
 			if (value){}
 			else if (value2){}`,
-			expected: IfStmt{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 4, 21).Build(),
+			expected: &IfStmt{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 4, 21).Build(),
 				Label:          option.None[string](),
-				Condition: []Expression{
-					NewIdentifierBuilder().WithName("value").WithStartEnd(3, 7, 3, 12).Build(),
+				Condition: []*DeclOrExpr{
+					{Expr: NewIdentifierBuilder().WithName("value").WithStartEnd(3, 7, 3, 12).BuildPtr()},
 				},
 				Else: ElseStatement{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 3, 4, 21).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 3, 4, 21).Build(),
 					Statement: &IfStmt{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 8, 4, 21).Build(),
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 8, 4, 21).Build(),
 						Label:          option.None[string](),
-						Condition: []Expression{
-							NewIdentifierBuilder().WithName("value2").WithStartEnd(4, 12, 4, 18).Build(),
+						Condition: []*DeclOrExpr{
+							{Expr: NewIdentifierBuilder().WithName("value2").WithStartEnd(4, 12, 4, 18).BuildPtr()},
 						},
 					},
 				},
@@ -498,8 +532,8 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			if FOO: (i > 0)
 			{
 			}`,
-			expected: IfStmt{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 4).Build(),
+			expected: &IfStmt{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 5, 4).Build(),
 				Label:          option.Some("FOO"),
 			},
 		},
@@ -518,7 +552,7 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*IfStmt))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*IfStmt))
 		})
 	}
 }
@@ -527,52 +561,65 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected ForStatement
+		expected *ForStatement
 	}{
 		{
 			skip: false,
 			input: `
 			for (int i=0; i<10; i++) {}`,
-			expected: ForStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 30).Build(),
+			expected: &ForStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 30).Build(),
 				Label:          option.None[string](),
-				Initializer: []Statement{
-					&DeclarationStmt{Decl: &VariableDecl{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 8, 3, 15).Build(),
-						Names: []Ident{
-							NewIdentifierBuilder().
-								WithName("i").
-								WithStartEnd(3, 12, 3, 13).
-								Build(),
+				Initializer: []*DeclOrExpr{
+					{
+						Stmt: &DeclarationStmt{
+							//NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 8, 3, 15).Build(),
+							Decl: &VariableDecl{
+								NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 8, 3, 15).Build(),
+								Names: []*Ident{
+									NewIdentifierBuilder().
+										WithName("i").
+										WithStartEnd(3, 12, 3, 13).
+										BuildPtr(),
+								},
+								Type: NewTypeInfoBuilder().
+									WithName("int").
+									WithStartEnd(3, 8, 3, 11).
+									WithNameStartEnd(3, 8, 3, 11).
+									IsBuiltin().
+									Build(),
+								Initializer: &BasicLit{
+									NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 14, 3, 15).Build(),
+									Kind:           INT,
+									Value:          "0",
+								},
+							},
 						},
-						Type: NewTypeInfoBuilder().
-							WithName("int").
-							WithStartEnd(3, 8, 3, 11).
-							WithNameStartEnd(3, 8, 3, 11).
-							IsBuiltin().
-							Build(),
-						Initializer: &IntegerLiteral{
-							Value: "0",
-						},
-					},
 					},
 				},
-				Condition: &BinaryExpression{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 17, 3, 21).Build(),
-					Left:           NewIdentifierBuilder().WithName("i").WithStartEnd(3, 17, 3, 18).Build(),
-					Right:          IntegerLiteral{Value: "10"},
-					Operator:       "<",
-				},
-				Update: []Statement{
-					&ExpressionStmt{Expr: &UpdateExpression{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 23, 3, 26).Build(),
-						Operator:       "++",
-						Argument:       NewIdentifierBuilder().WithName("i").WithStartEnd(3, 23, 3, 24).Build(),
+				Condition: &DeclOrExpr{
+					Expr: &BinaryExpression{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 17, 3, 21).Build(),
+						Left:           NewIdentifierBuilder().WithName("i").WithStartEnd(3, 17, 3, 18).BuildPtr(),
+						Right: &BasicLit{
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 19, 3, 21).Build(),
+							Kind:           INT,
+							Value:          "10",
+						},
+						Operator: "<",
 					},
+				},
+				Update: []*DeclOrExpr{
+					{
+						Expr: &UpdateExpression{
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 23, 3, 26).Build(),
+							Operator:       "++",
+							Argument:       NewIdentifierBuilder().WithName("i").WithStartEnd(3, 23, 3, 24).BuildPtr(),
+						},
 					},
 				},
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 28, 3, 30).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 28, 3, 30).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -581,50 +628,66 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 			skip: false,
 			input: `
 			for (int i=0, j=0; true; i++) {}`,
-			expected: ForStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 35).Build(),
+			expected: &ForStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 35).Build(),
 				Label:          option.None[string](),
-				Initializer: []Statement{
-					&DeclarationStmt{Decl: &VariableDecl{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 8, 3, 20).Build(),
-						Names: []Ident{
-							NewIdentifierBuilder().
-								WithName("i").
-								WithStartEnd(3, 12, 3, 13).
-								Build(),
-						},
-						Type: NewTypeInfoBuilder().
-							WithName("int").
-							WithStartEnd(3, 8, 3, 11).
-							WithNameStartEnd(3, 8, 3, 11).
-							IsBuiltin().
-							Build(),
-						Initializer: &IntegerLiteral{
-							Value: "0",
+				Initializer: []*DeclOrExpr{
+					{
+						Stmt: &DeclarationStmt{
+							Decl: &VariableDecl{
+								NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 8, 3, 20).Build(),
+								Names: []*Ident{
+									NewIdentifierBuilder().
+										WithName("i").
+										WithStartEnd(3, 12, 3, 13).
+										BuildPtr(),
+								},
+								Type: NewTypeInfoBuilder().
+									WithName("int").
+									WithStartEnd(3, 8, 3, 11).
+									WithNameStartEnd(3, 8, 3, 11).
+									IsBuiltin().
+									Build(),
+								Initializer: &BasicLit{
+									NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 14, 3, 15).Build(),
+									Kind:           INT,
+									Value:          "0",
+								},
+							},
 						},
 					},
-					},
-					&AssignmentStatement{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 17, 3, 20).Build(),
+					{Expr: &AssignmentExpression{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 17, 3, 20).Build(),
 						Left: NewIdentifierBuilder().
 							WithName("j").
 							WithStartEnd(3, 17, 3, 18).
-							Build(),
-						Right:    &IntegerLiteral{Value: "0"},
+							BuildPtr(),
+						Right: &BasicLit{
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 19, 3, 20).Build(),
+							Kind:           INT,
+							Value:          "0",
+						},
 						Operator: "=",
 					},
-				},
-				Condition: &BoolLiteral{Value: true},
-				Update: []Statement{
-					&ExpressionStmt{Expr: &UpdateExpression{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 28, 3, 31).Build(),
-						Operator:       "++",
-						Argument:       NewIdentifierBuilder().WithName("i").WithStartEnd(3, 28, 3, 29).Build(),
 					},
+				},
+				Condition: &DeclOrExpr{
+					Expr: &BasicLit{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 22, 3, 26).Build(),
+						Kind:           BOOLEAN,
+						Value:          "true"},
+				},
+				Update: []*DeclOrExpr{
+					{
+						Expr: &UpdateExpression{
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 28, 3, 31).Build(),
+							Operator:       "++",
+							Argument:       NewIdentifierBuilder().WithName("i").WithStartEnd(3, 28, 3, 29).BuildPtr(),
+						},
 					},
 				},
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 33, 3, 35).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 33, 3, 35).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -633,17 +696,17 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 			skip: false,
 			input: `
 			for (int i=0; foo(); i++) {}`,
-			expected: ForStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 31).Build(),
+			expected: &ForStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 31).Build(),
 				Label:          option.None[string](),
-				Initializer: []Statement{
-					&DeclarationStmt{Decl: &VariableDecl{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 8, 3, 15).Build(),
-						Names: []Ident{
+				Initializer: []*DeclOrExpr{
+					{Stmt: &DeclarationStmt{Decl: &VariableDecl{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 8, 3, 15).Build(),
+						Names: []*Ident{
 							NewIdentifierBuilder().
 								WithName("i").
 								WithStartEnd(3, 12, 3, 13).
-								Build(),
+								BuildPtr(),
 						},
 						Type: NewTypeInfoBuilder().
 							WithName("int").
@@ -651,25 +714,31 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 							WithNameStartEnd(3, 8, 3, 11).
 							IsBuiltin().
 							Build(),
-						Initializer: &IntegerLiteral{Value: "0"},
+						Initializer: &BasicLit{
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 14, 3, 15).Build(),
+							Kind:           INT,
+							Value:          "0"},
+					},
 					},
 					},
 				},
-				Condition: &FunctionCall{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 17, 3, 22).Build(),
-					Identifier:     NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 17, 3, 20).Build(),
-					Arguments:      []Expression{},
+				Condition: &DeclOrExpr{
+					Expr: &FunctionCall{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 17, 3, 22).Build(),
+						Identifier:     NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 17, 3, 20).BuildPtr(),
+						Arguments:      []Expression{},
+					},
 				},
-				Update: []Statement{
-					&ExpressionStmt{Expr: &UpdateExpression{
-						NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 24, 3, 27).Build(),
+				Update: []*DeclOrExpr{
+					{Expr: &UpdateExpression{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 24, 3, 27).Build(),
 						Operator:       "++",
-						Argument:       NewIdentifierBuilder().WithName("i").WithStartEnd(3, 24, 3, 25).Build(),
+						Argument:       NewIdentifierBuilder().WithName("i").WithStartEnd(3, 24, 3, 25).BuildPtr(),
 					},
 					},
 				},
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 29, 3, 31).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 29, 3, 31).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -681,24 +750,27 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 			for (;;) {
 				int i = 0;
 			}`,
-			expected: ForStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 4).Build(),
+			expected: &ForStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 5, 4).Build(),
 				Label:          option.None[string](),
 				Initializer:    nil,
 				Condition:      nil,
 				Update:         nil,
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 12, 5, 4).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 12, 5, 4).Build(),
 					Statements: []Statement{
 						&DeclarationStmt{Decl: &VariableDecl{
-							NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 4, 4, 14).Build(),
-							Names: []Ident{
-								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 4, 4, 14).Build(),
+							Names: []*Ident{
+								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).BuildPtr(),
 							},
 							Type: NewTypeInfoBuilder().WithName("int").IsBuiltin().
 								WithStartEnd(4, 4, 4, 7).
 								WithNameStartEnd(4, 4, 4, 7).Build(),
-							Initializer: &IntegerLiteral{Value: "0"},
+							Initializer: &BasicLit{
+								NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 12, 4, 13).Build(),
+								Kind:           INT,
+								Value:          "0"},
 						},
 						},
 					},
@@ -720,7 +792,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*ForStatement))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*ForStatement))
 		})
 	}
 }
@@ -729,21 +801,21 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected ForeachStatement
+		expected *ForeachStatement
 	}{
 		{
 			skip: false,
 			input: `
 			foreach (int x : a) {}`,
-			expected: ForeachStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 25).Build(),
+			expected: &ForeachStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 25).Build(),
 				Value: ForeachValue{
 					Type:       NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
-					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).Build(),
+					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).BuildPtr(),
 				},
-				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).Build(),
+				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).BuildPtr(),
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 23, 3, 25).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 23, 3, 25).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -752,15 +824,15 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 			skip: false,
 			input: `
 			foreach (int &x : a) {}`,
-			expected: ForeachStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 26).Build(),
+			expected: &ForeachStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 26).Build(),
 				Value: ForeachValue{
 					Type:       NewTypeInfoBuilder().WithName("int").IsBuiltin().IsReference().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
-					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 17, 3, 18).Build(),
+					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 17, 3, 18).BuildPtr(),
 				},
-				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 21, 3, 22).Build(),
+				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 21, 3, 22).BuildPtr(),
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 24, 3, 26).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 24, 3, 26).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -769,20 +841,20 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 			skip: false,
 			input: `
 			foreach (int idx, char value : a) {}`,
-			expected: ForeachStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 39).Build(),
+			expected: &ForeachStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 39).Build(),
 
 				Index: ForeachValue{
 					Type:       NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
-					Identifier: NewIdentifierBuilder().WithName("idx").WithStartEnd(3, 16, 3, 19).Build(),
+					Identifier: NewIdentifierBuilder().WithName("idx").WithStartEnd(3, 16, 3, 19).BuildPtr(),
 				},
 				Value: ForeachValue{
 					Type:       NewTypeInfoBuilder().WithName("char").IsBuiltin().WithNameStartEnd(3, 21, 3, 25).WithStartEnd(3, 21, 3, 25).Build(),
-					Identifier: NewIdentifierBuilder().WithName("value").WithStartEnd(3, 26, 3, 31).Build(),
+					Identifier: NewIdentifierBuilder().WithName("value").WithStartEnd(3, 26, 3, 31).BuildPtr(),
 				},
-				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 34, 3, 35).Build(),
+				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 34, 3, 35).BuildPtr(),
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 37, 3, 39).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 37, 3, 39).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -793,20 +865,20 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 			foreach (int x : a) {
 				int i;
 			}`,
-			expected: ForeachStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 4).Build(),
+			expected: &ForeachStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 5, 4).Build(),
 				Value: ForeachValue{
 					Type:       NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
-					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).Build(),
+					Identifier: NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).BuildPtr(),
 				},
-				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).Build(),
+				Collection: NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).BuildPtr(),
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 23, 5, 4).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 23, 5, 4).Build(),
 					Statements: []Statement{
 						&DeclarationStmt{Decl: &VariableDecl{
-							NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 4, 4, 10).Build(),
-							Names: []Ident{
-								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 4, 4, 10).Build(),
+							Names: []*Ident{
+								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).BuildPtr(),
 							},
 							Type: NewTypeInfoBuilder().WithName("int").IsBuiltin().
 								WithStartEnd(4, 4, 4, 7).
@@ -832,7 +904,7 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*ForeachStatement))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*ForeachStatement))
 		})
 	}
 }
@@ -841,19 +913,21 @@ func TestConvertToAST_while_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected WhileStatement
+		expected *WhileStatement
 	}{
 		{
 			skip: false,
 			input: `
 			while (true) {}`,
-			expected: WhileStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 18).Build(),
-				Condition: []Expression{
-					&BoolLiteral{Value: true},
+			expected: &WhileStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 18).Build(),
+				Condition: []*DeclOrExpr{
+					{Expr: &BasicLit{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 10, 3, 14).Build(),
+						Kind:           BOOLEAN, Value: "true"}},
 				},
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 16, 3, 18).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 16, 3, 18).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -864,18 +938,23 @@ func TestConvertToAST_while_stmt(t *testing.T) {
 			while (true) {
 				int i;
 			}`,
-			expected: WhileStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 4).Build(),
-				Condition: []Expression{
-					&BoolLiteral{Value: true},
+			expected: &WhileStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 5, 4).Build(),
+				Condition: []*DeclOrExpr{
+					{Expr: &BasicLit{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 10, 3, 14).Build(),
+						Kind:           BOOLEAN,
+						Value:          "true",
+					},
+					},
 				},
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 16, 5, 4).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 16, 5, 4).Build(),
 					Statements: []Statement{
 						&DeclarationStmt{Decl: &VariableDecl{
-							NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 4, 4, 10).Build(),
-							Names: []Ident{
-								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 4, 4, 10).Build(),
+							Names: []*Ident{
+								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).BuildPtr(),
 							},
 							Type: NewTypeInfoBuilder().WithName("int").IsBuiltin().
 								WithStartEnd(4, 4, 4, 7).
@@ -901,7 +980,7 @@ func TestConvertToAST_while_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*WhileStatement))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*WhileStatement))
 		})
 	}
 }
@@ -910,17 +989,17 @@ func TestConvertToAST_do_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected DoStatement
+		expected *DoStatement
 	}{
 		{
 			skip: false,
 			input: `
 			do {};`,
-			expected: DoStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 9).Build(),
+			expected: &DoStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 9).Build(),
 				Condition:      nil,
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 6, 3, 8).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 6, 3, 8).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -929,11 +1008,14 @@ func TestConvertToAST_do_stmt(t *testing.T) {
 			skip: false,
 			input: `
 			do {} while(true);`,
-			expected: DoStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 21).Build(),
-				Condition:      &BoolLiteral{Value: true},
+			expected: &DoStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 21).Build(),
+				Condition: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 15, 3, 19).Build(),
+					Kind:           BOOLEAN,
+					Value:          "true"},
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 6, 3, 8).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 6, 3, 8).Build(),
 					Statements:     []Statement{},
 				},
 			},
@@ -944,16 +1026,19 @@ func TestConvertToAST_do_stmt(t *testing.T) {
 			do {
 				int i;
 			} while(true);`,
-			expected: DoStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 5, 17).Build(),
-				Condition:      &BoolLiteral{Value: true},
+			expected: &DoStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 5, 17).Build(),
+				Condition: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(5, 11, 5, 15).Build(),
+					Kind:           BOOLEAN,
+					Value:          "true"},
 				Body: &CompoundStmt{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 6, 5, 4).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 6, 5, 4).Build(),
 					Statements: []Statement{
 						&DeclarationStmt{Decl: &VariableDecl{
-							NodeAttributes: NewBaseNodeBuilder().WithStartEnd(4, 4, 4, 10).Build(),
-							Names: []Ident{
-								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
+							NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(4, 4, 4, 10).Build(),
+							Names: []*Ident{
+								NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).BuildPtr(),
 							},
 							Type: NewTypeInfoBuilder().WithName("int").IsBuiltin().
 								WithStartEnd(4, 4, 4, 7).
@@ -979,7 +1064,7 @@ func TestConvertToAST_do_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*DoStatement))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*DoStatement))
 		})
 	}
 }
@@ -988,17 +1073,17 @@ func TestConvertToAST_defer_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected DeferStatement
+		expected *DeferStatement
 	}{
 		{
 			skip: false,
 			input: `
 			defer foo();`,
-			expected: DeferStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 15).Build(),
+			expected: &DeferStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 15).Build(),
 				Statement: &ExpressionStmt{Expr: &FunctionCall{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 9, 3, 14).Build(),
-					Identifier:     NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 9, 3, 12).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 9, 3, 14).Build(),
+					Identifier:     NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 9, 3, 12).BuildPtr(),
 					Arguments:      []Expression{},
 				},
 				},
@@ -1008,11 +1093,11 @@ func TestConvertToAST_defer_stmt(t *testing.T) {
 			skip: false,
 			input: `
 			defer try foo();`,
-			expected: DeferStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 19).Build(),
+			expected: &DeferStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 19).Build(),
 				Statement: &ExpressionStmt{Expr: &FunctionCall{
-					NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 13, 3, 18).Build(),
-					Identifier:     NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 13, 3, 16).Build(),
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 13, 3, 18).Build(),
+					Identifier:     NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 13, 3, 16).BuildPtr(),
 					Arguments:      []Expression{},
 				},
 				},
@@ -1033,7 +1118,7 @@ func TestConvertToAST_defer_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*DeferStatement))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*DeferStatement))
 		})
 	}
 }
@@ -1042,16 +1127,19 @@ func TestConvertToAST_assert_stmt(t *testing.T) {
 	cases := []struct {
 		skip     bool
 		input    string
-		expected AssertStatement
+		expected *AssertStatement
 	}{
 		{
 			skip: false,
 			input: `
 			assert(true);`,
-			expected: AssertStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 16).Build(),
+			expected: &AssertStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 16).Build(),
 				Assertions: []Expression{
-					&BoolLiteral{Value: true},
+					&BasicLit{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 10, 3, 14).Build(),
+						Kind:           BOOLEAN,
+						Value:          "true"},
 				},
 			},
 		},
@@ -1059,11 +1147,18 @@ func TestConvertToAST_assert_stmt(t *testing.T) {
 			skip: false,
 			input: `
 			assert(true,1);`,
-			expected: AssertStatement{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(3, 3, 3, 18).Build(),
+			expected: &AssertStatement{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 3, 3, 18).Build(),
 				Assertions: []Expression{
-					&BoolLiteral{Value: true},
-					&IntegerLiteral{Value: "1"},
+					&BasicLit{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 10, 3, 14).Build(),
+						Kind:           BOOLEAN,
+						Value:          "true",
+					},
+					&BasicLit{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 15, 3, 16).Build(),
+						Kind:           INT,
+						Value:          "1"},
 				},
 			},
 		},
@@ -1082,7 +1177,7 @@ func TestConvertToAST_assert_stmt(t *testing.T) {
 			ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 			funcDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-			assert.Equal(t, tt.expected, funcDecl.Body.(CompoundStmt).Statements[0].(*AssertStatement))
+			assert.Equal(t, tt.expected, funcDecl.Body.(*CompoundStmt).Statements[0].(*AssertStatement))
 		})
 	}
 }
