@@ -4,4 +4,4 @@ if [ -z "$VERSION" ]; then
 fi
 
 cd "$C3C_DIR" && git fetch --all && git reset --hard origin/master && git checkout tags/v"$VERSION"
-cd server/cmd/stdlib_indexer && go run main.go blurp.go --"$VERSION"
+cd ../../server/cmd/stdlib_indexer && go run main.go blurp.go --"$VERSION"
