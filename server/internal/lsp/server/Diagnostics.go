@@ -43,7 +43,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 				s.state.RemoveDocumentDiagnostics(k)
 				notify(protocol.ServerTextDocumentPublishDiagnostics,
 					protocol.PublishDiagnosticsParams{
-						URI:         k,
+						URI:         fs.ConvertPathToURI(k, s.options.C3.StdlibPath),
 						Diagnostics: []protocol.Diagnostic{},
 					})
 			}
