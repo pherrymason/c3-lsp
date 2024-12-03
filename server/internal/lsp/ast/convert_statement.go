@@ -32,7 +32,7 @@ func convert_statement(node *sitter.Node, source []byte) Statement {
 		NodeOfType("ct_switch_stmt"),
 		NodeOfType("ct_foreach_stmt"),
 		NodeOfType("ct_for_stmt"),
-	}, node, source, true)
+	}, node, source, false)
 
 	return dd.(Statement)
 }
@@ -69,13 +69,15 @@ func convert_return_stmt(node *sitter.Node, source []byte) Statement {
 	}
 }
 
-func convert_split_declaration_stmt(node *sitter.Node, source []byte) Declaration {
+func convert_split_declaration_stmt(node *sitter.Node, source []byte) Statement {
 	return convert_declaration_stmt(node.Parent(), source)
 }
 
-func convert_declaration_stmt(node *sitter.Node, source []byte) Declaration {
+func convert_declaration_stmt(node *sitter.Node, source []byte) Statement {
 	if node.Type() == "const_declaration" {
-		return convert_const_declaration(node, source)
+		return &DeclarationStmt{
+			Decl: convert_const_declaration(node, source),
+		}
 	}
 
 	isStatic := false
@@ -105,7 +107,7 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Declaration {
 			varDecl.Names = append(varDecl.Names, NewIdentifierBuilder().
 				WithName(n.ChildByFieldName("name").Content(source)).
 				WithSitterPos(n.ChildByFieldName("name")).
-				Build(),
+				BuildPtr(),
 			)
 
 			right := n.ChildByFieldName("right")
@@ -116,7 +118,9 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Declaration {
 		}
 	}
 
-	return &varDecl
+	return &DeclarationStmt{
+		Decl: &varDecl,
+	}
 }
 
 func convert_continue_stmt(node *sitter.Node, source []byte) Statement {
@@ -203,10 +207,18 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Statement {
 		}
 	}
 
+	var conditionExpression []*DeclOrExpr
+	conditionNode := node.ChildByFieldName("condition")
+	if conditionNode != nil {
+		ConvertDebug = false
+		conditionExpression = convert_paren_conditions(conditionNode, source)
+		ConvertDebug = false
+	}
+
 	return &SwitchStatement{
 		NodeAttributes: NewBaseNodeFromSitterNode(node),
 		Label:          label,
-		Condition:      convert_expression(node.ChildByFieldName("condition"), source).(Expression),
+		Condition:      conditionExpression,
 		Cases:          cases,
 		Default:        defaultStatement,
 	}
@@ -214,14 +226,18 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Statement {
 
 func convert_nextcase_stmt(node *sitter.Node, source []byte) Statement {
 	label := option.None[string]()
-	var value Node
+	var value Expression
 	targetNode := node.ChildByFieldName("target")
 	if targetNode != nil {
-		value = anyOf("nextcase_stmt", []NodeRule{
+		found := anyOf("nextcase_stmt", []NodeRule{
 			NodeTryConversionFunc("_expr"),
 			NodeOfType("type"),
 			NodeOfType("default"),
-		}, targetNode, source, false)
+		}, targetNode, source, true)
+
+		if found != nil {
+			value = found.(Expression)
+		}
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -234,7 +250,7 @@ func convert_nextcase_stmt(node *sitter.Node, source []byte) Statement {
 	return &Nextcase{
 		NodeAttributes: NewBaseNodeFromSitterNode(node),
 		Label:          label,
-		Value:          value.(Expression),
+		Value:          value,
 	}
 }
 
@@ -289,12 +305,12 @@ func convert_if_stmt(node *sitter.Node, source []byte) Statement {
 		  ),
 		)
 */
-func convert_paren_conditions(node *sitter.Node, source []byte) []Expression {
+func convert_paren_conditions(node *sitter.Node, source []byte) []*DeclOrExpr {
 	return convert_conditions(node.Child(1), source)
 }
 
-func convert_conditions(node *sitter.Node, source []byte) []Expression {
-	conditions := []Expression{}
+func convert_conditions(node *sitter.Node, source []byte) []*DeclOrExpr {
+	var conditions []*DeclOrExpr
 
 	// Option 1: try_unwrap_chain
 	if node.Type() == "try_unwrap_chain" {
@@ -306,7 +322,7 @@ func convert_conditions(node *sitter.Node, source []byte) []Expression {
 		//		(decl_or_expr),* + optional(, try_unwrap | catch_unwrap)
 		nodes := commaSep(convert_decl_or_expression, node, source)
 		for _, n := range nodes {
-			conditions = append(conditions, n.(Expression))
+			conditions = append(conditions, n.(*DeclOrExpr))
 		}
 	}
 
@@ -327,11 +343,11 @@ func convert_local_declaration_after_type(node *sitter.Node, source []byte) Decl
 
 	varDecl := &VariableDecl{
 		NodeAttributes: NewBaseNodeFromSitterNode(node),
-		Names: []Ident{
+		Names: []*Ident{
 			NewIdentifierBuilder().
 				WithName(node.ChildByFieldName("name").Content(source)).
 				WithSitterPos(node.ChildByFieldName("name")).
-				Build(),
+				BuildPtr(),
 		},
 		Initializer: init,
 	}
@@ -370,12 +386,12 @@ func convert_for_stmt(node *sitter.Node, source []byte) Statement {
 	return forStmt
 }
 
-func convert_comma_decl_or_expression(node *sitter.Node, source []byte) []Statement {
+func convert_comma_decl_or_expression(node *sitter.Node, source []byte) []*DeclOrExpr {
 	nodes := commaSep(convert_decl_or_expression, node.Child(0), source)
 
-	stmts := []Statement{}
+	var stmts []*DeclOrExpr
 	for _, n := range nodes {
-		stmts = append(stmts, n.(Statement))
+		stmts = append(stmts, n.(*DeclOrExpr))
 	}
 	return stmts
 }
@@ -388,46 +404,30 @@ func convert_decl_or_expression(node *sitter.Node, source []byte) Node {
 			NodeOfType("type"), NodeOfType("local_decl_after_type"),
 		}, "split_declaration_stmt"),
 		NodeAnonymous("_expr"),
-	}, node, source, true)
+	}, node, source, false)
 
 	switch found.(type) {
 	case Expression:
-		return &ExpressionStmt{
+		return &DeclOrExpr{
 			Expr: found.(Expression),
 		}
 
 	case Declaration:
-		return &DeclarationStmt{
+		return &DeclOrExpr{
 			Decl: found.(Declaration),
 		}
 
+	case Statement:
+		return &DeclOrExpr{
+			Stmt: found.(Statement),
+		}
+
 	default:
-		panic("Did not find type")
+		panic("decl_or_expression: did not find found type.")
 	}
 }
 
 func convert_foreach_stmt(node *sitter.Node, source []byte) Statement {
-	/*
-		foreach_stmt: $ => seq(
-		      choice('foreach', 'foreach_r'),
-		      optional($.label),
-		      $.foreach_cond,
-		      field('body', $._statement)
-		    )
-
-		foreach_cond: $ => seq(
-			'(',
-			optional(seq(field('index', $.foreach_var), ',')),
-			field('value', $.foreach_var),
-			':',
-			field('collection', $._expr),
-			')',
-		),
-
-		foreach_var: $ => choice(
-			seq(optional($._type_or_optional_type), optional('&'), $.ident),
-		),
-	*/
 	stmt := &ForeachStatement{
 		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
@@ -480,7 +480,7 @@ func convert_foreach_var(node *sitter.Node, source []byte) ForeachValue {
 			value.Type.Reference = true
 
 		case "ident":
-			value.Identifier = convert_ident(n, source).(Ident)
+			value.Identifier = convert_ident(n, source).(*Ident)
 		}
 	}
 
@@ -543,15 +543,15 @@ func convert_assert_stmt(node *sitter.Node, source []byte) Statement {
 	stmt := &AssertStatement{
 		NodeAttributes: NewBaseNodeFromSitterNode(node),
 	}
-	/*
-		nodes := commaSep(
-			convert_expression,
-			node.Child(2),
-			source,
-		)
-		for _, node := range nodes {
-			stmt.Assertions = append(stmt.Assertions, node.(Expression))
-		}
-	*/
+
+	nodes := commaSep(
+		cv_expr_fn(convert_expression),
+		node.Child(2),
+		source,
+	)
+	for _, node := range nodes {
+		stmt.Assertions = append(stmt.Assertions, node.(Expression))
+	}
+
 	return stmt
 }

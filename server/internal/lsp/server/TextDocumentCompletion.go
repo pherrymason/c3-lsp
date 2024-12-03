@@ -9,17 +9,17 @@ import (
 
 // Support "Completion"
 // Returns: []CompletionItem | CompletionList | nil
-func (h *Server) TextDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
+func (srv *Server) TextDocumentCompletion(context *glsp.Context, params *protocol.CompletionParams) (any, error) {
 
 	cursorContext := ctx.BuildFromDocumentPosition(
 		params.Position,
 		utils.NormalizePath(params.TextDocument.URI),
-		h.state,
+		srv.state,
 	)
 
-	suggestions := h.search.BuildCompletionList(
+	suggestions := srv.search.BuildCompletionList(
 		cursorContext,
-		h.state,
+		srv.state,
 	)
 	return suggestions, nil
 }

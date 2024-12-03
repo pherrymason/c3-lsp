@@ -8,7 +8,7 @@ import (
 )
 
 func aWithPos(startRow uint, startCol uint, endRow uint, endCol uint) NodeAttributes {
-	return NewBaseNodeBuilder().
+	return NewNodeAttributesBuilder().
 		WithStartEnd(startRow, startCol, endRow, endCol).
 		Build()
 }
@@ -19,12 +19,12 @@ func TestConvertToAST_module(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	expectedAst := File{
-		NodeAttributes: NewBaseNodeBuilder().WithStartEnd(0, 0, 0, 11).Build(),
+		NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(0, 0, 0, 11).Build(),
 		Name:           "file.c3",
 		Modules: []Module{
 			{
 				Name:           "foo",
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(0, 0, 0, 11).Build(),
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(0, 0, 0, 11).Build(),
 			},
 		},
 	}
@@ -41,18 +41,22 @@ func TestConvertToAST_module_implicit(t *testing.T) {
 
 	expected := Module{
 		Name:           "path_file_xxx",
-		NodeAttributes: NewBaseNodeBuilder().WithStartEnd(1, 1, 2, 1).Build(),
+		NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 1, 2, 1).Build(),
 		Declarations: []Declaration{
 			&VariableDecl{
-				NodeAttributes: NewBaseNodeBuilder().WithStartEnd(1, 1, 1, 18).Build(),
-				Names: []Ident{
-					NewIdentifierBuilder().WithName("variable").WithStartEnd(1, 5, 1, 13).Build(),
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 1, 1, 18).Build(),
+				Names: []*Ident{
+					NewIdentifierBuilder().WithName("variable").WithStartEnd(1, 5, 1, 13).BuildPtr(),
 				},
 				Type: NewTypeInfoBuilder().IsBuiltin().
 					WithName("int").
 					WithNameStartEnd(1, 1, 1, 4).
 					WithStartEnd(1, 1, 1, 4).Build(),
-				Initializer: &IntegerLiteral{Value: "0"},
+				Initializer: &BasicLit{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 16, 1, 17).Build(),
+					Kind:           INT,
+					Value:          "0",
+				},
 			},
 		},
 	}
@@ -60,7 +64,7 @@ func TestConvertToAST_module_implicit(t *testing.T) {
 
 	expected = Module{
 		Name:           "foo",
-		NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 1, 2, 12).Build(),
+		NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 1, 2, 12).Build(),
 	}
 	assert.Equal(t, expected, ast.Modules[1])
 }
@@ -128,7 +132,7 @@ func TestConvertToAST_module_with_imports(t *testing.T) {
 
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-	assert.Equal(t, []Import{
+	assert.Equal(t, []*Import{
 		{Path: "foo"},
 		{Path: "foo2::subfoo"},
 	}, ast.Modules[0].Imports)
@@ -141,14 +145,14 @@ func TestConvertToAST_global_variables(t *testing.T) {
 
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-	expectedHello := VariableDecl{
-		NodeAttributes: NewBaseNodeBuilder().
+	expectedHello := &VariableDecl{
+		NodeAttributes: NewNodeAttributesBuilder().
 			WithStartEnd(1, 1, 1, 15).
 			Build(),
-		Names: []Ident{
+		Names: []*Ident{
 			{
 				Name: "hello",
-				NodeAttributes: NewBaseNodeBuilder().
+				NodeAttributes: NewNodeAttributesBuilder().
 					WithStartEnd(1, 5, 1, 10).
 					Build(),
 			},
@@ -156,17 +160,21 @@ func TestConvertToAST_global_variables(t *testing.T) {
 		Type: TypeInfo{
 			Identifier: NewIdentifierBuilder().WithName("int").WithStartEnd(1, 1, 1, 4).Build(),
 			BuiltIn:    true,
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(1, 1, 1, 4).
 				Build(),
 		},
-		Initializer: &IntegerLiteral{Value: "3"},
+		Initializer: &BasicLit{
+			NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 13, 1, 14).Build(),
+			Kind:           INT,
+			Value:          "3",
+		},
 	}
 	assert.Equal(t, expectedHello, ast.Modules[0].Declarations[0])
 
-	expectedAnimals := VariableDecl{
+	expectedAnimals := &VariableDecl{
 		NodeAttributes: aWithPos(2, 1, 2, 24),
-		Names: []Ident{
+		Names: []*Ident{
 			{
 				Name:           "dog",
 				NodeAttributes: aWithPos(2, 5, 2, 8),
@@ -198,42 +206,42 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 
 	// Test basic enum declaration
 	row := uint(1)
-	expected := EnumDecl{
+	expected := &EnumDecl{
 		Name: "Colors",
-		NodeAttributes: NewBaseNodeBuilder().
+		NodeAttributes: NewNodeAttributesBuilder().
 			WithStartEnd(1, 1, 1, 33).
 			Build(),
 		Members: []EnumMember{
 			{
 				Name: Ident{
 					Name: "RED",
-					NodeAttributes: NewBaseNodeBuilder().
+					NodeAttributes: NewNodeAttributesBuilder().
 						WithStartEnd(1, 15, 1, 18).
 						Build(),
 				},
-				NodeAttributes: NewBaseNodeBuilder().
+				NodeAttributes: NewNodeAttributesBuilder().
 					WithStartEnd(1, 15, 1, 18).
 					Build(),
 			},
 			{
 				Name: Ident{
 					Name: "BLUE",
-					NodeAttributes: NewBaseNodeBuilder().
+					NodeAttributes: NewNodeAttributesBuilder().
 						WithStartEnd(1, 20, 1, 24).
 						Build(),
 				},
-				NodeAttributes: NewBaseNodeBuilder().
+				NodeAttributes: NewNodeAttributesBuilder().
 					WithStartEnd(1, 20, 1, 24).
 					Build(),
 			},
 			{
 				Name: Ident{
 					Name: "GREEN",
-					NodeAttributes: NewBaseNodeBuilder().
+					NodeAttributes: NewNodeAttributesBuilder().
 						WithStartEnd(1, 26, 1, 31).
 						Build(),
 				},
-				NodeAttributes: NewBaseNodeBuilder().
+				NodeAttributes: NewNodeAttributesBuilder().
 					WithStartEnd(1, 26, 1, 31).
 					Build(),
 			},
@@ -243,7 +251,7 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 
 	// Test typed enum declaration
 	row = 2
-	expected = EnumDecl{
+	expected = &EnumDecl{
 		Name: "TypedColors",
 		BaseType: TypeInfo{
 			Identifier:     NewIdentifierBuilder().WithName("int").WithStartEnd(2, 18, 2, 21).Build(),
@@ -290,7 +298,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 
 	// Test enum with associated parameters declaration
 	row := uint(1)
-	expected := EnumDecl{
+	expected := &EnumDecl{
 		Name: "State",
 		BaseType: TypeInfo{
 			Identifier:     NewIdentifierBuilder().WithName("int").WithStartEnd(1, 14, 1, 17).Build(),
@@ -302,7 +310,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 			{
 				Name: Ident{
 					Name:           "desc",
-					NodeAttributes: aWithPos(row, 26, row, 30),
+					NodeAttributes: aWithPos(row, 19, row, 30),
 				},
 				Type: TypeInfo{
 					Identifier:     NewIdentifierBuilder().WithName("String").WithStartEnd(1, 19, 1, 25).Build(),
@@ -315,7 +323,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 			{
 				Name: Ident{
 					Name:           "active",
-					NodeAttributes: aWithPos(row, 37, row, 43),
+					NodeAttributes: aWithPos(row, 32, row, 43),
 				},
 				Type: TypeInfo{
 					Identifier:     NewIdentifierBuilder().WithName("bool").WithStartEnd(1, 32, 1, 36).Build(),
@@ -328,7 +336,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 			{
 				Name: Ident{
 					Name:           "ke",
-					NodeAttributes: aWithPos(row, 50, row, 52),
+					NodeAttributes: aWithPos(row, 45, row, 52),
 				},
 				Type: TypeInfo{
 					Identifier:     NewIdentifierBuilder().WithName("char").WithStartEnd(1, 45, 1, 49).Build(),
@@ -348,9 +356,9 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 				},
 				Value: CompositeLiteral{
 					Elements: []Expression{
-						&Literal{Value: "\"pending start\""},
-						&BoolLiteral{Value: false},
-						&Literal{Value: "'c'"},
+						&BasicLit{NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 13, 2, 28).Build(), Kind: STRING, Value: "\"pending start\""},
+						&BasicLit{NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 30, 2, 35).Build(), Kind: BOOLEAN, Value: "false"},
+						&BasicLit{NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 37, 2, 40).Build(), Kind: CHAR, Value: "'c'"},
 					},
 				},
 				NodeAttributes: aWithPos(row+1, 2, row+1, 41),
@@ -362,9 +370,9 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 				},
 				Value: CompositeLiteral{
 					Elements: []Expression{
-						&Literal{Value: "\"running\""},
-						&BoolLiteral{Value: true},
-						&Literal{Value: "'e'"},
+						&BasicLit{NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 13, 3, 22).Build(), Kind: STRING, Value: "\"running\""},
+						&BasicLit{NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 24, 3, 28).Build(), Kind: BOOLEAN, Value: "true"},
+						&BasicLit{NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(3, 30, 3, 33).Build(), Kind: CHAR, Value: "'e'"},
 					},
 				},
 				NodeAttributes: aWithPos(row+2, 2, row+2, 34),
@@ -384,7 +392,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
-	expected := StructDecl{
+	expected := &StructDecl{
 		NodeAttributes: aWithPos(1, 1, 5, 2),
 		Name:           "MyStruct",
 		StructType:     StructTypeNormal,
@@ -692,7 +700,7 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 				WithName("IO_ERROR").
 				WithStartEnd(3, 3, 3, 11).
 				Build(),
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(3, 3, 3, 11).
 				Build(),
 		},
@@ -705,7 +713,7 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 				WithName("PARSE_ERROR").
 				WithStartEnd(4, 3, 4, 14).
 				Build(),
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(4, 3, 4, 14).
 				Build(),
 		},
@@ -724,8 +732,8 @@ func TestConvertToAST_def_decl(t *testing.T) {
 	row := uint(0)
 
 	assert.Equal(t,
-		DefDecl{
-			NodeAttributes: NewBaseNodeBuilder().WithStartEnd(1, 1, 1, 16).Build(),
+		&DefDecl{
+			NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 1, 1, 16).Build(),
 			Name:           NewIdentifierBuilder().WithName("Kilo").WithStartEnd(1, 5, 1, 9).Build(),
 			resolvesToType: option.Some(
 				NewTypeInfoBuilder().
@@ -737,8 +745,8 @@ func TestConvertToAST_def_decl(t *testing.T) {
 		}, ast.Modules[0].Declarations[0])
 
 	assert.Equal(t,
-		DefDecl{
-			NodeAttributes: NewBaseNodeBuilder().WithStartEnd(2, 1, 2, 21).Build(),
+		&DefDecl{
+			NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 1, 2, 21).Build(),
 			Name:           NewIdentifierBuilder().WithName("KiloPtr").WithStartEnd(2, 5, 2, 12).Build(),
 			resolvesToType: option.Some(
 				NewTypeInfoBuilder().
@@ -752,8 +760,8 @@ func TestConvertToAST_def_decl(t *testing.T) {
 	// Def with generics
 	row = 4
 	assert.Equal(t,
-		DefDecl{
-			NodeAttributes: NewBaseNodeBuilder().WithStartEnd(row, 1, row, 40).Build(),
+		&DefDecl{
+			NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(row, 1, row, 40).Build(),
 			Name:           NewIdentifierBuilder().WithName("MyMap").WithStartEnd(row, 5, row, 10).Build(),
 			resolvesToType: option.Some(
 				NewTypeInfoBuilder().
@@ -768,8 +776,8 @@ func TestConvertToAST_def_decl(t *testing.T) {
 	// Def with Ident path
 	row = 5
 	assert.Equal(t,
-		DefDecl{
-			NodeAttributes: NewBaseNodeBuilder().WithStartEnd(row, 1, row, 29).Build(),
+		&DefDecl{
+			NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(row, 1, row, 29).Build(),
 			Name:           NewIdentifierBuilder().WithName("Camera").WithStartEnd(row, 5, row, 11).Build(),
 			resolvesToType: option.Some(
 				NewTypeInfoBuilder().
@@ -845,7 +853,7 @@ func TestConvertToAST_function_with_arguments_declaration(t *testing.T) {
 				IsBuiltin().
 				WithStartEnd(1, 14, 1, 17).
 				Build(),
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(1, 14, 1, 24).Build(),
 		},
 		fnDecl.Signature.Parameters[0],
@@ -858,7 +866,7 @@ func TestConvertToAST_function_with_arguments_declaration(t *testing.T) {
 				IsBuiltin().
 				WithStartEnd(1, 26, 1, 30).
 				Build(),
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(1, 26, 1, 33).Build(),
 		},
 		fnDecl.Signature.Parameters[1],
@@ -872,7 +880,7 @@ func TestConvertToAST_function_with_arguments_declaration(t *testing.T) {
 				IsPointer().
 				WithStartEnd(1, 35, 1, 38).
 				Build(),
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(1, 35, 1, 47).Build(),
 		},
 		fnDecl.Signature.Parameters[2],
@@ -909,7 +917,7 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 				WithName("UserStruct").WithNameStartEnd(1, 30, 1, 34).
 				WithStartEnd(1, 30, 1, 34).
 				Build(),
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(1, 30, 1, 34).Build(),
 		},
 		methodDecl.Signature.Parameters[0],
@@ -923,7 +931,7 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 				IsPointer().
 				WithStartEnd(1, 36, 1, 39).
 				Build(),
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(1, 36, 1, 48).Build(),
 		},
 		methodDecl.Signature.Parameters[1],
@@ -946,7 +954,7 @@ func TestConvertToAST_method_declaration_mutable(t *testing.T) {
 				WithStartEnd(1, 30, 1, 35).
 				IsPointer().
 				Build(),
-			NodeAttributes: NewBaseNodeBuilder().
+			NodeAttributes: NewNodeAttributesBuilder().
 				WithStartEnd(1, 30, 1, 35).Build(),
 		},
 		methodDecl.Signature.Parameters[0],
@@ -986,7 +994,7 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 	assert.Equal(
 		t,
 		FunctionParameter{
-			NodeAttributes: NewBaseNodeBuilder().WithStartEnd(1, 9, 1, 10).Build(),
+			NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(1, 9, 1, 10).Build(),
 			Name:           NewIdentifierBuilder().WithName("x").WithStartEnd(1, 9, 1, 10).Build(),
 		},
 		macroDecl.Signature.Parameters[0],

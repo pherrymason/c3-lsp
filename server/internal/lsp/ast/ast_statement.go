@@ -36,7 +36,7 @@ type (
 	IfStmt struct {
 		NodeAttributes
 		Label     option.Option[string]
-		Condition []Expression
+		Condition []*DeclOrExpr
 		Statement Statement
 		Else      ElseStatement
 	}
@@ -49,13 +49,6 @@ type (
 	ReturnStatement struct {
 		NodeAttributes
 		Return option.Option[Expression]
-	}
-
-	AssignmentStatement struct {
-		NodeAttributes
-		Left     Expression
-		Right    Expression
-		Operator string
 	}
 
 	ContinueStatement struct {
@@ -71,7 +64,7 @@ type (
 	SwitchStatement struct {
 		NodeAttributes
 		Label     option.Option[string]
-		Condition Expression
+		Condition []*DeclOrExpr
 		Cases     []SwitchCase
 		Default   []Statement
 	}
@@ -97,9 +90,9 @@ type (
 	ForStatement struct {
 		NodeAttributes
 		Label       option.Option[string]
-		Initializer []Statement
+		Initializer []*DeclOrExpr
 		Condition   Expression
-		Update      []Statement
+		Update      []*DeclOrExpr
 		Body        Statement
 	}
 
@@ -113,12 +106,12 @@ type (
 
 	ForeachValue struct {
 		Type       TypeInfo
-		Identifier Ident
+		Identifier *Ident
 	}
 
 	WhileStatement struct {
 		NodeAttributes
-		Condition []Expression
+		Condition []*DeclOrExpr
 		Body      Statement
 	}
 
@@ -139,23 +132,22 @@ type (
 	}
 )
 
-func (e *ExpressionStmt) stmtNode()      {}
-func (e *BlockStmt) stmtNode()           {}
-func (e *CompoundStmt) stmtNode()        {}
-func (e *DeclarationStmt) stmtNode()     {}
-func (e *IfStmt) stmtNode()              {}
-func (e *ElseStatement) stmtNode()       {}
-func (e *ReturnStatement) stmtNode()     {}
-func (e *AssignmentStatement) stmtNode() {}
-func (e *ContinueStatement) stmtNode()   {}
-func (e *BreakStatement) stmtNode()      {}
-func (e *SwitchStatement) stmtNode()     {}
-func (e *SwitchCase) stmtNode()          {}
-func (e *SwitchCaseRange) stmtNode()     {}
-func (e *Nextcase) stmtNode()            {}
-func (e *ForStatement) stmtNode()        {}
-func (e *ForeachStatement) stmtNode()    {}
-func (e *WhileStatement) stmtNode()      {}
-func (e *DoStatement) stmtNode()         {}
-func (e *DeferStatement) stmtNode()      {}
-func (e *AssertStatement) stmtNode()     {}
+func (e *ExpressionStmt) stmtNode()    {}
+func (e *BlockStmt) stmtNode()         {}
+func (e *CompoundStmt) stmtNode()      {}
+func (e *DeclarationStmt) stmtNode()   {}
+func (e *IfStmt) stmtNode()            {}
+func (e *ElseStatement) stmtNode()     {}
+func (e *ReturnStatement) stmtNode()   {}
+func (e *ContinueStatement) stmtNode() {}
+func (e *BreakStatement) stmtNode()    {}
+func (e *SwitchStatement) stmtNode()   {}
+func (e *SwitchCase) stmtNode()        {}
+func (e *SwitchCaseRange) stmtNode()   {}
+func (e *Nextcase) stmtNode()          {}
+func (e *ForStatement) stmtNode()      {}
+func (e *ForeachStatement) stmtNode()  {}
+func (e *WhileStatement) stmtNode()    {}
+func (e *DoStatement) stmtNode()       {}
+func (e *DeferStatement) stmtNode()    {}
+func (e *AssertStatement) stmtNode()   {}

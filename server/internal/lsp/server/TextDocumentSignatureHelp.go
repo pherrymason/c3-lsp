@@ -12,20 +12,20 @@ import (
 )
 
 // textDocument/signatureHelp: {"context":{"isRetrigger":false,"triggerCharacter":"(","triggerKind":2},"position":{"character":20,"line":8},"textDocument":{"uri":"file:///Volumes/Development/raul/projects/game-dev/raul-game-project/murder-c3/src/main.c3"}}
-func (h *Server) TextDocumentSignatureHelp(context *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
+func (srv *Server) TextDocumentSignatureHelp(context *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
 	// Rewind position after previous "("
 	docId := utils.NormalizePath(params.TextDocument.URI)
-	doc := h.state.GetDocument(docId)
+	doc := srv.state.GetDocument(docId)
 	posOption := doc.SourceCode.RewindBeforePreviousParenthesis(symbols.NewPositionFromLSPPosition(params.Position))
 
 	if posOption.IsNone() {
 		return nil, nil
 	}
 
-	foundSymbolOption := h.search.FindSymbolDeclarationInWorkspace(
+	foundSymbolOption := srv.search.FindSymbolDeclarationInWorkspace(
 		docId,
 		posOption.Get(),
-		h.state,
+		srv.state,
 	)
 	if foundSymbolOption.IsNone() {
 		return nil, nil

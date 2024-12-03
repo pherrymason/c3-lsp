@@ -12,9 +12,7 @@ import (
 )
 
 // Support "Hover"
-func (s *Server) Initialize(serverName string, serverVersion string, capabilities protocol.ServerCapabilities, context *glsp.Context, params *protocol.InitializeParams) (any, error) {
-	//capabilities := handler.CreateServerCapabilities()
-
+func (srv *Server) Initialize(serverName string, serverVersion string, capabilities protocol.ServerCapabilities, context *glsp.Context, params *protocol.InitializeParams) (any, error) {
 	change := protocol.TextDocumentSyncKindIncremental
 	capabilities.TextDocumentSync = protocol.TextDocumentSyncOptions{
 		OpenClose: cast.ToPtr(true),
@@ -49,16 +47,15 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 	}
 
 	if params.RootURI != nil {
-		s.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
+		srv.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
 		path, _ := fs.UriToPath(*params.RootURI)
-		s.loadServerConfigurationForWorkspace(path)
-		s.indexWorkspace()
-
-		s.RunDiagnostics(s.state, context.Notify, false)
+		srv.loadServerConfigurationForWorkspace(path)
+		srv.indexWorkspace()
+		srv.RunDiagnostics(srv.state, context.Notify, false)
 	}
 
 	if params.Capabilities.TextDocument.PublishDiagnostics.RelatedInformation == nil || *params.Capabilities.TextDocument.PublishDiagnostics.RelatedInformation == false {
-		s.options.Diagnostics.Enabled = false
+		srv.options.Diagnostics.Enabled = false
 	}
 
 	return protocol.InitializeResult{
@@ -70,13 +67,13 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 	}, nil
 }
 
-func (h *Server) indexWorkspace() {
-	path := h.state.GetProjectRootURI()
+func (srv *Server) indexWorkspace() {
+	path := srv.state.GetProjectRootURI()
 	files, _ := fs.ScanForC3(fs.GetCanonicalPath(path))
 
 	for _, filePath := range files {
 		content, _ := os.ReadFile(filePath)
 		doc := document.NewDocumentFromString(filePath, string(content))
-		h.state.RefreshDocumentIdentifiers(&doc, h.parser)
+		srv.state.RefreshDocumentIdentifiers(&doc, srv.parser)
 	}
 }

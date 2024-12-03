@@ -11,7 +11,18 @@ import (
 const (
 	ResolveStatusPending = iota
 	ResolveStatusDone
+
+	// literals
+	NULL
+	INT   // 12345
+	FLOAT // 123.45
+	IMAG  // 123.45i
+	CHAR  // 'a'
+	STRING
+	BOOLEAN
 )
+
+type Token int
 
 type Position struct {
 	Line, Column uint
@@ -136,3 +147,13 @@ type Block struct {
 	Declarations []Declaration
 	Statements   []Expression
 }
+
+type DeclOrExpr struct {
+	NodeAttributes
+	Decl Declaration
+	Expr Expression
+	Stmt Statement
+}
+
+func (*DeclOrExpr) exprNode() {}
+func (*DeclOrExpr) declNode() {}

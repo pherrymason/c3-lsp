@@ -2,6 +2,7 @@ package ast
 
 import (
 	sitter "github.com/smacker/go-tree-sitter"
+	"log"
 )
 
 // Here lays methods to help define expected CST nodes
@@ -134,10 +135,11 @@ func (t TryConversionFunc) Validate(node *sitter.Node, source []byte) bool {
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
+				log.Printf("Error validating node: %s\n", r)
 				expr = nil
 			}
 		}()
-		expr = conversion.convert(node, source).(Expression)
+		expr = conversion.convert(node, source, false).(Expression)
 	}()
 
 	return expr != nil

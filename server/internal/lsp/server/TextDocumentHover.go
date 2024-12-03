@@ -10,10 +10,10 @@ import (
 )
 
 // Support "Hover"
-func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+func (srv *Server) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
 	docId := utils.NormalizePath(params.TextDocument.URI)
-	foundSymbolOption := h.search.FindSymbolDeclarationInWorkspace(docId, pos, h.state)
+	foundSymbolOption := srv.search.FindSymbolDeclarationInWorkspace(docId, pos, srv.state)
 	if foundSymbolOption.IsNone() {
 		return nil, nil
 	}

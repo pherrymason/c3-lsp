@@ -21,7 +21,7 @@ func TestJSONVisitor_overall(t *testing.T) {
 
 	jsonString, err := visitor.ToJSONString()
 	if err != nil {
-		fmt.Println("Error al convertir a JSON:", err)
+		fmt.Println("Error al converting to JSON:", err)
 		return
 	}
 	fmt.Printf("%s", jsonString)

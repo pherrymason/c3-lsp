@@ -16,7 +16,7 @@ import "encoding/json"
 // 		- "node_type": "File"
 
 const PNodeType = "node_type"
-const PDocPos = "doc_pos"
+const PNodePos = "node_pos"
 
 type JSONObject map[string]interface{}
 
@@ -58,7 +58,7 @@ func (v *JSONVisitor) VisitModule(node *Module) {
 	v.Result = map[string]interface{}{
 		PNodeType:      "Module",
 		"name":         node.Name,
-		PDocPos:        serialize_pos(node),
+		PNodePos:       serialize_pos(node),
 		"declarations": declarations,
 	}
 }
@@ -80,8 +80,8 @@ func (v *JSONVisitor) VisitVariableDeclaration(node *VariableDecl) {
 	names := []map[string]interface{}{}
 	for _, name := range node.Names {
 		names = append(names, map[string]interface{}{
-			"name":  name.Name,
-			PDocPos: serialize_pos(name),
+			"name":   name.Name,
+			PNodePos: serialize_pos(name),
 		})
 	}
 
@@ -93,6 +93,7 @@ func (v *JSONVisitor) VisitVariableDeclaration(node *VariableDecl) {
 
 	v.Result = map[string]interface{}{
 		PNodeType:        "VariableDeclaration",
+		PNodePos:         serialize_pos(node),
 		"names":          names,
 		"variable_type":  typeV.Result,
 		"initialization": initV.Result,
@@ -165,21 +166,48 @@ func VisitFunctionParameter(node *FunctionParameter) JSONObject {
 }
 
 func (v *JSONVisitor) VisitFunctionCall(node *FunctionCall) {
+	vIdent := JSONVisitor{}
+	Visit(node.Identifier, &vIdent)
 
+	var args []JSONObject
+	for _, arg := range node.Arguments {
+		vArgs := JSONVisitor{}
+		Visit(arg, &vArgs)
+		args = append(args, vArgs.Result)
+	}
+
+	v.Result = JSONObject{
+		PNodeType:    "FunctionCall",
+		PNodePos:     serialize_pos(node),
+		"identifier": vIdent.Result,
+		"arguments":  args,
+	}
 }
 
 func (v *JSONVisitor) VisitInterfaceDecl(node *InterfaceDecl) {
 
 }
 
+func (v *JSONVisitor) VisitExpressionStatement(node *ExpressionStmt) {
+	exprV := JSONVisitor{}
+	Visit(node.Expr, &exprV)
+
+	v.Result = JSONObject{
+		PNodeType:    "ExpressionStatement",
+		"expression": exprV.Result,
+	}
+}
+
 func (v *JSONVisitor) VisitCompoundStatement(node *CompoundStmt) {
 	visitor := JSONVisitor{}
-	statements := []JSONObject{}
+	var statements []JSONObject
 	for _, s := range node.Statements {
 		Visit(s, &visitor)
 		statements = append(statements, visitor.Result)
 	}
-	visitor.Result = JSONObject{
+	v.Result = JSONObject{
+		PNodeType:    "CompoundStatement",
+		PNodePos:     serialize_pos(node),
 		"statements": statements,
 	}
 }
@@ -204,7 +232,30 @@ func VisitType(node *TypeInfo) JSONObject {
 }
 
 func (v *JSONVisitor) VisitIdentifier(node *Ident) {
+	v.Result = JSONObject{
+		PNodeType: "Ident",
+		PNodePos:  serialize_pos(node),
+		"name":    node.Name,
+	}
+}
 
+func (v *JSONVisitor) VisitFieldAccessExpr(node *FieldAccessExpr) {
+
+}
+
+func (v *JSONVisitor) VisitSelectorExpr(node *SelectorExpr) {
+	vExpr := JSONVisitor{}
+	Visit(node.X, &vExpr)
+
+	vSel := JSONVisitor{}
+	Visit(node.Sel, &vSel)
+
+	v.Result = JSONObject{
+		PNodeType: "SelectorExpr",
+		PNodePos:  serialize_pos(node),
+		"x":       vExpr.Result,
+		"sel":     vSel.Result,
+	}
 }
 
 func (v *JSONVisitor) VisitBinaryExpression(node *BinaryExpression) {
@@ -215,15 +266,33 @@ func (v *JSONVisitor) VisitIfStatement(node *IfStmt) {
 
 }
 
-func (v *JSONVisitor) VisitIntegerLiteral(node *IntegerLiteral) {
-	v.Result = map[string]interface{}{
-		PNodeType: "IntegerLiteral",
+func (v *JSONVisitor) VisitBasicLiteral(node *BasicLit) {
+	var kind string
+	switch node.Kind {
+	case INT:
+		kind = "int"
+	case FLOAT:
+		kind = "float"
+	case STRING:
+		kind = "string"
+	case BOOLEAN:
+		kind = "bool"
+	case NULL:
+		kind = "null"
+	default:
+		kind = "?"
+	}
+
+	v.Result = JSONObject{
+		PNodeType: "BasicLit",
+		PNodePos:  serialize_pos(node),
+		"type":    kind,
 		"value":   node.Value,
 	}
 }
 
 func (v *JSONVisitor) ToJSONString() (string, error) {
-	// Utilizamos json.MarshalIndent para obtener un JSON formateado con indentación
+	// Using json.MarshalIndent to obtain a formatted JSON with indentation
 	jsonBytes, err := json.MarshalIndent(v.Result, "", "  ")
 	if err != nil {
 		return "", err

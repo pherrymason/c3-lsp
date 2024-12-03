@@ -52,7 +52,7 @@ type (
 	// Deprecated use GenDecl with Token as token.VAR
 	VariableDecl struct {
 		NodeAttributes
-		Names       []Ident
+		Names       []*Ident
 		Type        TypeInfo
 		Initializer Expression
 	}
@@ -61,7 +61,7 @@ type (
 	// Deprecated use GenDecl with Token as token.CONST
 	ConstDecl struct {
 		NodeAttributes
-		Names       []Ident
+		Names       []*Ident
 		Type        option.Option[TypeInfo]
 		Initializer Expression
 	}
