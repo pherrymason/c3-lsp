@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -33,6 +34,10 @@ func convert_statement(node *sitter.Node, source []byte) Statement {
 		NodeOfType("ct_foreach_stmt"),
 		NodeOfType("ct_for_stmt"),
 	}, node, source, false)
+
+	if dd == nil {
+		log.Fatalf("Could not conver_statement. Node Type: %s. Content: %s\n----- %s\n", node.Type(), node.Content(source), node)
+	}
 
 	return dd.(Statement)
 }
