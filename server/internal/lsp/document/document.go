@@ -1,8 +1,11 @@
-package projectDocuments
+package document
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 )
+
+type Module struct {
+}
 
 type Document struct {
 	Uri             string
@@ -12,13 +15,14 @@ type Document struct {
 	DiagnosedErrors bool
 	Ast             ast.File
 	Version         uint
+	Imports         []Module
 }
 
-type ProjectDocuments struct {
+type Storage struct {
 	documents map[string]Document
 }
 
-func (pd *ProjectDocuments) OpenDocument(uri string, text string, version uint) {
+func (pd *Storage) OpenDocument(uri string, text string, version uint) {
 	pd.documents[uri] = Document{
 		Uri:      uri,
 		FullPath: "????",
@@ -33,6 +37,6 @@ func (pd *ProjectDocuments) OpenDocument(uri string, text string, version uint) 
 	}
 }
 
-func (pd *ProjectDocuments) CloseDocument(uri string) {
+func (pd *Storage) CloseDocument(uri string) {
 	delete(pd.documents, uri)
 }
