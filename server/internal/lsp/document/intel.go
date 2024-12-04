@@ -1,4 +1,4 @@
-package projectDocuments
+package document
 
 type DBIntel struct {
 }

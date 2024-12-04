@@ -27,12 +27,12 @@ func NewDocument(docId string, sourceCode string) Document {
 	}
 }
 
-func NewDocumentFromString(docId string, sourceCode string) Document {
-	return NewDocument(docId, sourceCode)
+func NewDocumentFromString(uri string, sourceCode string) Document {
+	return NewDocument(uri, sourceCode)
 }
 
-func NewDocumentFromDocURI(docURI string, sourceCode string, docVersion int32) *Document {
-	normalizedPath := utils.NormalizePath(docURI)
+func NewDocumentFromDocURI(uri string, sourceCode string, docVersion int32) *Document {
+	normalizedPath := utils.NormalizePath(uri)
 	doc := NewDocumentFromString(normalizedPath, sourceCode)
 
 	return &doc
