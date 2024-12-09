@@ -2,6 +2,7 @@ package document
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 )
 
 type Module struct {
@@ -19,13 +20,19 @@ type Document struct {
 }
 
 type Storage struct {
-	documents map[string]Document
+	documents map[string]*Document
+}
+
+func NewStore() *Storage {
+	return &Storage{
+		documents: make(map[string]*Document),
+	}
 }
 
 func (pd *Storage) OpenDocument(uri string, text string, version uint) {
-	pd.documents[uri] = Document{
+	pd.documents[uri] = &Document{
 		Uri:      uri,
-		FullPath: "????",
+		FullPath: utils.NormalizePath(uri),
 		Text:     text,
 		Owned:    true,
 		Version:  version,
@@ -39,4 +46,8 @@ func (pd *Storage) OpenDocument(uri string, text string, version uint) {
 
 func (pd *Storage) CloseDocument(uri string) {
 	delete(pd.documents, uri)
+}
+
+func (pd *Storage) GetDocument(uri string) (*Document, error) {
+	return pd.documents[uri], nil
 }

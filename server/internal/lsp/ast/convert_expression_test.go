@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"strings"
 	"testing"
 
@@ -145,6 +146,18 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 13, 2, 29).Build(),
 				Operator:       "&",
 				Argument:       NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).BuildPtr(),
+			},
+		},
+		{
+			literal: "Enum.MEMBER",
+			expected: &SelectorExpr{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 13, 2, 24).Build(),
+				X: NewTypeInfoBuilder().
+					WithName("Enum").
+					WithNameStartEnd(2, 13, 2, 17).
+					WithStartEnd(2, 13, 2, 17).
+					Build(),
+				Sel: NewIdentifierBuilder().WithName("MEMBER").WithStartEnd(2, 18, 2, 24).BuildPtr(),
 			},
 		},
 
@@ -402,8 +415,8 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 			input: "object.call(1);",
 			expected: &FunctionCall{
 				NodeAttributes: NodeAttributes{
-					StartPos: Position{Line: 3, Column: 2},
-					EndPos:   Position{Line: 3, Column: 16},
+					StartPos: lsp.Position{Line: 3, Column: 2},
+					EndPos:   lsp.Position{Line: 3, Column: 16},
 				},
 				Identifier: &SelectorExpr{
 					X:   NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
@@ -422,8 +435,8 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 			input: "object.prop.call(1);",
 			expected: &FunctionCall{
 				NodeAttributes: NodeAttributes{
-					StartPos: Position{Line: 3, Column: 2},
-					EndPos:   Position{Line: 3, Column: 21},
+					StartPos: lsp.Position{Line: 3, Column: 2},
+					EndPos:   lsp.Position{Line: 3, Column: 21},
 				},
 				Identifier: &SelectorExpr{
 					X: &SelectorExpr{

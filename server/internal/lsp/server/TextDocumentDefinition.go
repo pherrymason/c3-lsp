@@ -1,7 +1,10 @@
 package server
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis"
 	_prot "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
+	"github.com/pherrymason/c3-lsp/pkg/featureflags"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
@@ -11,6 +14,12 @@ import (
 
 // Returns: Location | []Location | []LocationLink | nil
 func (srv *Server) TextDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
+	if featureflags.IsActive(featureflags.UseGeneratedAST) {
+		doc, _ := srv.documents.GetDocument(params.TextDocument.URI)
+		analysis.GetDefinitionLocation(doc, lsp.NewLSPPosition(params.Position))
+		return nil, nil
+	}
+
 	identifierOption := srv.search.FindSymbolDeclarationInWorkspace(
 		utils.NormalizePath(params.TextDocument.URI),
 		symbols.NewPositionFromLSPPosition(params.Position),

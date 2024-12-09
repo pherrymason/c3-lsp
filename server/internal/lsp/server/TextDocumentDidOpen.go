@@ -14,7 +14,7 @@ func (srv *Server) TextDocumentDidOpen(context *glsp.Context, params *protocol.D
 	}
 
 	if featureflags.IsActive(featureflags.UseGeneratedAST) {
-		srv.project.OpenDocument(params.TextDocument.URI, params.TextDocument.Text, uint(params.TextDocument.Version))
+		srv.documents.OpenDocument(params.TextDocument.URI, params.TextDocument.Text, uint(params.TextDocument.Version))
 	} else {
 		doc := document.NewDocumentFromDocURI(params.TextDocument.URI, params.TextDocument.Text, params.TextDocument.Version)
 		srv.state.RefreshDocumentIdentifiers(doc, srv.parser)

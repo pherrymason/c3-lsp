@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -29,11 +30,11 @@ func (d *ASTBaseNodeBuilder) Build() NodeAttributes {
 }
 
 func (d *ASTBaseNodeBuilder) WithSitterPosRange(start sitter.Point, end sitter.Point) *ASTBaseNodeBuilder {
-	d.bn.StartPos = Position{
+	d.bn.StartPos = lsp.Position{
 		Column: uint(start.Column),
 		Line:   uint(start.Row),
 	}
-	d.bn.EndPos = Position{
+	d.bn.EndPos = lsp.Position{
 		Column: uint(end.Column),
 		Line:   uint(end.Row),
 	}
@@ -46,8 +47,8 @@ func (i *ASTBaseNodeBuilder) WithSitterPos(node *sitter.Node) *ASTBaseNodeBuilde
 }
 
 func (d *ASTBaseNodeBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *ASTBaseNodeBuilder {
-	d.bn.StartPos = Position{startRow, startCol}
-	d.bn.EndPos = Position{endRow, endCol}
+	d.bn.StartPos = lsp.Position{startRow, startCol}
+	d.bn.EndPos = lsp.Position{endRow, endCol}
 	return d
 }
 
@@ -161,14 +162,14 @@ func (b *TypeInfoBuilder) WithPath(path string) *TypeInfoBuilder {
 }
 
 func (b *TypeInfoBuilder) WithNameStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.Identifier.StartPos = Position{startRow, startCol}
-	b.t.Identifier.EndPos = Position{endRow, endCol}
+	b.t.Identifier.StartPos = lsp.Position{startRow, startCol}
+	b.t.Identifier.EndPos = lsp.Position{endRow, endCol}
 	return b
 }
 
 func (b *TypeInfoBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.NodeAttributes.StartPos = Position{startRow, startCol}
-	b.t.NodeAttributes.EndPos = Position{endRow, endCol}
+	b.t.NodeAttributes.StartPos = lsp.Position{startRow, startCol}
+	b.t.NodeAttributes.EndPos = lsp.Position{endRow, endCol}
 	return b
 }
 
@@ -211,8 +212,8 @@ func (b *DefDeclBuilder) WithName(name string) *DefDeclBuilder {
 	return b
 }
 func (b *DefDeclBuilder) WithIdentifierSitterPos(node *sitter.Node) *DefDeclBuilder {
-	b.d.Name.StartPos = Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
-	b.d.Name.EndPos = Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
+	b.d.Name.StartPos = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+	b.d.Name.EndPos = lsp.Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
 
 	return b
 }

@@ -2,7 +2,7 @@ package ast
 
 import (
 	"errors"
-	"fmt"
+	"log"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -75,6 +75,7 @@ func nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
 		"ident":                  {method: cv_expr_fn(convert_ident)},
 		"if_stmt":                {method: cv_stmt_fn(convert_if_stmt)},
 		"initializer_list":       {method: cv_expr_fn(convert_initializer_list)},
+		"type_access_expr":       {method: cv_expr_fn(convert_type_access_expr)},
 
 		"lambda_declaration":    {method: cv_expr_fn(convert_lambda_declaration)},
 		"lambda_expr":           {method: cv_expr_fn(convert_lambda_expr)},
@@ -154,6 +155,15 @@ func nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
 	//panic(fmt.Sprintf("La función %s no existe\n", nodeType))
 }
 
+func choice(types []string, node *sitter.Node, source []byte, debug bool) Node {
+	rules := []NodeRule{}
+	for _, typ := range types {
+		rules = append(rules, NodeOfType(typ))
+	}
+
+	return anyOf("x", rules, node, source, debug)
+}
+
 func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) Node {
 	//fmt.Printf("anyOf: ")
 	if debug {
@@ -166,7 +176,7 @@ func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debu
 	for _, rule := range rules {
 		if rule.Validate(node, source) {
 			if debug {
-				fmt.Printf("Converted selected %s\n", rule.Type())
+				log.Printf("Converted selected %s\n", rule.Type())
 			}
 			conversion, err := nodeTypeConverterMap(rule.Type())
 			if err != nil {

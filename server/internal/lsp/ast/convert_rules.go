@@ -135,7 +135,7 @@ func (t TryConversionFunc) Validate(node *sitter.Node, source []byte) bool {
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("Error validating node: %s\n", r)
+				log.Printf("Error validating node: %s\nNode type: %s. Content: %s. Cv: %s", r, node.Type(), node.Content(source), t.FuncName)
 				expr = nil
 			}
 		}()

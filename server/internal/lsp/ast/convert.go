@@ -4,6 +4,8 @@ import "C"
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"log"
 	"strconv"
 	"strings"
 
@@ -15,6 +17,11 @@ import (
 )
 
 var ConvertDebug bool = false
+
+// statements not implemented yet and we want to ignore
+var ignoreStatements = [1]string{
+	"line_comment",
+}
 
 func GetCST(sourceCode string) *sitter.Node {
 	return cst.GetParsedTreeFromString(sourceCode).RootNode()
@@ -55,7 +62,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 		case "module":
 			if anonymousModule {
 				anonymousModule = false
-				lastMod.NodeAttributes.EndPos = Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+				lastMod.NodeAttributes.EndPos = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
 			}
 
 			prg.Modules = append(prg.Modules, convert_module(node, source))
@@ -1133,8 +1140,10 @@ func convert_assignment_expr(node *sitter.Node, source []byte) Expression {
 		right = convert_type(rightNode, source)
 		operator = "="
 	} else {
+		ConvertDebug = true
 		left = convert_expression(leftNode, source)
 		right = convert_expression(rightNode, source)
+		ConvertDebug = false
 		operator = node.ChildByFieldName("operator").Content(source)
 	}
 
@@ -1186,7 +1195,23 @@ func convert_ternary_expr(node *sitter.Node, source []byte) Expression {
 	}
 }
 
+func convert_type_access_expr(node *sitter.Node, source []byte) Expression {
+	var x Expression
+	var y *Ident
+
+	argumentNode := node.ChildByFieldName("argument")
+	x = convert_type(argumentNode, source)
+	y = choice([]string{"access_ident", "const_ident"}, node.ChildByFieldName("field"), source, true).(*Ident)
+
+	return &SelectorExpr{
+		NodeAttributes: NewNodeAttributesBuilder().WithSitterPos(node).Build(),
+		X:              x,
+		Sel:            y,
+	}
+}
+
 func convert_field_expr(node *sitter.Node, source []byte) Expression {
+	debugNode(node, source, "field_expr")
 	argument := node.ChildByFieldName("argument")
 	var argumentNode Expression
 	if argument.Type() == "ident" {
@@ -1641,9 +1666,9 @@ func convert_token_separated(node *sitter.Node, separator string, source []byte,
 
 func debugNode(node *sitter.Node, source []byte, tag string) {
 	if node == nil {
-		fmt.Printf("Node is nil\n")
+		log.Printf("Node is nil\n")
 		return
 	}
 
-	fmt.Printf("%s: %s: %s\n----- %s\n", tag, node.Type(), node.Content(source), node)
+	log.Printf("%s: %s: %s\n----- %s\n", tag, node.Type(), node.Content(source), node)
 }

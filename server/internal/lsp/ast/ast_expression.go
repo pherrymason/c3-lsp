@@ -35,8 +35,8 @@ type (
 
 	SelectorExpr struct {
 		NodeAttributes
-		X   Expression
-		Sel *Ident
+		X   Expression //
+		Sel *Ident     //
 	}
 
 	// Ellipsis TODO
@@ -97,6 +97,13 @@ type (
 		Left     Expression
 		Right    Expression
 		Operator string
+	}
+
+	// A StarExpr node represents an expression of the form "*" Expression.
+	// Semantically it could be a unary "*" expression, or a pointer type.
+	StarExpr struct {
+		NodeAttributes
+		X Expression
 	}
 
 	// A FunctionCall node represents an expression followed by an argument list.
