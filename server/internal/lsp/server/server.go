@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"log"
 	"time"
@@ -26,8 +27,8 @@ type Server struct {
 	options ServerOpts
 	version string
 
-	project document.Storage
-	dbIntel document.DBIntel
+	documents *document.Storage
+	dbIntel   analysis.DBIntel
 
 	state  *ps.ProjectState
 	parser *p.Parser
@@ -71,9 +72,10 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		options: opts,
 		version: version,
 
-		state:  &state,
-		parser: &parser,
-		search: search,
+		documents: document.NewStore(),
+		state:     &state,
+		parser:    &parser,
+		search:    search,
 
 		diagnosticDebounced: debounce.New(opts.Diagnostics.Delay * time.Millisecond),
 	}

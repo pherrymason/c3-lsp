@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -24,10 +25,6 @@ const (
 
 type Token int
 
-type Position struct {
-	Line, Column uint
-}
-
 // ----------------------------------------------------------------------------
 // Interfaces
 //
@@ -40,8 +37,8 @@ type Position struct {
 // corresponding source text segment.
 
 type Node interface {
-	StartPosition() Position
-	EndPosition() Position
+	StartPosition() lsp.Position
+	EndPosition() lsp.Position
 }
 
 type Expression interface {
@@ -59,19 +56,27 @@ type Statement interface {
 	stmtNode()
 }
 
+type EmptyNode struct {
+	NodeAttributes
+}
+
+func (n *EmptyNode) declNode() {}
+func (n *EmptyNode) exprNode() {}
+func (n *EmptyNode) stmtNode() {}
+
 // NodeAttributes is a struct that contains the common information all
 // AST Nodes contains, like position or other attributes
 type NodeAttributes struct {
-	StartPos, EndPos Position
+	StartPos, EndPos lsp.Position
 	Attributes       []string
 }
 
-func (n NodeAttributes) StartPosition() Position { return n.StartPos }
-func (n NodeAttributes) EndPosition() Position   { return n.EndPos }
+func (n NodeAttributes) StartPosition() lsp.Position { return n.StartPos }
+func (n NodeAttributes) EndPosition() lsp.Position   { return n.EndPos }
 
 func ChangeNodePosition(n *NodeAttributes, start sitter.Point, end sitter.Point) {
-	n.StartPos = Position{Line: uint(start.Row), Column: uint(start.Column)}
-	n.EndPos = Position{Line: uint(end.Row), Column: uint(end.Column)}
+	n.StartPos = lsp.Position{Line: uint(start.Row), Column: uint(start.Column)}
+	n.EndPos = lsp.Position{Line: uint(end.Row), Column: uint(end.Column)}
 } /*
 func (n *NodeAttributes) SetPos(start sitter.Point, end sitter.Point) {
 	n.StartPos = Position{Line: uint(start.Row), Column: uint(start.Column)}
@@ -141,7 +146,8 @@ type FunctionParameter struct {
 	Type TypeInfo
 }
 
-// Block TODO document what this represents
+// Block
+// Only used in MacroDecl.Body
 type Block struct {
 	NodeAttributes
 	Declarations []Declaration

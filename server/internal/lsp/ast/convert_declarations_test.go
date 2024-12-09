@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -81,15 +82,15 @@ func TestConvertToAST_module_with_generics(t *testing.T) {
 				GenericParameters: []string{"Type"},
 				NodeAttributes: NodeAttributes{
 					Attributes: nil,
-					StartPos:   Position{0, 0},
-					EndPos:     Position{0, 19},
+					StartPos:   lsp.Position{0, 0},
+					EndPos:     lsp.Position{0, 19},
 				},
 			},
 		},
 		NodeAttributes: NodeAttributes{
 			Attributes: nil,
-			StartPos:   Position{0, 0},
-			EndPos:     Position{0, 19},
+			StartPos:   lsp.Position{0, 0},
+			EndPos:     lsp.Position{0, 19},
 		},
 		Name: "file.c3",
 	}
@@ -109,15 +110,15 @@ func TestConvertToAST_module_with_attributes(t *testing.T) {
 				GenericParameters: nil,
 				NodeAttributes: NodeAttributes{
 					Attributes: []string{"@private"},
-					StartPos:   Position{0, 0},
-					EndPos:     Position{0, 20},
+					StartPos:   lsp.Position{0, 0},
+					EndPos:     lsp.Position{0, 20},
 				},
 			},
 		},
 		NodeAttributes: NodeAttributes{
 			Attributes: nil,
-			StartPos:   Position{0, 0},
-			EndPos:     Position{0, 20},
+			StartPos:   lsp.Position{0, 0},
+			EndPos:     lsp.Position{0, 20},
 		},
 		Name: "file.c3",
 	}
@@ -688,8 +689,8 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 			Build(),
 		faultDecl.Name,
 	)
-	assert.Equal(t, Position{1, 1}, faultDecl.NodeAttributes.StartPos)
-	assert.Equal(t, Position{5, 2}, faultDecl.NodeAttributes.EndPos)
+	assert.Equal(t, lsp.Position{1, 1}, faultDecl.NodeAttributes.StartPos)
+	assert.Equal(t, lsp.Position{5, 2}, faultDecl.NodeAttributes.EndPos)
 
 	assert.Equal(t, false, faultDecl.BackingType.IsSome())
 	assert.Equal(t, 2, len(faultDecl.Members))
@@ -798,16 +799,16 @@ func TestConvertToAST_function_declaration(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	fnDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
-	assert.Equal(t, Position{1, 1}, fnDecl.NodeAttributes.StartPos)
-	assert.Equal(t, Position{3, 2}, fnDecl.NodeAttributes.EndPos)
+	assert.Equal(t, lsp.Position{1, 1}, fnDecl.NodeAttributes.StartPos)
+	assert.Equal(t, lsp.Position{3, 2}, fnDecl.NodeAttributes.EndPos)
 
 	assert.Equal(t, "test", fnDecl.Signature.Name.Name, "Function name")
-	assert.Equal(t, Position{1, 9}, fnDecl.Signature.Name.NodeAttributes.StartPos)
-	assert.Equal(t, Position{1, 13}, fnDecl.Signature.Name.NodeAttributes.EndPos)
+	assert.Equal(t, lsp.Position{1, 9}, fnDecl.Signature.Name.NodeAttributes.StartPos)
+	assert.Equal(t, lsp.Position{1, 13}, fnDecl.Signature.Name.NodeAttributes.EndPos)
 
 	assert.Equal(t, "void", fnDecl.Signature.ReturnType.Identifier.Name, "Return type")
-	assert.Equal(t, Position{1, 4}, fnDecl.Signature.ReturnType.NodeAttributes.StartPos)
-	assert.Equal(t, Position{1, 8}, fnDecl.Signature.ReturnType.NodeAttributes.EndPos)
+	assert.Equal(t, lsp.Position{1, 4}, fnDecl.Signature.ReturnType.NodeAttributes.StartPos)
+	assert.Equal(t, lsp.Position{1, 8}, fnDecl.Signature.ReturnType.NodeAttributes.EndPos)
 }
 
 func TestConvertToAST_function_declaration_one_line(t *testing.T) {
@@ -818,8 +819,8 @@ func TestConvertToAST_function_declaration_one_line(t *testing.T) {
 	fnDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
 
 	assert.Equal(t, "init_window", fnDecl.Signature.Name.Name, "Function name")
-	assert.Equal(t, Position{1, 1}, fnDecl.NodeAttributes.StartPos)
-	assert.Equal(t, Position{1, 79}, fnDecl.NodeAttributes.EndPos)
+	assert.Equal(t, lsp.Position{1, 1}, fnDecl.NodeAttributes.StartPos)
+	assert.Equal(t, lsp.Position{1, 79}, fnDecl.NodeAttributes.EndPos)
 }
 
 func TestConvertToAST_Function_returning_optional_type_declaration(t *testing.T) {
@@ -896,18 +897,18 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 
 	methodDecl := ast.Modules[0].Declarations[0].(*FunctionDecl)
 
-	assert.Equal(t, Position{1, 1}, methodDecl.NodeAttributes.StartPos)
-	assert.Equal(t, Position{3, 2}, methodDecl.NodeAttributes.EndPos)
+	assert.Equal(t, lsp.Position{1, 1}, methodDecl.NodeAttributes.StartPos)
+	assert.Equal(t, lsp.Position{3, 2}, methodDecl.NodeAttributes.EndPos)
 
 	assert.Equal(t, true, methodDecl.ParentTypeId.IsSome(), "Function is flagged as method")
 	assert.Equal(t, "method", methodDecl.Signature.Name.Name, "Function name")
-	assert.Equal(t, Position{1, 23}, methodDecl.Signature.Name.NodeAttributes.StartPos)
-	assert.Equal(t, Position{1, 29}, methodDecl.Signature.Name.NodeAttributes.EndPos)
+	assert.Equal(t, lsp.Position{1, 23}, methodDecl.Signature.Name.NodeAttributes.StartPos)
+	assert.Equal(t, lsp.Position{1, 29}, methodDecl.Signature.Name.NodeAttributes.EndPos)
 
 	assert.Equal(t, "Object", methodDecl.Signature.ReturnType.Identifier.Name, "Return type")
 	assert.Equal(t, uint(1), methodDecl.Signature.ReturnType.Pointer, "Return type is pointer")
-	assert.Equal(t, Position{1, 4}, methodDecl.Signature.ReturnType.NodeAttributes.StartPos)
-	assert.Equal(t, Position{1, 10}, methodDecl.Signature.ReturnType.NodeAttributes.EndPos)
+	assert.Equal(t, lsp.Position{1, 4}, methodDecl.Signature.ReturnType.NodeAttributes.StartPos)
+	assert.Equal(t, lsp.Position{1, 10}, methodDecl.Signature.ReturnType.NodeAttributes.EndPos)
 
 	assert.Equal(t, 2, len(methodDecl.Signature.Parameters))
 	assert.Equal(t,
@@ -983,12 +984,12 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 	macroDecl := ast.Modules[0].Declarations[0].(*MacroDecl)
 
-	assert.Equal(t, Position{1, 1}, macroDecl.StartPos)
-	assert.Equal(t, Position{3, 2}, macroDecl.EndPos)
+	assert.Equal(t, lsp.Position{1, 1}, macroDecl.StartPos)
+	assert.Equal(t, lsp.Position{3, 2}, macroDecl.EndPos)
 
 	assert.Equal(t, "m", macroDecl.Signature.Name.Name)
-	assert.Equal(t, Position{1, 7}, macroDecl.Signature.Name.StartPos)
-	assert.Equal(t, Position{1, 8}, macroDecl.Signature.Name.EndPos)
+	assert.Equal(t, lsp.Position{1, 7}, macroDecl.Signature.Name.StartPos)
+	assert.Equal(t, lsp.Position{1, 8}, macroDecl.Signature.Name.EndPos)
 
 	assert.Equal(t, 1, len(macroDecl.Signature.Parameters))
 	assert.Equal(

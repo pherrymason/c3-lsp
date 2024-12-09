@@ -11,7 +11,7 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-// textDocument/signatureHelp: {"context":{"isRetrigger":false,"triggerCharacter":"(","triggerKind":2},"position":{"character":20,"line":8},"textDocument":{"uri":"file:///Volumes/Development/raul/projects/game-dev/raul-game-project/murder-c3/src/main.c3"}}
+// textDocument/signatureHelp: {"context":{"isRetrigger":false,"triggerCharacter":"(","triggerKind":2},"position":{"character":20,"line":8},"textDocument":{"uri":"file:///Volumes/Development/raul/projects/game-dev/raul-game-documents/murder-c3/src/main.c3"}}
 func (srv *Server) TextDocumentSignatureHelp(context *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
 	// Rewind position after previous "("
 	docId := utils.NormalizePath(params.TextDocument.URI)

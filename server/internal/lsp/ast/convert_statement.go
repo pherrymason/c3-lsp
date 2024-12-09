@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/pkg"
 	"log"
 
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -9,6 +10,10 @@ import (
 )
 
 func convert_statement(node *sitter.Node, source []byte) Statement {
+	if pkg.SliceContains(ignoreStatements[:], node.Type()) {
+		return &EmptyNode{}
+	}
+
 	dd := anyOf("statement", []NodeRule{
 		NodeOfType("compound_stmt"),
 		NodeOfType("expr_stmt"),

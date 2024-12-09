@@ -43,7 +43,7 @@ type ServerOptsJson struct {
 func (srv *Server) loadServerConfigurationForWorkspace(path string) {
 	file, err := os.Open(path + "/c3lsp.json")
 	if err != nil {
-		// No configuration project file found.
+		// No configuration documents file found.
 		log.Print("No configuration " + path + "/c3lsp.json found")
 		return
 	}
