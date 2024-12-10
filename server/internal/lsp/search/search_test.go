@@ -18,7 +18,7 @@ func NewSearchWithoutLog() Search {
 	logger := &MockLogger{
 		tracker: make(map[string][]string),
 	}
-	search := NewSearch(logger, true)
+	search := NewSearch(logger, false)
 
 	return search
 }

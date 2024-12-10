@@ -16,8 +16,8 @@ import (
 func (srv *Server) TextDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
 	if featureflags.IsActive(featureflags.UseGeneratedAST) {
 		doc, _ := srv.documents.GetDocument(params.TextDocument.URI)
-		analysis.GetDefinitionLocation(doc, lsp.NewLSPPosition(params.Position))
-		return nil, nil
+		locations := analysis.GetDefinitionLocation(doc, lsp.NewLSPPosition(params.Position), srv.documents)
+		return locations, nil
 	}
 
 	identifierOption := srv.search.FindSymbolDeclarationInWorkspace(

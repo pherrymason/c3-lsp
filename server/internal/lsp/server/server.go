@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/pherrymason/c3-lsp/internal/lsp/analysis"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"log"
 	"time"
@@ -28,7 +27,6 @@ type Server struct {
 	version string
 
 	documents *document.Storage
-	dbIntel   analysis.DBIntel
 
 	state  *ps.ProjectState
 	parser *p.Parser

@@ -68,11 +68,14 @@ func (n *EmptyNode) stmtNode() {}
 // AST Nodes contains, like position or other attributes
 type NodeAttributes struct {
 	StartPos, EndPos lsp.Position
+	Range            lsp.Range
+	Parent           Node
 	Attributes       []string
 }
 
 func (n NodeAttributes) StartPosition() lsp.Position { return n.StartPos }
 func (n NodeAttributes) EndPosition() lsp.Position   { return n.EndPos }
+func SetParent(parent Node, child *NodeAttributes)   { child.Parent = parent }
 
 func ChangeNodePosition(n *NodeAttributes, start sitter.Point, end sitter.Point) {
 	n.StartPos = lsp.Position{Line: uint(start.Row), Column: uint(start.Column)}
@@ -89,12 +92,36 @@ type File struct {
 	Modules []Module
 }
 
+func NewFile(name string, aRange lsp.Range, modules []Module) *File {
+	node := &File{
+		Name: name,
+		NodeAttributes: NewNodeAttributesBuilder().
+			WithRange(aRange).Build(),
+		Modules: modules,
+	}
+
+	for i := range node.Modules {
+		SetParent(node, &node.Modules[i].NodeAttributes)
+	}
+	return node
+}
+
 type Module struct {
 	NodeAttributes
 	Name              string
 	GenericParameters []string
 	Declarations      []Declaration // Top level declarations
 	Imports           []*Import     // Imports in this file
+}
+
+func NewModule(name string, aRange lsp.Range, file *File) *Module {
+	return &Module{
+		Name: name,
+		NodeAttributes: NodeAttributes{
+			Parent: file,
+			Range:  aRange,
+		},
+	}
 }
 
 type Import struct {

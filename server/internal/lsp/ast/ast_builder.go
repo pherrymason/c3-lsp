@@ -7,14 +7,14 @@ import (
 )
 
 // --
-// ASTBaseNodeBuilder
+// NodeAttrsBuilder
 // --
-type ASTBaseNodeBuilder struct {
+type NodeAttrsBuilder struct {
 	bn NodeAttributes
 }
 
-func NewNodeAttributesBuilder() *ASTBaseNodeBuilder {
-	return &ASTBaseNodeBuilder{
+func NewNodeAttributesBuilder() *NodeAttrsBuilder {
+	return &NodeAttrsBuilder{
 		bn: NodeAttributes{},
 	}
 }
@@ -25,11 +25,11 @@ func NewBaseNodeFromSitterNode(node *sitter.Node) NodeAttributes {
 
 	return builder.Build()
 }
-func (d *ASTBaseNodeBuilder) Build() NodeAttributes {
+func (d *NodeAttrsBuilder) Build() NodeAttributes {
 	return d.bn
 }
 
-func (d *ASTBaseNodeBuilder) WithSitterPosRange(start sitter.Point, end sitter.Point) *ASTBaseNodeBuilder {
+func (d *NodeAttrsBuilder) WithSitterPosRange(start sitter.Point, end sitter.Point) *NodeAttrsBuilder {
 	d.bn.StartPos = lsp.Position{
 		Column: uint(start.Column),
 		Line:   uint(start.Row),
@@ -41,14 +41,19 @@ func (d *ASTBaseNodeBuilder) WithSitterPosRange(start sitter.Point, end sitter.P
 	return d
 }
 
-func (i *ASTBaseNodeBuilder) WithSitterPos(node *sitter.Node) *ASTBaseNodeBuilder {
+func (i *NodeAttrsBuilder) WithSitterPos(node *sitter.Node) *NodeAttrsBuilder {
 	i.WithSitterPosRange(node.StartPoint(), node.EndPoint())
 	return i
 }
 
-func (d *ASTBaseNodeBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *ASTBaseNodeBuilder {
+func (d *NodeAttrsBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *NodeAttrsBuilder {
 	d.bn.StartPos = lsp.Position{startRow, startCol}
 	d.bn.EndPos = lsp.Position{endRow, endCol}
+	return d
+}
+
+func (d *NodeAttrsBuilder) WithRange(aRange lsp.Range) *NodeAttrsBuilder {
+	d.bn.Range = aRange
 	return d
 }
 
@@ -57,7 +62,7 @@ func (d *ASTBaseNodeBuilder) WithStartEnd(startRow uint, startCol uint, endRow u
 // --
 type IdentifierBuilder struct {
 	bi *Ident
-	bn ASTBaseNodeBuilder
+	bn NodeAttrsBuilder
 }
 
 func NewIdentifierBuilder() *IdentifierBuilder {
@@ -182,7 +187,7 @@ func (i *TypeInfoBuilder) Build() TypeInfo {
 // --
 type DefDeclBuilder struct {
 	d DefDecl
-	a ASTBaseNodeBuilder
+	a NodeAttrsBuilder
 }
 
 func NewDefDeclBuilder() *DefDeclBuilder {

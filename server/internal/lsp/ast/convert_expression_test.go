@@ -160,6 +160,26 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 				Sel: NewIdentifierBuilder().WithName("MEMBER").WithStartEnd(2, 18, 2, 24).BuildPtr(),
 			},
 		},
+		{
+			literal: "((int)1.0)",
+			expected: &ParenExpr{
+				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 13, 2, 23).Build(),
+				X: &CastExpression{
+					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 14, 2, 22).Build(),
+					Type: NewTypeInfoBuilder().
+						WithName("int").
+						WithStartEnd(2, 15, 2, 18).
+						WithNameStartEnd(2, 15, 2, 18).
+						IsBuiltin().
+						Build(),
+					Argument: &BasicLit{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(2, 19, 2, 22).Build(),
+						Kind:           FLOAT,
+						Value:          "1.0",
+					},
+				},
+			},
+		},
 
 		// seq($.type, $.initializer_list),
 		{
