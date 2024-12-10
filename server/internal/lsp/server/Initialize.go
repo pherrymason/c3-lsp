@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/pherrymason/c3-lsp/pkg/featureflags"
 	"os"
 
 	"github.com/pherrymason/c3-lsp/pkg/cast"
@@ -73,7 +74,12 @@ func (srv *Server) indexWorkspace() {
 
 	for _, filePath := range files {
 		content, _ := os.ReadFile(filePath)
-		doc := document.NewDocumentFromString(filePath, string(content))
-		srv.state.RefreshDocumentIdentifiers(&doc, srv.parser)
+
+		if featureflags.IsActive(featureflags.UseGeneratedAST) {
+			srv.documents.OpenDocumentFromPath(filePath, string(content), 0)
+		} else {
+			doc := document.NewDocumentFromString(filePath, string(content))
+			srv.state.RefreshDocumentIdentifiers(&doc, srv.parser)
+		}
 	}
 }

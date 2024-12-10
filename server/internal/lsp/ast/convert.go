@@ -19,8 +19,9 @@ import (
 var ConvertDebug bool = false
 
 // statements not implemented yet and we want to ignore
-var ignoreStatements = [1]string{
+var ignoreStatements = [2]string{
 	"line_comment",
+	"block_comment",
 }
 
 func GetCST(sourceCode string) *sitter.Node {
@@ -32,10 +33,11 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 
 	var prg File
 	if cstNode.Type() == "source_file" {
-		prg = File{
-			Name:           fileName,
-			NodeAttributes: NewNodeAttributesBuilder().WithSitterPos(cstNode).Build(),
-		}
+		prg = *NewFile(
+			fileName,
+			lsp.NewRangeFromSitterNode(cstNode),
+			[]Module{},
+		)
 	}
 
 	anonymousModule := false
@@ -45,10 +47,15 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 		if parsedModules == 0 && node.Type() != "module" {
 			anonymousModule = true
 			prg.Modules = append(prg.Modules,
-				Module{
-					NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(uint(node.StartPoint().Row), uint(node.StartPoint().Column), 0, 0).Build(),
-					Name:           symbols.NormalizeModuleName(fileName),
-				},
+				*NewModule(
+					symbols.NormalizeModuleName(fileName),
+					lsp.NewRangeFromSitterNode(node),
+					&prg,
+				), /*
+					Module{
+						NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(uint(node.StartPoint().Row), uint(node.StartPoint().Column), 0, 0).Build(),
+						Name:           symbols.NormalizeModuleName(fileName),
+					},*/
 			)
 			parsedModules = len(prg.Modules)
 		}
@@ -62,10 +69,12 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 		case "module":
 			if anonymousModule {
 				anonymousModule = false
-				lastMod.NodeAttributes.EndPos = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+				lastMod.NodeAttributes.Range.End = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
 			}
 
-			prg.Modules = append(prg.Modules, convert_module(node, source))
+			module := convert_module(node, source)
+			SetParent(&prg, &module.NodeAttributes)
+			prg.Modules = append(prg.Modules, module)
 
 		case "import_declaration":
 			lastMod.Imports = append(lastMod.Imports, convert_imports(node, source).(*Import))
@@ -115,10 +124,11 @@ func convertSourceFile(node *sitter.Node, source []byte) File {
 }
 
 func convert_module(node *sitter.Node, source []byte) Module {
-	module := Module{NodeAttributes: NewNodeAttributesBuilder().Build()}
-	module.Name = node.ChildByFieldName("path").Content(source)
-	//module.SetPos(node.StartPoint(), node.EndPoint())
-	ChangeNodePosition(&module.NodeAttributes, node.StartPoint(), node.EndPoint())
+	module := NewModule(
+		node.ChildByFieldName("path").Content(source),
+		lsp.NewRangeFromSitterNode(node),
+		nil,
+	)
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
@@ -139,12 +149,13 @@ func convert_module(node *sitter.Node, source []byte) Module {
 		}
 	}
 
-	return module
+	return *module
 }
 
 func convert_imports(node *sitter.Node, source []byte) Statement {
 	imports := &Import{
-		Path: node.ChildByFieldName("path").Content(source),
+		NodeAttributes: NewNodeAttributesBuilder().WithSitterPos(node).Build(),
+		Path:           node.ChildByFieldName("path").Content(source),
 	}
 
 	return imports
@@ -1086,8 +1097,8 @@ func convert_base_expression(node *sitter.Node, source []byte) Expression {
 
 		NodeOfType("field_expr"),       // TODO
 		NodeOfType("type_access_expr"), // TODO
-		NodeOfType("paren_expr"),       // TODO
-		NodeOfType("expr_block"),       // TODO
+		NodeOfType("paren_expr"),
+		NodeOfType("expr_block"), // TODO
 
 		NodeOfType("$vacount"),
 
@@ -1662,6 +1673,21 @@ func convert_token_separated(node *sitter.Node, separator string, source []byte,
 	}
 
 	return nodes
+}
+
+func convert_paren_expr(node *sitter.Node, source []byte) Expression {
+	child := node.Child(0)
+	if child.Type() != "(" {
+		panic(
+			fmt.Sprintf("convert_paren_expr: Incorrect type. Expected \"(\": %s", node.Type()),
+		)
+	}
+
+	next := child.NextSibling()
+	return &ParenExpr{
+		NodeAttributes: NewBaseNodeFromSitterNode(node),
+		X:              convert_expression(next, source),
+	}
 }
 
 func debugNode(node *sitter.Node, source []byte, tag string) {

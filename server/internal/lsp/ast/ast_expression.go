@@ -33,6 +33,11 @@ type (
 		FieldName string
 	}
 
+	ParenExpr struct {
+		NodeAttributes
+		X Expression
+	}
+
 	SelectorExpr struct {
 		NodeAttributes
 		X   Expression //
@@ -265,6 +270,7 @@ func (*ArgFieldSet) exprNode()             {}
 func (*ArgParamPathSet) exprNode()         {}
 func (e *AssignmentExpression) exprNode()  {}
 func (Ident) exprNode()                    {}
+func (*ParenExpr) exprNode()               {}
 func (SelectorExpr) exprNode()             {}
 func (Path) exprNode()                     {}
 func (e *BasicLit) exprNode()              {}

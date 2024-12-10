@@ -50,6 +50,11 @@ func cv_decl_fn(fn DeclarationConverter) nodeConverter {
 
 func nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
 	funcMap := map[string]conversionInfo{
+		// Expressions
+		"paren_expr": {method: cv_expr_fn(convert_paren_expr)},
+
+		// Statements
+
 		"assignment_expr":        {method: cv_expr_fn(convert_assignment_expr)},
 		"assert_stmt":            {method: cv_stmt_fn(convert_assert_stmt)},
 		"at_ident":               {method: cv_expr_fn(convert_ident)},

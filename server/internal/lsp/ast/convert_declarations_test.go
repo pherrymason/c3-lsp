@@ -20,15 +20,14 @@ func TestConvertToAST_module(t *testing.T) {
 	ast := ConvertToAST(GetCST(source), source, "file.c3")
 
 	expectedAst := File{
-		NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(0, 0, 0, 11).Build(),
-		Name:           "file.c3",
-		Modules: []Module{
-			{
-				Name:           "foo",
-				NodeAttributes: NewNodeAttributesBuilder().WithStartEnd(0, 0, 0, 11).Build(),
-			},
-		},
+		Name: "file.c3",
+		NodeAttributes: NewNodeAttributesBuilder().
+			WithRange(lsp.NewRange(0, 0, 0, 11)).
+			Build(),
+		Modules: []Module{},
 	}
+	mod := NewModule("foo", lsp.NewRange(0, 0, 0, 11), &expectedAst)
+	expectedAst.Modules = append(expectedAst.Modules, *mod)
 
 	assert.Equal(t, expectedAst, ast)
 }

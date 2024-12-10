@@ -2,6 +2,8 @@ package document
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/pkg/fs"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 )
 
@@ -20,34 +22,46 @@ type Document struct {
 }
 
 type Storage struct {
-	documents map[string]*Document
+	Documents map[string]*Document
 }
 
 func NewStore() *Storage {
 	return &Storage{
-		documents: make(map[string]*Document),
+		Documents: make(map[string]*Document),
 	}
 }
 
 func (pd *Storage) OpenDocument(uri string, text string, version uint) {
-	pd.documents[uri] = &Document{
+	document := &Document{
 		Uri:      uri,
 		FullPath: utils.NormalizePath(uri),
 		Text:     text,
 		Owned:    true,
 		Version:  version,
-		Ast: ast.ConvertToAST(
-			ast.GetCST(text),
-			text,
-			uri,
-		),
+		Ast:      ast.ConvertToAST(ast.GetCST(text), text, uri),
 	}
+
+	pd.Documents[uri] = document
+}
+
+func (pd *Storage) OpenDocumentFromPath(path string, text string, version uint) {
+	uri := fs.ConvertPathToURI(path, option.None[string]())
+	document := &Document{
+		Uri:      uri,
+		FullPath: path,
+		Text:     text,
+		Owned:    false,
+		Version:  version,
+		Ast:      ast.ConvertToAST(ast.GetCST(text), text, path),
+	}
+
+	pd.Documents[uri] = document
 }
 
 func (pd *Storage) CloseDocument(uri string) {
-	delete(pd.documents, uri)
+	delete(pd.Documents, uri)
 }
 
 func (pd *Storage) GetDocument(uri string) (*Document, error) {
-	return pd.documents[uri], nil
+	return pd.Documents[uri], nil
 }

@@ -41,7 +41,7 @@ func convert_statement(node *sitter.Node, source []byte) Statement {
 	}, node, source, false)
 
 	if dd == nil {
-		log.Fatalf("Could not conver_statement. Node Type: %s. Content: %s\n----- %s\n", node.Type(), node.Content(source), node)
+		log.Fatalf("Could not convert_statement. Node Type: %s. Content: %s\n----- %s\n", node.Type(), node.Content(source), node)
 	}
 
 	return dd.(Statement)
