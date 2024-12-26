@@ -537,12 +537,13 @@ func convert_fault_declaration(node *sitter.Node, sourceCode []byte) ast.Declara
 }
 
 func convert_const_declaration(node *sitter.Node, source []byte) ast.Declaration {
-	constant := &ast.ConstDecl{
-		Names: []*ast.Ident{},
+	constant := &ast.GenDecl{
+		Token: ast.Token(ast.CONST),
 		NodeAttributes: ast.NewNodeAttributesBuilder().
 			WithSitterPos(node).
 			Build(),
 	}
+	valueSpec := &ast.ValueSpec{}
 
 	var idNode *sitter.Node
 
@@ -550,7 +551,7 @@ func convert_const_declaration(node *sitter.Node, source []byte) ast.Declaration
 		n := node.Child(i)
 		switch n.Type() {
 		case "type":
-			constant.Type = option.Some(convert_type(n, source))
+			valueSpec.Type = convert_type(n, source)
 
 		case "const_ident":
 			idNode = n
@@ -560,7 +561,7 @@ func convert_const_declaration(node *sitter.Node, source []byte) ast.Declaration
 		}
 	}
 
-	constant.Names = append(constant.Names,
+	valueSpec.Names = append(valueSpec.Names,
 		ast.NewIdentifierBuilder().
 			WithName(idNode.Content(source)).
 			WithSitterPos(idNode).
@@ -569,8 +570,10 @@ func convert_const_declaration(node *sitter.Node, source []byte) ast.Declaration
 
 	right := node.ChildByFieldName("right")
 	if right != nil {
-		constant.Initializer = convert_expression(right, source).(ast.Expression)
+		expr := convert_expression(right, source).(ast.Expression)
+		valueSpec.Value = expr
 	}
+	constant.Spec = valueSpec
 
 	return constant
 }
@@ -1293,7 +1296,7 @@ func convert_type_access_expr(node *sitter.Node, source []byte) ast.Expression {
 }
 
 func convert_field_expr(node *sitter.Node, source []byte) ast.Expression {
-	debugNode(node, source, "field_expr")
+	//debugNode(node, source, "field_expr")
 	argument := node.ChildByFieldName("argument")
 	var argumentNode ast.Expression
 	if argument.Type() == "ident" {

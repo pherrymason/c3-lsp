@@ -202,7 +202,7 @@ func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debu
 func commaSep(convert nodeConverter, node *sitter.Node, source []byte) []ast.Node {
 	var nodes []ast.Node
 	for {
-		debugNode(node, source, "commaSep")
+		//debugNode(node, source, "commaSep")
 		condition := convert(node, source)
 
 		if condition != nil {
