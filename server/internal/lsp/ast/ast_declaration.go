@@ -70,11 +70,15 @@ type (
 		Body      Block
 	}
 
+	// DefDecl can be used for
+	// defining a new type: def Int32 = int
+	// defining a pointer type: def Callback = fn void(int value);
 	DefDecl struct {
 		NodeAttributes
 		Name           Ident
-		ResolvesTo     string
-		ResolvesToType option.Option[TypeInfo]
+		Expr           Expression
+		ResolvesTo     string                  // Deprecated
+		ResolvesToType option.Option[TypeInfo] // Deprecated
 	}
 
 	StructDecl struct {

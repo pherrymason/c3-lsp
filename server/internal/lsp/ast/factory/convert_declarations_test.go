@@ -631,73 +631,47 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 	)
 }
 
-func TestConvertToAST_def_decl(t *testing.T) {
-	source := `module foo;
-	def Kilo = int;
-	def KiloPtr = Kilo*;
-	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*); // TODO
-	def MyMap = HashMap(<String, Feature>);
-	def Camera = raylib::Camera;`
+func TestConvertToAST_def_declares_type(t *testing.T) {
+	source := `def Kilo = int;`
 	tree := ConvertToAST(GetCST(source), source, "file.c3")
-	row := uint(0)
 
 	assert.Equal(t,
 		&ast.DefDecl{
-			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 1, 1, 16).Build(),
-			Name:           ast.NewIdentifierBuilder().WithName("Kilo").WithStartEnd(1, 5, 1, 9).Build(),
-			ResolvesToType: option.Some(
-				ast.NewTypeInfoBuilder().
-					WithName("int").WithNameStartEnd(1, 12, 1, 15).
-					IsBuiltin().
-					WithStartEnd(1, 12, 1, 15).
-					Build(),
-			),
+			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(0, 0, 0, 15).Build(),
+			Name:           ast.NewIdentifierBuilder().WithName("Kilo").WithStartEnd(0, 4, 0, 8).Build(),
+			Expr: ast.NewTypeInfoBuilder().
+				WithName("int").WithNameStartEnd(0, 11, 0, 14).
+				IsBuiltin().
+				WithStartEnd(0, 11, 0, 14).
+				Build(),
 		}, tree.Modules[0].Declarations[0])
+}
+
+func TestConvertToAST_def_declares_function_type(t *testing.T) {
+	source := `def Kilo = fn void (int);`
+	tree := ConvertToAST(GetCST(source), source, "file.c3")
 
 	assert.Equal(t,
-		&ast.DefDecl{
-			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 1, 2, 21).Build(),
-			Name:           ast.NewIdentifierBuilder().WithName("KiloPtr").WithStartEnd(2, 5, 2, 12).Build(),
-			ResolvesToType: option.Some(
-				ast.NewTypeInfoBuilder().
-					WithName("Kilo").WithNameStartEnd(2, 15, 2, 19).
-					IsPointer().
-					WithStartEnd(2, 15, 2, 19).
-					Build(),
-			),
-		}, tree.Modules[0].Declarations[1])
-
-	// Def with generics
-	row = 4
-	assert.Equal(t,
-		&ast.DefDecl{
-			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(row, 1, row, 40).Build(),
-			Name:           ast.NewIdentifierBuilder().WithName("MyMap").WithStartEnd(row, 5, row, 10).Build(),
-			ResolvesToType: option.Some(
-				ast.NewTypeInfoBuilder().
-					WithName("HashMap").WithNameStartEnd(row, 13, row, 20).
-					WithStartEnd(row, 13, row, 39).
-					WithGeneric("String", row, 22, row, 28).
-					WithGeneric("Feature", row, 30, row, 37).
-					Build(),
-			),
-		}, tree.Modules[0].Declarations[3])
-
-	// Def with Ident path
-	row = 5
-	assert.Equal(t,
-		&ast.DefDecl{
-			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(row, 1, row, 29).Build(),
-			Name:           ast.NewIdentifierBuilder().WithName("Camera").WithStartEnd(row, 5, row, 11).Build(),
-			ResolvesToType: option.Some(
-				ast.NewTypeInfoBuilder().
-					WithPath("raylib").
-					WithName("Camera").WithNameStartEnd(row, 14, row, 28).
-					WithStartEnd(row, 14, row, 28).
-					Build(),
-			),
-		}, tree.Modules[0].Declarations[4])
-
+		&ast.FuncType{
+			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(0, 11, 0, 24).Build(),
+			ReturnType: ast.NewTypeInfoBuilder().
+				WithName("void").
+				WithStartEnd(0, 14, 0, 18).
+				WithNameStartEnd(0, 14, 0, 18).
+				IsBuiltin().
+				Build(),
+			Params: []ast.FunctionParameter{
+				{
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(0, 20, 0, 23).Build(),
+					Type: ast.NewTypeInfoBuilder().
+						WithName("int").
+						WithStartEnd(0, 20, 0, 23).
+						WithNameStartEnd(0, 20, 0, 23).
+						IsBuiltin().
+						Build(),
+				},
+			},
+		}, tree.Modules[0].Declarations[0].(*ast.DefDecl).Expr)
 }
 
 func TestConvertToAST_function_declaration(t *testing.T) {

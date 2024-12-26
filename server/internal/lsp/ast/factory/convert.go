@@ -603,10 +603,18 @@ func convert_def_declaration(node *sitter.Node, sourceCode []byte) ast.Declarati
 			if n.Child(0).Type() == "type" {
 				// Might contain module path
 				_type = convert_type(n.Child(0), sourceCode)
-				defBuilder.WithResolvesToType(_type)
+				//defBuilder.WithResolvesToType(_type)
+				defBuilder.WithExpression(_type)
 			} else if n.Child(0).Type() == "func_typedef" {
-				// TODO Parse full info of this func typedefinition
-				defBuilder.WithResolvesTo(n.Content(sourceCode))
+				funcTypeDefNode := n.Child(0)
+				name := funcTypeDefNode.Child(2)
+				funcType := &ast.FuncType{
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithSitterPos(funcTypeDefNode).Build(),
+					ReturnType:     convert_type(funcTypeDefNode.ChildByFieldName("return_type"), sourceCode),
+					Params:         convert_function_parameter_list(name, option.None[ast.Ident](), sourceCode),
+				}
+
+				defBuilder.WithExpression(funcType)
 			}
 		}
 	}
@@ -942,6 +950,7 @@ func convert_function_signature(node *sitter.Node, sourceCode []byte) ast.Functi
 
 func convert_function_parameter_list(node *sitter.Node, typeIdentifier option.Option[ast.Ident], source []byte) []ast.FunctionParameter {
 	if node.Type() != "fn_parameter_list" {
+		debugNode(node, source, "x")
 		panic(
 			fmt.Sprintf("Wrong node provided: Expected fn_parameter_list, provided %s", node.Type()),
 		)
@@ -1770,5 +1779,5 @@ func debugNode(node *sitter.Node, source []byte, tag string) {
 		return
 	}
 
-	log.Printf("%s: %s: %s\n----- %s\n", tag, node.Type(), node.Content(source), node)
+	log.Printf("%s: %s: %s\n----> %s\n", tag, node.Type(), node.Content(source), node)
 }

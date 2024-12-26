@@ -247,12 +247,6 @@ type (
 		Elt Expression // element type
 	}
 
-	// A bStructType represents a struct type
-	bStructType struct {
-		NodeAttributes
-		Fields []Expression
-	}
-
 	EnumType struct {
 		NodeAttributes
 		BaseType option.Option[TypeInfo] // Enums can be typed.
@@ -264,6 +258,13 @@ type (
 		Name  *Ident
 		Value Expression
 	}
+
+	FuncType struct {
+		NodeAttributes
+		ReturnType TypeInfo
+		Params     []FunctionParameter
+	}
+
 	/*
 		FuncType struct {
 			NodeAttributes
@@ -323,6 +324,6 @@ func (*InlineTypeWithInitialization) exprNode() {}
 func (l *Field) exprNode()                      {}
 func (l *ArrayType) exprNode()                  {}
 func (l *EnumType) exprNode()                   {}
-func (l *bStructType) exprNode()                {}
+func (l *FuncType) exprNode()                   {}
 func (l *InterfaceType) exprNode()              {}
 func (l *TrailingGenericsExpr) exprNode()       {}
