@@ -229,6 +229,11 @@ func (b *DefDeclBuilder) WithIdentifierSitterPos(node *sitter.Node) *DefDeclBuil
 	return b
 }
 
+func (b *DefDeclBuilder) WithExpression(expression Expression) *DefDeclBuilder {
+	b.d.Expr = expression
+	return b
+}
+
 func (b *DefDeclBuilder) Build() DefDecl {
 	def := b.d
 	def.NodeAttributes = b.a.Build()
