@@ -1,19 +1,20 @@
-package ast
+package factory
 
 import (
 	"errors"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"log"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type nodeConverter func(node *sitter.Node, source []byte) Node
+type nodeConverter func(node *sitter.Node, source []byte) ast.Node
 type conversionInfo struct {
 	method  nodeConverter
 	goChild bool
 }
 
-func (c conversionInfo) convert(node *sitter.Node, source []byte, debug bool) Node {
+func (c conversionInfo) convert(node *sitter.Node, source []byte, debug bool) ast.Node {
 	n := node
 	if c.goChild {
 		n = node.Child(0)
@@ -26,25 +27,25 @@ func (c conversionInfo) convert(node *sitter.Node, source []byte, debug bool) No
 	return c.method(n, source)
 }
 
-type StatementConverter func(node *sitter.Node, source []byte) Statement
-type ExpressionConverter func(node *sitter.Node, source []byte) Expression
-type DeclarationConverter func(node *sitter.Node, source []byte) Declaration
+type StatementConverter func(node *sitter.Node, source []byte) ast.Statement
+type ExpressionConverter func(node *sitter.Node, source []byte) ast.Expression
+type DeclarationConverter func(node *sitter.Node, source []byte) ast.Declaration
 
 func cv_stmt_fn(fn StatementConverter) nodeConverter {
-	return func(node *sitter.Node, source []byte) Node {
-		return fn(node, source).(Node)
+	return func(node *sitter.Node, source []byte) ast.Node {
+		return fn(node, source).(ast.Node)
 	}
 }
 
 func cv_expr_fn(fn ExpressionConverter) nodeConverter {
-	return func(node *sitter.Node, source []byte) Node {
-		return fn(node, source).(Node)
+	return func(node *sitter.Node, source []byte) ast.Node {
+		return fn(node, source).(ast.Node)
 	}
 }
 
 func cv_decl_fn(fn DeclarationConverter) nodeConverter {
-	return func(node *sitter.Node, source []byte) Node {
-		return fn(node, source).(Node)
+	return func(node *sitter.Node, source []byte) ast.Node {
+		return fn(node, source).(ast.Node)
 	}
 }
 
@@ -95,7 +96,7 @@ func nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
 		"switch_stmt":           {method: cv_stmt_fn(convert_switch_stmt)},
 		"ternary_expr":          {method: cv_expr_fn(convert_ternary_expr)},
 		"trailing_generic_expr": {method: cv_expr_fn(convert_trailing_generic_expr)},
-		"type": {method: func(node *sitter.Node, source []byte) Node {
+		"type": {method: func(node *sitter.Node, source []byte) ast.Node {
 			n := convert_type(node, source)
 			return n
 		}},
@@ -160,7 +161,7 @@ func nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
 	//panic(fmt.Sprintf("La función %s no existe\n", nodeType))
 }
 
-func choice(types []string, node *sitter.Node, source []byte, debug bool) Node {
+func choice(types []string, node *sitter.Node, source []byte, debug bool) ast.Node {
 	rules := []NodeRule{}
 	for _, typ := range types {
 		rules = append(rules, NodeOfType(typ))
@@ -169,7 +170,7 @@ func choice(types []string, node *sitter.Node, source []byte, debug bool) Node {
 	return anyOf("x", rules, node, source, debug)
 }
 
-func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) Node {
+func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) ast.Node {
 	//fmt.Printf("anyOf: ")
 	if debug {
 		debugNode(node, source, "AnyOf["+name+"]")
@@ -198,8 +199,8 @@ func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debu
 	return nil
 }
 
-func commaSep(convert nodeConverter, node *sitter.Node, source []byte) []Node {
-	var nodes []Node
+func commaSep(convert nodeConverter, node *sitter.Node, source []byte) []ast.Node {
+	var nodes []ast.Node
 	for {
 		debugNode(node, source, "commaSep")
 		condition := convert(node, source)

@@ -21,7 +21,7 @@ func NewNodeAttributesBuilder() *NodeAttrsBuilder {
 
 func NewBaseNodeFromSitterNode(node *sitter.Node) NodeAttributes {
 	builder := NewNodeAttributesBuilder().
-		WithSitterPos(node)
+		WithRange(lsp.NewRangeFromSitterNode(node))
 
 	return builder.Build()
 }
@@ -29,12 +29,12 @@ func (d *NodeAttrsBuilder) Build() NodeAttributes {
 	return d.bn
 }
 
-func (d *NodeAttrsBuilder) WithSitterPosRange(start sitter.Point, end sitter.Point) *NodeAttrsBuilder {
-	d.bn.StartPos = lsp.Position{
+func (d *NodeAttrsBuilder) WithSitterStartEnd(start sitter.Point, end sitter.Point) *NodeAttrsBuilder {
+	d.bn.Range.Start = lsp.Position{
 		Column: uint(start.Column),
 		Line:   uint(start.Row),
 	}
-	d.bn.EndPos = lsp.Position{
+	d.bn.Range.End = lsp.Position{
 		Column: uint(end.Column),
 		Line:   uint(end.Row),
 	}
@@ -42,13 +42,13 @@ func (d *NodeAttrsBuilder) WithSitterPosRange(start sitter.Point, end sitter.Poi
 }
 
 func (i *NodeAttrsBuilder) WithSitterPos(node *sitter.Node) *NodeAttrsBuilder {
-	i.WithSitterPosRange(node.StartPoint(), node.EndPoint())
+	i.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
 	return i
 }
 
-func (d *NodeAttrsBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *NodeAttrsBuilder {
-	d.bn.StartPos = lsp.Position{startRow, startCol}
-	d.bn.EndPos = lsp.Position{endRow, endCol}
+func (d *NodeAttrsBuilder) WithRangePositions(startRow uint, startCol uint, endRow uint, endCol uint) *NodeAttrsBuilder {
+	d.bn.Range.Start = lsp.Position{startRow, startCol}
+	d.bn.Range.End = lsp.Position{endRow, endCol}
 	return d
 }
 
@@ -82,12 +82,18 @@ func (i *IdentifierBuilder) WithPath(path string) *IdentifierBuilder {
 }
 
 func (i *IdentifierBuilder) WithSitterPos(node *sitter.Node) *IdentifierBuilder {
-	i.bn.WithSitterPosRange(node.StartPoint(), node.EndPoint())
+	i.bn.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
+	i.bn.WithRange(lsp.NewRangeFromSitterNode(node))
+	return i
+}
+
+func (i *IdentifierBuilder) WithSitterRange(node *sitter.Node) *IdentifierBuilder {
+	i.bn.WithRange(lsp.NewRangeFromSitterNode(node))
 	return i
 }
 
 func (i *IdentifierBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *IdentifierBuilder {
-	i.bn.WithStartEnd(startRow, startCol, endRow, endCol)
+	i.bn.WithRange(lsp.NewRange(startRow, startCol, endRow, endCol))
 	return i
 }
 
@@ -167,14 +173,14 @@ func (b *TypeInfoBuilder) WithPath(path string) *TypeInfoBuilder {
 }
 
 func (b *TypeInfoBuilder) WithNameStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.Identifier.StartPos = lsp.Position{startRow, startCol}
-	b.t.Identifier.EndPos = lsp.Position{endRow, endCol}
+	b.t.Identifier.Range.Start = lsp.Position{startRow, startCol}
+	b.t.Identifier.Range.End = lsp.Position{endRow, endCol}
 	return b
 }
 
 func (b *TypeInfoBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.NodeAttributes.StartPos = lsp.Position{startRow, startCol}
-	b.t.NodeAttributes.EndPos = lsp.Position{endRow, endCol}
+	b.t.NodeAttributes.Range.Start = lsp.Position{startRow, startCol}
+	b.t.NodeAttributes.Range.End = lsp.Position{endRow, endCol}
 	return b
 }
 
@@ -198,17 +204,17 @@ func NewDefDeclBuilder() *DefDeclBuilder {
 }
 
 func (b *DefDeclBuilder) WithResolvesToType(typeInfo TypeInfo) *DefDeclBuilder {
-	b.d.resolvesToType = option.Some(typeInfo)
+	b.d.ResolvesToType = option.Some(typeInfo)
 	return b
 }
 
 func (b *DefDeclBuilder) WithResolvesTo(resolvesTo string) *DefDeclBuilder {
-	b.d.resolvesTo = resolvesTo
+	b.d.ResolvesTo = resolvesTo
 	return b
 }
 
 func (b *DefDeclBuilder) WithSitterPos(node *sitter.Node) *DefDeclBuilder {
-	b.a.WithSitterPosRange(node.StartPoint(), node.EndPoint())
+	b.a.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
 	return b
 }
 
@@ -217,8 +223,8 @@ func (b *DefDeclBuilder) WithName(name string) *DefDeclBuilder {
 	return b
 }
 func (b *DefDeclBuilder) WithIdentifierSitterPos(node *sitter.Node) *DefDeclBuilder {
-	b.d.Name.StartPos = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
-	b.d.Name.EndPos = lsp.Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
+	b.d.Name.Range.Start = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+	b.d.Name.Range.End = lsp.Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
 
 	return b
 }

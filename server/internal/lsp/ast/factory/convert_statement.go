@@ -1,7 +1,8 @@
-package ast
+package factory
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/pkg"
 	"log"
 
@@ -9,9 +10,9 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func convert_statement(node *sitter.Node, source []byte) Statement {
+func convert_statement(node *sitter.Node, source []byte) ast.Statement {
 	if pkg.SliceContains(ignoreStatements[:], node.Type()) {
-		return &EmptyNode{}
+		return &ast.EmptyNode{}
 	}
 
 	dd := anyOf("statement", []NodeRule{
@@ -41,16 +42,16 @@ func convert_statement(node *sitter.Node, source []byte) Statement {
 	}, node, source, false)
 
 	if dd == nil {
-		log.Fatalf("Could not convert_statement. Node Type: %s. Content: %s\n----- %s\n", node.Type(), node.Content(source), node)
+		log.Fatalf("Could not convert_statement. Node TypeDescription: %s. Content: %s\n----- %s\n", node.Type(), node.Content(source), node)
 	}
 
-	return dd.(Statement)
+	return dd.(ast.Statement)
 }
 
-func convert_compound_stmt(node *sitter.Node, source []byte) Statement {
-	cmpStatement := &CompoundStmt{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
-		Statements:     []Statement{},
+func convert_compound_stmt(node *sitter.Node, source []byte) ast.Statement {
+	cmpStatement := &ast.CompoundStmt{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
+		Statements:     []ast.Statement{},
 	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -65,37 +66,41 @@ func convert_compound_stmt(node *sitter.Node, source []byte) Statement {
 	return cmpStatement
 }
 
-func convert_return_stmt(node *sitter.Node, source []byte) Statement {
-	expr := option.None[Expression]()
+func convert_return_stmt(node *sitter.Node, source []byte) ast.Statement {
+	expr := option.None[ast.Expression]()
 
 	argNode := node.Child(0).NextSibling()
 	if argNode.Type() != ";" {
-		expr = option.Some(convert_expression(argNode, source).(Expression))
+		expr = option.Some(convert_expression(argNode, source).(ast.Expression))
 	}
 
-	return &ReturnStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+	return &ast.ReturnStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 		Return:         expr,
 	}
 }
 
-func convert_split_declaration_stmt(node *sitter.Node, source []byte) Statement {
+func convert_split_declaration_stmt(node *sitter.Node, source []byte) ast.Statement {
 	return convert_declaration_stmt(node.Parent(), source)
 }
 
-func convert_declaration_stmt(node *sitter.Node, source []byte) Statement {
+func convert_declaration_stmt(node *sitter.Node, source []byte) ast.Statement {
 	if node.Type() == "const_declaration" {
-		return &DeclarationStmt{
+		return &ast.DeclarationStmt{
 			Decl: convert_const_declaration(node, source),
 		}
 	}
 
 	isStatic := false
 	isTlocal := false
-	varDecl := VariableDecl{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+
+	varDecl := &ast.GenDecl{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
+		Token:          ast.VAR,
+		//Spec:           &ast.ValueSpec{},
 	}
 	end := false
+	valueSpec := &ast.ValueSpec{}
 	for i := 0; i < int(node.ChildCount()) && !end; i++ {
 		n := node.Child(i)
 		debugNode(n, source, "dd")
@@ -109,31 +114,34 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) Statement {
 			}
 
 		case "type":
-			varDecl.Type = convert_type(n, source)
-			varDecl.Type.Static = isStatic
-			varDecl.Type.TLocal = isTlocal
+			Type := convert_type(n, source)
+			Type.Static = isStatic
+			Type.TLocal = isTlocal
+			valueSpec.Type = Type
 
 		case "local_decl_after_type":
-			varDecl.Names = append(varDecl.Names, NewIdentifierBuilder().
+			//valueSpec.Names =
+			ident := ast.NewIdentifierBuilder().
 				WithName(n.ChildByFieldName("name").Content(source)).
 				WithSitterPos(n.ChildByFieldName("name")).
-				BuildPtr(),
-			)
+				BuildPtr()
+			valueSpec.Names = append(valueSpec.Names, ident)
 
 			right := n.ChildByFieldName("right")
 			if right != nil {
-				varDecl.Initializer = convert_expression(right, source).(Expression)
+				valueSpec.Value = convert_expression(right, source).(ast.Expression)
 			}
 			end = true
 		}
 	}
+	varDecl.Spec = valueSpec
 
-	return &DeclarationStmt{
-		Decl: &varDecl,
+	return &ast.DeclarationStmt{
+		Decl: varDecl,
 	}
 }
 
-func convert_continue_stmt(node *sitter.Node, source []byte) Statement {
+func convert_continue_stmt(node *sitter.Node, source []byte) ast.Statement {
 	label := option.None[string]()
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -142,13 +150,13 @@ func convert_continue_stmt(node *sitter.Node, source []byte) Statement {
 		}
 	}
 
-	return &ContinueStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+	return &ast.ContinueStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 		Label:          label,
 	}
 }
 
-func convert_break_stmt(node *sitter.Node, source []byte) Statement {
+func convert_break_stmt(node *sitter.Node, source []byte) ast.Statement {
 	label := option.None[string]()
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -157,43 +165,43 @@ func convert_break_stmt(node *sitter.Node, source []byte) Statement {
 		}
 	}
 
-	return &BreakStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+	return &ast.BreakStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 		Label:          label,
 	}
 }
 
-func convert_switch_stmt(node *sitter.Node, source []byte) Statement {
+func convert_switch_stmt(node *sitter.Node, source []byte) ast.Statement {
 	label := option.None[string]()
-	var cases []SwitchCase
-	var defaultStatement []Statement
+	var cases []ast.SwitchCase
+	var defaultStatement []ast.Statement
 
 	body := node.ChildByFieldName("body")
 	for i := 0; i < int(body.ChildCount()); i++ {
 		n := body.Child(i)
 		if n.Type() == "case_stmt" {
 			conditionNode := n.ChildByFieldName("value")
-			var caseValue Statement
+			var caseValue ast.Statement
 			if conditionNode.Type() == "case_range" {
-				caseValue = &SwitchCaseRange{
-					NodeAttributes: NewBaseNodeFromSitterNode(conditionNode),
-					Start:          convert_expression(conditionNode.Child(0), source).(Expression),
-					End:            convert_expression(conditionNode.Child(2), source).(Expression),
+				caseValue = &ast.SwitchCaseRange{
+					NodeAttributes: ast.NewBaseNodeFromSitterNode(conditionNode),
+					Start:          convert_expression(conditionNode.Child(0), source).(ast.Expression),
+					End:            convert_expression(conditionNode.Child(2), source).(ast.Expression),
 				}
 			} else if conditionNode.Type() == "type" {
-				caseValue = &ExpressionStmt{
+				caseValue = &ast.ExpressionStmt{
 					Expr: convert_type(conditionNode, source),
 				}
 			} else {
-				caseValue = &ExpressionStmt{
-					Expr: convert_expression(conditionNode, source).(Expression),
+				caseValue = &ast.ExpressionStmt{
+					Expr: convert_expression(conditionNode, source).(ast.Expression),
 				}
 
 			}
 
 			colon := conditionNode.NextSibling()
 			ns := colon.NextSibling()
-			var statements []Statement
+			var statements []ast.Statement
 			for {
 				if ns == nil {
 					break
@@ -202,8 +210,8 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Statement {
 				ns = ns.NextSibling()
 			}
 
-			cases = append(cases, SwitchCase{
-				NodeAttributes: NewBaseNodeFromSitterNode(n),
+			cases = append(cases, ast.SwitchCase{
+				NodeAttributes: ast.NewBaseNodeFromSitterNode(n),
 				Value:          caseValue,
 				Statements:     statements,
 			})
@@ -217,7 +225,7 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Statement {
 		}
 	}
 
-	var conditionExpression []*DeclOrExpr
+	var conditionExpression []*ast.DeclOrExpr
 	conditionNode := node.ChildByFieldName("condition")
 	if conditionNode != nil {
 		ConvertDebug = false
@@ -225,8 +233,8 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Statement {
 		ConvertDebug = false
 	}
 
-	return &SwitchStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+	return &ast.SwitchStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 		Label:          label,
 		Condition:      conditionExpression,
 		Cases:          cases,
@@ -234,19 +242,19 @@ func convert_switch_stmt(node *sitter.Node, source []byte) Statement {
 	}
 }
 
-func convert_nextcase_stmt(node *sitter.Node, source []byte) Statement {
+func convert_nextcase_stmt(node *sitter.Node, source []byte) ast.Statement {
 	label := option.None[string]()
-	var value Expression
+	var value ast.Expression
 	targetNode := node.ChildByFieldName("target")
 	if targetNode != nil {
 		found := anyOf("nextcase_stmt", []NodeRule{
 			NodeTryConversionFunc("_expr"),
 			NodeOfType("type"),
 			NodeOfType("default"),
-		}, targetNode, source, true)
+		}, targetNode, source, false)
 
 		if found != nil {
-			value = found.(Expression)
+			value = found.(ast.Expression)
 		}
 	}
 
@@ -257,18 +265,18 @@ func convert_nextcase_stmt(node *sitter.Node, source []byte) Statement {
 		}
 	}
 
-	return &Nextcase{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+	return &ast.Nextcase{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 		Label:          label,
 		Value:          value,
 	}
 }
 
-func convert_if_stmt(node *sitter.Node, source []byte) Statement {
+func convert_if_stmt(node *sitter.Node, source []byte) ast.Statement {
 	conditions := convert_paren_conditions(node.ChildByFieldName("condition"), source)
 	//fmt.Printf("%s", reflect.TypeOf(conditions).String())
-	stmt := &IfStmt{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+	stmt := &ast.IfStmt{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 		Label:          option.None[string](),
 		Condition:      conditions,
 	}
@@ -281,13 +289,13 @@ func convert_if_stmt(node *sitter.Node, source []byte) Statement {
 		case "else_part":
 			elseStmt := convert_statement(n.Child(1), source)
 			switch elseStmt.(type) {
-			case *CompoundStmt:
-				if len(elseStmt.(*CompoundStmt).Statements) == 0 {
+			case *ast.CompoundStmt:
+				if len(elseStmt.(*ast.CompoundStmt).Statements) == 0 {
 					elseStmt = nil
 				}
 			}
-			stmt.Else = ElseStatement{
-				NodeAttributes: NewBaseNodeFromSitterNode(n),
+			stmt.Else = ast.ElseStatement{
+				NodeAttributes: ast.NewBaseNodeFromSitterNode(n),
 				Statement:      elseStmt,
 			}
 		}
@@ -296,8 +304,8 @@ func convert_if_stmt(node *sitter.Node, source []byte) Statement {
 	ifBody := node.ChildByFieldName("body")
 	bodyStmt := convert_statement(ifBody, source)
 	switch bodyStmt.(type) {
-	case *CompoundStmt:
-		if len(bodyStmt.(*CompoundStmt).Statements) == 0 {
+	case *ast.CompoundStmt:
+		if len(bodyStmt.(*ast.CompoundStmt).Statements) == 0 {
 			bodyStmt = nil
 		}
 	}
@@ -315,12 +323,12 @@ func convert_if_stmt(node *sitter.Node, source []byte) Statement {
 		  ),
 		)
 */
-func convert_paren_conditions(node *sitter.Node, source []byte) []*DeclOrExpr {
+func convert_paren_conditions(node *sitter.Node, source []byte) []*ast.DeclOrExpr {
 	return convert_conditions(node.Child(1), source)
 }
 
-func convert_conditions(node *sitter.Node, source []byte) []*DeclOrExpr {
-	var conditions []*DeclOrExpr
+func convert_conditions(node *sitter.Node, source []byte) []*ast.DeclOrExpr {
+	var conditions []*ast.DeclOrExpr
 
 	// Option 1: try_unwrap_chain
 	if node.Type() == "try_unwrap_chain" {
@@ -332,15 +340,15 @@ func convert_conditions(node *sitter.Node, source []byte) []*DeclOrExpr {
 		//		(decl_or_expr),* + optional(, try_unwrap | catch_unwrap)
 		nodes := commaSep(convert_decl_or_expression, node, source)
 		for _, n := range nodes {
-			conditions = append(conditions, n.(*DeclOrExpr))
+			conditions = append(conditions, n.(*ast.DeclOrExpr))
 		}
 	}
 
 	return conditions
 }
 
-func convert_local_declaration_after_type(node *sitter.Node, source []byte) Declaration {
-	var init Expression
+func convert_local_declaration_after_type(node *sitter.Node, source []byte) ast.Declaration {
+	var init ast.Expression
 
 	if node.Child(1).Type() == "attributes" {
 		// TODO Get attributes
@@ -348,26 +356,39 @@ func convert_local_declaration_after_type(node *sitter.Node, source []byte) Decl
 
 	right := node.ChildByFieldName("right")
 	if right != nil {
-		init = convert_expression(right, source).(Expression)
+		init = convert_expression(right, source).(ast.Expression)
 	}
-
-	varDecl := &VariableDecl{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
-		Names: []*Ident{
-			NewIdentifierBuilder().
-				WithName(node.ChildByFieldName("name").Content(source)).
-				WithSitterPos(node.ChildByFieldName("name")).
-				BuildPtr(),
+	/*
+		varDec2l := &ast.VariableDecl{
+			NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
+			Names: []*ast.Ident{
+				ast.NewIdentifierBuilder().
+					WithName(node.ChildByFieldName("name").Content(source)).
+					WithSitterPos(node.ChildByFieldName("name")).
+					BuildPtr(),
+			},
+			Initializer: init,
+		}*/
+	varDecl := &ast.GenDecl{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
+		Token:          ast.VAR,
+		Spec: &ast.ValueSpec{
+			Names: []*ast.Ident{
+				ast.NewIdentifierBuilder().
+					WithName(node.ChildByFieldName("name").Content(source)).
+					WithSitterPos(node.ChildByFieldName("name")).
+					BuildPtr(),
+			},
+			Value: init,
 		},
-		Initializer: init,
 	}
 
 	return varDecl
 }
 
-func convert_for_stmt(node *sitter.Node, source []byte) Statement {
-	forStmt := &ForStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+func convert_for_stmt(node *sitter.Node, source []byte) ast.Statement {
+	forStmt := &ast.ForStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -396,18 +417,18 @@ func convert_for_stmt(node *sitter.Node, source []byte) Statement {
 	return forStmt
 }
 
-func convert_comma_decl_or_expression(node *sitter.Node, source []byte) []*DeclOrExpr {
+func convert_comma_decl_or_expression(node *sitter.Node, source []byte) []*ast.DeclOrExpr {
 	nodes := commaSep(convert_decl_or_expression, node.Child(0), source)
 
-	var stmts []*DeclOrExpr
+	var stmts []*ast.DeclOrExpr
 	for _, n := range nodes {
-		stmts = append(stmts, n.(*DeclOrExpr))
+		stmts = append(stmts, n.(*ast.DeclOrExpr))
 	}
 	return stmts
 }
 
 // This takes anon nodes
-func convert_decl_or_expression(node *sitter.Node, source []byte) Node {
+func convert_decl_or_expression(node *sitter.Node, source []byte) ast.Node {
 	found := anyOf("decl_or_expression", []NodeRule{
 		NodeOfType("var_decl"),
 		NodeSiblingsWithSequenceOf([]NodeRule{
@@ -417,19 +438,19 @@ func convert_decl_or_expression(node *sitter.Node, source []byte) Node {
 	}, node, source, false)
 
 	switch found.(type) {
-	case Expression:
-		return &DeclOrExpr{
-			Expr: found.(Expression),
+	case ast.Expression:
+		return &ast.DeclOrExpr{
+			Expr: found.(ast.Expression),
 		}
 
-	case Declaration:
-		return &DeclOrExpr{
-			Decl: found.(Declaration),
+	case ast.Declaration:
+		return &ast.DeclOrExpr{
+			Decl: found.(ast.Declaration),
 		}
 
-	case Statement:
-		return &DeclOrExpr{
-			Stmt: found.(Statement),
+	case ast.Statement:
+		return &ast.DeclOrExpr{
+			Stmt: found.(ast.Statement),
 		}
 
 	default:
@@ -437,11 +458,11 @@ func convert_decl_or_expression(node *sitter.Node, source []byte) Node {
 	}
 }
 
-func convert_foreach_stmt(node *sitter.Node, source []byte) Statement {
-	stmt := &ForeachStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+func convert_foreach_stmt(node *sitter.Node, source []byte) ast.Statement {
+	stmt := &ast.ForeachStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 	}
-	foreachVar := ForeachValue{}
+	foreachVar := ast.ForeachValue{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -461,7 +482,7 @@ func convert_foreach_stmt(node *sitter.Node, source []byte) Statement {
 				case ")", "(":
 
 				default:
-					stmt.Collection = convert_expression(cn, source).(Expression)
+					stmt.Collection = convert_expression(cn, source).(ast.Expression)
 				}
 			}
 		}
@@ -475,8 +496,8 @@ func convert_foreach_stmt(node *sitter.Node, source []byte) Statement {
 	return stmt
 }
 
-func convert_foreach_var(node *sitter.Node, source []byte) ForeachValue {
-	value := ForeachValue{}
+func convert_foreach_var(node *sitter.Node, source []byte) ast.ForeachValue {
+	value := ast.ForeachValue{}
 
 	debugNode(node, source, fmt.Sprint(node.ChildCount()))
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -490,16 +511,16 @@ func convert_foreach_var(node *sitter.Node, source []byte) ForeachValue {
 			value.Type.Reference = true
 
 		case "ident":
-			value.Identifier = convert_ident(n, source).(*Ident)
+			value.Identifier = convert_ident(n, source).(*ast.Ident)
 		}
 	}
 
 	return value
 }
 
-func convert_while_stmt(node *sitter.Node, source []byte) Statement {
-	stmt := &WhileStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+func convert_while_stmt(node *sitter.Node, source []byte) ast.Statement {
+	stmt := &ast.WhileStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -518,9 +539,9 @@ func convert_while_stmt(node *sitter.Node, source []byte) Statement {
 	return stmt
 }
 
-func convert_do_stmt(node *sitter.Node, source []byte) Statement {
-	stmt := &DoStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+func convert_do_stmt(node *sitter.Node, source []byte) ast.Statement {
+	stmt := &ast.DoStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -529,16 +550,16 @@ func convert_do_stmt(node *sitter.Node, source []byte) Statement {
 		case "compound_stmt":
 			stmt.Body = convert_statement(n, source)
 		case "paren_expr":
-			stmt.Condition = convert_expression(n.Child(1), source).(Expression)
+			stmt.Condition = convert_expression(n.Child(1), source).(ast.Expression)
 		}
 	}
 
 	return stmt
 }
 
-func convert_defer_stmt(node *sitter.Node, source []byte) Statement {
-	stmt := &DeferStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+func convert_defer_stmt(node *sitter.Node, source []byte) ast.Statement {
+	stmt := &ast.DeferStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 	}
 
 	stmt.Statement = convert_statement(
@@ -549,9 +570,9 @@ func convert_defer_stmt(node *sitter.Node, source []byte) Statement {
 	return stmt
 }
 
-func convert_assert_stmt(node *sitter.Node, source []byte) Statement {
-	stmt := &AssertStatement{
-		NodeAttributes: NewBaseNodeFromSitterNode(node),
+func convert_assert_stmt(node *sitter.Node, source []byte) ast.Statement {
+	stmt := &ast.AssertStatement{
+		NodeAttributes: ast.NewBaseNodeFromSitterNode(node),
 	}
 
 	nodes := commaSep(
@@ -560,7 +581,7 @@ func convert_assert_stmt(node *sitter.Node, source []byte) Statement {
 		source,
 	)
 	for _, node := range nodes {
-		stmt.Assertions = append(stmt.Assertions, node.(Expression))
+		stmt.Assertions = append(stmt.Assertions, node.(ast.Expression))
 	}
 
 	return stmt

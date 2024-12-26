@@ -1,16 +1,24 @@
-package ast
+package walk
 
-import "fmt"
+import (
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	goAst "go/ast"
+)
+
+type WalkContext struct {
+	File   ast.File // File Node
+	Scopes goAst.Scope
+}
 
 // Visitor Enter method is invoked for each node encountered by Walk.
 // If the result visitor w is not nil, Walk visits each of the children
 // of node with the visitor v, followed by a call of the Exit method.
 type Visitor interface {
-	Enter(n Node) (v Visitor)
-	Exit(n Node)
+	Enter(n ast.Node) (v Visitor)
+	Exit(n ast.Node)
 }
 
-func walkList[N Node](v Visitor, list []N) {
+func walkList[N ast.Node](v Visitor, list []N) {
 	for _, node := range list {
 		Walk(v, node)
 	}
@@ -21,7 +29,8 @@ func walkList[N Node](v Visitor, list []N) {
 // v.Enter(node) is not nil, Walk is invoked recursively with visitor
 // v for each of the non-nil children of node, followed by a call
 // of v.Exit(node).
-func Walk(v Visitor, n Node) {
+// Alternative Walk method signature Walk(v Visitor, n Node, p *Path)
+func Walk(v Visitor, n ast.Node) {
 	if n == nil {
 		return
 	}
@@ -39,50 +48,55 @@ func Walk(v Visitor, n Node) {
 	//case *CommentGroup:
 	// Nothing to do
 
-	case *File:
+	case ast.File:
 		walkList(v, n.Modules)
 
-	case *Module:
+	case ast.Module:
 		walkList(v, n.Imports)
 		walkList(v, n.Declarations)
 
-	case Import:
+	case ast.Import:
 		// Do nothing
 
 	// Expressions
-	case *Ident, *BasicLit:
+	case *ast.Ident, *ast.BasicLit:
 		// Nothing to do
 
-	case *CompositeLiteral:
+	case *ast.CompositeLiteral:
 		walkList(v, n.Elements)
 
-	case *IndexAccessExpr:
+	case *ast.IndexAccessExpr:
 		Walk(v, n.Array)
 
-	case *RangeAccessExpr:
+	case *ast.RangeAccessExpr:
 		Walk(v, n.Array)
 
-	case *SubscriptExpression:
+	case *ast.SubscriptExpression:
 		Walk(v, n.Argument)
 		Walk(v, n.Index)
 
-	case *FieldAccessExpr:
+	case *ast.FieldAccessExpr:
 
-	case *AssignmentExpression:
-	case *StarExpr:
+	case *ast.AssignmentExpression:
+	case *ast.StarExpr:
 
-	case *SelectorExpr:
+	case *ast.SelectorExpr:
 		Walk(v, n.X)
 		Walk(v, n.Sel)
 
-	case *FunctionCall:
+	case *ast.FunctionCall:
 		Walk(v, n.Identifier)
 		walkList(v, n.Arguments)
 		if n.TrailingBlock.IsSome() {
 			Walk(v, n.TrailingBlock.Get())
 		}
 
-	case *LambdaDeclarationExpr:
+	case *ast.GenDecl:
+		Walk(v, n.Spec)
+
+	case *ast.ValueSpec:
+
+	case *ast.LambdaDeclarationExpr:
 		walkList(v, n.Parameters)
 		Walk(v, n.Body)
 		/*
@@ -269,6 +283,6 @@ func Walk(v Visitor, n Node) {
 					Walk(v, n.Body)
 				}*/
 	default:
-		panic(fmt.Sprintf("Walk: unexpected node type %T", n))
+		//panic(fmt.Sprintf("Walk: unexpected node type %T", n))
 	}
 }

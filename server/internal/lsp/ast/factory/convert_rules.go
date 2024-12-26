@@ -1,6 +1,7 @@
-package ast
+package factory
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	sitter "github.com/smacker/go-tree-sitter"
 	"log"
 )
@@ -131,7 +132,7 @@ func (t TryConversionFunc) Validate(node *sitter.Node, source []byte) bool {
 		return false
 	}
 
-	var expr Expression
+	var expr ast.Expression
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -139,7 +140,7 @@ func (t TryConversionFunc) Validate(node *sitter.Node, source []byte) bool {
 				expr = nil
 			}
 		}()
-		expr = conversion.convert(node, source, false).(Expression)
+		expr = conversion.convert(node, source, false).(ast.Expression)
 	}()
 
 	return expr != nil

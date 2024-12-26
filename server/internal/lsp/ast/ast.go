@@ -21,6 +21,13 @@ const (
 	CHAR  // 'a'
 	STRING
 	BOOLEAN
+
+	// Types
+	VAR
+	CONST
+	STRUCT
+	ENUM
+	FAULT
 )
 
 type Token int
@@ -67,24 +74,17 @@ func (n *EmptyNode) stmtNode() {}
 // NodeAttributes is a struct that contains the common information all
 // AST Nodes contains, like position or other attributes
 type NodeAttributes struct {
-	StartPos, EndPos lsp.Position
-	Range            lsp.Range
-	Parent           Node
-	Attributes       []string
+	Range      lsp.Range
+	Attributes []string
 }
 
-func (n NodeAttributes) StartPosition() lsp.Position { return n.StartPos }
-func (n NodeAttributes) EndPosition() lsp.Position   { return n.EndPos }
-func SetParent(parent Node, child *NodeAttributes)   { child.Parent = parent }
+func (n NodeAttributes) StartPosition() lsp.Position { return n.Range.Start }
+func (n NodeAttributes) EndPosition() lsp.Position   { return n.Range.End }
 
 func ChangeNodePosition(n *NodeAttributes, start sitter.Point, end sitter.Point) {
-	n.StartPos = lsp.Position{Line: uint(start.Row), Column: uint(start.Column)}
-	n.EndPos = lsp.Position{Line: uint(end.Row), Column: uint(end.Column)}
-} /*
-func (n *NodeAttributes) SetPos(start sitter.Point, end sitter.Point) {
-	n.StartPos = Position{Line: uint(start.Row), Column: uint(start.Column)}
-	n.EndPos = Position{Line: uint(end.Row), Column: uint(end.Column)}
-}*/
+	n.Range.Start = lsp.Position{Line: uint(start.Row), Column: uint(start.Column)}
+	n.Range.End = lsp.Position{Line: uint(end.Row), Column: uint(end.Column)}
+}
 
 type File struct {
 	NodeAttributes
@@ -100,10 +100,10 @@ func NewFile(name string, aRange lsp.Range, modules []Module) *File {
 		Modules: modules,
 	}
 
-	for i := range node.Modules {
-		SetParent(node, &node.Modules[i].NodeAttributes)
-	}
 	return node
+}
+func (f *File) AddModule(module Module) {
+	f.Modules = append(f.Modules, module)
 }
 
 type Module struct {
@@ -118,8 +118,7 @@ func NewModule(name string, aRange lsp.Range, file *File) *Module {
 	return &Module{
 		Name: name,
 		NodeAttributes: NodeAttributes{
-			Parent: file,
-			Range:  aRange,
+			Range: aRange,
 		},
 	}
 }

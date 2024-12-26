@@ -15,9 +15,7 @@ type ASTVisitor interface {
 	// Declarations
 
 	VisitFunctionDecl(node *FunctionDecl)
-	VisitVariableDeclaration(node *VariableDecl)
 	VisitConstDeclaration(node *ConstDecl)
-	VisitEnumDecl(node *EnumDecl)
 	VisitStructDecl(node *StructDecl)
 	VisitFaultDecl(node *FaultDecl)
 	VisitDefDecl(node *DefDecl)
@@ -57,8 +55,6 @@ func Visit(node Node, v ASTVisitor) {
 	case *Module:
 		v.VisitModule(node.(*Module))
 
-	case *VariableDecl:
-		v.VisitVariableDeclaration(node.(*VariableDecl))
 	case *FunctionDecl:
 		n := node.(*FunctionDecl)
 		v.VisitFunctionDecl(n)
