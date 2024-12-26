@@ -1,7 +1,6 @@
 package factory
 
 import (
-	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/pkg"
 	"log"
@@ -103,7 +102,7 @@ func convert_declaration_stmt(node *sitter.Node, source []byte) ast.Statement {
 	valueSpec := &ast.ValueSpec{}
 	for i := 0; i < int(node.ChildCount()) && !end; i++ {
 		n := node.Child(i)
-		debugNode(n, source, "dd")
+		//debugNode(n, source, "dd")
 
 		switch n.Type() {
 		case "local_decl_storage":
@@ -499,7 +498,7 @@ func convert_foreach_stmt(node *sitter.Node, source []byte) ast.Statement {
 func convert_foreach_var(node *sitter.Node, source []byte) ast.ForeachValue {
 	value := ast.ForeachValue{}
 
-	debugNode(node, source, fmt.Sprint(node.ChildCount()))
+	//debugNode(node, source, fmt.Sprint(node.ChildCount()))
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		switch n.Type() {

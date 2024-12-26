@@ -70,6 +70,24 @@ func (s *SymbolTable) RegisterType(typeDecl *ast.GenDecl, currentModule ast.Modu
 	})
 }
 
+func (s *SymbolTable) RegisterStruct(n *ast.StructDecl, currentModule ast.Module) {
+	s.symbols = append(s.symbols, Symbol{
+		Name:     n.Name,
+		Module:   []string{currentModule.Name},
+		NodeDecl: n,
+		Range:    n.Range,
+	})
+}
+
+func (s *SymbolTable) RegisterFault(n *ast.FaultDecl, currentModule ast.Module) {
+	s.symbols = append(s.symbols, Symbol{
+		Name:     n.Name.Name,
+		Module:   []string{currentModule.Name},
+		NodeDecl: n,
+		Range:    n.Range,
+	})
+}
+
 type SymbolID uint
 
 type Symbol struct {
@@ -118,13 +136,18 @@ func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
 		}
 
 	case *ast.GenDecl:
-		if n.Token == ast.VAR {
+		if n.Token == ast.VAR || n.Token == ast.CONST {
 			v.table.RegisterVariable(n, v.currentModule)
-		} else if n.Token == ast.ENUM || n.Token == ast.STRUCT {
+		} else if n.Token == ast.ENUM {
 			v.table.RegisterType(n, v.currentModule)
 		}
-	}
 
+	case *ast.StructDecl:
+		v.table.RegisterStruct(n, v.currentModule)
+
+	case *ast.FaultDecl:
+		v.table.RegisterFault(n, v.currentModule)
+	}
 	return v
 }
 

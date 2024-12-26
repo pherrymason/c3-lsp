@@ -26,6 +26,7 @@ const (
 	VAR
 	CONST
 	STRUCT
+	UNION
 	ENUM
 	FAULT
 )

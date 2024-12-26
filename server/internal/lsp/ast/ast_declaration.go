@@ -51,25 +51,6 @@ const (
 type StructType int
 
 type (
-
-	// VariableDecl
-	// Deprecated use GenDecl with Token as token.VAR
-	VariableDecl struct {
-		NodeAttributes
-		Names       []*Ident
-		Type        TypeInfo
-		Initializer Expression
-	}
-
-	// ConstDecl
-	// Deprecated use GenDecl with Token as token.CONST
-	ConstDecl struct {
-		NodeAttributes
-		Names       []*Ident
-		Type        option.Option[TypeInfo]
-		Initializer Expression
-	}
-
 	GenDecl struct {
 		NodeAttributes
 		Token Token // const, variable
@@ -120,7 +101,6 @@ type (
 )
 
 func (v *GenDecl) declNode()    {}
-func (v *ConstDecl) declNode()  {}
 func (v *FaultDecl) declNode()  {}
 func (v *StructDecl) declNode() {}
 func (v *DefDecl) declNode()    {}

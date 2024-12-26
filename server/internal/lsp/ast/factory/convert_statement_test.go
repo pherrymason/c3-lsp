@@ -17,41 +17,50 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 	}{
 		{
 			input: "const int I;",
-			expected: &ast.ConstDecl{
+			expected: &ast.GenDecl{
+				Token:          ast.Token(ast.CONST),
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 15).Build(),
-				Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).BuildPtr()},
-				Type: option.Some(ast.NewTypeInfoBuilder().
-					WithName("int").
-					IsBuiltin().
-					WithStartEnd(1, 9, 1, 12).
-					WithNameStartEnd(1, 9, 1, 12).
-					Build()),
+				Spec: &ast.ValueSpec{
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).BuildPtr()},
+					Type: ast.NewTypeInfoBuilder().
+						WithName("int").
+						IsBuiltin().
+						WithStartEnd(1, 9, 1, 12).
+						WithNameStartEnd(1, 9, 1, 12).
+						Build(),
+				},
 			},
 		},
 		{
 			input: "const int I = 1;", // With initialization
-			expected: &ast.ConstDecl{
+			expected: &ast.GenDecl{
+				Token:          ast.Token(ast.CONST),
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 19).Build(),
-				Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).BuildPtr()},
-				Type: option.Some(ast.NewTypeInfoBuilder().
-					WithName("int").
-					IsBuiltin().
-					WithStartEnd(1, 9, 1, 12).
-					WithNameStartEnd(1, 9, 1, 12).
-					Build()),
-				Initializer: &ast.BasicLit{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 17, 1, 18).Build(),
-					Kind:           ast.INT,
-					Value:          "1",
+				Spec: &ast.ValueSpec{
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).BuildPtr()},
+					Type: ast.NewTypeInfoBuilder().
+						WithName("int").
+						IsBuiltin().
+						WithStartEnd(1, 9, 1, 12).
+						WithNameStartEnd(1, 9, 1, 12).
+						Build(),
+					Value: &ast.BasicLit{
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 17, 1, 18).Build(),
+						Kind:           ast.INT,
+						Value:          "1",
+					},
 				},
 			},
 		},
 		{
 			input: "const I;", // Without type
-			expected: &ast.ConstDecl{
+			expected: &ast.GenDecl{
+				Token:          ast.Token(ast.CONST),
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 11).Build(),
-				Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 9, 1, 10).BuildPtr()},
-				Type:           option.None[ast.TypeInfo](),
+				Spec: &ast.ValueSpec{
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 9, 1, 10).BuildPtr()},
+					Type:  nil,
+				},
 			},
 		},
 	}
@@ -66,7 +75,7 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 
 			tree := ConvertToAST(GetCST(source), source, "file.c3")
 
-			varDecl := tree.Modules[0].Declarations[0].(*ast.ConstDecl)
+			varDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 			assert.Equal(t, tt.expected, varDecl)
 		})
 	}
