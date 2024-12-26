@@ -186,22 +186,22 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "TypeDescription{1,2}",
 			expected: &ast.InlineTypeWithInitialization{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 22).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 33).Build(),
 				Type: ast.NewTypeInfoBuilder().
 					WithName("TypeDescription").
-					WithNameStartEnd(2, 13, 2, 17).
-					WithStartEnd(2, 13, 2, 17).
+					WithNameStartEnd(2, 13, 2, 28).
+					WithStartEnd(2, 13, 2, 28).
 					Build(),
 				InitializerList: &ast.InitializerList{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 17, 2, 22).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 28, 2, 33).Build(),
 					Args: []ast.Expression{
 						&ast.BasicLit{
-							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 18, 2, 19).Build(),
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 29, 2, 30).Build(),
 							Kind:           ast.INT,
 							Value:          "1"},
 
 						&ast.BasicLit{
-							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 20, 2, 21).Build(),
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 31, 2, 32).Build(),
 							Kind:           ast.INT,
 							Value:          "2"},
 					},
@@ -817,7 +817,7 @@ func TestConvertToAST_assignment_expr(t *testing.T) {
 					Value:          "$CompileTimeType"},
 				Right: ast.NewTypeInfoBuilder().
 					WithName("TypeDescription").
-					WithNameStartEnd(1, 38, 1, 42).
+					WithNameStartEnd(1, 38, 1, 53).
 					WithStartEnd(1, 38, 1, 42).
 					Build(),
 				Operator: "=",
