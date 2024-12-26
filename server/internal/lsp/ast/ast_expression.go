@@ -24,6 +24,7 @@ type (
 		Name       string // Identifier name
 		ModulePath string // Module path. Some identifiers, specify module path.
 	}
+
 	Path struct {
 		NodeAttributes
 		PathType  int
@@ -227,17 +228,42 @@ type (
 		Generics      []TypeInfo
 	}
 
+	BaseType struct {
+		NodeAttributes
+		Name *Ident
+	}
+
+	Field struct {
+		NodeAttributes
+		Name  *Ident
+		Type  TypeInfo
+		Value Expression // Value if applicable.
+	}
+
+	// An ArrayType represents an array or slice type.
 	ArrayType struct {
 		NodeAttributes
 		Len Expression // length of the array
 		Elt Expression // element type
 	}
 
+	// A bStructType represents a struct type
 	bStructType struct {
 		NodeAttributes
 		Fields []Expression
 	}
 
+	EnumType struct {
+		NodeAttributes
+		BaseType option.Option[TypeInfo] // Enums can be typed.
+		Fields   []Expression            // Enums in C3 can have fields
+		Values   []*EnumValue
+	}
+
+	EnumValue struct {
+		Name  *Ident
+		Value Expression
+	}
 	/*
 		FuncType struct {
 			NodeAttributes
@@ -273,6 +299,7 @@ func (Ident) exprNode()                    {}
 func (*ParenExpr) exprNode()               {}
 func (SelectorExpr) exprNode()             {}
 func (Path) exprNode()                     {}
+func (*BaseType) exprNode()                {}
 func (e *BasicLit) exprNode()              {}
 func (l *CompositeLiteral) exprNode()      {}
 func (l *IndexAccessExpr) exprNode()       {}
@@ -293,7 +320,9 @@ func (l *UpdateExpression) exprNode()      {}
 func (TypeInfo) exprNode()                      {}
 func (*InitializerList) exprNode()              {}
 func (*InlineTypeWithInitialization) exprNode() {}
+func (l *Field) exprNode()                      {}
 func (l *ArrayType) exprNode()                  {}
+func (l *EnumType) exprNode()                   {}
 func (l *bStructType) exprNode()                {}
 func (l *InterfaceType) exprNode()              {}
 func (l *TrailingGenericsExpr) exprNode()       {}

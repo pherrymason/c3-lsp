@@ -2,6 +2,7 @@ package document
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
@@ -38,7 +39,7 @@ func (pd *Storage) OpenDocument(uri string, text string, version uint) {
 		Text:     text,
 		Owned:    true,
 		Version:  version,
-		Ast:      ast.ConvertToAST(ast.GetCST(text), text, uri),
+		Ast:      factory.ConvertToAST(factory.GetCST(text), text, uri),
 	}
 
 	pd.Documents[uri] = document
@@ -52,7 +53,7 @@ func (pd *Storage) OpenDocumentFromPath(path string, text string, version uint) 
 		Text:     text,
 		Owned:    false,
 		Version:  version,
-		Ast:      ast.ConvertToAST(ast.GetCST(text), text, path),
+		Ast:      factory.ConvertToAST(factory.GetCST(text), text, path),
 	}
 
 	pd.Documents[uri] = document

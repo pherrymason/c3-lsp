@@ -69,42 +69,12 @@ func (v *JSONVisitor) VisitImport(node *Import) {
 
 func (v *JSONVisitor) VisitDeclaration(node Declaration) {
 	switch node.(type) {
-	case *VariableDecl:
-		v.VisitVariableDeclaration(node.(*VariableDecl))
 	case *FunctionDecl:
 		v.VisitFunctionDecl(node.(*FunctionDecl))
 	}
 }
 
-func (v *JSONVisitor) VisitVariableDeclaration(node *VariableDecl) {
-	names := []map[string]interface{}{}
-	for _, name := range node.Names {
-		names = append(names, map[string]interface{}{
-			"name":   name.Name,
-			PNodePos: serialize_pos(name),
-		})
-	}
-
-	typeV := JSONVisitor{}
-	Visit(&node.Type, &typeV)
-
-	initV := JSONVisitor{}
-	Visit(node.Initializer, &initV)
-
-	v.Result = map[string]interface{}{
-		PNodeType:        "VariableDeclaration",
-		PNodePos:         serialize_pos(node),
-		"names":          names,
-		"variable_type":  typeV.Result,
-		"initialization": initV.Result,
-	}
-}
-
 func (v *JSONVisitor) VisitConstDeclaration(node *ConstDecl) {
-
-}
-
-func (v *JSONVisitor) VisitEnumDecl(node *EnumDecl) {
 
 }
 
@@ -223,7 +193,7 @@ func VisitType(node *TypeInfo) JSONObject {
 	}
 
 	return map[string]interface{}{
-		PNodeType:    "Type",
+		PNodeType:    "TypeDescription",
 		"name":       node.Identifier.Name,
 		"builtin":    node.BuiltIn,
 		"optional":   node.Optional,

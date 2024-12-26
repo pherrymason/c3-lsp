@@ -41,7 +41,7 @@ func BuildFromDocumentPosition(
 		return context
 	}
 
-	//s := fmt.Sprintf("Node found. Type: %s. Content: %s", node.Type(), node.Content([]byte(doc.SourceCode.Text)))
+	//s := fmt.Sprintf("Node found. TypeDescription: %s. Content: %s", node.TypeDescription(), node.Content([]byte(doc.SourceCode.Text)))
 	//fmt.Printf(s)
 
 	switch node.Type() {

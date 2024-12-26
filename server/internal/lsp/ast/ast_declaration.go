@@ -21,23 +21,26 @@ type (
 	}
 
 	ValueSpec struct {
-		Names  []*Ident
-		Type   Expression   // value type, or nil
-		Values []Expression // initial values, or nil
+		NodeAttributes
+		Names []*Ident
+		Type  Expression // value type, or nil
+		Value Expression // initial values, or nil
 	}
 
 	// TypeSpec represents declarations of types like aliases, definition of types
 	// or parametrized types (generics)
 	TypeSpec struct {
-		Name       *Ident       // type name
-		TypeParams []Expression // type parameters; or nil
-		Assign     token.Pos    // position of '=', if any
-		Type       Expression   // *Ident, *ParenExpr, *SelectorExpr, *StarExpr, or any of the *XxxTypes
+		NodeAttributes
+		Name            *Ident       // type name
+		TypeParams      []Expression // Generic type parameters; or nil
+		Assign          token.Pos    // position of '=', if any
+		TypeDescription Expression   // ast node describing the type with detail: EnumType, bStructType
 	}
 )
 
-func (*ImportSpec) specNode() {}
-func (*ValueSpec) specNode()  {}
+func (i *ImportSpec) specNode() {}
+func (v *ValueSpec) specNode()  {}
+func (v *TypeSpec) specNode()   {}
 
 const (
 	StructTypeNormal = iota
@@ -48,6 +51,7 @@ const (
 type StructType int
 
 type (
+
 	// VariableDecl
 	// Deprecated use GenDecl with Token as token.VAR
 	VariableDecl struct {
@@ -68,16 +72,8 @@ type (
 
 	GenDecl struct {
 		NodeAttributes
-		Token token.Token
-		Specs []Spec
-	}
-
-	EnumDecl struct {
-		NodeAttributes
-		Name       string
-		BaseType   TypeInfo
-		Properties []EnumProperty
-		Members    []EnumMember
+		Token Token // const, variable
+		Spec  Spec
 	}
 
 	FaultDecl struct {
@@ -96,8 +92,8 @@ type (
 	DefDecl struct {
 		NodeAttributes
 		Name           Ident
-		resolvesTo     string
-		resolvesToType option.Option[TypeInfo]
+		ResolvesTo     string
+		ResolvesToType option.Option[TypeInfo]
 	}
 
 	StructDecl struct {
@@ -123,13 +119,12 @@ type (
 	}
 )
 
-func (v *VariableDecl) declNode() {}
-func (v *ConstDecl) declNode()    {}
-func (v *EnumDecl) declNode()     {}
-func (v *FaultDecl) declNode()    {}
-func (v *StructDecl) declNode()   {}
-func (v *DefDecl) declNode()      {}
-func (v *MacroDecl) declNode()    {}
+func (v *GenDecl) declNode()    {}
+func (v *ConstDecl) declNode()  {}
+func (v *FaultDecl) declNode()  {}
+func (v *StructDecl) declNode() {}
+func (v *DefDecl) declNode()    {}
+func (v *MacroDecl) declNode()  {}
 
 func (v *FunctionDecl) declNode()  {}
 func (v *InterfaceDecl) declNode() {}

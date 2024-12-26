@@ -90,7 +90,7 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		}
 
 		context.Notify(protocol.ServerWindowShowMessage, protocol.ShowMessageParams{
-			Type:    protocol.MessageTypeInfo,
+			TypeDescription:    protocol.MessageTypeInfo,
 			Message: fmt.Sprintf("SendCrash: %s", sendCrashStatus),
 		})
 		*/
