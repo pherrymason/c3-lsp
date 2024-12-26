@@ -270,14 +270,14 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{[0] = TypeDescription}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 13+12).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 36).Build(),
 				Args: []ast.Expression{
 					&ast.ArgParamPathSet{
 						Path: "[0]",
 						Expr: ast.NewTypeInfoBuilder().
-							WithStartEnd(2, 13+7, 2, 13+11).
+							WithStartEnd(2, 13+7, 2, 35).
 							WithName("TypeDescription").
-							WithNameStartEnd(2, 13+7, 2, 13+11).
+							WithNameStartEnd(2, 13+7, 2, 35).
 							Build(),
 					},
 				},
@@ -316,12 +316,12 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{TypeDescription}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 13+6).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 30).Build(),
 				Args: []ast.Expression{
 					ast.NewTypeInfoBuilder().
-						WithStartEnd(2, 13+1, 2, 13+5).
+						WithStartEnd(2, 13+1, 2, 29).
 						WithName("TypeDescription").
-						WithNameStartEnd(2, 13+1, 2, 13+5).
+						WithNameStartEnd(2, 13+1, 2, 29).
 						Build(),
 				},
 			},
@@ -810,7 +810,7 @@ func TestConvertToAST_assignment_expr(t *testing.T) {
 		{
 			input: "$CompileTimeType = TypeDescription;",
 			expected: &ast.AssignmentExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 19+23).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 53).Build(),
 				Left: &ast.BasicLit{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 35).Build(),
 					Kind:           ast.STRING,
@@ -818,7 +818,7 @@ func TestConvertToAST_assignment_expr(t *testing.T) {
 				Right: ast.NewTypeInfoBuilder().
 					WithName("TypeDescription").
 					WithNameStartEnd(1, 38, 1, 53).
-					WithStartEnd(1, 38, 1, 42).
+					WithStartEnd(1, 38, 1, 53).
 					Build(),
 				Operator: "=",
 			},
