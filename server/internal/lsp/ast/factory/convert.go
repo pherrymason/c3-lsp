@@ -60,6 +60,11 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) ast.
 		var lastMod *ast.Module
 		if parsedModules > 0 {
 			lastMod = &prg.Modules[len(prg.Modules)-1]
+
+			if anonymousModule && node.Type() != "module" {
+				// Update end position
+				lastMod.NodeAttributes.Range.End = lsp.Position{Line: uint(node.EndPoint().Row), Column: uint(node.EndPoint().Column)}
+			}
 		}
 
 		switch node.Type() {
