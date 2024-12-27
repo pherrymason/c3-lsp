@@ -33,17 +33,29 @@ func TestConvertToAST_module(t *testing.T) {
 }
 
 func TestConvertToAST_module_implicit(t *testing.T) {
-	source := `
+	t.Run("First module is anonymous, second is named", func(t *testing.T) {
+		source := `
 	int variable = 0;
 	module foo;`
 
-	tree := ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
+		tree := ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
 
-	assert.Equal(t, "path_file_xxx", tree.Modules[0].Name)
-	assert.Equal(t, lsp.NewRange(1, 1, 2, 1), tree.Modules[0].Range)
+		assert.Equal(t, "path_file_xxx", tree.Modules[0].Name)
+		assert.Equal(t, lsp.NewRange(1, 1, 2, 1), tree.Modules[0].Range)
 
-	assert.Equal(t, "foo", tree.Modules[1].Name)
-	assert.Equal(t, lsp.NewRange(2, 1, 2, 12), tree.Modules[1].Range)
+		assert.Equal(t, "foo", tree.Modules[1].Name)
+		assert.Equal(t, lsp.NewRange(2, 1, 2, 12), tree.Modules[1].Range)
+	})
+
+	t.Run("Single anonymous module", func(t *testing.T) {
+		source := `int number = 0;
+		number + 2;`
+
+		tree := ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
+
+		assert.Equal(t, "path_file_xxx", tree.Modules[0].Name)
+		assert.Equal(t, lsp.NewRange(0, 0, 1, 13), tree.Modules[0].Range)
+	})
 }
 
 func TestConvertToAST_module_with_generics(t *testing.T) {
