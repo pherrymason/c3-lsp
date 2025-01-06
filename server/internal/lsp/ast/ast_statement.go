@@ -15,13 +15,7 @@ type (
 		Expr Expression
 	}
 
-	// A BlockStmt represents a braced statement list
-	BlockStmt struct {
-		NodeAttributes
-		List []Statement
-	}
-
-	// A CompoundStmt TODO What's the difference with BlockStmt?
+	// A CompoundStmt
 	CompoundStmt struct {
 		NodeAttributes
 		Statements []Statement
@@ -133,7 +127,6 @@ type (
 )
 
 func (e *ExpressionStmt) stmtNode()    {}
-func (e *BlockStmt) stmtNode()         {}
 func (e *CompoundStmt) stmtNode()      {}
 func (e *DeclarationStmt) stmtNode()   {}
 func (e *IfStmt) stmtNode()            {}

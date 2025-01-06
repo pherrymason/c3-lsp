@@ -1092,7 +1092,25 @@ func (c *ASTConverter) convert_expression(node *sitter.Node, source []byte) ast.
 		NodeTryConversionFunc("_base_expr"),
 	}, node, source, ConvertDebug)
 
+	if converted == nil {
+		return nil
+	}
 	return converted.(ast.Expression)
+}
+
+func (c *ASTConverter) convert_expr_block(node *sitter.Node, source []byte) ast.Expression {
+	var statements []ast.Statement
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() != "{|" && n.Type() != "|}" {
+			statements = append(statements, c.convert_statement(n, source))
+		}
+	}
+
+	return &ast.BlockExpr{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		List:           statements,
+	}
 }
 
 func (c *ASTConverter) convert_expr_stmt(node *sitter.Node, source []byte) ast.Statement {
@@ -1136,7 +1154,7 @@ func (c *ASTConverter) convert_base_expression(node *sitter.Node, source []byte)
 		NodeOfType("field_expr"),       // TODO
 		NodeOfType("type_access_expr"), // TODO
 		NodeOfType("paren_expr"),
-		NodeOfType("expr_block"), // TODO
+		NodeOfType("expr_block"),
 
 		NodeOfType("$vacount"),
 
