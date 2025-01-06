@@ -34,12 +34,20 @@ func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
 
 	case *ast.GenDecl:
 		if n.Token == ast.VAR || n.Token == ast.CONST {
-			v.table.RegisterSymbol(
+			_, symbol := v.table.RegisterSymbol(
 				n.Spec.(*ast.ValueSpec).Names[0].Name,
 				n.Range,
 				n, v.currentModule,
 				v.currentFilePath.Name,
 			)
+
+			typeExpression := n.Spec.(*ast.ValueSpec).Type
+			symbol.Type = TypeDefinition{
+				Name:      typeExpression.Identifier.Name,
+				IsBuiltIn: typeExpression.BuiltIn,
+				NodeDecl:  typeExpression,
+			}
+
 		} else if n.Token == ast.ENUM {
 			v.table.RegisterSymbol(
 				n.Spec.(*ast.TypeSpec).Name.Name,
@@ -63,7 +71,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
 			v.currentFilePath.Name)
 
 	case *ast.FunctionDecl:
-		id := v.table.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule,
+		id, _ := v.table.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule,
 			v.currentFilePath.Name)
 		if n.ParentTypeId.IsSome() {
 			// Should register method as children of parent type

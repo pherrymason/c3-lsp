@@ -190,11 +190,13 @@ func (c *ASTConverter) convert_switch_stmt(node *sitter.Node, source []byte) ast
 				}
 			} else if conditionNode.Type() == "type" {
 				caseValue = &ast.ExpressionStmt{
-					Expr: c.convert_type(conditionNode, source),
+					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
+					Expr:           c.convert_type(conditionNode, source),
 				}
 			} else {
 				caseValue = &ast.ExpressionStmt{
-					Expr: c.convert_expression(conditionNode, source).(ast.Expression),
+					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
+					Expr:           c.convert_expression(conditionNode, source).(ast.Expression),
 				}
 
 			}
@@ -381,6 +383,7 @@ func (c *ASTConverter) convert_local_declaration_after_type(node *sitter.Node, s
 					BuildPtr(),
 			},
 			Value: init,
+			// TODO Isn't this missing the Type field???
 		},
 	}
 

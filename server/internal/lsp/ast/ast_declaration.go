@@ -23,7 +23,7 @@ type (
 	ValueSpec struct {
 		NodeAttributes
 		Names []*Ident
-		Type  Expression // value type, or nil
+		Type  TypeInfo   // value type, or nil
 		Value Expression // initial values, or nil
 	}
 
