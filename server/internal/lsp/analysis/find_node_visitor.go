@@ -7,9 +7,10 @@ import (
 )
 
 type FindNodeVisitor struct {
-	pos   lsp.Position
-	found ast.Node
-	Path  []ast.Node
+	pos        lsp.Position
+	found      ast.Node
+	Path       []ast.Node
+	stopSearch bool
 }
 
 // Visit implementa el método del visitor.
@@ -20,12 +21,17 @@ func (v *FindNodeVisitor) Enter(node ast.Node) walk.Visitor {
 
 	// Verify if the position is inside the range of the node
 	if node.GetRange().HasPosition(v.pos) {
-		//if v.pos >= node.StartPosition() && v.pos < node.EndPosition() {
 		// Guardar el nodo actual si es más específico
 		v.found = node
 		v.Path = append(v.Path, node)
 
 		// Continuar recorriendo los nodos hijos
+		switch node.(type) {
+		case *ast.Ident, *ast.BasicLit:
+			v.stopSearch = true
+		default:
+		}
+
 		return v
 	}
 
@@ -33,14 +39,19 @@ func (v *FindNodeVisitor) Enter(node ast.Node) walk.Visitor {
 }
 
 func (v *FindNodeVisitor) Exit(n ast.Node) {
+	if v.stopSearch {
+		return
+	}
+
 	if len(v.Path) > 0 && v.Path[len(v.Path)-1].GetId() == n.GetId() {
 		v.Path = v.Path[:len(v.Path)-1]
 	}
 }
 
 // FindNode encuentra el nodo del AST que contiene la posición dada.
-func FindNode(root ast.Node, pos lsp.Position) ast.Node {
+func FindNode(root ast.Node, pos lsp.Position) (ast.Node, []ast.Node) {
 	visitor := &FindNodeVisitor{pos: pos}
 	walk.Walk(visitor, root)
-	return visitor.found
+
+	return visitor.found, visitor.Path
 }

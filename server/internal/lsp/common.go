@@ -9,11 +9,19 @@ type Position struct {
 	Line, Column uint
 }
 
-func (pos Position) ToProtocol() protocol.Position {
+func (p Position) ToProtocol() protocol.Position {
 	return protocol.Position{
-		Line:      protocol.UInteger(pos.Line),
-		Character: protocol.UInteger(pos.Column),
+		Line:      protocol.UInteger(p.Line),
+		Character: protocol.UInteger(p.Column),
 	}
+}
+
+func (p Position) IsAfter(other Position) bool {
+	return p.Line > other.Line || (p.Line == other.Line && p.Column >= other.Column)
+}
+
+func (p Position) IsBefore(other Position) bool {
+	return p.Line < other.Line || (p.Line == other.Line && p.Column <= other.Column)
 }
 
 func NewLSPPosition(pos protocol.Position) Position {
@@ -67,4 +75,8 @@ func (r Range) HasPosition(position Position) bool {
 	}
 
 	return false
+}
+
+func (r Range) IsInside(or Range) bool {
+	return r.Start.IsAfter(or.Start) && r.End.IsBefore(or.End)
 }

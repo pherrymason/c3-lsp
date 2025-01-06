@@ -76,10 +76,35 @@ func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, 
 	return SymbolID(len(s.symbols)), symbol
 }
 
-func (s *SymbolTable) FindSymbol(name string, module []string, hint ast.Token) option.Option[*Symbol] {
+// FindSymbol searches a symbol by name, module and a given scope
+func (s *SymbolTable) FindSymbol(name string, module []string, scopeStack []lsp.Range, hint ast.Token) option.Option[*Symbol] {
+	type SymbolScope struct {
+		symbol *Symbol
+		scope  lsp.Range
+	}
+	symbolFound := option.None[SymbolScope]()
+	checkScope := len(scopeStack) > 0
+
 	for _, symbol := range s.symbols {
 		if symbol.Name != name {
 			continue
+		}
+		if symbol.Module[0] != module[0] {
+			continue
+		}
+
+		matchedScope := option.None[lsp.Range]()
+		if checkScope {
+			for i := len(scopeStack) - 1; i >= 0; i-- {
+				if symbol.Range.IsInside(scopeStack[i]) == true {
+					matchedScope = option.Some(scopeStack[i])
+					break
+				}
+			}
+
+			if matchedScope.IsNone() {
+				continue
+			}
 		}
 
 		if hint == 1 {
@@ -88,10 +113,30 @@ func (s *SymbolTable) FindSymbol(name string, module []string, hint ast.Token) o
 			}
 		}
 
-		return option.Some(symbol)
+		if symbolFound.IsSome() {
+			// Check if matchedScope is deeper in provided scopeStack
+			if symbolFound.Get().scope.IsInside(matchedScope.Get()) {
+				// Ignore, already found symbol is in a closer scope
+			} else {
+				symbolFound = option.Some(SymbolScope{
+					symbol: symbol,
+					scope:  matchedScope.Get(),
+				})
+			}
+		} else {
+			symbolFound = option.Some(SymbolScope{
+				symbol: symbol,
+				scope:  matchedScope.Get(),
+			})
+		}
+		//return option.Some(symbol)
 	}
 
-	return option.None[*Symbol]()
+	if symbolFound.IsNone() {
+		return option.None[*Symbol]()
+	}
+
+	return option.Some(symbolFound.Get().symbol)
 }
 
 type SymbolID int
