@@ -77,6 +77,6 @@ func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 
 	assert.Equal(t, 2, len(result.symbols))
 	assert.Equal(t, "Obj", result.symbols[0].Name)
-	assert.Equal(t, Relation{SymbolID: 2, Type: Method}, result.symbols[0].Children[0])
+	assert.Equal(t, Relation{SymbolID: 2, Tag: Method}, result.symbols[0].Children[0])
 	assert.Equal(t, "method", result.symbols[1].Name)
 }
