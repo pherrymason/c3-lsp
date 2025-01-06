@@ -12,22 +12,26 @@ type NodeAttrsBuilder struct {
 	bn NodeAttributes
 }
 
-func NewNodeAttributesBuilder(nodeID NodeId) *NodeAttrsBuilder {
+func NewNodeAttributesBuilder() *NodeAttrsBuilder {
 	return &NodeAttrsBuilder{
-		bn: NodeAttributes{
-			Id: nodeID,
-		},
+		bn: NodeAttributes{},
 	}
 }
 
 func NewAttrNodeFromSitterNode(nodeId NodeId, node *sitter.Node) NodeAttributes {
-	builder := NewNodeAttributesBuilder(nodeId).
+	builder := NewNodeAttributesBuilder().
+		WithId(nodeId).
 		WithRange(lsp.NewRangeFromSitterNode(node))
 
 	return builder.Build()
 }
 func (d *NodeAttrsBuilder) Build() NodeAttributes {
 	return d.bn
+}
+
+func (d *NodeAttrsBuilder) WithId(id NodeId) *NodeAttrsBuilder {
+	d.bn.Id = id
+	return d
 }
 
 func (d *NodeAttrsBuilder) WithSitterStartEnd(start sitter.Point, end sitter.Point) *NodeAttrsBuilder {
@@ -66,13 +70,17 @@ type IdentifierBuilder struct {
 	bn NodeAttrsBuilder
 }
 
-func NewIdentifierBuilder(nodeId NodeId) *IdentifierBuilder {
+func NewIdentifierBuilder() *IdentifierBuilder {
 	return &IdentifierBuilder{
 		bi: &Ident{},
-		bn: *NewNodeAttributesBuilder(nodeId),
+		bn: *NewNodeAttributesBuilder(),
 	}
 }
 
+func (i *IdentifierBuilder) WithId(nodeId NodeId) *IdentifierBuilder {
+	i.bn.WithId(nodeId)
+	return i
+}
 func (i *IdentifierBuilder) WithName(name string) *IdentifierBuilder {
 	i.bi.Name = name
 	return i
@@ -200,7 +208,7 @@ type DefDeclBuilder struct {
 func NewDefDeclBuilder(nodeId NodeId) *DefDeclBuilder {
 	return &DefDeclBuilder{
 		d: DefDecl{},
-		a: *NewNodeAttributesBuilder(nodeId),
+		a: *NewNodeAttributesBuilder(),
 	}
 }
 

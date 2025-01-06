@@ -120,7 +120,8 @@ func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte
 
 		case "local_decl_after_type":
 			//valueSpec.Names =
-			ident := ast.NewIdentifierBuilder(c.getNextID()).
+			ident := ast.NewIdentifierBuilder().
+				WithId(c.getNextID()).
 				WithName(n.ChildByFieldName("name").Content(source)).
 				WithSitterPos(n.ChildByFieldName("name")).
 				BuildPtr()
@@ -183,7 +184,7 @@ func (c *ASTConverter) convert_switch_stmt(node *sitter.Node, source []byte) ast
 			var caseValue ast.Statement
 			if conditionNode.Type() == "case_range" {
 				caseValue = &ast.SwitchCaseRange{
-					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.nextID, conditionNode),
+					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
 					Start:          c.convert_expression(conditionNode.Child(0), source).(ast.Expression),
 					End:            c.convert_expression(conditionNode.Child(2), source).(ast.Expression),
 				}
@@ -373,7 +374,8 @@ func (c *ASTConverter) convert_local_declaration_after_type(node *sitter.Node, s
 		Token:          ast.VAR,
 		Spec: &ast.ValueSpec{
 			Names: []*ast.Ident{
-				ast.NewIdentifierBuilder(c.getNextID()).
+				ast.NewIdentifierBuilder().
+					WithId(c.getNextID()).
 					WithName(node.ChildByFieldName("name").Content(source)).
 					WithSitterPos(node.ChildByFieldName("name")).
 					BuildPtr(),
