@@ -21,7 +21,8 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	fn void Obj.method() {}
 	`
 
-	tree := factory.ConvertToAST(factory.GetCST(source), source, "file.c3")
+	astConverter := factory.NewASTConverter()
+	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
 
 	result := BuildSymbolTable(tree)
 
@@ -48,7 +49,8 @@ func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 	fn void Obj.method() {}
 	`
 
-	tree := factory.ConvertToAST(factory.GetCST(source), source, "file.c3")
+	astConverter := factory.NewASTConverter()
+	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
 
 	result := BuildSymbolTable(tree)
 
