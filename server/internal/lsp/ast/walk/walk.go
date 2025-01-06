@@ -121,6 +121,9 @@ func Walk(v Visitor, n ast.Node) {
 
 	case *ast.CompoundStmt:
 		walkList(v, n.Statements)
+
+	case *ast.DeclarationStmt:
+		Walk(v, n.Decl)
 		/*
 			case *AssignExpression:
 				if n != nil {

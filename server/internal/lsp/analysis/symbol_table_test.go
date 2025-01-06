@@ -42,6 +42,27 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	}
 }
 
+func TestSymbolBuild_registers_local_declarations(t *testing.T) {
+	source := `
+	module foo;
+	fn void main() {
+		int cat = 1;
+	}`
+
+	astConverter := factory.NewASTConverter()
+	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
+
+	result := BuildSymbolTable(tree)
+
+	assert.Equal(t, 2, len(result.symbols))
+	assert.Equal(t, "main", result.symbols[0].Name)
+	assert.Equal(t, "cat", result.symbols[1].Name)
+
+	for _, symbol := range result.symbols {
+		assert.Equal(t, "file.c3", symbol.FilePath, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.FilePath))
+	}
+}
+
 func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 	source := `
 	module foo;

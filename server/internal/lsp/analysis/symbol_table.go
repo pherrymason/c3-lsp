@@ -63,16 +63,17 @@ func (s *SymbolTable) RegisterVariable(genDecl *ast.GenDecl, currentModule ast.M
 
 	return SymbolID(len(s.symbols))
 }
-func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, filePath string) SymbolID {
-	s.symbols = append(s.symbols, &Symbol{
+func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, filePath string) (SymbolID, *Symbol) {
+	symbol := &Symbol{
 		Name:     name,
 		Module:   []string{module.Name},
 		FilePath: filePath,
 		NodeDecl: n,
 		Range:    nRange,
-	})
+	}
+	s.symbols = append(s.symbols, symbol)
 
-	return SymbolID(len(s.symbols))
+	return SymbolID(len(s.symbols)), symbol
 }
 
 func (s *SymbolTable) FindSymbol(name string, module []string, hint ast.Token) option.Option[*Symbol] {
@@ -113,7 +114,7 @@ type ModuleName []string
 
 type TypeDefinition struct {
 	Name      string
-	IsBuiltIn bool // Is it a built in type definition?
+	IsBuiltIn bool // Is it a built-in type definition?
 	NodeDecl  ast.Node
 }
 
