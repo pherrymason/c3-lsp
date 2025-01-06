@@ -37,10 +37,10 @@ func (c *ASTConverter) convert_compile_time_call(node *sitter.Node, source []byt
 	endNode = flatPath.NextSibling()
 
 	funcCall := &ast.FunctionCall{
-		NodeAttributes: ast.NewNodeAttributesBuilder(c.getNextID()).
+		NodeAttributes: ast.NewNodeAttributesBuilder().
 			WithSitterStartEnd(node.StartPoint(), endNode.EndPoint()).
 			Build(),
-		Identifier: ast.NewIdentifierBuilder(c.getNextID()).
+		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			BuildPtr(),
@@ -67,10 +67,10 @@ func (c *ASTConverter) convert_compile_time_arg(node *sitter.Node, source []byte
 	expr := c.convert_expression(insideParenths, source)
 
 	funcCall := &ast.FunctionCall{
-		NodeAttributes: ast.NewNodeAttributesBuilder(c.getNextID()).
+		NodeAttributes: ast.NewNodeAttributesBuilder().
 			WithSitterStartEnd(node.StartPoint(), endNode.EndPoint()).
 			Build(),
-		Identifier: ast.NewIdentifierBuilder(c.getNextID()).
+		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			BuildPtr(),
@@ -113,10 +113,10 @@ func (c *ASTConverter) convert_compile_time_analyse(node *sitter.Node, source []
 	//expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
 
 	funcCall := &ast.FunctionCall{
-		NodeAttributes: ast.NewNodeAttributesBuilder(c.getNextID()).
+		NodeAttributes: ast.NewNodeAttributesBuilder().
 			WithSitterStartEnd(node.StartPoint(), decl_or_expr_node.NextSibling().EndPoint()).
 			Build(),
-		Identifier: ast.NewIdentifierBuilder(c.getNextID()).
+		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			BuildPtr(),
@@ -152,8 +152,8 @@ func (c *ASTConverter) convert_compile_time_call_unk(node *sitter.Node, source [
 	}
 
 	return &ast.FunctionCall{
-		NodeAttributes: ast.NewNodeAttributesBuilder(c.getNextID()).WithSitterStartEnd(node.StartPoint(), next.EndPoint()).Build(),
-		Identifier: ast.NewIdentifierBuilder(c.getNextID()).
+		NodeAttributes: ast.NewNodeAttributesBuilder().WithSitterStartEnd(node.StartPoint(), next.EndPoint()).Build(),
+		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			BuildPtr(),
@@ -164,8 +164,8 @@ func (c *ASTConverter) convert_compile_time_call_unk(node *sitter.Node, source [
 func (c *ASTConverter) convert_feature(node *sitter.Node, source []byte) ast.Expression {
 	next := node.NextNamedSibling()
 	return &ast.FunctionCall{
-		NodeAttributes: ast.NewNodeAttributesBuilder(c.getNextID()).WithSitterStartEnd(node.StartPoint(), next.EndPoint()).Build(),
-		Identifier: ast.NewIdentifierBuilder(c.getNextID()).
+		NodeAttributes: ast.NewNodeAttributesBuilder().WithSitterStartEnd(node.StartPoint(), next.EndPoint()).Build(),
+		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			BuildPtr(),

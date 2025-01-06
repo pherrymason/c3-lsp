@@ -22,7 +22,7 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "1",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(7).
+				NodeAttributes: ast.NewNodeAttributesBuilder().
 					WithRangePositions(2, 13, 2, 14).
 					Build(),
 				Kind:  ast.INT,
@@ -32,14 +32,14 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "1.1",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 16).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 16).Build(),
 				Kind:           ast.FLOAT,
 				Value:          "1.1"},
 		},
 		{
 			literal: "false",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 18).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 18).Build(),
 				Kind:           ast.BOOLEAN,
 				Value:          "false",
 			},
@@ -47,69 +47,69 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "true",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 17).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 17).Build(),
 				Kind:           ast.BOOLEAN,
 				Value:          "true"},
 		},
 		{
 			literal: "null",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 17).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 17).Build(),
 				Kind:           ast.NULL,
 				Value:          "null"},
 		},
 		{
 			literal: "\"hello\"",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 20).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 20).Build(),
 				Kind:           ast.STRING, Value: "\"hello\""},
 		},
 		{
 			literal: "`hello`",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 20).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 20).Build(),
 				Kind:           ast.STRING, Value: "`hello`"},
 		},
 		{
 			literal: "x'FF'",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 18).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 18).Build(),
 				Kind:           ast.STRING, Value: "x'FF'"},
 		},
 		{
 			literal: "x\"FF\"",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 18).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 18).Build(),
 				Kind:           ast.STRING, Value: "x\"FF\""},
 		},
 		{
 			literal: "x`FF`",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 18).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 18).Build(),
 				Kind:           ast.STRING, Value: "x`FF`"},
 		},
 		{
 			literal: "b64'FF'",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 20).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 20).Build(),
 				Kind:           ast.STRING, Value: "b64'FF'"},
 		},
 		{
 			literal: "b64\"FF\"",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 20).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 20).Build(),
 				Kind:           ast.STRING, Value: "b64\"FF\""},
 		},
 		{
 			literal: "b64`FF`",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 20).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 20).Build(),
 				Kind:           ast.STRING, Value: "b64`FF`"},
 		},
 		{
 			literal: "$$builtin",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 22).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 22).Build(),
 				Kind:           ast.STRING,
 				Value:          "$$builtin"},
 		},
@@ -117,57 +117,57 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		// - const_ident
 		{
 			literal:  "A_CONSTANT",
-			expected: ast.NewIdentifierBuilder(6).WithName("A_CONSTANT").WithStartEnd(2, 13, 2, 23).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("A_CONSTANT").WithStartEnd(2, 13, 2, 23).BuildPtr(),
 		},
 		// - ident
 		{
 			literal:  "ident",
-			expected: ast.NewIdentifierBuilder(7).WithName("ident").WithStartEnd(2, 13, 2, 18).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("ident").WithStartEnd(2, 13, 2, 18).BuildPtr(),
 		},
 		// - at_ident
 		{
 			literal:  "@ident",
-			expected: ast.NewIdentifierBuilder(7).WithName("@ident").WithStartEnd(2, 13, 2, 19).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("@ident").WithStartEnd(2, 13, 2, 19).BuildPtr(),
 		},
 		// module_ident_expr:
 		{
 			literal:  "path::ident",
-			expected: ast.NewIdentifierBuilder(7).WithPath("path").WithName("ident").WithStartEnd(2, 13, 2, 24).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithPath("path").WithName("ident").WithStartEnd(2, 13, 2, 24).BuildPtr(),
 		},
 		{
 			literal:  "$_abc",
-			expected: ast.NewIdentifierBuilder(7).WithName("$_abc").WithStartEnd(2, 13, 2, 18).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("$_abc").WithStartEnd(2, 13, 2, 18).BuildPtr(),
 		},
 		{
 			literal:  "#_abc",
-			expected: ast.NewIdentifierBuilder(7).WithName("#_abc").WithStartEnd(2, 13, 2, 18).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("#_abc").WithStartEnd(2, 13, 2, 18).BuildPtr(),
 		},
 		{
 			literal: "&anotherVariable",
 			expected: &ast.UnaryExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(6).WithRangePositions(2, 13, 2, 29).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 29).Build(),
 				Operator:       "&",
-				Argument:       ast.NewIdentifierBuilder(8).WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).BuildPtr(),
+				Argument:       ast.NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).BuildPtr(),
 			},
 		},
 		{
 			literal: "Enum.MEMBER",
 			expected: &ast.SelectorExpr{
-				NodeAttributes: ast.NewNodeAttributesBuilder(7).WithRangePositions(2, 13, 2, 24).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 24).Build(),
 				X: ast.NewTypeInfoBuilder().
 					WithName("Enum").
 					WithNameStartEnd(2, 13, 2, 17).
 					WithStartEnd(2, 13, 2, 17).
 					Build(),
-				Sel: ast.NewIdentifierBuilder(0).WithName("MEMBER").WithStartEnd(2, 18, 2, 24).BuildPtr(),
+				Sel: ast.NewIdentifierBuilder().WithName("MEMBER").WithStartEnd(2, 18, 2, 24).BuildPtr(),
 			},
 		},
 		{
 			literal: "((int)1.0)",
 			expected: &ast.ParenExpr{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 23).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 23).Build(),
 				X: &ast.CastExpression{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(2, 14, 2, 22).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 14, 2, 22).Build(),
 					Type: ast.NewTypeInfoBuilder().
 						WithName("int").
 						WithStartEnd(2, 15, 2, 18).
@@ -175,7 +175,7 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 						IsBuiltin().
 						Build(),
 					Argument: &ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(2, 19, 2, 22).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 19, 2, 22).Build(),
 						Kind:           ast.FLOAT,
 						Value:          "1.0",
 					},
@@ -187,22 +187,22 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "TypeDescription{1,2}",
 			expected: &ast.InlineTypeWithInitialization{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 33).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 33).Build(),
 				Type: ast.NewTypeInfoBuilder().
 					WithName("TypeDescription").
 					WithNameStartEnd(2, 13, 2, 28).
 					WithStartEnd(2, 13, 2, 28).
 					Build(),
 				InitializerList: &ast.InitializerList{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(2, 28, 2, 33).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 28, 2, 33).Build(),
 					Args: []ast.Expression{
 						&ast.BasicLit{
-							NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(2, 29, 2, 30).Build(),
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 29, 2, 30).Build(),
 							Kind:           ast.INT,
 							Value:          "1"},
 
 						&ast.BasicLit{
-							NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(2, 31, 2, 32).Build(),
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 31, 2, 32).Build(),
 							Kind:           ast.INT,
 							Value:          "2"},
 					},
@@ -214,7 +214,7 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		{
 			literal: "$vacount",
 			expected: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 21).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 21).Build(),
 				Kind:           ast.STRING,
 				Value:          "$vacount"},
 		},
@@ -229,7 +229,7 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 			module foo;
 			int var = ` + tt.literal + ";"
 
-			cv := NewASTConverter()
+			cv := newTestAstConverter()
 			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
 			decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
@@ -249,12 +249,12 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{[0] = 1, [2] = 2}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 13+18).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 13+18).Build(),
 				Args: []ast.Expression{
 					&ast.ArgParamPathSet{
 						Path: "[0]",
 						Expr: &ast.BasicLit{
-							NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 20, 2, 21).Build(),
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 20, 2, 21).Build(),
 							Kind:           ast.INT,
 							Value:          "1",
 						},
@@ -262,7 +262,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 					&ast.ArgParamPathSet{
 						Path: "[2]",
 						Expr: &ast.BasicLit{
-							NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 29, 2, 30).Build(),
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 29, 2, 30).Build(),
 							Kind:           ast.INT,
 							Value:          "2"},
 					},
@@ -272,7 +272,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{[0] = TypeDescription}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 36).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 36).Build(),
 				Args: []ast.Expression{
 					&ast.ArgParamPathSet{
 						Path: "[0]",
@@ -288,12 +288,12 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{[0..2] = 2}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 25).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 25).Build(),
 				Args: []ast.Expression{
 					&ast.ArgParamPathSet{
 						Path: "[0..2]",
 						Expr: &ast.BasicLit{
-							NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(2, 23, 2, 24).Build(),
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 23, 2, 24).Build(),
 							Kind:           ast.INT,
 							Value:          "2"},
 					},
@@ -303,12 +303,12 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{.a = 1}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 13+8).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 13+8).Build(),
 				Args: []ast.Expression{
 					&ast.ArgFieldSet{
 						FieldName: "a",
 						Expr: &ast.BasicLit{
-							NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(2, 19, 2, 20).Build(),
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 19, 2, 20).Build(),
 							Kind:           ast.INT,
 							Value:          "1"},
 					},
@@ -318,7 +318,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{TypeDescription}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 30).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 30).Build(),
 				Args: []ast.Expression{
 					ast.NewTypeInfoBuilder().
 						WithStartEnd(2, 13+1, 2, 29).
@@ -331,10 +331,10 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{$vasplat()}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 25).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 25).Build(),
 				Args: []ast.Expression{
 					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(2, 14, 2, 24).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 14, 2, 24).Build(),
 						Kind:           ast.STRING,
 						Value:          "$vasplat()"},
 				},
@@ -343,10 +343,10 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{$vasplat(0..1)}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 29).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 29).Build(),
 				Args: []ast.Expression{
 					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(2, 14, 2, 28).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 14, 2, 28).Build(),
 						Kind:           ast.STRING,
 						Value:          "$vasplat(0..1)"},
 				},
@@ -355,9 +355,9 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 		{
 			literal: "{...id}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 20).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 20).Build(),
 				Args: []ast.Expression{
-					ast.NewIdentifierBuilder(1).
+					ast.NewIdentifierBuilder().
 						WithName("id").
 						WithStartEnd(2, 13+4, 2, 13+6).BuildPtr(),
 				},
@@ -391,7 +391,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 			module foo;
 			int var = ` + tt.literal + ";"
 
-			cv := NewASTConverter()
+			cv := newTestAstConverter()
 			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
 			decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
@@ -409,7 +409,7 @@ func TestConvertToAST_function_statements_with_declarations(t *testing.T) {
 		MyStruct object;
 	}`
 
-	cv := NewASTConverter()
+	cv := newTestAstConverter()
 	cv.ConvertToAST(GetCST(source), source, "file.c3")
 }
 
@@ -421,7 +421,7 @@ func TestConvertToAST_function_statements_call(t *testing.T) {
 		call();
 	}`
 
-	cv := NewASTConverter()
+	cv := newTestAstConverter()
 	cv.ConvertToAST(GetCST(source), source, "file.c3")
 }
 
@@ -433,7 +433,7 @@ func TestConvertToAST_function_statements_call_with_arguments(t *testing.T) {
 		call2(cat);
 	}`
 
-	cv := NewASTConverter()
+	cv := newTestAstConverter()
 	cv.ConvertToAST(GetCST(source), source, "file.c3")
 }
 
@@ -447,14 +447,14 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 			skip:  false,
 			input: "object.call(1);",
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(3, 2, 3, 16).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 16).Build(),
 				Identifier: &ast.SelectorExpr{
-					X:   ast.NewIdentifierBuilder(1).WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
-					Sel: ast.NewIdentifierBuilder(2).WithName("call").WithStartEnd(3, 9, 3, 13).BuildPtr(),
+					X:   ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
+					Sel: ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).BuildPtr(),
 				},
 				Arguments: []ast.Expression{
 					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder(4).WithRangePositions(3, 14, 3, 15).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 14, 3, 15).Build(),
 						Kind:           ast.INT,
 						Value:          "1"},
 				},
@@ -464,17 +464,17 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 			skip:  false,
 			input: "object.prop.call(1);",
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(3, 2, 3, 21).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 21).Build(),
 				Identifier: &ast.SelectorExpr{
 					X: &ast.SelectorExpr{
-						X:   ast.NewIdentifierBuilder(1).WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
-						Sel: ast.NewIdentifierBuilder(2).WithName("prop").WithStartEnd(3, 9, 3, 13).BuildPtr(),
+						X:   ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
+						Sel: ast.NewIdentifierBuilder().WithName("prop").WithStartEnd(3, 9, 3, 13).BuildPtr(),
 					},
-					Sel: ast.NewIdentifierBuilder(3).WithName("call").WithStartEnd(3, 14, 3, 18).BuildPtr(),
+					Sel: ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 14, 3, 18).BuildPtr(),
 				},
 				Arguments: []ast.Expression{
 					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder(4).WithRangePositions(3, 19, 3, 20).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 19, 3, 20).Build(),
 						Kind:           ast.INT, Value: "1"},
 				},
 			},
@@ -492,7 +492,7 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 		` + tt.input + `
 	}`
 
-			cv := NewASTConverter()
+			cv := newTestAstConverter()
 			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 			call := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt).Statements[0].(*ast.ExpressionStmt).Expr.(*ast.FunctionCall)
 
@@ -525,7 +525,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 			input:            "$(10)", // literal
 			ArgumentTypeName: "BasicLit",
 			Argument: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 13, 2, 14).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 14).Build(),
 				Kind:           ast.INT,
 				Value:          "10"},
 		},
@@ -533,7 +533,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 			input:            "$(a[5])",
 			ArgumentTypeName: "IndexAccessExpr",
 			Argument: &ast.IndexAccessExpr{
-				Array: ast.NewIdentifierBuilder(0).WithName("a").WithStartEnd(1, 10, 1, 11).BuildPtr(),
+				Array: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).BuildPtr(),
 				Index: "[5]",
 			},
 		},
@@ -541,7 +541,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 			input:            "$(a[5..6])",
 			ArgumentTypeName: "RangeAccessExpr",
 			Argument: &ast.RangeAccessExpr{
-				Array:      ast.NewIdentifierBuilder(0).WithName("a").WithStartEnd(1, 10, 1, 11).BuildPtr(),
+				Array:      ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).BuildPtr(),
 				RangeStart: 5,
 				RangeEnd:   6,
 			},
@@ -572,7 +572,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 				), func(t *testing.T) {
 					source := `module foo;
 	int x = ` + input + `;`
-					cv := NewASTConverter()
+					cv := newTestAstConverter()
 					tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 					decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 					spec := decl.Spec.(*ast.ValueSpec)
@@ -640,17 +640,17 @@ func TestConvertToAST_compile_time_argument_call(t *testing.T) {
 				source := `module foo;
 				int x = ` + method + `(id);`
 
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 				decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 				spec := decl.Spec.(*ast.ValueSpec)
 				initializer := spec.Value.(*ast.FunctionCall)
 
 				assert.Equal(t, &ast.FunctionCall{
-					NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 12, 1, 16+length).Build(),
-					Identifier:     ast.NewIdentifierBuilder(1).WithName(method).WithStartEnd(1, 12, 1, 12+length).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 12, 1, 16+length).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName(method).WithStartEnd(1, 12, 1, 12+length).BuildPtr(),
 					Arguments: []ast.Expression{
-						ast.NewIdentifierBuilder(2).WithName("id").WithStartEnd(1, 12+length+1, 1, 14+length+1).BuildPtr(),
+						ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 12+length+1, 1, 14+length+1).BuildPtr(),
 					},
 				}, initializer)
 			})
@@ -666,10 +666,10 @@ func TestConvertToAST_compile_time_analyse(t *testing.T) {
 		{
 			input: "$eval(id)",
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 12, 1, 21).Build(),
-				Identifier:     ast.NewIdentifierBuilder(1).WithName("$eval").WithStartEnd(1, 12, 1, 17).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 12, 1, 21).Build(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).BuildPtr(),
 				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder(2).WithName("id").WithStartEnd(1, 18, 1, 20).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 18, 1, 20).BuildPtr(),
 				},
 			},
 		},
@@ -706,7 +706,7 @@ func TestConvertToAST_compile_time_analyse(t *testing.T) {
 				source := `module foo;
 				int x = ` + tt.input + `;`
 
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
 				decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
@@ -725,7 +725,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 		{
 			input: "int i = fn int (int a, int b){};",
 			expected: &ast.LambdaDeclarationExpr{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 8, 1, 29).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 8, 1, 29).Build(),
 				ReturnType: option.Some[ast.TypeInfo](ast.NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
@@ -734,8 +734,8 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 					Build()),
 				Parameters: []ast.FunctionParameter{
 					{
-						NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 16, 1, 21).Build(),
-						Name:           ast.NewIdentifierBuilder(1).WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 16, 1, 21).Build(),
+						Name:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
 						Type: ast.NewTypeInfoBuilder().
 							WithName("int").
 							IsBuiltin().
@@ -744,8 +744,8 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 							Build(),
 					},
 					{
-						NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 23, 1, 28).Build(),
-						Name:           ast.NewIdentifierBuilder(1).WithName("b").WithStartEnd(1, 27, 1, 28).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 23, 1, 28).Build(),
+						Name:           ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 27, 1, 28).Build(),
 						Type: ast.NewTypeInfoBuilder().
 							WithName("int").
 							IsBuiltin().
@@ -755,7 +755,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 					},
 				},
 				Body: &ast.CompoundStmt{
-					NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(1, 29, 1, 31).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 29, 1, 31).Build(),
 					Statements:     []ast.Statement{},
 				},
 			},
@@ -763,11 +763,11 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 		{
 			input: "int i = fn (){};",
 			expected: &ast.LambdaDeclarationExpr{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 8, 1, 13).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 8, 1, 13).Build(),
 				//Parameters:     []FunctionParameter{},
 				ReturnType: option.None[ast.TypeInfo](),
 				Body: &ast.CompoundStmt{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(1, 13, 1, 15).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 13, 1, 15).Build(),
 					Statements:     []ast.Statement{},
 				},
 			},
@@ -785,7 +785,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 				source := `module foo;
 ` + tt.input
 
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
 				decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
@@ -804,10 +804,10 @@ func TestConvertToAST_assignment_expr(t *testing.T) {
 		{
 			input: "i = 10;",
 			expected: &ast.AssignmentExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 19, 1, 19+6).Build(),
-				Left:           ast.NewIdentifierBuilder(1).WithName("i").WithStartEnd(1, 19, 1, 20).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 19+6).Build(),
+				Left:           ast.NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).BuildPtr(),
 				Right: &ast.BasicLit{
-					NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(1, 23, 1, 25).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 23, 1, 25).Build(),
 					Kind:           ast.INT,
 					Value:          "10",
 				},
@@ -817,9 +817,9 @@ func TestConvertToAST_assignment_expr(t *testing.T) {
 		{
 			input: "$CompileTimeType = TypeDescription;",
 			expected: &ast.AssignmentExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 19, 1, 53).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 53).Build(),
 				Left: &ast.BasicLit{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(1, 19, 1, 35).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 35).Build(),
 					Kind:           ast.STRING,
 					Value:          "$CompileTimeType"},
 				Right: ast.NewTypeInfoBuilder().
@@ -843,7 +843,7 @@ func TestConvertToAST_assignment_expr(t *testing.T) {
 				source := `module foo;
 				fn void main(){` + tt.input + `}`
 
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
 				cmp_stmts := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
@@ -861,18 +861,18 @@ func TestConvertToAST_ternary_expr(t *testing.T) {
 		{
 			input: "i > 10 ? a:b;",
 			expected: &ast.TernaryExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 19, 1, 19+12).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 19+12).Build(),
 				Condition: &ast.BinaryExpression{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(1, 19, 1, 25).Build(),
-					Left:           ast.NewIdentifierBuilder(2).WithName("i").WithStartEnd(1, 19, 1, 20).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 25).Build(),
+					Left:           ast.NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).BuildPtr(),
 					Operator:       ">",
 					Right: &ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(1, 23, 1, 25).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 23, 1, 25).Build(),
 						Kind:           ast.INT,
 						Value:          "10"},
 				},
-				Consequence: ast.NewIdentifierBuilder(4).WithName("a").WithStartEnd(1, 19+9, 1, 19+10).BuildPtr(),
-				Alternative: ast.NewIdentifierBuilder(5).WithName("b").WithStartEnd(1, 19+11, 1, 19+12).BuildPtr(),
+				Consequence: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 19+9, 1, 19+10).BuildPtr(),
+				Alternative: ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 19+11, 1, 19+12).BuildPtr(),
 			},
 		},
 	}
@@ -888,7 +888,7 @@ func TestConvertToAST_ternary_expr(t *testing.T) {
 				source := `module foo;
 				fn void main(){` + tt.input + `};`
 
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
 				cmp_stmts := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
@@ -901,11 +901,11 @@ func TestConvertToAST_lambda_expr(t *testing.T) {
 	source := `module foo;
 	int i = fn int () => 10;`
 
-	cv := NewASTConverter()
+	cv := newTestAstConverter()
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
 	expected := &ast.LambdaDeclarationExpr{
-		NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 9, 1, 24).Build(),
+		NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 9, 1, 24).Build(),
 		ReturnType: option.Some(ast.NewTypeInfoBuilder().
 			WithStartEnd(1, 12, 1, 15).
 			WithName("int").
@@ -915,9 +915,9 @@ func TestConvertToAST_lambda_expr(t *testing.T) {
 		),
 		//Parameters: []FunctionParameter{},
 		Body: &ast.ReturnStatement{
-			NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(1, 22, 1, 24).Build(),
+			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 22, 1, 24).Build(),
 			Return: option.Some[ast.Expression](&ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(1, 22, 1, 24).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 22, 1, 24).Build(),
 				Kind:           ast.INT,
 				Value:          "10",
 			}),
@@ -941,11 +941,11 @@ func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
 			source: `module foo;
 			int i = condition ?: 10;`,
 			expected: &ast.TernaryExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 11, 1, 26).Build(),
-				Condition:      ast.NewIdentifierBuilder(1).WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
-				Consequence:    ast.NewIdentifierBuilder(2).WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 26).Build(),
+				Condition:      ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
+				Consequence:    ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
 				Alternative: &ast.BasicLit{
-					NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(1, 24, 1, 26).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 24, 1, 26).Build(),
 					Kind:           ast.INT,
 					Value:          "10",
 				},
@@ -955,11 +955,11 @@ func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
 			source: `module foo;
 			int i = condition ?? 10;`,
 			expected: &ast.TernaryExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 11, 1, 26).Build(),
-				Condition:      ast.NewIdentifierBuilder(1).WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
-				Consequence:    ast.NewIdentifierBuilder(2).WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 26).Build(),
+				Condition:      ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
+				Consequence:    ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
 				Alternative: &ast.BasicLit{
-					NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(1, 24, 1, 26).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 24, 1, 26).Build(),
 					Kind:           ast.INT,
 					Value:          "10"},
 			},
@@ -974,7 +974,7 @@ func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("elivs_or_else_expr: %d", i),
 			func(t *testing.T) {
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
 				decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
@@ -994,12 +994,12 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 			source: `module foo;
 			int b = a + b?;`,
 			expected: &ast.OptionalExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 11, 1, 17).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 17).Build(),
 				Operator:       "?",
 				Argument: &ast.BinaryExpression{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(1, 11, 1, 16).Build(),
-					Left:           ast.NewIdentifierBuilder(2).WithName("a").WithStartEnd(1, 11, 1, 12).BuildPtr(),
-					Right:          ast.NewIdentifierBuilder(3).WithName("b").WithStartEnd(1, 15, 1, 16).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 16).Build(),
+					Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).BuildPtr(),
+					Right:          ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).BuildPtr(),
 					Operator:       "+",
 				},
 			},
@@ -1008,12 +1008,12 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 			source: `module foo;
 			int b = a + b?!;`,
 			expected: &ast.OptionalExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 11, 1, 18).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 18).Build(),
 				Operator:       "?!",
 				Argument: &ast.BinaryExpression{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(1, 11, 1, 16).Build(),
-					Left:           ast.NewIdentifierBuilder(2).WithName("a").WithStartEnd(1, 11, 1, 12).BuildPtr(),
-					Right:          ast.NewIdentifierBuilder(3).WithName("b").WithStartEnd(1, 15, 1, 16).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 16).Build(),
+					Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).BuildPtr(),
+					Right:          ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).BuildPtr(),
 					Operator:       "+",
 				},
 			},
@@ -1028,7 +1028,7 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("optional_expr: %d", i),
 			func(t *testing.T) {
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
 				decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
@@ -1048,15 +1048,15 @@ func TestConvertToAST_unary_expr(t *testing.T) {
 		++b;
 	}`
 
-	cv := NewASTConverter()
+	cv := newTestAstConverter()
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 	stmt := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt).Statements[0]
 
 	assert.Equal(t,
 		&ast.UnaryExpression{
-			NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 2, 2, 5).Build(),
+			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 2, 2, 5).Build(),
 			Operator:       "++",
-			Argument:       ast.NewIdentifierBuilder(1).WithName("b").WithStartEnd(2, 4, 2, 5).BuildPtr(),
+			Argument:       ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 4, 2, 5).BuildPtr(),
 		},
 		stmt.(*ast.ExpressionStmt).Expr,
 	)
@@ -1068,20 +1068,20 @@ func TestConvertToAST_cast_expr(t *testing.T) {
 		(int)b;
 	}`
 
-	cv := NewASTConverter()
+	cv := newTestAstConverter()
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 	stmt := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt).Statements[0]
 
 	assert.Equal(t,
 		&ast.CastExpression{
-			NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 2, 2, 8).Build(),
+			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 2, 2, 8).Build(),
 			Type: ast.NewTypeInfoBuilder().
 				WithName("int").
 				WithNameStartEnd(2, 3, 2, 6).
 				WithStartEnd(2, 3, 2, 6).
 				IsBuiltin().
 				Build(),
-			Argument: ast.NewIdentifierBuilder(2).WithName("b").WithStartEnd(2, 7, 2, 8).BuildPtr(),
+			Argument: ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 7, 2, 8).BuildPtr(),
 		},
 		stmt.(*ast.ExpressionStmt).Expr, //CastExpression),
 	)
@@ -1098,11 +1098,11 @@ func TestConvertToAST_rethrow_expr(t *testing.T) {
 			source: `module foo;
 			int b = foo_may_error()!;`,
 			expected: &ast.RethrowExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 11, 1, 27).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 27).Build(),
 				Operator:       "!",
 				Argument: &ast.FunctionCall{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(1, 11, 1, 26).Build(),
-					Identifier:     ast.NewIdentifierBuilder(2).WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 26).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).BuildPtr(),
 					Arguments:      []ast.Expression{},
 				},
 			},
@@ -1111,11 +1111,11 @@ func TestConvertToAST_rethrow_expr(t *testing.T) {
 			source: `module foo;
 			int b = foo_may_error()!!;`,
 			expected: &ast.RethrowExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(1, 11, 1, 28).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 28).Build(),
 				Operator:       "!!",
 				Argument: &ast.FunctionCall{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(1, 11, 1, 26).Build(),
-					Identifier:     ast.NewIdentifierBuilder(2).WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 26).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).BuildPtr(),
 					Arguments:      []ast.Expression{},
 				},
 			},
@@ -1130,7 +1130,7 @@ func TestConvertToAST_rethrow_expr(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("rethrow_expr: %d", i),
 			func(t *testing.T) {
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
 				decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
@@ -1153,8 +1153,8 @@ func TestConvertToAST_call_expr(t *testing.T) {
 				simple();
 			}`,
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 12).Build(),
-				Identifier:     ast.NewIdentifierBuilder(1).WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 12).Build(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
 				Arguments:      []ast.Expression{},
 			},
 		},
@@ -1165,11 +1165,11 @@ func TestConvertToAST_call_expr(t *testing.T) {
 				simple(a, b);
 			}`,
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 16).Build(),
-				Identifier:     ast.NewIdentifierBuilder(1).WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 16).Build(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
 				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder(2).WithName("a").WithStartEnd(2, 11, 2, 12).BuildPtr(),
-					ast.NewIdentifierBuilder(3).WithName("b").WithStartEnd(2, 14, 2, 15).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).BuildPtr(),
 				},
 			},
 		},
@@ -1181,11 +1181,11 @@ func TestConvertToAST_call_expr(t *testing.T) {
 				simple(a, b) @attributes;
 			}`,
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 28).Build(),
-				Identifier:     ast.NewIdentifierBuilder(1).WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 28).Build(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
 				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder(2).WithName("a").WithStartEnd(2, 11, 2, 12).BuildPtr(),
-					ast.NewIdentifierBuilder(3).WithName("b").WithStartEnd(2, 14, 2, 15).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).BuildPtr(),
 				},
 			},
 		},
@@ -1200,22 +1200,22 @@ func TestConvertToAST_call_expr(t *testing.T) {
 				};
 			}`,
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 5, 5).Build(),
-				Identifier:     ast.NewIdentifierBuilder(1).WithName("$simple").WithStartEnd(2, 4, 2, 11).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 5, 5).Build(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("$simple").WithStartEnd(2, 4, 2, 11).BuildPtr(),
 				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder(2).WithName("a").WithStartEnd(2, 12, 2, 13).BuildPtr(),
-					ast.NewIdentifierBuilder(3).WithName("b").WithStartEnd(2, 15, 2, 16).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 12, 2, 13).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 15, 2, 16).BuildPtr(),
 				},
 				TrailingBlock: option.Some(
 					&ast.CompoundStmt{
-						NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(3, 4, 5, 5).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 4, 5, 5).Build(),
 						Statements: []ast.Statement{
 							&ast.ExpressionStmt{
 								Expr: &ast.AssignmentExpression{
-									NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(4, 8, 4, 13).Build(),
-									Left:           ast.NewIdentifierBuilder(2).WithName("a").WithStartEnd(4, 8, 4, 9).BuildPtr(),
+									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 8, 4, 13).Build(),
+									Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(4, 8, 4, 9).BuildPtr(),
 									Right: &ast.BasicLit{
-										NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(4, 12, 4, 13).Build(),
+										NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 12, 4, 13).Build(),
 										Kind:           ast.INT,
 										Value:          "1",
 									},
@@ -1237,7 +1237,7 @@ func TestConvertToAST_call_expr(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("call_expr: %d", i),
 			func(t *testing.T) {
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
 				mainFnc := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
@@ -1258,9 +1258,9 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 				test(<int, double>)(1.0, &g);
 			}`,
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 32).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 32).Build(),
 				Identifier: &ast.Ident{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(2, 4, 2, 8).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 8).Build(),
 					Name:           "test",
 					ModulePath:     "",
 				},
@@ -1270,13 +1270,13 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 				}),
 				Arguments: []ast.Expression{
 					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(2, 24, 2, 27).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 24, 2, 27).Build(),
 						Kind:           ast.FLOAT,
 						Value:          "1.0"},
 					&ast.UnaryExpression{
-						NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(2, 29, 2, 31).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 29, 2, 31).Build(),
 						Operator:       "&",
-						Argument:       ast.NewIdentifierBuilder(4).WithName("g").WithStartEnd(2, 30, 2, 31).BuildPtr(),
+						Argument:       ast.NewIdentifierBuilder().WithName("g").WithStartEnd(2, 30, 2, 31).BuildPtr(),
 					},
 				},
 			},
@@ -1287,8 +1287,8 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 				foo_test::test(<int, double>)(1.0, &g);
 			}`,
 			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 42).Build(),
-				Identifier: ast.NewIdentifierBuilder(1).
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 42).Build(),
+				Identifier: ast.NewIdentifierBuilder().
 					WithName("test").
 					WithPath("foo_test").
 					WithStartEnd(2, 4, 2, 18).
@@ -1299,13 +1299,13 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 				}),
 				Arguments: []ast.Expression{
 					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(2, 34, 2, 37).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 34, 2, 37).Build(),
 						Kind:           ast.FLOAT,
 						Value:          "1.0"},
 					&ast.UnaryExpression{
-						NodeAttributes: ast.NewNodeAttributesBuilder(3).WithRangePositions(2, 39, 2, 41).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 39, 2, 41).Build(),
 						Operator:       "&",
-						Argument:       ast.NewIdentifierBuilder(4).WithName("g").WithStartEnd(2, 40, 2, 41).BuildPtr(),
+						Argument:       ast.NewIdentifierBuilder().WithName("g").WithStartEnd(2, 40, 2, 41).BuildPtr(),
 					},
 				},
 			},
@@ -1320,7 +1320,7 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("trailing_generic_expr: %d", i),
 			func(t *testing.T) {
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
 				assert.Equal(
@@ -1345,10 +1345,10 @@ func TestConvertToAST_update_expr(t *testing.T) {
 				a++;
 			}`,
 			expected: &ast.UpdateExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 7).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 7).Build(),
 				Operator:       "++",
 				Argument: &ast.Ident{
-					NodeAttributes: ast.NewNodeAttributesBuilder(1).WithRangePositions(2, 4, 2, 5).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 5).Build(),
 					Name:           "a",
 				},
 			},
@@ -1359,9 +1359,9 @@ func TestConvertToAST_update_expr(t *testing.T) {
 				a--;
 			}`,
 			expected: &ast.UpdateExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(2, 4, 2, 7).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 7).Build(),
 				Operator:       "--",
-				Argument: ast.NewIdentifierBuilder(3).
+				Argument: ast.NewIdentifierBuilder().
 					WithName("a").
 					WithStartEnd(2, 4, 2, 5).
 					BuildPtr(),
@@ -1377,7 +1377,7 @@ func TestConvertToAST_update_expr(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("update_expr: %d", i),
 			func(t *testing.T) {
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
 				assert.Equal(
@@ -1402,10 +1402,10 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 				a[0];
 			}`,
 			expected: &ast.SubscriptExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 8).Build(),
-				Argument:       ast.NewIdentifierBuilder(1).WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 8).Build(),
+				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
 				Index: &ast.BasicLit{
-					NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(2, 6, 2, 7).Build(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 6, 2, 7).Build(),
 					Kind:           ast.INT,
 					Value:          "0"},
 			},
@@ -1416,8 +1416,8 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 					a[0..2];
 				}`,
 			expected: &ast.SubscriptExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 5, 2, 12).Build(),
-				Argument:       ast.NewIdentifierBuilder(1).WithName("a").WithStartEnd(2, 5, 2, 6).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 5, 2, 12).Build(),
+				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 5, 2, 6).BuildPtr(),
 				Index: &ast.RangeIndexExpr{
 					//NodeAttributes: NewNodeAttributesBuilder().WithRangePositions(2, 6, 2, 9).Build(),
 					Start: option.Some(uint(0)),
@@ -1431,9 +1431,9 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 				a[id];
 			}`,
 			expected: &ast.SubscriptExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 9).Build(),
-				Argument:       ast.NewIdentifierBuilder(1).WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
-				Index:          ast.NewIdentifierBuilder(2).WithName("id").WithStartEnd(2, 6, 2, 8).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 9).Build(),
+				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
+				Index:          ast.NewIdentifierBuilder().WithName("id").WithStartEnd(2, 6, 2, 8).BuildPtr(),
 			},
 		},
 		{
@@ -1442,11 +1442,11 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 				a[call()];
 			}`,
 			expected: &ast.SubscriptExpression{
-				NodeAttributes: ast.NewNodeAttributesBuilder(0).WithRangePositions(2, 4, 2, 13).Build(),
-				Argument:       ast.NewIdentifierBuilder(1).WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 13).Build(),
+				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
 				Index: &ast.FunctionCall{
-					NodeAttributes: ast.NewNodeAttributesBuilder(2).WithRangePositions(2, 6, 2, 12).Build(),
-					Identifier:     ast.NewIdentifierBuilder(3).WithName("call").WithStartEnd(2, 6, 2, 10).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 6, 2, 12).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("call").WithStartEnd(2, 6, 2, 10).BuildPtr(),
 					Arguments:      []ast.Expression{},
 				},
 			},
@@ -1461,7 +1461,7 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("subscript_expr: %d", i),
 			func(t *testing.T) {
-				cv := NewASTConverter()
+				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(tt.source), tt.source, "file.c3")
 
 				assert.Equal(

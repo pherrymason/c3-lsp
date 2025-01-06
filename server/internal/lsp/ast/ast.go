@@ -102,7 +102,7 @@ type File struct {
 func NewFile(nodeId NodeId, name string, aRange lsp.Range, modules []Module) *File {
 	node := &File{
 		Name: name,
-		NodeAttributes: NewNodeAttributesBuilder(nodeId).
+		NodeAttributes: NewNodeAttributesBuilder().
 			WithRange(aRange).Build(),
 		Modules: modules,
 	}
