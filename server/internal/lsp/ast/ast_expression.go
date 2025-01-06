@@ -112,6 +112,12 @@ type (
 		X Expression
 	}
 
+	// A BlockExpr represents a braced statement list
+	BlockExpr struct {
+		NodeAttributes
+		List []Statement
+	}
+
 	// A FunctionCall node represents an expression followed by an argument list.
 	FunctionCall struct {
 		NodeAttributes
@@ -301,6 +307,7 @@ func (*ParenExpr) exprNode()               {}
 func (SelectorExpr) exprNode()             {}
 func (Path) exprNode()                     {}
 func (*BaseType) exprNode()                {}
+func (e *BlockExpr) exprNode()             {}
 func (e *BasicLit) exprNode()              {}
 func (l *CompositeLiteral) exprNode()      {}
 func (l *IndexAccessExpr) exprNode()       {}

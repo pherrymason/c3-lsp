@@ -501,6 +501,22 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 	}
 }
 
+func TestConvertToAST_expression_block(t *testing.T) {
+	source := `module foo;
+	fn void test()
+	{
+		{|
+			int a;
+		|};
+	}`
+
+	cv := newTestAstConverter()
+	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+
+	_, ok := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt).Statements[0].(*ast.ExpressionStmt).Expr.(*ast.BlockExpr)
+	assert.True(t, ok, "Not BlockExpr found")
+}
+
 func TestConvertToAST_compile_time_call(t *testing.T) {
 
 	cases := []struct {

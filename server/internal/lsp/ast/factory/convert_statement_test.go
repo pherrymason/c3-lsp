@@ -59,7 +59,7 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 11).Build(),
 				Spec: &ast.ValueSpec{
 					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 9, 1, 10).BuildPtr()},
-					Type:  nil,
+					Type:  ast.TypeInfo{},
 				},
 			},
 		},

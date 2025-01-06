@@ -108,8 +108,8 @@ func TestConvertToAST_global_variable_unitialized(t *testing.T) {
 
 	assert.Equal(t, "hello", spec.Names[0].Name)
 	assert.Equal(t, lsp.NewRange(1, 5, 1, 10), spec.Names[0].Range)
-	assert.Equal(t, "int", spec.Type.(ast.TypeInfo).Identifier.Name)
-	assert.Equal(t, lsp.NewRange(1, 1, 1, 4), spec.Type.(ast.TypeInfo).Identifier.Range)
+	assert.Equal(t, "int", spec.Type.Identifier.Name)
+	assert.Equal(t, lsp.NewRange(1, 1, 1, 4), spec.Type.Identifier.Range)
 }
 
 func TestConvertToAST_global_variable_with_scalar_initialization(t *testing.T) {
@@ -146,7 +146,7 @@ func TestConvertToAST_declare_multiple_variables_in_single_statement(t *testing.
 	assert.Equal(t, lsp.NewRange(1, 10, 1, 13), decl.Spec.(*ast.ValueSpec).Names[1].Range)
 	assert.Equal(t, "elephant", decl.Spec.(*ast.ValueSpec).Names[2].Name)
 	assert.Equal(t, lsp.NewRange(1, 15, 1, 23), decl.Spec.(*ast.ValueSpec).Names[2].Range)
-	assert.Equal(t, "int", decl.Spec.(*ast.ValueSpec).Type.(ast.TypeInfo).Identifier.Name)
+	assert.Equal(t, "int", decl.Spec.(*ast.ValueSpec).Type.Identifier.Name)
 }
 
 // -----------------------------------------------------
