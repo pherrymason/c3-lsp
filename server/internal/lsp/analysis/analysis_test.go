@@ -9,7 +9,8 @@ import (
 )
 
 func getTree(source string, fileName string) ast.File {
-	tree := factory.ConvertToAST(factory.GetCST(source), source, fileName)
+	astConverter := factory.NewASTConverter()
+	tree := astConverter.ConvertToAST(factory.GetCST(source), source, fileName)
 
 	return tree
 }
