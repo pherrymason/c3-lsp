@@ -25,10 +25,30 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		symbolTable := BuildSymbolTable(tree)
 
 		cursorPosition := lsp.Position{Line: 1, Column: 18}
-		symbol := FindSymbolAtPosition(cursorPosition, symbolTable, tree)
+		symbolOpt := FindSymbolAtPosition(cursorPosition, symbolTable, tree)
+		symbol := symbolOpt.Get()
 
 		assert.Equal(t, "number", symbol.Name)
-		assert.Equal(t, lsp.NewRange(0, 4, 0, 10), symbol.NodeDecl.GetRange())
+		assert.Equal(t, lsp.NewRange(0, 0, 0, 15), symbol.NodeDecl.GetRange())
 		assert.Equal(t, "int", symbol.Type.Name)
+	})
+
+	t.Run("Find local variable declaration in the right scope", func(t *testing.T) {
+		source := `int number = 0;
+		fn void main(){
+			float number = 2; 
+			number + 2;
+		}`
+
+		tree := getTree(source, "app.c3")
+		symbolTable := BuildSymbolTable(tree)
+
+		cursorPosition := lsp.Position{Line: 3, Column: 4}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, symbolTable, tree)
+		symbol := symbolOpt.Get()
+
+		assert.Equal(t, "number", symbol.Name)
+		assert.Equal(t, lsp.NewRange(2, 3, 2, 20), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "float", symbol.Type.Name)
 	})
 }

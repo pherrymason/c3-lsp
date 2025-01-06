@@ -1,10 +1,10 @@
 package analysis
 
 import (
-	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -40,10 +40,37 @@ func getPositionContext(document *document.Document, pos lsp.Position) PositionC
 	return posContext
 }
 
-func FindSymbolAtPosition(pos lsp.Position, symbolTable SymbolTable, tree ast.Node) Symbol {
-	nodeAtPosition := FindNode(tree, pos)
+func FindSymbolAtPosition(pos lsp.Position, symbolTable SymbolTable, tree ast.Node) option.Option[*Symbol] {
+	nodeAtPosition, path := FindNode(tree, pos)
 
-	fmt.Printf("Pos: %d", nodeAtPosition.StartPosition().Line)
+	var name string
+	switch n := nodeAtPosition.(type) {
+	case *ast.Ident:
+		name = n.Name
+	}
 
-	return Symbol{}
+	scopeStack := []lsp.Range{}
+
+	moduleName := []string{}
+	for _, n := range path {
+		if moduleNode, ok := n.(ast.Module); ok {
+			moduleName = append(moduleName, moduleNode.Name)
+			scopeStack = append(scopeStack, moduleNode.GetRange())
+		} else if fnDecl, ok := n.(*ast.FunctionDecl); ok {
+			scopeStack = append(scopeStack, fnDecl.Body.GetRange())
+		}
+	}
+
+	sym := symbolTable.FindSymbol(name, moduleName, scopeStack, 0)
+
+	return sym
+}
+
+func isWrapperNode(node ast.Node) bool {
+	switch node.(type) {
+	case *ast.ExpressionStmt, *ast.DeclarationStmt:
+		return true
+	default:
+		return false // Ignore other nodes
+	}
 }

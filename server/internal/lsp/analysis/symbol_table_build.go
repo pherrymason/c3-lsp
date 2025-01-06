@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
 )
@@ -78,6 +79,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
 			sym := v.table.FindSymbol(
 				n.ParentTypeId.Get().Name,
 				[]string{v.currentModule.Name},
+				[]lsp.Range{},
 				ast.Token(ast.STRUCT),
 			)
 			if sym.IsSome() {
