@@ -77,7 +77,6 @@ type (
 		NodeAttributes
 		Name           Ident
 		Expr           Expression
-		ResolvesTo     string                  // Deprecated
 		ResolvesToType option.Option[TypeInfo] // Deprecated
 	}
 

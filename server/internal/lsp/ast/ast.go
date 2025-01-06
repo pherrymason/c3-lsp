@@ -32,6 +32,7 @@ const (
 )
 
 type Token int
+type NodeId uint
 
 // ----------------------------------------------------------------------------
 // Interfaces
@@ -47,6 +48,8 @@ type Token int
 type Node interface {
 	StartPosition() lsp.Position
 	EndPosition() lsp.Position
+	GetRange() lsp.Range
+	GetId() NodeId
 }
 
 type Expression interface {
@@ -77,10 +80,13 @@ func (n *EmptyNode) stmtNode() {}
 type NodeAttributes struct {
 	Range      lsp.Range
 	Attributes []string
+	Id         NodeId
 }
 
 func (n NodeAttributes) StartPosition() lsp.Position { return n.Range.Start }
 func (n NodeAttributes) EndPosition() lsp.Position   { return n.Range.End }
+func (n NodeAttributes) GetRange() lsp.Range         { return n.Range }
+func (n NodeAttributes) GetId() NodeId               { return n.Id }
 
 func ChangeNodePosition(n *NodeAttributes, start sitter.Point, end sitter.Point) {
 	n.Range.Start = lsp.Position{Line: uint(start.Row), Column: uint(start.Column)}
@@ -93,10 +99,10 @@ type File struct {
 	Modules []Module
 }
 
-func NewFile(name string, aRange lsp.Range, modules []Module) *File {
+func NewFile(nodeId NodeId, name string, aRange lsp.Range, modules []Module) *File {
 	node := &File{
 		Name: name,
-		NodeAttributes: NewNodeAttributesBuilder().
+		NodeAttributes: NewNodeAttributesBuilder(nodeId).
 			WithRange(aRange).Build(),
 		Modules: modules,
 	}
@@ -115,10 +121,11 @@ type Module struct {
 	Imports           []*Import     // Imports in this file
 }
 
-func NewModule(name string, aRange lsp.Range, file *File) *Module {
+func NewModule(nodeId NodeId, name string, aRange lsp.Range, file *File) *Module {
 	return &Module{
 		Name: name,
 		NodeAttributes: NodeAttributes{
+			Id:    nodeId,
 			Range: aRange,
 		},
 	}

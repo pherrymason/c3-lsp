@@ -33,19 +33,21 @@ func NewStore() *Storage {
 }
 
 func (pd *Storage) OpenDocument(uri string, text string, version uint) {
+	converter := factory.NewASTConverter()
 	document := &Document{
 		Uri:      uri,
 		FullPath: utils.NormalizePath(uri),
 		Text:     text,
 		Owned:    true,
 		Version:  version,
-		Ast:      factory.ConvertToAST(factory.GetCST(text), text, uri),
+		Ast:      converter.ConvertToAST(factory.GetCST(text), text, uri),
 	}
 
 	pd.Documents[uri] = document
 }
 
 func (pd *Storage) OpenDocumentFromPath(path string, text string, version uint) {
+	converter := factory.NewASTConverter()
 	uri := fs.ConvertPathToURI(path, option.None[string]())
 	document := &Document{
 		Uri:      uri,
@@ -53,7 +55,7 @@ func (pd *Storage) OpenDocumentFromPath(path string, text string, version uint) 
 		Text:     text,
 		Owned:    false,
 		Version:  version,
-		Ast:      factory.ConvertToAST(factory.GetCST(text), text, path),
+		Ast:      converter.ConvertToAST(factory.GetCST(text), text, path),
 	}
 
 	pd.Documents[uri] = document

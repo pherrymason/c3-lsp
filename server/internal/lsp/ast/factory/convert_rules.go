@@ -8,7 +8,7 @@ import (
 
 // Here lays methods to help define expected CST nodes
 type NodeRule interface {
-	Validate(node *sitter.Node, source []byte) bool
+	Validate(node *sitter.Node, source []byte, c *ASTConverter) bool
 	Type() string
 }
 
@@ -20,7 +20,7 @@ type OfType struct {
 	Name string
 }
 
-func (o OfType) Validate(node *sitter.Node, source []byte) bool {
+func (o OfType) Validate(node *sitter.Node, source []byte, c *ASTConverter) bool {
 	return node.Type() == o.Name
 }
 
@@ -47,7 +47,7 @@ type SequenceOf struct {
 	AsType           string
 }
 
-func (r SequenceOf) Validate(node *sitter.Node, source []byte) bool {
+func (r SequenceOf) Validate(node *sitter.Node, source []byte, c *ASTConverter) bool {
 
 	if r.SequenceType == SequenceTypeChild {
 		childCount := node.ChildCount()
@@ -57,7 +57,7 @@ func (r SequenceOf) Validate(node *sitter.Node, source []byte) bool {
 
 		for i, rule := range r.ExpectedSequence {
 			child := node.Child(i)
-			if child == nil || !rule.Validate(child, source) {
+			if child == nil || !rule.Validate(child, source, c) {
 				return false
 			}
 		}
@@ -81,7 +81,7 @@ func (r SequenceOf) Validate(node *sitter.Node, source []byte) bool {
 
 		next = node
 		for _, rule := range r.ExpectedSequence {
-			if next == nil || !rule.Validate(next, source) {
+			if next == nil || !rule.Validate(next, source, c) {
 				return false
 			}
 			next = next.NextSibling()
@@ -101,15 +101,14 @@ func NodeSiblingsWithSequenceOf(rules []NodeRule, asType string) SequenceOf {
 }
 
 // -----------------------------------
-// AnonymousNode
-// -----------------------------------
+// AnonNode
 // This rule is for usage on anonymous nodes that cannot be detected by its type, but
 // one needs to try to convert them, and if does not return nil, it succeeds
 type AnonNode struct {
 	FuncName string
 }
 
-func (a AnonNode) Validate(node *sitter.Node, source []byte) bool {
+func (a AnonNode) Validate(node *sitter.Node, source []byte, c *ASTConverter) bool {
 	return true
 }
 func (a AnonNode) Type() string {
@@ -126,8 +125,8 @@ type TryConversionFunc struct {
 	FuncName string
 }
 
-func (t TryConversionFunc) Validate(node *sitter.Node, source []byte) bool {
-	conversion, err := nodeTypeConverterMap(t.FuncName)
+func (t TryConversionFunc) Validate(node *sitter.Node, source []byte, c *ASTConverter) bool {
+	conversion, err := c.nodeTypeConverterMap(t.FuncName)
 	if err != nil {
 		return false
 	}
