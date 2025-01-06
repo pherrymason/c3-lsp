@@ -78,6 +78,9 @@ func Walk(v Visitor, n ast.Node) {
 	case *ast.FieldAccessExpr:
 
 	case *ast.AssignmentExpression:
+		Walk(v, n.Left)
+		Walk(v, n.Right)
+
 	case *ast.StarExpr:
 
 	case *ast.BinaryExpression:

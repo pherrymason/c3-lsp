@@ -50,26 +50,38 @@ import (
 */
 type SymbolTable struct {
 	// Each position inside symbols is the ID of the symbol which can be referenced in other index tables.
-	symbols []*Symbol
+	symbols   []*Symbol
+	scopeTree map[string]*Scope // scope trees for each file
 }
 
-func (s *SymbolTable) RegisterVariable(genDecl *ast.GenDecl, currentModule ast.Module) SymbolID {
-	s.symbols = append(s.symbols, &Symbol{
-		Name:     genDecl.Spec.(*ast.ValueSpec).Names[0].Name,
-		Module:   []string{currentModule.Name},
-		NodeDecl: genDecl,
-		Range:    genDecl.Range,
-	})
-
-	return SymbolID(len(s.symbols))
+type X struct {
+	symID SymbolID
 }
-func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, filePath string) (SymbolID, *Symbol) {
+
+func NewSymbolTable() *SymbolTable {
+	return &SymbolTable{
+		symbols:   []*Symbol{},
+		scopeTree: make(map[string]*Scope),
+	}
+}
+
+func (s *SymbolTable) RegisterNewRootScope(file string, Range lsp.Range) *Scope {
+	scope := &Scope{
+		Range: Range,
+	}
+	s.scopeTree[file] = scope
+
+	return scope
+}
+
+func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, scope *Scope, filePath string) (SymbolID, *Symbol) {
 	symbol := &Symbol{
 		Name:     name,
 		Module:   []string{module.Name},
 		FilePath: filePath,
 		NodeDecl: n,
 		Range:    nRange,
+		Scope:    scope,
 	}
 	s.symbols = append(s.symbols, symbol)
 
@@ -77,13 +89,17 @@ func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, 
 }
 
 // FindSymbol searches a symbol by name, module and a given scope
-func (s *SymbolTable) FindSymbol(name string, module []string, scopeStack []lsp.Range, hint ast.Token) option.Option[*Symbol] {
+// name: name of the symbol. Exact match
+// module: module name where the symbol should be defined.
+// usageScopeStack: scopeTree where the symbol is being used. This helps to discard unrelated scopes.
+// hint: If we are only interested in a type of symbol,
+func (s *SymbolTable) FindSymbol(name string, module []string, usageScopeStack []lsp.Range, hint ast.Token) option.Option[*Symbol] {
 	type SymbolScope struct {
 		symbol *Symbol
 		scope  lsp.Range
 	}
 	symbolFound := option.None[SymbolScope]()
-	checkScope := len(scopeStack) > 0
+	checkScope := len(usageScopeStack) > 0
 
 	for _, symbol := range s.symbols {
 		if symbol.Name != name {
@@ -95,9 +111,9 @@ func (s *SymbolTable) FindSymbol(name string, module []string, scopeStack []lsp.
 
 		matchedScope := option.None[lsp.Range]()
 		if checkScope {
-			for i := len(scopeStack) - 1; i >= 0; i-- {
-				if symbol.Range.IsInside(scopeStack[i]) == true {
-					matchedScope = option.Some(scopeStack[i])
+			for i := len(usageScopeStack) - 1; i >= 0; i-- {
+				if symbol.Scope.Range.IsInside(usageScopeStack[i]) == true {
+					matchedScope = option.Some(usageScopeStack[i])
 					break
 				}
 			}
@@ -113,11 +129,20 @@ func (s *SymbolTable) FindSymbol(name string, module []string, scopeStack []lsp.
 			}
 		}
 
-		if symbolFound.IsSome() {
-			// Check if matchedScope is deeper in provided scopeStack
-			if symbolFound.Get().scope.IsInside(matchedScope.Get()) {
-				// Ignore, already found symbol is in a closer scope
+		if checkScope {
+			replace := false
+			if symbolFound.IsSome() {
+				// Check if matchedScope is deeper in provided usageScopeStack
+				if symbolFound.Get().scope.IsInside(matchedScope.Get()) {
+					// Ignore, already found symbol is in a closer scope
+				} else {
+					replace = true
+				}
 			} else {
+				replace = true
+			}
+
+			if replace {
 				symbolFound = option.Some(SymbolScope{
 					symbol: symbol,
 					scope:  matchedScope.Get(),
@@ -126,10 +151,8 @@ func (s *SymbolTable) FindSymbol(name string, module []string, scopeStack []lsp.
 		} else {
 			symbolFound = option.Some(SymbolScope{
 				symbol: symbol,
-				scope:  matchedScope.Get(),
 			})
 		}
-		//return option.Some(symbol)
 	}
 
 	if symbolFound.IsNone() {
@@ -149,6 +172,7 @@ type Symbol struct {
 	NodeDecl ast.Node // Declaration node of this symbol
 	Type     TypeDefinition
 	Children []Relation
+	Scope    *Scope
 }
 
 func (s *Symbol) AppendChild(id SymbolID, relationType RelationType) {
@@ -173,11 +197,19 @@ const (
 // Relation represents a relation between a symbol and its parent.
 type Relation struct {
 	SymbolID SymbolID
-	Type     RelationType
+	Tag      RelationType
 }
 
-// ScopeTable represents the list of symbols declared in a scope
-type ScopeTable struct {
-	Range   lsp.Range
-	Symbols []SymbolID
+type ScopeID int
+type Scope struct {
+	Range    lsp.Range
+	Parent   *Scope
+	Children []*Scope
+}
+
+func (s *Scope) pushScope(Range lsp.Range) *Scope {
+	newScope := &Scope{Range: Range, Parent: s, Children: nil}
+	s.Children = append(s.Children, newScope)
+
+	return newScope
 }
