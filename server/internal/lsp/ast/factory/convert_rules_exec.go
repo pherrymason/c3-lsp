@@ -49,111 +49,114 @@ func cv_decl_fn(fn DeclarationConverter) nodeConverter {
 	}
 }
 
-func nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
-	funcMap := map[string]conversionInfo{
+func (c *ASTConverter) generateConversionInfo() {
+	c.rules = map[string]conversionInfo{
 		// Expressions
-		"paren_expr": {method: cv_expr_fn(convert_paren_expr)},
+		"paren_expr": {method: cv_expr_fn(c.convert_paren_expr)},
 
 		// Statements
 
-		"assignment_expr":        {method: cv_expr_fn(convert_assignment_expr)},
-		"assert_stmt":            {method: cv_stmt_fn(convert_assert_stmt)},
-		"at_ident":               {method: cv_expr_fn(convert_ident)},
-		"binary_expr":            {method: cv_expr_fn(convert_binary_expr)},
-		"break_stmt":             {method: cv_stmt_fn(convert_break_stmt)},
-		"bytes_expr":             {method: cv_expr_fn(convert_bytes_expr)},
-		"builtin":                {method: cv_expr_fn(convert_as_literal)},
-		"call_expr":              {method: cv_expr_fn(convert_call_expr)},
-		"continue_stmt":          {method: cv_stmt_fn(convert_continue_stmt)},
-		"cast_expr":              {method: cv_expr_fn(convert_cast_expr)},
-		"const_ident":            {method: cv_expr_fn(convert_ident)},
-		"compound_stmt":          {method: cv_stmt_fn(convert_compound_stmt)},
-		"ct_ident":               {method: cv_expr_fn(convert_ident)},
-		"declaration_stmt":       {method: cv_stmt_fn(convert_declaration_stmt)},
-		"defer_stmt":             {method: cv_stmt_fn(convert_defer_stmt)},
-		"do_stmt":                {method: cv_stmt_fn(convert_do_stmt)},
-		"split_declaration_stmt": {method: cv_stmt_fn(convert_split_declaration_stmt)},
-		"elvis_orelse_expr":      {method: cv_expr_fn(convert_elvis_orelse_expr)},
-		"expr_stmt":              {method: cv_stmt_fn(convert_expr_stmt), goChild: true},
-		"for_stmt":               {method: cv_stmt_fn(convert_for_stmt)},
-		"foreach_stmt":           {method: cv_stmt_fn(convert_foreach_stmt)},
-		"hash_ident":             {method: cv_expr_fn(convert_ident)},
-		"ident":                  {method: cv_expr_fn(convert_ident)},
-		"if_stmt":                {method: cv_stmt_fn(convert_if_stmt)},
-		"initializer_list":       {method: cv_expr_fn(convert_initializer_list)},
-		"type_access_expr":       {method: cv_expr_fn(convert_type_access_expr)},
+		"assignment_expr":        {method: cv_expr_fn(c.convert_assignment_expr)},
+		"assert_stmt":            {method: cv_stmt_fn(c.convert_assert_stmt)},
+		"at_ident":               {method: cv_expr_fn(c.convert_ident)},
+		"binary_expr":            {method: cv_expr_fn(c.convert_binary_expr)},
+		"break_stmt":             {method: cv_stmt_fn(c.convert_break_stmt)},
+		"bytes_expr":             {method: cv_expr_fn(c.convert_bytes_expr)},
+		"builtin":                {method: cv_expr_fn(c.convert_as_literal)},
+		"call_expr":              {method: cv_expr_fn(c.convert_call_expr)},
+		"continue_stmt":          {method: cv_stmt_fn(c.convert_continue_stmt)},
+		"cast_expr":              {method: cv_expr_fn(c.convert_cast_expr)},
+		"const_ident":            {method: cv_expr_fn(c.convert_ident)},
+		"compound_stmt":          {method: cv_stmt_fn(c.convert_compound_stmt)},
+		"ct_ident":               {method: cv_expr_fn(c.convert_ident)},
+		"declaration_stmt":       {method: cv_stmt_fn(c.convert_declaration_stmt)},
+		"defer_stmt":             {method: cv_stmt_fn(c.convert_defer_stmt)},
+		"do_stmt":                {method: cv_stmt_fn(c.convert_do_stmt)},
+		"split_declaration_stmt": {method: cv_stmt_fn(c.convert_split_declaration_stmt)},
+		"elvis_orelse_expr":      {method: cv_expr_fn(c.convert_elvis_orelse_expr)},
+		"expr_stmt":              {method: cv_stmt_fn(c.convert_expr_stmt), goChild: true},
+		"for_stmt":               {method: cv_stmt_fn(c.convert_for_stmt)},
+		"foreach_stmt":           {method: cv_stmt_fn(c.convert_foreach_stmt)},
+		"hash_ident":             {method: cv_expr_fn(c.convert_ident)},
+		"ident":                  {method: cv_expr_fn(c.convert_ident)},
+		"if_stmt":                {method: cv_stmt_fn(c.convert_if_stmt)},
+		"initializer_list":       {method: cv_expr_fn(c.convert_initializer_list)},
+		"type_access_expr":       {method: cv_expr_fn(c.convert_type_access_expr)},
 
-		"lambda_declaration":    {method: cv_expr_fn(convert_lambda_declaration)},
-		"lambda_expr":           {method: cv_expr_fn(convert_lambda_expr)},
-		"local_decl_after_type": {method: cv_decl_fn(convert_local_declaration_after_type)},
-		"module_ident_expr":     {method: cv_expr_fn(convert_module_ident_expr)},
-		"nextcase_stmt":         {method: cv_stmt_fn(convert_nextcase_stmt)},
-		"optional_expr":         {method: cv_expr_fn(convert_optional_expr)},
-		"rethrow_expr":          {method: cv_expr_fn(convert_rethrow_expr)},
-		"return_stmt":           {method: cv_stmt_fn(convert_return_stmt)},
+		"lambda_declaration":    {method: cv_expr_fn(c.convert_lambda_declaration)},
+		"lambda_expr":           {method: cv_expr_fn(c.convert_lambda_expr)},
+		"local_decl_after_type": {method: cv_decl_fn(c.convert_local_declaration_after_type)},
+		"module_ident_expr":     {method: cv_expr_fn(c.convert_module_ident_expr)},
+		"nextcase_stmt":         {method: cv_stmt_fn(c.convert_nextcase_stmt)},
+		"optional_expr":         {method: cv_expr_fn(c.convert_optional_expr)},
+		"rethrow_expr":          {method: cv_expr_fn(c.convert_rethrow_expr)},
+		"return_stmt":           {method: cv_stmt_fn(c.convert_return_stmt)},
 		//"suffix_expr":           convert_dummy,
-		"subscript_expr":        {method: cv_expr_fn(convert_subscript_expr)},
-		"switch_stmt":           {method: cv_stmt_fn(convert_switch_stmt)},
-		"ternary_expr":          {method: cv_expr_fn(convert_ternary_expr)},
-		"trailing_generic_expr": {method: cv_expr_fn(convert_trailing_generic_expr)},
+		"subscript_expr":        {method: cv_expr_fn(c.convert_subscript_expr)},
+		"switch_stmt":           {method: cv_stmt_fn(c.convert_switch_stmt)},
+		"ternary_expr":          {method: cv_expr_fn(c.convert_ternary_expr)},
+		"trailing_generic_expr": {method: cv_expr_fn(c.convert_trailing_generic_expr)},
 		"type": {method: func(node *sitter.Node, source []byte) ast.Node {
-			n := convert_type(node, source)
+			n := c.convert_type(node, source)
 			return n
 		}},
-		"unary_expr":  {method: cv_expr_fn(convert_unary_expr)},
-		"update_expr": {method: cv_expr_fn(convert_update_expr)},
-		"var_stmt":    {method: cv_decl_fn(convert_var_decl), goChild: true},
-		"while_stmt":  {method: cv_stmt_fn(convert_while_stmt)},
-		"field_expr":  {method: cv_expr_fn(convert_field_expr)},
+		"unary_expr":  {method: cv_expr_fn(c.convert_unary_expr)},
+		"update_expr": {method: cv_expr_fn(c.convert_update_expr)},
+		"var_stmt":    {method: cv_decl_fn(c.convert_var_decl), goChild: true},
+		"while_stmt":  {method: cv_stmt_fn(c.convert_while_stmt)},
+		"field_expr":  {method: cv_expr_fn(c.convert_field_expr)},
 
 		// Builtins ----------------
-		"$vacount": {method: cv_expr_fn(convert_as_literal)},
-		"$feature": {method: cv_expr_fn(convert_feature)},
+		"$vacount": {method: cv_expr_fn(c.convert_as_literal)},
+		"$feature": {method: cv_expr_fn(c.convert_feature)},
 
-		"$alignof":   {method: cv_expr_fn(convert_compile_time_call)},
-		"$extnameof": {method: cv_expr_fn(convert_compile_time_call)},
-		"$nameof":    {method: cv_expr_fn(convert_compile_time_call)},
-		"$offsetof":  {method: cv_expr_fn(convert_compile_time_call)},
-		"$qnameof":   {method: cv_expr_fn(convert_compile_time_call)},
+		"$alignof":   {method: cv_expr_fn(c.convert_compile_time_call)},
+		"$extnameof": {method: cv_expr_fn(c.convert_compile_time_call)},
+		"$nameof":    {method: cv_expr_fn(c.convert_compile_time_call)},
+		"$offsetof":  {method: cv_expr_fn(c.convert_compile_time_call)},
+		"$qnameof":   {method: cv_expr_fn(c.convert_compile_time_call)},
 
-		"$vaconst": {method: cv_expr_fn(convert_compile_time_arg)},
-		"$vaarg":   {method: cv_expr_fn(convert_compile_time_arg)},
-		"$varef":   {method: cv_expr_fn(convert_compile_time_arg)},
-		"$vaexpr":  {method: cv_expr_fn(convert_compile_time_arg)},
+		"$vaconst": {method: cv_expr_fn(c.convert_compile_time_arg)},
+		"$vaarg":   {method: cv_expr_fn(c.convert_compile_time_arg)},
+		"$varef":   {method: cv_expr_fn(c.convert_compile_time_arg)},
+		"$vaexpr":  {method: cv_expr_fn(c.convert_compile_time_arg)},
 
-		"$eval":      {method: cv_expr_fn(convert_compile_time_analyse)},
-		"$is_const":  {method: cv_expr_fn(convert_compile_time_analyse)},
-		"$sizeof":    {method: cv_expr_fn(convert_compile_time_analyse)},
-		"$stringify": {method: cv_expr_fn(convert_compile_time_analyse)},
+		"$eval":      {method: cv_expr_fn(c.convert_compile_time_analyse)},
+		"$is_const":  {method: cv_expr_fn(c.convert_compile_time_analyse)},
+		"$sizeof":    {method: cv_expr_fn(c.convert_compile_time_analyse)},
+		"$stringify": {method: cv_expr_fn(c.convert_compile_time_analyse)},
 
-		"$and":     {method: cv_expr_fn(convert_compile_time_call_unk)},
-		"$append":  {method: cv_expr_fn(convert_compile_time_call_unk)},
-		"$concat":  {method: cv_expr_fn(convert_compile_time_call_unk)},
-		"$defined": {method: cv_expr_fn(convert_compile_time_call_unk)},
-		"$embed":   {method: cv_expr_fn(convert_compile_time_call_unk)},
-		"$or":      {method: cv_expr_fn(convert_compile_time_call_unk)},
+		"$and":     {method: cv_expr_fn(c.convert_compile_time_call_unk)},
+		"$append":  {method: cv_expr_fn(c.convert_compile_time_call_unk)},
+		"$concat":  {method: cv_expr_fn(c.convert_compile_time_call_unk)},
+		"$defined": {method: cv_expr_fn(c.convert_compile_time_call_unk)},
+		"$embed":   {method: cv_expr_fn(c.convert_compile_time_call_unk)},
+		"$or":      {method: cv_expr_fn(c.convert_compile_time_call_unk)},
 
-		"_expr":      {method: cv_expr_fn(convert_expression)},
-		"_base_expr": {method: cv_expr_fn(convert_base_expression)},
-		"_statement": {method: cv_stmt_fn(convert_statement)},
+		"_expr":      {method: cv_expr_fn(c.convert_expression)},
+		"_base_expr": {method: cv_expr_fn(c.convert_base_expression)},
+		"_statement": {method: cv_stmt_fn(c.convert_statement)},
 
 		// Literals
-		"string_literal":     {method: cv_expr_fn(convert_literal)},
-		"char_literal":       {method: cv_expr_fn(convert_literal)},
-		"raw_string_literal": {method: cv_expr_fn(convert_literal)},
-		"integer_literal":    {method: cv_expr_fn(convert_literal)},
-		"real_literal":       {method: cv_expr_fn(convert_literal)},
-		"bytes_literal":      {method: cv_expr_fn(convert_literal)},
-		"true":               {method: cv_expr_fn(convert_literal)},
-		"false":              {method: cv_expr_fn(convert_literal)},
-		"null":               {method: cv_expr_fn(convert_literal)},
+		"string_literal":     {method: cv_expr_fn(c.convert_literal)},
+		"char_literal":       {method: cv_expr_fn(c.convert_literal)},
+		"raw_string_literal": {method: cv_expr_fn(c.convert_literal)},
+		"integer_literal":    {method: cv_expr_fn(c.convert_literal)},
+		"real_literal":       {method: cv_expr_fn(c.convert_literal)},
+		"bytes_literal":      {method: cv_expr_fn(c.convert_literal)},
+		"true":               {method: cv_expr_fn(c.convert_literal)},
+		"false":              {method: cv_expr_fn(c.convert_literal)},
+		"null":               {method: cv_expr_fn(c.convert_literal)},
 
 		// Custom ones ----------------
-		"..type_with_initializer_list..":   {method: cv_expr_fn(convert_type_with_initializer_list)},
-		"..lambda_declaration_with_body..": {method: cv_expr_fn(convert_lambda_declaration_with_body)},
+		"..type_with_initializer_list..":   {method: cv_expr_fn(c.convert_type_with_initializer_list)},
+		"..lambda_declaration_with_body..": {method: cv_expr_fn(c.convert_lambda_declaration_with_body)},
 	}
+}
 
-	if function, exists := funcMap[nodeType]; exists {
+func (c *ASTConverter) nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
+
+	if function, exists := c.rules[nodeType]; exists {
 		return function, nil
 	}
 
@@ -161,16 +164,16 @@ func nodeTypeConverterMap(nodeType string) (conversionInfo, error) {
 	//panic(fmt.Sprintf("La función %s no existe\n", nodeType))
 }
 
-func choice(types []string, node *sitter.Node, source []byte, debug bool) ast.Node {
+func (c *ASTConverter) choice(types []string, node *sitter.Node, source []byte, debug bool) ast.Node {
 	rules := []NodeRule{}
 	for _, typ := range types {
 		rules = append(rules, NodeOfType(typ))
 	}
 
-	return anyOf("x", rules, node, source, debug)
+	return c.anyOf("x", rules, node, source, debug)
 }
 
-func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) ast.Node {
+func (c *ASTConverter) anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) ast.Node {
 	//fmt.Printf("anyOf: ")
 	if debug {
 		debugNode(node, source, "AnyOf["+name+"]")
@@ -180,11 +183,11 @@ func anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debu
 	}
 
 	for _, rule := range rules {
-		if rule.Validate(node, source) {
+		if rule.Validate(node, source, c) {
 			if debug {
 				log.Printf("Converted selected %s\n", rule.Type())
 			}
-			conversion, err := nodeTypeConverterMap(rule.Type())
+			conversion, err := c.nodeTypeConverterMap(rule.Type())
 			if err != nil {
 				continue
 			}

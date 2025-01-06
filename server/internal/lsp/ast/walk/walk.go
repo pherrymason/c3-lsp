@@ -80,9 +80,16 @@ func Walk(v Visitor, n ast.Node) {
 	case *ast.AssignmentExpression:
 	case *ast.StarExpr:
 
+	case *ast.BinaryExpression:
+		Walk(v, n.Left)
+		Walk(v, n.Right)
+
 	case *ast.SelectorExpr:
 		Walk(v, n.X)
 		Walk(v, n.Sel)
+
+	case *ast.ExpressionStmt:
+		Walk(v, n.Expr)
 
 	case *ast.FunctionCall:
 		Walk(v, n.Identifier)
@@ -96,9 +103,24 @@ func Walk(v Visitor, n ast.Node) {
 
 	case *ast.ValueSpec:
 
+	case *ast.FunctionDecl:
+		if n.ParentTypeId.IsSome() {
+			Walk(v, n.ParentTypeId.Get())
+		}
+		Walk(v, n.Signature)
+		Walk(v, n.Body)
+
+	case ast.FunctionSignature:
+		Walk(v, n.Name)
+		walkList(v, n.Parameters)
+		Walk(v, n.ReturnType)
+
 	case *ast.LambdaDeclarationExpr:
 		walkList(v, n.Parameters)
 		Walk(v, n.Body)
+
+	case *ast.CompoundStmt:
+		walkList(v, n.Statements)
 		/*
 			case *AssignExpression:
 				if n != nil {

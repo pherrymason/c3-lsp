@@ -3,7 +3,7 @@ package analysis
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
-	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 )
 
 // SymbolTable stores list of symbols defined in the project.
@@ -50,52 +50,63 @@ import (
 */
 type SymbolTable struct {
 	// Each position inside symbols is the ID of the symbol which can be referenced in other index tables.
-	symbols []Symbol
+	symbols []*Symbol
 }
 
-func (s *SymbolTable) RegisterVariable(genDecl *ast.GenDecl, currentModule ast.Module) {
-	s.symbols = append(s.symbols, Symbol{
+func (s *SymbolTable) RegisterVariable(genDecl *ast.GenDecl, currentModule ast.Module) SymbolID {
+	s.symbols = append(s.symbols, &Symbol{
 		Name:     genDecl.Spec.(*ast.ValueSpec).Names[0].Name,
 		Module:   []string{currentModule.Name},
 		NodeDecl: genDecl,
 		Range:    genDecl.Range,
 	})
-}
-func (s *SymbolTable) RegisterType(typeDecl *ast.GenDecl, currentModule ast.Module) {
-	s.symbols = append(s.symbols, Symbol{
-		Name:     typeDecl.Spec.(*ast.TypeSpec).Name.Name,
-		Module:   []string{currentModule.Name},
-		NodeDecl: typeDecl,
-		Range:    typeDecl.Range,
-	})
-}
 
-func (s *SymbolTable) RegisterStruct(n *ast.StructDecl, currentModule ast.Module) {
-	s.symbols = append(s.symbols, Symbol{
-		Name:     n.Name,
-		Module:   []string{currentModule.Name},
+	return SymbolID(len(s.symbols))
+}
+func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, filePath string) SymbolID {
+	s.symbols = append(s.symbols, &Symbol{
+		Name:     name,
+		Module:   []string{module.Name},
+		FilePath: filePath,
 		NodeDecl: n,
-		Range:    n.Range,
+		Range:    nRange,
 	})
+
+	return SymbolID(len(s.symbols))
 }
 
-func (s *SymbolTable) RegisterFault(n *ast.FaultDecl, currentModule ast.Module) {
-	s.symbols = append(s.symbols, Symbol{
-		Name:     n.Name.Name,
-		Module:   []string{currentModule.Name},
-		NodeDecl: n,
-		Range:    n.Range,
-	})
+func (s *SymbolTable) FindSymbol(name string, module []string, hint ast.Token) option.Option[*Symbol] {
+	for _, symbol := range s.symbols {
+		if symbol.Name != name {
+			continue
+		}
+
+		if hint == 1 {
+			if _, ok := symbol.NodeDecl.(*ast.StructDecl); !ok {
+				continue
+			}
+		}
+
+		return option.Some(symbol)
+	}
+
+	return option.None[*Symbol]()
 }
 
-type SymbolID uint
+type SymbolID int
 
 type Symbol struct {
 	Name     string
 	Module   ModuleName
+	FilePath string
 	Range    lsp.Range
 	NodeDecl ast.Node // Declaration node of this symbol
 	Type     TypeDefinition
+	Children []Relation
+}
+
+func (s *Symbol) AppendChild(id SymbolID, relationType RelationType) {
+	s.Children = append(s.Children, Relation{id, relationType})
 }
 
 type ModuleName []string
@@ -106,51 +117,21 @@ type TypeDefinition struct {
 	NodeDecl  ast.Node
 }
 
+type RelationType string
+
+const (
+	Method   RelationType = "method"   // It's a method of parent
+	Property RelationType = "property" // It's a property of parent
+)
+
+// Relation represents a relation between a symbol and its parent.
+type Relation struct {
+	SymbolID SymbolID
+	Type     RelationType
+}
+
 // ScopeTable represents the list of symbols declared in a scope
 type ScopeTable struct {
 	Range   lsp.Range
 	Symbols []SymbolID
-}
-
-func BuildSymbolTable(astTree ast.Node) SymbolTable {
-	visitor := symbolTableGenerator{}
-	walk.Walk(&visitor, astTree)
-
-	return visitor.table
-}
-
-type symbolTableGenerator struct {
-	table SymbolTable
-
-	// State properties to keep track
-	currentModule ast.Module
-}
-
-func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
-	switch n := node.(type) {
-	case ast.Module:
-		v.currentModule = ast.Module{
-			Name:              n.Name,
-			GenericParameters: n.GenericParameters,
-			NodeAttributes:    n.NodeAttributes,
-		}
-
-	case *ast.GenDecl:
-		if n.Token == ast.VAR || n.Token == ast.CONST {
-			v.table.RegisterVariable(n, v.currentModule)
-		} else if n.Token == ast.ENUM {
-			v.table.RegisterType(n, v.currentModule)
-		}
-
-	case *ast.StructDecl:
-		v.table.RegisterStruct(n, v.currentModule)
-
-	case *ast.FaultDecl:
-		v.table.RegisterFault(n, v.currentModule)
-	}
-	return v
-}
-
-func (v *symbolTableGenerator) Exit(n ast.Node) {
-
 }

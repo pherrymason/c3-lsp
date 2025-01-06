@@ -8,3 +8,4 @@ server/internal/parser
 server/internal/lsp/ast/ast.json
 server/bin
 dist/
+docs/help

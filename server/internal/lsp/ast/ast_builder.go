@@ -2,7 +2,6 @@ package ast
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
-	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -13,14 +12,16 @@ type NodeAttrsBuilder struct {
 	bn NodeAttributes
 }
 
-func NewNodeAttributesBuilder() *NodeAttrsBuilder {
+func NewNodeAttributesBuilder(nodeID NodeId) *NodeAttrsBuilder {
 	return &NodeAttrsBuilder{
-		bn: NodeAttributes{},
+		bn: NodeAttributes{
+			Id: nodeID,
+		},
 	}
 }
 
-func NewBaseNodeFromSitterNode(node *sitter.Node) NodeAttributes {
-	builder := NewNodeAttributesBuilder().
+func NewAttrNodeFromSitterNode(nodeId NodeId, node *sitter.Node) NodeAttributes {
+	builder := NewNodeAttributesBuilder(nodeId).
 		WithRange(lsp.NewRangeFromSitterNode(node))
 
 	return builder.Build()
@@ -65,10 +66,10 @@ type IdentifierBuilder struct {
 	bn NodeAttrsBuilder
 }
 
-func NewIdentifierBuilder() *IdentifierBuilder {
+func NewIdentifierBuilder(nodeId NodeId) *IdentifierBuilder {
 	return &IdentifierBuilder{
 		bi: &Ident{},
-		bn: *NewNodeAttributesBuilder(),
+		bn: *NewNodeAttributesBuilder(nodeId),
 	}
 }
 
@@ -196,21 +197,11 @@ type DefDeclBuilder struct {
 	a NodeAttrsBuilder
 }
 
-func NewDefDeclBuilder() *DefDeclBuilder {
+func NewDefDeclBuilder(nodeId NodeId) *DefDeclBuilder {
 	return &DefDeclBuilder{
 		d: DefDecl{},
-		a: *NewNodeAttributesBuilder(),
+		a: *NewNodeAttributesBuilder(nodeId),
 	}
-}
-
-func (b *DefDeclBuilder) WithResolvesToType(typeInfo TypeInfo) *DefDeclBuilder {
-	b.d.ResolvesToType = option.Some(typeInfo)
-	return b
-}
-
-func (b *DefDeclBuilder) WithResolvesTo(resolvesTo string) *DefDeclBuilder {
-	b.d.ResolvesTo = resolvesTo
-	return b
 }
 
 func (b *DefDeclBuilder) WithSitterPos(node *sitter.Node) *DefDeclBuilder {

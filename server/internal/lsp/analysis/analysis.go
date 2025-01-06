@@ -1,11 +1,11 @@
 package analysis
 
 import (
+	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"go/token"
 )
 
 type Location struct {
@@ -40,20 +40,10 @@ func getPositionContext(document *document.Document, pos lsp.Position) PositionC
 	return posContext
 }
 
-func FindNodeAtPosition(n ast.Node, fset *token.FileSet, pos lsp.Position) ast.Node {
-	if n == nil {
-		return nil
-	}
+func FindSymbolAtPosition(pos lsp.Position, symbolTable SymbolTable, tree ast.Node) Symbol {
+	nodeAtPosition := FindNode(tree, pos)
 
-	// Convertimos la posición del nodo a coordenadas (línea y columna)
-	start := n.StartPosition()
-	end := n.EndPosition()
+	fmt.Printf("Pos: %d", nodeAtPosition.StartPosition().Line)
 
-	// Verificamos si la posición está dentro del rango del nodo
-	if (start.Line < pos.Line || (start.Line == pos.Line && start.Column <= pos.Column)) &&
-		(end.Line > pos.Line || (end.Line == pos.Line && end.Column >= pos.Column)) {
-
-	}
-
-	return n
+	return Symbol{}
 }

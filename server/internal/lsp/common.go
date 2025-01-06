@@ -49,3 +49,22 @@ func NewRangeFromSitterNode(node *sitter.Node) Range {
 		},
 	}
 }
+
+func (r Range) HasPosition(position Position) bool {
+	line := position.Line
+	ch := position.Column
+
+	if line >= r.Start.Line && line <= r.End.Line {
+		// Exactly same line
+		if line == r.Start.Line && line == r.End.Line {
+			// Must be inside character ranges
+			if ch >= r.Start.Column && ch <= r.End.Column {
+				return true
+			}
+		} else {
+			return true
+		}
+	}
+
+	return false
+}
