@@ -54,10 +54,6 @@ type SymbolTable struct {
 	scopeTree map[string]*Scope // scope trees for each file
 }
 
-type X struct {
-	symID SymbolID
-}
-
 func NewSymbolTable() *SymbolTable {
 	return &SymbolTable{
 		symbols:   []*Symbol{},
@@ -77,7 +73,7 @@ func (s *SymbolTable) RegisterNewRootScope(file string, Range lsp.Range) *Scope 
 func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, scope *Scope, filePath string) (SymbolID, *Symbol) {
 	symbol := &Symbol{
 		Name:     name,
-		Module:   []string{module.Name},
+		Module:   ModuleName(module.Name),
 		FilePath: filePath,
 		NodeDecl: n,
 		Range:    nRange,
@@ -88,12 +84,72 @@ func (s *SymbolTable) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, 
 	return SymbolID(len(s.symbols)), symbol
 }
 
+func (s *SymbolTable) FindSymbol2(
+	pos lsp.Position,
+	fileName string,
+	name string,
+	module ModuleName,
+	usageScopeStack []lsp.Range,
+	hint ast.Token) option.Option[*Symbol] {
+	type SymbolScope struct {
+		symbol     *Symbol
+		rangeScope lsp.Range
+	}
+	symbolFound := option.None[SymbolScope]()
+	// Search current scope
+	scope := FindScope(s.scopeTree[fileName], pos)
+	if scope == nil {
+		return option.None[*Symbol]()
+	}
+
+	// Search inside the scope and go up until find its declaration
+	currentScope := scope
+	found := false
+	for {
+		for _, symbol := range currentScope.Symbols {
+			if symbol.Name != name {
+				continue
+			}
+			if symbol.Module != module {
+				continue
+			}
+
+			if hint == ast.STRUCT {
+				if _, ok := symbol.NodeDecl.(*ast.StructDecl); !ok {
+					continue
+				}
+			}
+
+			symbolFound = option.Some(SymbolScope{
+				symbol:     symbol,
+				rangeScope: currentScope.Range,
+			})
+			found = true
+			break
+		}
+
+		if found {
+			break
+		} else if currentScope.Parent.IsSome() {
+			currentScope = currentScope.Parent.Get()
+		} else {
+			break
+		}
+	}
+
+	if symbolFound.IsNone() {
+		return option.None[*Symbol]()
+	}
+
+	return option.Some(symbolFound.Get().symbol)
+}
+
 // FindSymbol searches a symbol by name, module and a given scope
 // name: name of the symbol. Exact match
 // module: module name where the symbol should be defined.
 // usageScopeStack: scopeTree where the symbol is being used. This helps to discard unrelated scopes.
 // hint: If we are only interested in a type of symbol,
-func (s *SymbolTable) FindSymbol(name string, module []string, usageScopeStack []lsp.Range, hint ast.Token) option.Option[*Symbol] {
+func (s *SymbolTable) FindSymbol(name string, module ModuleName, usageScopeStack []lsp.Range, hint ast.Token) option.Option[*Symbol] {
 	type SymbolScope struct {
 		symbol *Symbol
 		scope  lsp.Range
@@ -105,7 +161,7 @@ func (s *SymbolTable) FindSymbol(name string, module []string, usageScopeStack [
 		if symbol.Name != name {
 			continue
 		}
-		if symbol.Module[0] != module[0] {
+		if symbol.Module != module {
 			continue
 		}
 
@@ -179,7 +235,7 @@ func (s *Symbol) AppendChild(id SymbolID, relationType RelationType) {
 	s.Children = append(s.Children, Relation{id, relationType})
 }
 
-type ModuleName []string
+type ModuleName string
 
 type TypeDefinition struct {
 	Name      string
@@ -198,18 +254,4 @@ const (
 type Relation struct {
 	SymbolID SymbolID
 	Tag      RelationType
-}
-
-type ScopeID int
-type Scope struct {
-	Range    lsp.Range
-	Parent   *Scope
-	Children []*Scope
-}
-
-func (s *Scope) pushScope(Range lsp.Range) *Scope {
-	newScope := &Scope{Range: Range, Parent: s, Children: nil}
-	s.Children = append(s.Children, newScope)
-
-	return newScope
 }
