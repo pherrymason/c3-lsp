@@ -24,7 +24,7 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	astConverter := factory.NewASTConverter()
 	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
 
-	result := BuildSymbolTable(tree)
+	result := BuildSymbolTable(tree, "")
 
 	assert.Equal(t, 9, len(result.symbols))
 	assert.Equal(t, "cat", result.symbols[0].Name)
@@ -52,7 +52,7 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 	astConverter := factory.NewASTConverter()
 	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
 
-	result := BuildSymbolTable(tree)
+	result := BuildSymbolTable(tree, "")
 
 	assert.Equal(t, 2, len(result.symbols))
 	assert.Equal(t, "main", result.symbols[0].Name)
@@ -73,7 +73,7 @@ func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 	astConverter := factory.NewASTConverter()
 	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
 
-	result := BuildSymbolTable(tree)
+	result := BuildSymbolTable(tree, "")
 
 	assert.Equal(t, 2, len(result.symbols))
 	assert.Equal(t, "Obj", result.symbols[0].Name)

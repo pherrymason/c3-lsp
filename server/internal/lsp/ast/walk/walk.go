@@ -62,6 +62,9 @@ func Walk(v Visitor, n ast.Node) {
 	case *ast.Ident, *ast.BasicLit:
 		// Nothing to do
 
+	case *ast.BlockExpr:
+		walkList(v, n.List)
+
 	case *ast.CompositeLiteral:
 		walkList(v, n.Elements)
 

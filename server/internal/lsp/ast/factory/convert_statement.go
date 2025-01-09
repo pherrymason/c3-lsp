@@ -86,7 +86,8 @@ func (c *ASTConverter) convert_split_declaration_stmt(node *sitter.Node, source 
 func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte) ast.Statement {
 	if node.Type() == "const_declaration" {
 		return &ast.DeclarationStmt{
-			Decl: c.convert_const_declaration(node, source),
+			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+			Decl:           c.convert_const_declaration(node, source),
 		}
 	}
 
@@ -137,7 +138,8 @@ func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte
 	varDecl.Spec = valueSpec
 
 	return &ast.DeclarationStmt{
-		Decl: varDecl,
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		Decl:           varDecl,
 	}
 }
 
