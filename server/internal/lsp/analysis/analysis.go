@@ -59,6 +59,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable SymbolT
 	for _, step := range path {
 		if moduleNode, ok := step.node.(ast.Module); ok {
 			moduleName = ModuleName(moduleNode.Name)
+			break
 			//	scopeStack = append(scopeStack, moduleNode.GetRange())
 		} // else if fnDecl, ok := step.node.(*ast.FunctionDecl); ok {
 		//	scopeStack = append(scopeStack, fnDecl.Body.GetRange())
@@ -133,6 +134,12 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			if parentSymbol == nil {
 				return nil
 			}
+		case *ast.Ident:
+			sym := symbolTable.FindSymbolByPosition(pos, fileName, i.Name, moduleName, 0)
+			if sym.IsNone() {
+				return nil
+			}
+			parentSymbol = sym.Get()
 		}
 
 	default:
@@ -146,7 +153,7 @@ func solveSymbolChild(symbol *Symbol, childName string, moduleName ModuleName, f
 	if symbol == nil {
 		return nil
 	}
-	
+
 	selIdent := childName
 	switch symbol.Kind {
 	case ast.STRUCT:
