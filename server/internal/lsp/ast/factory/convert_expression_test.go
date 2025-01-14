@@ -449,8 +449,9 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 16).Build(),
 				Identifier: &ast.SelectorExpr{
-					X:   ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
-					Sel: ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 13).Build(),
+					X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
+					Sel:            ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).BuildPtr(),
 				},
 				Arguments: []ast.Expression{
 					&ast.BasicLit{
@@ -466,9 +467,11 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 21).Build(),
 				Identifier: &ast.SelectorExpr{
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 14, 3, 18).Build(),
 					X: &ast.SelectorExpr{
-						X:   ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
-						Sel: ast.NewIdentifierBuilder().WithName("prop").WithStartEnd(3, 9, 3, 13).BuildPtr(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 13).Build(),
+						X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
+						Sel:            ast.NewIdentifierBuilder().WithName("prop").WithStartEnd(3, 9, 3, 13).BuildPtr(),
 					},
 					Sel: ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 14, 3, 18).BuildPtr(),
 				},
@@ -494,7 +497,8 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 
 			cv := newTestAstConverter()
 			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
-			call := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt).Statements[0].(*ast.ExpressionStmt).Expr.(*ast.FunctionCall)
+			compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
+			call := compound.Statements[0].(*ast.ExpressionStmt).Expr.(*ast.FunctionCall)
 
 			assert.Equal(t, tt.expected, call)
 		})
@@ -1435,9 +1439,9 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 5, 2, 12).Build(),
 				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 5, 2, 6).BuildPtr(),
 				Index: &ast.RangeIndexExpr{
-					//NodeAttributes: NewNodeAttributesBuilder().WithRangePositions(2, 6, 2, 9).Build(),
-					Start: option.Some(uint(0)),
-					End:   option.Some(uint(2)),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 7, 2, 11).Build(),
+					Start:          option.Some(uint(0)),
+					End:            option.Some(uint(2)),
 				},
 			},
 		},

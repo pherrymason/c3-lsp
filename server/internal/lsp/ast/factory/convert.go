@@ -1075,7 +1075,7 @@ func (c *ASTConverter) convert_expression(node *sitter.Node, source []byte) ast.
 		debugNode(node, source, "convert_expression")
 	}
 
-	converted := c.anyOf("_expr", []NodeRule{
+	rules := []NodeRule{
 		NodeOfType("assignment_expr"),
 		NodeOfType("ternary_expr"),
 		NodeChildWithSequenceOf([]NodeRule{
@@ -1094,7 +1094,8 @@ func (c *ASTConverter) convert_expression(node *sitter.Node, source []byte) ast.
 		NodeOfType("subscript_expr"),
 		NodeOfType("initializer_list"),
 		NodeTryConversionFunc("_base_expr"),
-	}, node, source, ConvertDebug)
+	}
+	converted := c.anyOf("_expr", rules, node, source, ConvertDebug)
 
 	if converted == nil {
 		return nil
@@ -1129,7 +1130,7 @@ func (c *ASTConverter) convert_expr_stmt(node *sitter.Node, source []byte) ast.S
 func (c *ASTConverter) convert_base_expression(node *sitter.Node, source []byte) ast.Expression {
 	//debugNode(node, source)
 
-	found := c.anyOf("_base_expr", []NodeRule{
+	rules := []NodeRule{
 		NodeOfType("string_literal"),
 		NodeOfType("char_literal"),
 		NodeOfType("raw_string_literal"),
@@ -1155,7 +1156,7 @@ func (c *ASTConverter) convert_base_expression(node *sitter.Node, source []byte)
 			NodeOfType("initializer_list"),
 		}, "..type_with_initializer_list.."),
 
-		NodeOfType("field_expr"),       // TODO
+		NodeOfType("field_expr"),
 		NodeOfType("type_access_expr"), // TODO
 		NodeOfType("paren_expr"),
 		NodeOfType("expr_block"),
@@ -1193,7 +1194,8 @@ func (c *ASTConverter) convert_base_expression(node *sitter.Node, source []byte)
 			NodeOfType("lambda_declaration"),
 			NodeOfType("compound_stmt"),
 		}, "..lambda_declaration_with_body.."),
-	}, node, source, false)
+	}
+	found := c.anyOf("_base_expr", rules, node, source, false)
 
 	return found.(ast.Expression)
 }
@@ -1296,7 +1298,7 @@ func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.
 	}
 	field := node.ChildByFieldName("field")
 
-	return &ast.SelectorExpr{
+	selExpr := &ast.SelectorExpr{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), field),
 		X:              argumentNode,
 		Sel: ast.NewIdentifierBuilder().
@@ -1305,6 +1307,8 @@ func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.
 			WithSitterPos(field).
 			BuildPtr(),
 	}
+	fmt.Printf("X:%s", selExpr.X)
+	return selExpr
 }
 
 func (c *ASTConverter) convert_elvis_orelse_expr(node *sitter.Node, source []byte) ast.Expression {
@@ -1407,6 +1411,7 @@ func (c *ASTConverter) convert_call_expr(node *sitter.Node, source []byte) ast.E
 	switch expr.(type) {
 	case *ast.SelectorExpr:
 		identifier = expr.(*ast.SelectorExpr)
+		fmt.Printf("IS selectorExpr")
 	case *ast.Ident:
 		identifier = expr.(*ast.Ident)
 	case *ast.TrailingGenericsExpr:
@@ -1415,13 +1420,14 @@ func (c *ASTConverter) convert_call_expr(node *sitter.Node, source []byte) ast.E
 		genericArguments = option.Some(ga)
 	}
 
-	return &ast.FunctionCall{
+	fnCall := &ast.FunctionCall{
 		NodeAttributes:   ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Identifier:       identifier,
 		GenericArguments: genericArguments,
 		Arguments:        args,
 		TrailingBlock:    compoundStmt,
 	}
+	return fnCall
 }
 
 /*
