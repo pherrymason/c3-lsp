@@ -14,13 +14,13 @@ type WalkContext struct {
 // If the result visitor w is not nil, Walk visits each of the children
 // of node with the visitor v, followed by a call of the Exit method.
 type Visitor interface {
-	Enter(n ast.Node) (v Visitor)
-	Exit(n ast.Node)
+	Enter(n ast.Node, propertyName string) (v Visitor)
+	Exit(n ast.Node, propertyName string)
 }
 
-func walkList[N ast.Node](v Visitor, list []N) {
+func walkList[N ast.Node](v Visitor, list []N, propertyName string) {
 	for _, node := range list {
-		Walk(v, node)
+		Walk(v, node, propertyName)
 	}
 }
 
@@ -30,16 +30,16 @@ func walkList[N ast.Node](v Visitor, list []N) {
 // v for each of the non-nil children of node, followed by a call
 // of v.Exit(node).
 // Alternative Walk method signature Walk(v Visitor, n Node, p *Path)
-func Walk(v Visitor, n ast.Node) {
+func Walk(v Visitor, n ast.Node, propertyName string) {
 	if n == nil {
 		return
 	}
 
-	if v = v.Enter(n); v == nil {
+	if v = v.Enter(n, propertyName); v == nil {
 		return
 	}
 
-	defer v.Exit(n)
+	defer v.Exit(n, propertyName)
 
 	switch n := n.(type) {
 	// Comments and fields
@@ -49,11 +49,11 @@ func Walk(v Visitor, n ast.Node) {
 	// Nothing to do
 
 	case ast.File:
-		walkList(v, n.Modules)
+		walkList(v, n.Modules, "Modules")
 
 	case ast.Module:
-		walkList(v, n.Imports)
-		walkList(v, n.Declarations)
+		walkList(v, n.Imports, "Imports")
+		walkList(v, n.Declarations, "Declarations")
 
 	case ast.Import:
 		// Do nothing
@@ -63,73 +63,77 @@ func Walk(v Visitor, n ast.Node) {
 		// Nothing to do
 
 	case *ast.BlockExpr:
-		walkList(v, n.List)
+		walkList(v, n.List, "List")
 
 	case *ast.CompositeLiteral:
-		walkList(v, n.Elements)
+		walkList(v, n.Elements, "Elements")
 
 	case *ast.IndexAccessExpr:
-		Walk(v, n.Array)
+		Walk(v, n.Array, "Array")
 
 	case *ast.RangeAccessExpr:
-		Walk(v, n.Array)
+		Walk(v, n.Array, "Array")
 
+	case *ast.SelectorExpr:
+		Walk(v, n.X, "X")
+		Walk(v, n.Sel, "Sel")
+
+	case *ast.StarExpr:
 	case *ast.SubscriptExpression:
-		Walk(v, n.Argument)
-		Walk(v, n.Index)
+		Walk(v, n.Argument, "Argument")
+		Walk(v, n.Index, "Index")
 
 	case *ast.FieldAccessExpr:
 
 	case *ast.AssignmentExpression:
-		Walk(v, n.Left)
-		Walk(v, n.Right)
-
-	case *ast.StarExpr:
+		Walk(v, n.Left, "Left")
+		Walk(v, n.Right, "Right")
 
 	case *ast.BinaryExpression:
-		Walk(v, n.Left)
-		Walk(v, n.Right)
-
-	case *ast.SelectorExpr:
-		Walk(v, n.X)
-		Walk(v, n.Sel)
+		Walk(v, n.Left, "Left")
+		Walk(v, n.Right, "Right")
 
 	case *ast.ExpressionStmt:
-		Walk(v, n.Expr)
+		Walk(v, n.Expr, "Expr")
 
 	case *ast.FunctionCall:
-		Walk(v, n.Identifier)
-		walkList(v, n.Arguments)
+		Walk(v, n.Identifier, "Identifier")
+		walkList(v, n.Arguments, "Arguments")
 		if n.TrailingBlock.IsSome() {
-			Walk(v, n.TrailingBlock.Get())
+			Walk(v, n.TrailingBlock.Get(), "TrailingBlock")
 		}
 
 	case *ast.GenDecl:
-		Walk(v, n.Spec)
+		Walk(v, n.Spec, "Spec")
 
 	case *ast.ValueSpec:
+		Walk(v, n.Type, "Type")
+		walkList(v, n.Names, "Names")
 
 	case *ast.FunctionDecl:
 		if n.ParentTypeId.IsSome() {
-			Walk(v, n.ParentTypeId.Get())
+			Walk(v, n.ParentTypeId.Get(), "ParentTypeId")
 		}
-		Walk(v, n.Signature)
-		Walk(v, n.Body)
+		Walk(v, n.Signature, "Signature")
+		Walk(v, n.Body, "Body")
 
 	case ast.FunctionSignature:
-		Walk(v, n.Name)
-		walkList(v, n.Parameters)
-		Walk(v, n.ReturnType)
+		Walk(v, n.Name, "Name")
+		walkList(v, n.Parameters, "Parameters")
+		Walk(v, n.ReturnType, "ReturnType")
 
 	case *ast.LambdaDeclarationExpr:
-		walkList(v, n.Parameters)
-		Walk(v, n.Body)
+		walkList(v, n.Parameters, "Parameters")
+		Walk(v, n.Body, "Body")
 
 	case *ast.CompoundStmt:
-		walkList(v, n.Statements)
+		walkList(v, n.Statements, "Statements")
 
 	case *ast.DeclarationStmt:
-		Walk(v, n.Decl)
+		Walk(v, n.Decl, "Decl")
+
+	case ast.TypeInfo:
+		Walk(v, n.Identifier, "Identifier")
 		/*
 			case *AssignExpression:
 				if n != nil {

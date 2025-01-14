@@ -41,8 +41,8 @@ type (
 
 	SelectorExpr struct {
 		NodeAttributes
-		X   Expression //
-		Sel *Ident     //
+		X   Expression // Before the dot
+		Sel *Ident     // After the dot
 	}
 
 	// Ellipsis TODO

@@ -24,13 +24,14 @@ func (s *Scope) pushScope(Range lsp.Range) *Scope {
 	return newScope
 }
 
-func (s *Scope) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module) (SymbolID, *Symbol) {
+func (s *Scope) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, kind ast.Token) (SymbolID, *Symbol) {
 	symbol := &Symbol{
 		Name:     name,
 		Module:   ModuleName(module.Name),
 		NodeDecl: n,
 		Range:    nRange,
 		Scope:    s,
+		Kind:     kind,
 	}
 	s.Symbols = append(s.Symbols, symbol)
 

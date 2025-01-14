@@ -7,7 +7,7 @@ import (
 
 func BuildSymbolTable(astTree ast.Node, fileName string) SymbolTable {
 	visitor := newSymbolTableVisitor()
-	walk.Walk(&visitor, astTree)
+	walk.Walk(&visitor, astTree, "")
 
 	return visitor.table
 }
@@ -19,6 +19,7 @@ type symbolTableGenerator struct {
 	currentModule   ast.Module
 	currentFilePath *ast.File
 	currentScope    *Scope
+	scopePushed     bool
 }
 
 func newSymbolTableVisitor() symbolTableGenerator {
@@ -27,7 +28,7 @@ func newSymbolTableVisitor() symbolTableGenerator {
 	}
 }
 
-func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
+func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Visitor {
 	switch n := node.(type) {
 	case ast.File:
 		v.currentFilePath = &n
@@ -39,21 +40,16 @@ func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
 			NodeAttributes:    n.NodeAttributes,
 		}
 		v.currentScope = v.table.RegisterNewRootScope(v.currentFilePath.Name, n.GetRange())
+		v.scopePushed = true
 
 	case *ast.GenDecl:
 		if n.Token == ast.VAR || n.Token == ast.CONST {
-			/*_, symbol := v.table.RegisterSymbol(
-				n.Spec.(*ast.ValueSpec).Names[0].Name,
-				n.Range,
-				n, v.currentModule,
-				v.currentScope,
-				v.currentFilePath.Name,
-			)*/
 			_, symbol := v.currentScope.RegisterSymbol(
 				n.Spec.(*ast.ValueSpec).Names[0].Name,
 				n.Range,
 				n,
 				v.currentModule,
+				n.Token,
 			)
 
 			typeExpression := n.Spec.(*ast.ValueSpec).Type
@@ -64,57 +60,42 @@ func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
 			}
 
 		} else if n.Token == ast.ENUM {
-			/*v.table.RegisterSymbol(
-				n.Spec.(*ast.TypeSpec).Name.Name,
-				n.Range,
-				n,
-				v.currentModule,
-				v.currentScope,
-				v.currentFilePath.Name,
-			)*/
 			v.currentScope.RegisterSymbol(
 				n.Spec.(*ast.TypeSpec).Name.Name,
 				n.Range,
 				n,
 				v.currentModule,
+				ast.ENUM,
 			)
 		}
 
-	case *ast.StructDecl: /*
-			v.table.RegisterSymbol(n.Name, n.Range, n, v.currentModule,
-				v.currentScope,
-				v.currentFilePath.Name)*/
-		v.currentScope.RegisterSymbol(n.Name, n.Range, n, v.currentModule)
+	case *ast.StructDecl:
+		v.currentScope.RegisterSymbol(n.Name, n.Range, n, v.currentModule, ast.STRUCT)
 
 	case *ast.FaultDecl:
-		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule)
-		/*v.table.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule,
-		v.currentScope,
-		v.currentFilePath.Name)*/
+		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, ast.FAULT)
 
 	case *ast.DefDecl:
-		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule)
-		/*v.table.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule,
-		v.currentScope,
-		v.currentFilePath.Name)*/
+		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, ast.DEF)
 
 	case *ast.FunctionDecl:
-		/*id, _ := v.table.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule,
-		v.currentScope,
-		v.currentFilePath.Name)*/
-		v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule)
-		v.currentScope = v.currentScope.pushScope(n.Body.GetRange())
+		v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, ast.FUNCTION)
+		if n.Body != nil {
+			v.currentScope = v.currentScope.pushScope(n.Body.GetRange())
+			v.scopePushed = true
+		}
+
 		if n.ParentTypeId.IsSome() {
 			// Should register method as children of parent type
-			/* TODO
-			sym := v.table.FindSymbolByName(
-				n.ParentTypeId.Get().Name,
-				ModuleName(v.currentModule.Name),
-				ast.Token(ast.STRUCT),
-			)
-			if sym.IsSome() {
-				sym.Get().AppendChild(id, Method)
-			}*/
+			/*
+				sym := v.table.FindSymbolByName(
+					n.ParentTypeId.Get().Name,
+					ModuleName(v.currentModule.Name),
+					ast.Token(ast.STRUCT),
+				)
+				if sym.IsSome() {
+					sym.Get().AppendChild(id, Method)
+				}*/
 		}
 
 	case ast.FunctionSignature:
@@ -122,16 +103,10 @@ func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
 			_, sym := v.currentScope.RegisterSymbol(param.Name.Name,
 				param.GetRange(),
 				param,
-				v.currentModule)
-			/*
-				_, sym := v.table.RegisterSymbol(
-					param.Name.Name,
-					param.GetRange(),
-					param,
-					v.currentModule,
-					v.currentScope,
-					v.currentFilePath.Name,
-				)*/
+				v.currentModule,
+				ast.VAR,
+			)
+
 			sym.Type = TypeDefinition{
 				Name:      param.Type.Identifier.Name,
 				IsBuiltIn: param.Type.BuiltIn,
@@ -140,17 +115,21 @@ func (v *symbolTableGenerator) Enter(node ast.Node) walk.Visitor {
 		}
 
 	case *ast.CompoundStmt:
-	//v.currentScope = v.currentScope.pushScope(n.GetRange())
 
 	case *ast.BlockExpr:
 		v.currentScope = v.currentScope.pushScope(n.GetRange())
+		v.scopePushed = true
 	}
 	return v
 }
 
-func (v *symbolTableGenerator) Exit(n ast.Node) {
+func (v *symbolTableGenerator) Exit(n ast.Node, propertyName string) {
 	switch n.(type) {
 	case *ast.BlockExpr, *ast.FunctionDecl:
-		v.currentScope = v.currentScope.Parent.Get()
+		if v.scopePushed {
+			v.currentScope = v.currentScope.Parent.Get()
+		}
 	}
+
+	v.scopePushed = false
 }
