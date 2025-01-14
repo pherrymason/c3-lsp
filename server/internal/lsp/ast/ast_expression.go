@@ -304,7 +304,7 @@ func (*ArgParamPathSet) exprNode()         {}
 func (e *AssignmentExpression) exprNode()  {}
 func (Ident) exprNode()                    {}
 func (*ParenExpr) exprNode()               {}
-func (SelectorExpr) exprNode()             {}
+func (*SelectorExpr) exprNode()            {}
 func (Path) exprNode()                     {}
 func (*BaseType) exprNode()                {}
 func (e *BlockExpr) exprNode()             {}
