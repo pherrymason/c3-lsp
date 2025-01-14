@@ -56,9 +56,10 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 	result := BuildSymbolTable(tree, "")
 
 	scope := result.scopeTree["file.c3"]
-	assert.Equal(t, 2, len(scope.Symbols))
+	assert.Equal(t, 1, len(scope.Symbols))
 	assert.Equal(t, "main", scope.Symbols[0].Name)
-	assert.Equal(t, "cat", scope.Symbols[1].Name)
+	scope = scope.Children[0]
+	assert.Equal(t, "cat", scope.Symbols[0].Name)
 
 	for _, symbol := range scope.Symbols {
 		assert.Equal(t, "file.c3", symbol.FilePath, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.FilePath))
