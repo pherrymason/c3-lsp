@@ -438,28 +438,37 @@ func (c *ASTConverter) convert_comma_decl_or_expression(node *sitter.Node, sourc
 
 // This takes anon nodes
 func (c *ASTConverter) convert_decl_or_expression(node *sitter.Node, source []byte) ast.Node {
-	found := c.anyOf("decl_or_expression", []NodeRule{
+	rules := []NodeRule{
 		NodeOfType("var_decl"),
 		NodeSiblingsWithSequenceOf([]NodeRule{
 			NodeOfType("type"), NodeOfType("local_decl_after_type"),
 		}, "split_declaration_stmt"),
 		NodeAnonymous("_expr"),
-	}, node, source, false)
+	}
+	found := c.anyOf("decl_or_expression", rules, node, source, false)
+
+	wrapperNode := node
+	if node.Type() == "type" {
+		wrapperNode = node.Parent()
+	}
 
 	switch found.(type) {
 	case ast.Expression:
 		return &ast.DeclOrExpr{
-			Expr: found.(ast.Expression),
+			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
+			Expr:           found.(ast.Expression),
 		}
 
 	case ast.Declaration:
 		return &ast.DeclOrExpr{
-			Decl: found.(ast.Declaration),
+			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
+			Decl:           found.(ast.Declaration),
 		}
 
 	case ast.Statement:
 		return &ast.DeclOrExpr{
-			Stmt: found.(ast.Statement),
+			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
+			Stmt:           found.(ast.Statement),
 		}
 
 	default:
