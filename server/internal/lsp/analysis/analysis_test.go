@@ -249,6 +249,28 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
 
+	t.Run("Find struct method definition in same module", func(t *testing.T) {
+		source := `struct Animal {int life;}
+		fn void Animal.bark() {}
+		fn void main(){
+			Animal dog;
+			dog.bark();
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 4, Column: 8}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "bark", symbol.Name)
+		assert.Equal(t, ModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(1, 2, 1, 26), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
+
 	t.Run("Find indirect struct field definition in same module", func(t *testing.T) {
 		source := `
 		struct Being {
