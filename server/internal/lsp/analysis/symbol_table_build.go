@@ -83,8 +83,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 	case *ast.FunctionDecl:
 		_, symbol := v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.Name, ast.FUNCTION)
 		if n.Body != nil {
-			v.currentScope = v.currentScope.pushScope(n.Body.GetRange())
-			v.scopePushed++
+			v.pushScope(n)
 		}
 
 		if n.ParentTypeId.IsSome() {
@@ -118,18 +117,31 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 	case *ast.CompoundStmt:
 
 	case *ast.BlockExpr:
-		v.currentScope = v.currentScope.pushScope(n.GetRange())
-		v.scopePushed++
+		v.pushScope(n)
 	}
 	return v
 }
 
-func (v *symbolTableGenerator) Exit(n ast.Node, propertyName string) {
-	switch n.(type) {
-	case *ast.BlockExpr, *ast.FunctionDecl:
-		if v.scopePushed > 0 {
-			v.currentScope = v.currentScope.Parent.Get()
-			v.scopePushed--
+func (v *symbolTableGenerator) pushScope(n ast.Node) {
+	v.currentScope = v.currentScope.pushScope(n.GetRange())
+	v.scopePushed++
+}
+
+func (v *symbolTableGenerator) Exit(node ast.Node, propertyName string) {
+	switch n := node.(type) {
+	case *ast.BlockExpr:
+		v.popScope()
+
+	case *ast.FunctionDecl:
+		if n.Body != nil {
+			v.popScope()
 		}
+	}
+}
+
+func (v *symbolTableGenerator) popScope() {
+	if v.scopePushed > 0 {
+		v.currentScope = v.currentScope.Parent.Get() // Retrocede al scope padre
+		v.scopePushed--                              // Actualiza el contador
 	}
 }

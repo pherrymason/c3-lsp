@@ -397,7 +397,6 @@ func TestFindsSymbol_Declaration_function(t *testing.T) {
 	})
 
 	t.Run("Should find function definition without body", func(t *testing.T) {
-		t.Skip()
 		source := `
 	fn void init_window(int width, int height, char* title) @extern("InitWindow");
 	init_window(200, 200, "hello");`
