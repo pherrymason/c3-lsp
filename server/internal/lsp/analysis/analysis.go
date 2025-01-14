@@ -47,24 +47,122 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable SymbolT
 	switch n := nodeAtPosition.(type) {
 	case *ast.Ident:
 		name = n.Name
+	case ast.Ident:
+		name = n.Name
 	}
 
-	scopeStack := []lsp.Range{}
+	//scopeStack := []lsp.Range{}
 
+	// Analyze parent nodes to better understand context
+	// -------------------------------------------------
 	var moduleName ModuleName
-	for _, n := range path {
-		if moduleNode, ok := n.(ast.Module); ok {
+	for _, step := range path {
+		if moduleNode, ok := step.node.(ast.Module); ok {
 			moduleName = ModuleName(moduleNode.Name)
-			scopeStack = append(scopeStack, moduleNode.GetRange())
-		} else if fnDecl, ok := n.(*ast.FunctionDecl); ok {
-			scopeStack = append(scopeStack, fnDecl.Body.GetRange())
+			//	scopeStack = append(scopeStack, moduleNode.GetRange())
+		} // else if fnDecl, ok := step.node.(*ast.FunctionDecl); ok {
+		//	scopeStack = append(scopeStack, fnDecl.Body.GetRange())
+		//}
+	}
+	// If parent is a SelectExpr, we will need to first search chain of elements to be able to find `name`.
+
+	totalSteps := len(path)
+	selectExpr := false
+	//identFound := false
+	index := 0
+	for i := totalSteps - 1; i >= 0; i-- {
+		switch path[i].node.(type) {
+		case *ast.Ident, ast.Ident:
+			//identFound = true
+
+		case *ast.SelectorExpr:
+			selectExpr = true
+			index = i
+			i = 0
 		}
 	}
 
-	sym := symbolTable.FindSymbol2(pos, fileName, name, moduleName, scopeStack, 0)
-	//sym2 := symbolTable.FindSymbol(name, moduleName, scopeStack, 0)
+	if selectExpr {
+		if path[index+1].propertyName == "Sel" {
+			// We need to solve first SelectorExpr.X!
+			symbol := solveSelAtSelectorExpr(
+				path[index].node.(*ast.SelectorExpr),
+				pos,
+				fileName,
+				moduleName,
+				symbolTable,
+			)
+
+			if symbol != nil {
+				return option.Some(symbol)
+			}
+		} else {
+			// As cursor is at X, we can just search normally.
+		}
+	}
+
+	// -------------------------------------------------
+
+	sym := symbolTable.FindSymbolByPosition(pos, fileName, name, moduleName, 0)
 
 	return sym
+}
+
+// solveSelAtSelectorExpr solves iteratively the X part of SelectorExpr
+// Solves X. If X is itself a SelectorExpr, it will follow the chain and solve the symbol just before the last '.'
+func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, moduleName ModuleName, symbolTable SymbolTable) *Symbol {
+	var parentSymbol *Symbol
+	switch base := selectorExpr.X.(type) {
+	case *ast.Ident:
+		parentSymbol = symbolTable.SolveType(base.Name, pos, fileName)
+		if parentSymbol == nil {
+			return nil
+		}
+
+	case *ast.SelectorExpr:
+		parentSymbol = solveSelAtSelectorExpr(base, pos, fileName, moduleName, symbolTable)
+		if parentSymbol == nil {
+			return nil
+		}
+
+	default:
+		return nil
+	}
+
+	switch parentSymbol.Kind {
+	case ast.STRUCT:
+		selIdent := selectorExpr.Sel.Name
+		for _, member := range parentSymbol.NodeDecl.(*ast.StructDecl).Members {
+			if member.Names[0].Name == selIdent {
+				if member.Type.BuiltIn {
+					return &Symbol{
+						Name:     member.Names[0].Name,
+						Module:   moduleName,
+						FilePath: fileName,
+						Range:    member.Range,
+						NodeDecl: member,
+						Kind:     ast.FIELD,
+						Type: TypeDefinition{
+							member.Type.Identifier.Name,
+							member.Type.BuiltIn,
+							member.Type,
+						},
+					}
+				}
+
+				value := symbolTable.FindSymbolByPosition(
+					member.Range.Start,
+					fileName,
+					member.Type.Identifier.Name,
+					moduleName,
+					0,
+				)
+				return value.Get()
+			}
+		}
+	}
+
+	return nil
 }
 
 func isWrapperNode(node ast.Node) bool {

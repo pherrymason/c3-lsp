@@ -189,7 +189,9 @@ func (c *ASTConverter) convert_global_declaration(node *sitter.Node, source []by
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
-	valueSpec := &ast.ValueSpec{}
+	valueSpec := &ast.ValueSpec{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		//debugNode(n, source)
@@ -559,7 +561,9 @@ func (c *ASTConverter) convert_const_declaration(node *sitter.Node, source []byt
 		Token:          ast.Token(ast.CONST),
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
-	valueSpec := &ast.ValueSpec{}
+	valueSpec := &ast.ValueSpec{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+	}
 
 	var identNode *sitter.Node
 
@@ -1293,7 +1297,8 @@ func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.
 	field := node.ChildByFieldName("field")
 
 	return &ast.SelectorExpr{
-		X: argumentNode,
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), field),
+		X:              argumentNode,
 		Sel: ast.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(field.Content(source)).

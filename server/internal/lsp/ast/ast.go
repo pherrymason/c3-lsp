@@ -29,6 +29,9 @@ const (
 	UNION
 	ENUM
 	FAULT
+	DEF
+	FUNCTION
+	FIELD
 )
 
 type Token int

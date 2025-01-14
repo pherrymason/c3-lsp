@@ -100,7 +100,9 @@ func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte
 		//Spec:           &ast.ValueSpec{},
 	}
 	end := false
-	valueSpec := &ast.ValueSpec{}
+	valueSpec := &ast.ValueSpec{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+	}
 	for i := 0; i < int(node.ChildCount()) && !end; i++ {
 		n := node.Child(i)
 		//debugNode(n, source, "dd")
@@ -377,6 +379,7 @@ func (c *ASTConverter) convert_local_declaration_after_type(node *sitter.Node, s
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.VAR,
 		Spec: &ast.ValueSpec{
+			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 			Names: []*ast.Ident{
 				ast.NewIdentifierBuilder().
 					WithId(c.getNextID()).

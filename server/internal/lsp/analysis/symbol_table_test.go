@@ -26,18 +26,19 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 
 	result := BuildSymbolTable(tree, "")
 
-	assert.Equal(t, 9, len(result.symbols))
-	assert.Equal(t, "cat", result.symbols[0].Name)
-	assert.Equal(t, "dog", result.symbols[1].Name)
-	assert.Equal(t, "Colors", result.symbols[2].Name)
-	assert.Equal(t, "Obj", result.symbols[3].Name)
-	assert.Equal(t, "Err", result.symbols[4].Name)
-	assert.Equal(t, "A_CONSTANT", result.symbols[5].Name)
-	assert.Equal(t, "Int32", result.symbols[6].Name)
-	assert.Equal(t, "foo", result.symbols[7].Name)
-	assert.Equal(t, "method", result.symbols[8].Name)
+	scope := result.scopeTree["file.c3"]
+	assert.Equal(t, 9, len(scope.Symbols))
+	assert.Equal(t, "cat", scope.Symbols[0].Name)
+	assert.Equal(t, "dog", scope.Symbols[1].Name)
+	assert.Equal(t, "Colors", scope.Symbols[2].Name)
+	assert.Equal(t, "Obj", scope.Symbols[3].Name)
+	assert.Equal(t, "Err", scope.Symbols[4].Name)
+	assert.Equal(t, "A_CONSTANT", scope.Symbols[5].Name)
+	assert.Equal(t, "Int32", scope.Symbols[6].Name)
+	assert.Equal(t, "foo", scope.Symbols[7].Name)
+	assert.Equal(t, "method", scope.Symbols[8].Name)
 
-	for _, symbol := range result.symbols {
+	for _, symbol := range scope.Symbols {
 		assert.Equal(t, "file.c3", symbol.FilePath, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.FilePath))
 	}
 }
@@ -54,11 +55,12 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 
 	result := BuildSymbolTable(tree, "")
 
-	assert.Equal(t, 2, len(result.symbols))
-	assert.Equal(t, "main", result.symbols[0].Name)
-	assert.Equal(t, "cat", result.symbols[1].Name)
+	scope := result.scopeTree["file.c3"]
+	assert.Equal(t, 2, len(scope.Symbols))
+	assert.Equal(t, "main", scope.Symbols[0].Name)
+	assert.Equal(t, "cat", scope.Symbols[1].Name)
 
-	for _, symbol := range result.symbols {
+	for _, symbol := range scope.Symbols {
 		assert.Equal(t, "file.c3", symbol.FilePath, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.FilePath))
 	}
 }
@@ -75,8 +77,9 @@ func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 
 	result := BuildSymbolTable(tree, "")
 
-	assert.Equal(t, 2, len(result.symbols))
-	assert.Equal(t, "Obj", result.symbols[0].Name)
-	assert.Equal(t, Relation{SymbolID: 2, Tag: Method}, result.symbols[0].Children[0])
-	assert.Equal(t, "method", result.symbols[1].Name)
+	scope := result.scopeTree["file.c3"]
+	assert.Equal(t, 2, len(scope.Symbols))
+	assert.Equal(t, "Obj", scope.Symbols[0].Name)
+	assert.Equal(t, Relation{Child: scope.Symbols[1], Tag: Method}, scope.Symbols[0].Children[0])
+	assert.Equal(t, "method", scope.Symbols[1].Name)
 }
