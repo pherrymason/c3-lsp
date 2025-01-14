@@ -24,10 +24,11 @@ func (s *Scope) pushScope(Range lsp.Range) *Scope {
 	return newScope
 }
 
-func (s *Scope) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, kind ast.Token) (SymbolID, *Symbol) {
+func (s *Scope) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, filePath string, kind ast.Token) (SymbolID, *Symbol) {
 	symbol := &Symbol{
 		Name:     name,
 		Module:   ModuleName(module.Name),
+		FilePath: filePath,
 		NodeDecl: n,
 		Range:    nRange,
 		Scope:    s,
