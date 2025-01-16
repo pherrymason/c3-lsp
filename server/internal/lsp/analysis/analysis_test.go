@@ -299,6 +299,61 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, "int", symbol.Type.Name)
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
+	t.Run("Find indirect struct field in a method chain in same module", func(t *testing.T) {
+		source := `
+		struct Sound {
+			int length;
+		}
+		struct Animal { 
+			String name;
+			Being being;
+		}
+		fn Sound Animal.bark() {}
+		fn void main(){
+			Animal dog;
+			dog.bark().length = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 11, Column: 15}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "length", symbol.Name)
+		assert.Equal(t, ModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(2, 3, 2, 14), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "int", symbol.Type.Name)
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+	})
+
+	t.Run("Find indirect struct field in a function chain in same module", func(t *testing.T) {
+		source := `
+		struct Sound {
+			int length;
+		}
+		fn Sound bark() {}
+		fn void main(){
+			Animal dog;
+			bark().length = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 7, Column: 11}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "length", symbol.Name)
+		assert.Equal(t, ModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(2, 3, 2, 12), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "int", symbol.Type.Name)
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+	})
 }
 
 func TestFindsSymbol_Declaration_def(t *testing.T) {

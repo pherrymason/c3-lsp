@@ -1285,8 +1285,10 @@ func (c *ASTConverter) convert_type_access_expr(node *sitter.Node, source []byte
 }
 
 func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.Expression {
+	//debugNode(node, source, "????")
 	argument := node.ChildByFieldName("argument")
 	var argumentNode ast.Expression
+
 	if argument.Type() == "ident" {
 		argumentNode = ast.NewIdentifierBuilder().
 			WithId(c.getNextID()).
@@ -1294,20 +1296,30 @@ func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.
 			WithSitterPos(argument).
 			BuildPtr()
 	} else {
-		argumentNode = c.convert_field_expr(argument, source)
+		//debugNode(argument, source, "field_expr/expr")
+		argumentNode = c.convert_expression(argument, source)
 	}
+	start := argumentNode.StartPosition()
 	field := node.ChildByFieldName("field")
 
 	selExpr := &ast.SelectorExpr{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), field),
-		X:              argumentNode,
+		NodeAttributes: ast.NewNodeAttributesBuilder().
+			WithId(c.getNextID()).
+			WithRangePositions(
+				start.Line,
+				start.Column,
+				uint(field.EndPoint().Row),
+				uint(field.EndPoint().Column),
+			).
+			Build(),
+		X: argumentNode,
 		Sel: ast.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(field.Content(source)).
 			WithSitterPos(field).
 			BuildPtr(),
 	}
-	fmt.Printf("X:%s", selExpr.X)
+	//fmt.Printf("X:%s", selExpr.X)
 	return selExpr
 }
 

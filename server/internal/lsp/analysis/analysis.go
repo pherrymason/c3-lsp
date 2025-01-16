@@ -125,14 +125,29 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			return nil
 		}
 
+	case *ast.FunctionCall:
+		ident := base.Identifier
+		switch i := ident.(type) {
+		case *ast.SelectorExpr:
+			parentSymbol = solveSelAtSelectorExpr(i, pos, fileName, moduleName, symbolTable)
+			if parentSymbol == nil {
+				return nil
+			}
+		}
+
 	default:
 		return nil
 	}
 
-	switch parentSymbol.Kind {
+	return solveSymbolChild(parentSymbol, selectorExpr.Sel.Name, moduleName, fileName, &symbolTable)
+}
+
+func solveSymbolChild(symbol *Symbol, childName string, moduleName ModuleName, fileName string, symbolTable *SymbolTable) *Symbol {
+	selIdent := childName
+	switch symbol.Kind {
 	case ast.STRUCT:
-		selIdent := selectorExpr.Sel.Name
-		for _, member := range parentSymbol.NodeDecl.(*ast.StructDecl).Members {
+		// Search In Members
+		for _, member := range symbol.NodeDecl.(*ast.StructDecl).Members {
 			if member.Names[0].Name == selIdent {
 				if member.Type.BuiltIn {
 					return &Symbol{
@@ -159,6 +174,34 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 				)
 				return value.Get()
 			}
+		}
+
+		// Not found in members, we need to search struct methods
+		for _, relatedSymbol := range symbol.Children {
+			if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == selIdent {
+				return relatedSymbol.Child
+			}
+		}
+
+	case ast.FUNCTION:
+		fn := symbol.NodeDecl.(*ast.FunctionDecl)
+		returnType := fn.Signature.ReturnType
+		returnTypeSymbol := symbolTable.FindSymbolByPosition(
+			returnType.Range.Start,
+			fileName,
+			returnType.Identifier.Name,
+			moduleName,
+			0,
+		)
+
+		if returnTypeSymbol.IsSome() {
+			return solveSymbolChild(
+				returnTypeSymbol.Get(),
+				selIdent,
+				moduleName,
+				fileName,
+				symbolTable,
+			)
 		}
 	}
 
