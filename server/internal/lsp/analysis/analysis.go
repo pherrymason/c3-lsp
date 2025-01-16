@@ -143,6 +143,10 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 }
 
 func solveSymbolChild(symbol *Symbol, childName string, moduleName ModuleName, fileName string, symbolTable *SymbolTable) *Symbol {
+	if symbol == nil {
+		return nil
+	}
+	
 	selIdent := childName
 	switch symbol.Kind {
 	case ast.STRUCT:
