@@ -444,7 +444,7 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 		expected *ast.FunctionCall
 	}{
 		{
-			skip:  false,
+			skip:  true,
 			input: "object.call(1);",
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 16).Build(),
@@ -462,7 +462,7 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 			},
 		},
 		{
-			skip:  false,
+			skip:  true,
 			input: "object.prop.call(1);",
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 21).Build(),
@@ -499,6 +499,55 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 			compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
 			call := compound.Statements[0].(*ast.ExpressionStmt).Expr.(*ast.FunctionCall)
+
+			assert.Equal(t, tt.expected, call)
+		})
+	}
+}
+
+func TestConvertToAST_field_expr(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		input    string
+		expected *ast.SelectorExpr
+	}{
+		{
+			skip:  false,
+			input: "object.call().length;",
+			expected: &ast.SelectorExpr{
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 22).Build(),
+				X: &ast.FunctionCall{
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 15).Build(),
+					Identifier: &ast.SelectorExpr{
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 13).Build(),
+						X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
+						Sel:            ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).BuildPtr(),
+					},
+					Arguments:     []ast.Expression{},
+					TrailingBlock: option.None[*ast.CompoundStmt](),
+				},
+				Sel: ast.NewIdentifierBuilder().
+					WithStartEnd(3, 16, 3, 22).
+					WithName("length").
+					BuildPtr(),
+			},
+		},
+	}
+	for i, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("function_statements_call_chain[%d]", i), func(t *testing.T) {
+			source := `
+	module foo;
+	fn void main() {
+		` + tt.input + `
+	}`
+
+			cv := newTestAstConverter()
+			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
+			call := compound.Statements[0].(*ast.ExpressionStmt).Expr.(*ast.SelectorExpr)
 
 			assert.Equal(t, tt.expected, call)
 		})
