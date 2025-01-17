@@ -32,18 +32,18 @@ func NewStore() *Storage {
 	}
 }
 
-func (pd *Storage) OpenDocument(uri string, text string, version uint) {
-	converter := factory.NewASTConverter()
+func (pd *Storage) OpenDocument(uri string, text string, version uint) *Document {
 	document := &Document{
 		Uri:      uri,
 		FullPath: utils.NormalizePath(uri),
 		Text:     text,
 		Owned:    true,
 		Version:  version,
-		Ast:      converter.ConvertToAST(factory.GetCST(text), text, uri),
 	}
 
 	pd.Documents[uri] = document
+
+	return document
 }
 
 func (pd *Storage) OpenDocumentFromPath(path string, text string, version uint) {

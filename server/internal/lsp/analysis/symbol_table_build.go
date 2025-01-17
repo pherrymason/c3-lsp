@@ -5,15 +5,19 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
 )
 
-func BuildSymbolTable(astTree ast.Node, fileName string) SymbolTable {
-	visitor := newSymbolTableVisitor()
+func BuildSymbolTable(astTree ast.Node, fileName string) *SymbolTable {
+	visitor := newSymbolTableVisitor(nil)
 	walk.Walk(&visitor, astTree, "")
 
 	return visitor.table
 }
+func UpdateSymbolTable(symbolTable *SymbolTable, astTree ast.Node, fileName string) {
+	visitor := newSymbolTableVisitor(symbolTable)
+	walk.Walk(&visitor, astTree, "")
+}
 
 type symbolTableGenerator struct {
-	table SymbolTable
+	table *SymbolTable
 
 	// State properties to keep track
 	currentModule   ast.Module
@@ -22,9 +26,15 @@ type symbolTableGenerator struct {
 	scopePushed     uint
 }
 
-func newSymbolTableVisitor() symbolTableGenerator {
+func newSymbolTableVisitor(symbolTable *SymbolTable) symbolTableGenerator {
+	if symbolTable == nil {
+		return symbolTableGenerator{
+			table: NewSymbolTable(),
+		}
+	}
+
 	return symbolTableGenerator{
-		table: *NewSymbolTable(),
+		table: symbolTable,
 	}
 }
 

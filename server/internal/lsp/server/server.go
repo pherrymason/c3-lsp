@@ -2,6 +2,8 @@ package server
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"log"
 	"time"
@@ -26,11 +28,13 @@ type Server struct {
 	options ServerOpts
 	version string
 
-	documents *document.Storage
+	documents    *document.Storage
+	astConverter *factory.ASTConverter
+	symbolTable  *analysis.SymbolTable
 
-	state  *ps.ProjectState
+	state  *ps.ProjectState // To remove on 0.4 release
 	parser *p.Parser
-	search search.Search
+	search search.Search // To remove on 0.4 release
 
 	diagnosticDebounced func(func())
 }
@@ -70,10 +74,13 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		options: opts,
 		version: version,
 
-		documents: document.NewStore(),
-		state:     &state,
-		parser:    &parser,
-		search:    search,
+		documents:    document.NewStore(),
+		astConverter: factory.NewASTConverter(),
+		symbolTable:  analysis.NewSymbolTable(),
+
+		state:  &state,
+		parser: &parser,
+		search: search,
 
 		diagnosticDebounced: debounce.New(opts.Diagnostics.Delay * time.Millisecond),
 	}

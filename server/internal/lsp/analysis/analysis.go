@@ -40,7 +40,7 @@ func getPositionContext(document *document.Document, pos lsp.Position) PositionC
 	return posContext
 }
 
-func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable SymbolTable, tree ast.Node) option.Option[*Symbol] {
+func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *SymbolTable, tree ast.Node) option.Option[*Symbol] {
 	nodeAtPosition, path := FindNode(tree, pos)
 
 	var name string
@@ -128,7 +128,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable SymbolT
 }
 
 // solveSelAtSelectorExpr resolves Sel Ident symbol.
-func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, moduleName ModuleName, symbolTable SymbolTable, deepLevel uint) *Symbol {
+func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, moduleName ModuleName, symbolTable *SymbolTable, deepLevel uint) *Symbol {
 	// To be able to resolve selectorExpr.Sel, we need to know first what is selectorExpr.X is or what does it return.
 	var parentSymbol *Symbol
 	switch base := selectorExpr.X.(type) {
@@ -172,7 +172,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 	if deepLevel == 0 {
 		solveElementType = false
 	}
-	return resolveChildSymbol(parentSymbol, selectorExpr.Sel.Name, moduleName, fileName, &symbolTable, solveElementType)
+	return resolveChildSymbol(parentSymbol, selectorExpr.Sel.Name, moduleName, fileName, symbolTable, solveElementType)
 }
 
 func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName, fileName string, symbolTable *SymbolTable, solveType bool) *Symbol {

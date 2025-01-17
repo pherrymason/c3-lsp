@@ -16,7 +16,7 @@ import (
 func (srv *Server) TextDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
 	if featureflags.IsActive(featureflags.UseGeneratedAST) {
 		doc, _ := srv.documents.GetDocument(params.TextDocument.URI)
-		locations := analysis.GetDefinitionLocation(doc, lsp.NewLSPPosition(params.Position), srv.documents)
+		locations := analysis.GetDefinitionLocation(doc, lsp.NewLSPPosition(params.Position), srv.documents, srv.symbolTable)
 		return locations, nil
 	}
 
