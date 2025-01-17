@@ -7,7 +7,7 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func GetDefinitionLocation(document *document.Document, pos lsp.Position, storage *document.Storage) []protocol.Location {
+func GetDefinitionLocation(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) []protocol.Location {
 
 	posContext := getPositionContext(document, pos)
 
@@ -19,6 +19,8 @@ func GetDefinitionLocation(document *document.Document, pos lsp.Position, storag
 			return locations
 		}
 	}
+
+	FindSymbolAtPosition(pos, document.FullPath, symbolTable, document.Ast)
 
 	return []protocol.Location{}
 }
