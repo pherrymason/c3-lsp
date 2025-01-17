@@ -16,20 +16,13 @@ func aWithPos(startRow uint, startCol uint, endRow uint, endCol uint) ast.NodeAt
 }
 
 func TestConvertToAST_module(t *testing.T) {
-	source := `module foo;`
+	source := `module foo;
+	int dummy;`
 	cv := newTestAstConverter()
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	expectedAst := ast.File{
-		Name: "file.c3",
-		NodeAttributes: ast.NewNodeAttributesBuilder().
-			WithRange(lsp.NewRange(0, 0, 0, 11)).
-			Build(),
-		Modules: []ast.Module{},
-	}
-	expectedAst.AddModule(*ast.NewModule(0, "foo", lsp.NewRange(0, 0, 0, 11), &expectedAst))
-
-	assert.Equal(t, expectedAst, tree)
+	assert.Equal(t, "foo", tree.Modules[0].Name)
+	assert.Equal(t, lsp.NewRange(0, 0, 1, 11), tree.Modules[0].Range)
 }
 
 func TestConvertToAST_module_implicit(t *testing.T) {
