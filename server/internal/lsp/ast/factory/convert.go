@@ -60,28 +60,29 @@ func (c *ASTConverter) getNextID() ast.NodeId {
 	return c.idGenerator.GenerateID()
 }
 
-func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) ast.File {
+func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) *ast.File {
 	c.generateConversionInfo()
 	source := []byte(sourceCode)
 
-	var prg ast.File
+	var prg *ast.File
 	if cstNode.Type() == "source_file" {
-		prg = *ast.NewFile(c.getNextID(), fileName, lsp.NewRangeFromSitterNode(cstNode), []ast.Module{})
+		prg = ast.NewFile(c.getNextID(), fileName, lsp.NewRangeFromSitterNode(cstNode), []ast.Module{})
 	}
 
 	anonymousModule := false
+	var lastMod *ast.Module
+	var node *sitter.Node
 	for i := 0; i < int(cstNode.ChildCount()); i++ {
-		node := cstNode.Child(i)
+		node = cstNode.Child(i)
 		parsedModules := len(prg.Modules)
 		if parsedModules == 0 && node.Type() != "module" {
 			anonymousModule = true
 			prg.AddModule(
-				*ast.NewModule(0, symbols.NormalizeModuleName(fileName), lsp.NewRangeFromSitterNode(node), &prg),
+				*ast.NewModule(0, symbols.NormalizeModuleName(fileName), lsp.NewRangeFromSitterNode(node), prg),
 			)
 			parsedModules = len(prg.Modules)
 		}
 
-		var lastMod *ast.Module
 		if parsedModules > 0 {
 			lastMod = &prg.Modules[len(prg.Modules)-1]
 
@@ -138,6 +139,10 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 		}
 	}
 
+	if node != nil {
+		lastMod.NodeAttributes.Range.End = lsp.Position{Line: uint(node.EndPoint().Row), Column: uint(node.EndPoint().Column)}
+	}
+	
 	return prg
 }
 
@@ -1423,7 +1428,6 @@ func (c *ASTConverter) convert_call_expr(node *sitter.Node, source []byte) ast.E
 	switch expr.(type) {
 	case *ast.SelectorExpr:
 		identifier = expr.(*ast.SelectorExpr)
-		fmt.Printf("IS selectorExpr")
 	case *ast.Ident:
 		identifier = expr.(*ast.Ident)
 	case *ast.TrailingGenericsExpr:
