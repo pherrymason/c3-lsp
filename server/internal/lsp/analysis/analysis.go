@@ -68,23 +68,37 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable SymbolT
 	// If parent is a SelectExpr, we will need to first search chain of elements to be able to find `name`.
 
 	totalSteps := len(path)
-	selectExpr := false
-	//identFound := false
+	parentNodeIsSelectorExpr := false
+	var parentSelectorExpr *ast.SelectorExpr
+
 	index := 0
+	selectorsChained := 0
 	for i := totalSteps - 1; i >= 0; i-- {
 		switch path[i].node.(type) {
 		case *ast.Ident, ast.Ident:
-			//identFound = true
 
 		case *ast.SelectorExpr:
-			selectExpr = true
-			index = i
-			i = 0
+			selectorsChained++
+			parentSelectorExpr = path[i].node.(*ast.SelectorExpr)
+			if !parentNodeIsSelectorExpr {
+				parentNodeIsSelectorExpr = true
+				index = i
+			}
+
+		default:
+			if parentNodeIsSelectorExpr {
+				i = 0
+			}
 		}
 	}
 
-	if selectExpr {
-		if path[index+1].propertyName == "Sel" {
+	if parentNodeIsSelectorExpr {
+		step := path[index+1]
+		if step.propertyName == "Sel" {
+			if selectorsChained > 1 {
+				// Even if we are resolving final part of a SelectorExpr, we are in the middle of a bigger chain of SelectorExpr. This means
+			}
+
 			// We need to solve first SelectorExpr.X!
 			symbol := solveSelAtSelectorExpr(
 				path[index].node.(*ast.SelectorExpr),
@@ -92,6 +106,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable SymbolT
 				fileName,
 				moduleName,
 				symbolTable,
+				0,
 			)
 
 			if symbol != nil {
@@ -101,27 +116,33 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable SymbolT
 			// As cursor is at X, we can just search normally.
 		}
 	}
-
+	if parentNodeIsSelectorExpr {
+		parentSelectorExpr.StartPosition()
+		parentSelectorExpr = nil
+	}
 	// -------------------------------------------------
-
+	// Normal search
 	sym := symbolTable.FindSymbolByPosition(pos, fileName, name, moduleName, 0)
 
 	return sym
 }
 
-// solveSelAtSelectorExpr solves iteratively the X part of SelectorExpr
-// Solves X. If X is itself a SelectorExpr, it will follow the chain and solve the symbol just before the last '.'
-func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, moduleName ModuleName, symbolTable SymbolTable) *Symbol {
+// solveSelAtSelectorExpr resolves Sel Ident symbol.
+func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, moduleName ModuleName, symbolTable SymbolTable, deepLevel uint) *Symbol {
+	// To be able to resolve selectorExpr.Sel, we need to know first what is selectorExpr.X is or what does it return.
 	var parentSymbol *Symbol
 	switch base := selectorExpr.X.(type) {
 	case *ast.Ident:
+		// X is a plain Ident. We need to resolve Ident Type:
+		// - Ident might be a variable. What's its type? Struct/Enum/Fault?
 		parentSymbol = symbolTable.SolveType(base.Name, pos, fileName)
 		if parentSymbol == nil {
 			return nil
 		}
 
 	case *ast.SelectorExpr:
-		parentSymbol = solveSelAtSelectorExpr(base, pos, fileName, moduleName, symbolTable)
+		// X is a SelectorExpr itself, we need to solve the type of base.Sel
+		parentSymbol = solveSelAtSelectorExpr(base, pos, fileName, moduleName, symbolTable, deepLevel+1)
 		if parentSymbol == nil {
 			return nil
 		}
@@ -130,7 +151,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 		ident := base.Identifier
 		switch i := ident.(type) {
 		case *ast.SelectorExpr:
-			parentSymbol = solveSelAtSelectorExpr(i, pos, fileName, moduleName, symbolTable)
+			parentSymbol = solveSelAtSelectorExpr(i, pos, fileName, moduleName, symbolTable, deepLevel+1)
 			if parentSymbol == nil {
 				return nil
 			}
@@ -146,21 +167,25 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 		return nil
 	}
 
-	return solveSymbolChild(parentSymbol, selectorExpr.Sel.Name, moduleName, fileName, &symbolTable)
+	// We've found X type, we are ready to find selectorExpr.Sel inside `X`'s type:
+	solveElementType := true
+	if deepLevel == 0 {
+		solveElementType = false
+	}
+	return resolveChildSymbol(parentSymbol, selectorExpr.Sel.Name, moduleName, fileName, &symbolTable, solveElementType)
 }
 
-func solveSymbolChild(symbol *Symbol, childName string, moduleName ModuleName, fileName string, symbolTable *SymbolTable) *Symbol {
+func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName, fileName string, symbolTable *SymbolTable, solveType bool) *Symbol {
 	if symbol == nil {
 		return nil
 	}
 
-	selIdent := childName
 	switch symbol.Kind {
 	case ast.STRUCT:
 		// Search In Members
 		for _, member := range symbol.NodeDecl.(*ast.StructDecl).Members {
-			if member.Names[0].Name == selIdent {
-				if member.Type.BuiltIn {
+			if member.Names[0].Name == nextIdent {
+				if member.Type.BuiltIn || !solveType {
 					return &Symbol{
 						Name:     member.Names[0].Name,
 						Module:   moduleName,
@@ -176,6 +201,8 @@ func solveSymbolChild(symbol *Symbol, childName string, moduleName ModuleName, f
 					}
 				}
 
+				// If nextIdent is the last element in the chain of SelectorExpr, we don't need to resolve the type.
+				// Else, we need to check for the type to continue resolving each step of the chain
 				value := symbolTable.FindSymbolByPosition(
 					member.Range.Start,
 					fileName,
@@ -183,13 +210,17 @@ func solveSymbolChild(symbol *Symbol, childName string, moduleName ModuleName, f
 					moduleName,
 					0,
 				)
-				return value.Get()
+				if value.IsSome() {
+					return value.Get()
+				} else {
+					return nil
+				}
 			}
 		}
 
 		// Not found in members, we need to search struct methods
 		for _, relatedSymbol := range symbol.Children {
-			if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == selIdent {
+			if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == nextIdent {
 				return relatedSymbol.Child
 			}
 		}
@@ -206,12 +237,13 @@ func solveSymbolChild(symbol *Symbol, childName string, moduleName ModuleName, f
 		)
 
 		if returnTypeSymbol.IsSome() {
-			return solveSymbolChild(
+			return resolveChildSymbol(
 				returnTypeSymbol.Get(),
-				selIdent,
+				nextIdent,
 				moduleName,
 				fileName,
 				symbolTable,
+				solveType,
 			)
 		}
 	}

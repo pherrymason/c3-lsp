@@ -228,17 +228,19 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 	t.Run("Find struct field definition in same module", func(t *testing.T) {
 		source := `struct Animal { 
 			int life;
+			Taxonomy taxId;
 		}
 		fn void main(){
 			Animal dog;
 			dog.life = 3;
+			dog.taxId = 1;
 		}`
 
 		fileName := "app.c3"
 		tree := getTree(source, fileName)
 		symbolTable := BuildSymbolTable(tree, fileName)
 
-		cursorPosition := lsp.Position{Line: 5, Column: 8}
+		cursorPosition := lsp.Position{Line: 6, Column: 8}
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
@@ -247,6 +249,33 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(1, 3, 1, 12), symbol.NodeDecl.GetRange())
 		assert.Equal(t, "int", symbol.Type.Name)
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+
+		// -----------------------------------------------
+		// Following is testing finding the symbol when cursor is in property that is not a builtin type
+		// -----------------------------------------------
+		cursorPosition = lsp.Position{Line: 7, Column: 8}
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol = symbolOpt.Get()
+		assert.Equal(t, "taxId", symbol.Name)
+		assert.Equal(t, ModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(2, 3, 2, 18), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "Taxonomy", symbol.Type.Name)
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+
+		//-----------------------------------------------
+		// Following is testing finding the symbol when cursor is in Selector.Expr
+		// -----------------------------------------------
+		cursorPosition = lsp.Position{Line: 6, Column: 4} // Cursor at d|og.life
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+
+		assert.True(t, symbolOpt.IsSome())
+		symbol = symbolOpt.Get()
+		assert.Equal(t, "dog", symbol.Name)
+		assert.Equal(t, ModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(5, 3, 5, 14), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "Animal", symbol.Type.Name)
+		assert.Equal(t, ast.Token(ast.VAR), symbol.Kind)
 	})
 
 	t.Run("Find struct method definition in same module", func(t *testing.T) {
@@ -298,7 +327,21 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(2, 3, 2, 12), symbol.NodeDecl.GetRange())
 		assert.Equal(t, "int", symbol.Type.Name)
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+
+		// -----------------------------------------------
+		// Following is testing finding the symbol when cursor is in Selector.Expr
+		// -----------------------------------------------
+		cursorPosition = lsp.Position{Line: 10, Column: 8} // Cursor is at dog.b|eing.life
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol = symbolOpt.Get()
+		assert.Equal(t, "being", symbol.Name)
+		assert.Equal(t, ModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(6, 3, 6, 15), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "Being", symbol.Type.Name)
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
+
 	t.Run("Find indirect struct field in a method chain in same module", func(t *testing.T) {
 		source := `
 		struct Sound {
@@ -411,6 +454,32 @@ func TestFindsSymbol_Declaration_function(t *testing.T) {
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "init_window", symbol.Name)
 		assert.Equal(t, lsp.NewRange(1, 1, 1, 79), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
+
+	// This test is interesting because we are playing with the cursor placed in SelectorExpr.X
+	t.Run("Find function returning a struct", func(t *testing.T) {
+		source := `
+		struct Sound {
+			int length;
+		}
+		fn Sound bark() {}
+		fn void main(){
+			Animal dog;
+			bark().length = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 7, Column: 4}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "bark", symbol.Name)
+		assert.Equal(t, ModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(4, 2, 4, 20), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
 }
