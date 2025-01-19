@@ -60,7 +60,13 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 
 	// Expressions
 	case *ast.Ident, *ast.BasicLit:
-		// Nothing to do
+	// Nothing to do
+
+	case *ast.ArgFieldSet:
+		Walk(v, n.Expr, "Expr")
+
+	case *ast.ArgParamPathSet:
+		Walk(v, n.Expr, "Expr")
 
 	case *ast.AssertStatement:
 		walkList(v, n.Assertions, "Assertions")
@@ -78,6 +84,10 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 	case *ast.BinaryExpression:
 		Walk(v, n.Left, "Left")
 		Walk(v, n.Right, "Right")
+
+	case *ast.CastExpression:
+		Walk(v, n.Type, "Type")
+		Walk(v, n.Argument, "Argument")
 
 	case *ast.CompoundStmt:
 		walkList(v, n.Statements, "Statements")
@@ -129,6 +139,8 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		Walk(v, n.Body, "Body")
 
 	case *ast.FieldAccessExpr:
+		Walk(v, n.Object, "Object")
+		Walk(v, n.Field, "Field")
 
 	case *ast.ForeachStatement:
 		Walk(v, n.Value, "Value")
@@ -172,9 +184,24 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 	case *ast.IndexAccessExpr:
 		Walk(v, n.Array, "Array")
 
+	case *ast.InlineTypeWithInitialization:
+		Walk(v, n.Type, "Type")
+		if n.InitializerList != nil {
+			Walk(v, n.InitializerList, "InitializerList")
+		}
+
+	case *ast.InitializerList:
+		walkList(v, n.Args, "Args")
+
 	case *ast.LambdaDeclarationExpr:
 		walkList(v, n.Parameters, "Parameters")
+		if n.ReturnType.IsSome() {
+			Walk(v, n.ReturnType.Get(), "ReturnType")
+		}
 		Walk(v, n.Body, "Body")
+
+	case *ast.ParenExpr:
+		Walk(v, n.X, "X")
 
 	case *ast.Nextcase:
 		if n.Label.IsSome() {
@@ -182,8 +209,16 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		}
 		Walk(v, n.Value, "Value")
 
+	case *ast.OptionalExpression:
+		Walk(v, n.Argument, "Argument")
+
 	case *ast.RangeAccessExpr:
 		Walk(v, n.Array, "Array")
+
+	case *ast.RangeIndexExpr:
+
+	case *ast.RethrowExpression:
+		Walk(v, n.Argument, "Argument")
 
 	case *ast.ReturnStatement:
 		if n.Return.IsSome() {
@@ -220,6 +255,11 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		walkList(v, n.Cases, "Cases")
 		walkList(v, n.Default, "Default")
 
+	case *ast.TernaryExpression:
+		Walk(v, n.Condition, "Condition")
+		Walk(v, n.Consequence, "Consequence")
+		Walk(v, n.Alternative, "Alternative")
+
 	case *ast.TypeSpec:
 		Walk(v, n.Name, "Name")
 		walkList(v, n.TypeParams, "TypeParams")
@@ -227,6 +267,12 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 
 	case ast.TypeInfo:
 		Walk(v, n.Identifier, "Identifier")
+
+	case *ast.UnaryExpression:
+		Walk(v, n.Argument, "Argument")
+
+	case *ast.UpdateExpression:
+		Walk(v, n.Argument, "Argument")
 
 	case *ast.ValueSpec:
 		Walk(v, n.Type, "Type")
@@ -238,189 +284,7 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 			walkList(v, n.Condition, "Condition")
 		}
 		Walk(v, n.Body, "Body")
-		/*
-			case *AssignExpression:
-				if n != nil {
-					Walk(v, n.Left)
-					Walk(v, n.Right)
-				}
-			case *BadExpression:
-			case *BadStatement:
-			case *BinaryExpression:
-				if n != nil {
-					Walk(v, n.Left)
-					Walk(v, n.Right)
-				}
-			case *BlockStatement:
-				if n != nil {
-					for _, s := range n.List {
-						Walk(v, s)
-					}
-				}
-			case *BooleanLiteral:
-			case *BracketExpression:
-				if n != nil {
-					Walk(v, n.Left)
-					Walk(v, n.Member)
-				}
-			case *BranchStatement:
-				if n != nil {
-					Walk(v, n.Label)
-				}
-			case *CallExpression:
-				if n != nil {
-					Walk(v, n.Callee)
-					for _, a := range n.ArgumentList {
-						Walk(v, a)
-					}
-				}
-			case *CaseStatement:
-				if n != nil {
-					Walk(v, n.Test)
-					for _, c := range n.Consequent {
-						Walk(v, c)
-					}
-				}
-			case *CatchStatement:
-				if n != nil {
-					Walk(v, n.Parameter)
-					Walk(v, n.Body)
-				}
-			case *ConditionalExpression:
-				if n != nil {
-					Walk(v, n.Test)
-					Walk(v, n.Consequent)
-					Walk(v, n.Alternate)
-				}
-			case *DebuggerStatement:
-			case *DoWhileStatement:
-				if n != nil {
-					Walk(v, n.Test)
-					Walk(v, n.Body)
-				}
-			case *DotExpression:
-				if n != nil {
-					Walk(v, n.Left)
-					Walk(v, n.Identifier)
-				}
-			case *EmptyExpression:
-			case *EmptyStatement:
-			case *ExpressionStatement:
-				if n != nil {
-					Walk(v, n.Expression)
-				}
-			case *ForInStatement:
-				if n != nil {
-					Walk(v, n.Into)
-					Walk(v, n.Source)
-					Walk(v, n.Body)
-				}
-			case *ForStatement:
-				if n != nil {
-					Walk(v, n.Initializer)
-					Walk(v, n.Update)
-					Walk(v, n.Test)
-					Walk(v, n.Body)
-				}
-			case *FunctionLiteral:
-				if n != nil {
-					Walk(v, n.URI)
-					for _, p := range n.ParameterList.List {
-						Walk(v, p)
-					}
-					Walk(v, n.Body)
-				}
-			case *FunctionStatement:
-				if n != nil {
-					Walk(v, n.Function)
-				}
-			case *Identifier:
-			case *IfStatement:
-				if n != nil {
-					Walk(v, n.Test)
-					Walk(v, n.Consequent)
-					Walk(v, n.Alternate)
-				}
-			case *LabelledStatement:
-				if n != nil {
-					Walk(v, n.Label)
-					Walk(v, n.Statement)
-				}
-			case *NewExpression:
-				if n != nil {
-					Walk(v, n.Callee)
-					for _, a := range n.ArgumentList {
-						Walk(v, a)
-					}
-				}
-			case *NullLiteral:
-			case *NumberLiteral:
-			case *ObjectLiteral:
-				if n != nil {
-					for _, p := range n.Value {
-						Walk(v, p.Value)
-					}
-				}
-			case *Program:
-				if n != nil {
-					for _, b := range n.Body {
-						Walk(v, b)
-					}
-				}
-			case *RegExpLiteral:
-			case *ReturnStatement:
-				if n != nil {
-					Walk(v, n.Argument)
-				}
-			case *SequenceExpression:
-				if n != nil {
-					for _, e := range n.Sequence {
-						Walk(v, e)
-					}
-				}
-			case *StringLiteral:
-			case *SwitchStatement:
-				if n != nil {
-					Walk(v, n.Discriminant)
-					for _, c := range n.Body {
-						Walk(v, c)
-					}
-				}
-			case *ThisExpression:
-			case *ThrowStatement:
-				if n != nil {
-					Walk(v, n.Argument)
-				}
-			case *TryStatement:
-				if n != nil {
-					Walk(v, n.Body)
-					Walk(v, n.Catch)
-					Walk(v, n.Finally)
-				}
-			case *UnaryExpression:
-				if n != nil {
-					Walk(v, n.Operand)
-				}
-			case *VariableExpression:
-				if n != nil {
-					Walk(v, n.Initializer)
-				}
-			case *VariableStatement:
-				if n != nil {
-					for _, e := range n.List {
-						Walk(v, e)
-					}
-				}
-			case *WhileStatement:
-				if n != nil {
-					Walk(v, n.Test)
-					Walk(v, n.Body)
-				}
-			case *WithStatement:
-				if n != nil {
-					Walk(v, n.Object)
-					Walk(v, n.Body)
-				}*/
+
 	default:
 		//panic(fmt.Sprintf("Walk: unexpected node type %T", n))
 	}
