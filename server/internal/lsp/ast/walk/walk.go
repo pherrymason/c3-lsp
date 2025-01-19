@@ -62,52 +62,41 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 	case *ast.Ident, *ast.BasicLit:
 		// Nothing to do
 
-	case *ast.BlockExpr:
-		walkList(v, n.List, "List")
-
-	case *ast.CompositeLiteral:
-		walkList(v, n.Elements, "Elements")
-
-	case *ast.IndexAccessExpr:
-		Walk(v, n.Array, "Array")
-
-	case *ast.RangeAccessExpr:
-		Walk(v, n.Array, "Array")
-
-	case *ast.SelectorExpr:
-		Walk(v, n.X, "X")
-		Walk(v, n.Sel, "Sel")
-
-	case *ast.StarExpr:
-	case *ast.SubscriptExpression:
-		Walk(v, n.Argument, "Argument")
-		Walk(v, n.Index, "Index")
-
-	case *ast.FieldAccessExpr:
+	case *ast.AssertStatement:
+		walkList(v, n.Assertions, "Assertions")
 
 	case *ast.AssignmentExpression:
 		Walk(v, n.Left, "Left")
 		Walk(v, n.Right, "Right")
 
+	case *ast.BlockExpr:
+		walkList(v, n.List, "List")
+
+	case *ast.BreakStatement:
+		// TODO label
+
 	case *ast.BinaryExpression:
 		Walk(v, n.Left, "Left")
 		Walk(v, n.Right, "Right")
 
-	case *ast.ExpressionStmt:
-		Walk(v, n.Expr, "Expr")
+	case *ast.CompoundStmt:
+		walkList(v, n.Statements, "Statements")
 
-	case *ast.GenDecl:
-		Walk(v, n.Spec, "Spec")
+	case *ast.CompositeLiteral:
+		walkList(v, n.Elements, "Elements")
 
-	case *ast.ValueSpec:
-		Walk(v, n.Type, "Type")
-		walkList(v, n.Names, "Names")
-		Walk(v, n.Value, "Value")
+	case *ast.ContinueStatement:
+		// TODO label
 
-	case *ast.TypeSpec:
-		Walk(v, n.Name, "Name")
-		walkList(v, n.TypeParams, "TypeParams")
-		Walk(v, n.TypeDescription, "TypeDescription")
+	case *ast.DeclarationStmt:
+		Walk(v, n.Decl, "Decl")
+
+	case *ast.DeferStatement:
+		Walk(v, n.Statement, "Statement")
+
+	case *ast.DoStatement:
+		Walk(v, n.Condition, "Condition")
+		Walk(v, n.Body, "Body")
 
 	case *ast.EnumType:
 		if n.BaseType.IsSome() {
@@ -116,12 +105,19 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		walkList(v, n.StaticValues, "StaticValues")
 		walkList(v, n.Values, "Values")
 
+	case *ast.ElseStatement:
+		Walk(v, n.Statement, "Statement")
+
+	case *ast.ExpressionStmt:
+		Walk(v, n.Expr, "Expr")
+
 	case *ast.FaultDecl:
 		Walk(v, n.Name, "Name")
 		if n.BackingType.IsSome() {
 			Walk(v, n.BackingType.Get(), "BackingType")
 		}
 		walkList(v, n.Members, "Members")
+
 	case ast.FaultMember:
 		Walk(v, n.Name, "Name")
 
@@ -132,36 +128,116 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		Walk(v, n.Signature, "Signature")
 		Walk(v, n.Body, "Body")
 
+	case *ast.FieldAccessExpr:
+
+	case *ast.ForeachStatement:
+		Walk(v, n.Value, "Value")
+		Walk(v, n.Index, "Index")
+		Walk(v, n.Collection, "Collection")
+		Walk(v, n.Body, "Body")
+
+	case *ast.ForStatement:
+		if n.Initializer != nil {
+			walkList(v, n.Initializer, "Initializer")
+		}
+		Walk(v, n.Condition, "Condition")
+		if n.Update != nil {
+			walkList(v, n.Update, "Update")
+		}
+		Walk(v, n.Body, "Body")
+
 	case *ast.FunctionCall:
 		Walk(v, n.Identifier, "Identifier")
 		walkList(v, n.Arguments, "Arguments")
 		if n.TrailingBlock.IsSome() {
 			Walk(v, n.TrailingBlock.Get(), "TrailingBlock")
 		}
-		
+
 	case ast.FunctionSignature:
 		Walk(v, n.Name, "URI")
 		walkList(v, n.Parameters, "Parameters")
 		Walk(v, n.ReturnType, "ReturnType")
 
+	case *ast.GenDecl:
+		Walk(v, n.Spec, "Spec")
+
+	case *ast.IfStmt:
+		// TODO Label
+		if n.Condition != nil {
+			walkList(v, n.Condition, "Condition")
+		}
+		Walk(v, n.Statement, "Statement")
+		Walk(v, n.Else, "Else")
+
+	case *ast.IndexAccessExpr:
+		Walk(v, n.Array, "Array")
+
 	case *ast.LambdaDeclarationExpr:
 		walkList(v, n.Parameters, "Parameters")
 		Walk(v, n.Body, "Body")
 
-	case *ast.CompoundStmt:
+	case *ast.Nextcase:
+		if n.Label.IsSome() {
+			// Nothing to do! Label is string
+		}
+		Walk(v, n.Value, "Value")
+
+	case *ast.RangeAccessExpr:
+		Walk(v, n.Array, "Array")
+
+	case *ast.ReturnStatement:
+		if n.Return.IsSome() {
+			Walk(v, n.Return.Get(), "Return")
+		}
+
+	case *ast.SelectorExpr:
+		Walk(v, n.X, "X")
+		Walk(v, n.Sel, "Sel")
+
+	case *ast.StarExpr:
+
+	case *ast.StructDecl:
+		walkList(v, n.Members, "Members")
+
+	case ast.StructMemberDecl:
+		Walk(v, n.Type, "Type")
+		walkList(v, n.Names, "Names")
+
+	case *ast.SubscriptExpression:
+		Walk(v, n.Argument, "Argument")
+		Walk(v, n.Index, "Index")
+
+	case ast.SwitchCase:
+		Walk(v, n.Value, "Value")
 		walkList(v, n.Statements, "Statements")
 
-	case *ast.DeclarationStmt:
-		Walk(v, n.Decl, "Decl")
+	case ast.SwitchCaseRange:
+		Walk(v, n.Start, "Start")
+		Walk(v, n.End, "End")
+
+	case *ast.SwitchStatement:
+		walkList(v, n.Condition, "Condition")
+		walkList(v, n.Cases, "Cases")
+		walkList(v, n.Default, "Default")
+
+	case *ast.TypeSpec:
+		Walk(v, n.Name, "Name")
+		walkList(v, n.TypeParams, "TypeParams")
+		Walk(v, n.TypeDescription, "TypeDescription")
 
 	case ast.TypeInfo:
 		Walk(v, n.Identifier, "Identifier")
 
-	case *ast.StructDecl:
-		walkList(v, n.Members, "Members")
-	case ast.StructMemberDecl:
+	case *ast.ValueSpec:
 		Walk(v, n.Type, "Type")
 		walkList(v, n.Names, "Names")
+		Walk(v, n.Value, "Value")
+
+	case *ast.WhileStatement:
+		if n.Condition != nil {
+			walkList(v, n.Condition, "Condition")
+		}
+		Walk(v, n.Body, "Body")
 		/*
 			case *AssignExpression:
 				if n != nil {

@@ -99,6 +99,7 @@ type (
 	}
 
 	ForeachValue struct {
+		NodeAttributes
 		Type       TypeInfo
 		Identifier *Ident
 	}

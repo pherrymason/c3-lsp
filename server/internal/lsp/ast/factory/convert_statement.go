@@ -515,7 +515,9 @@ func (c *ASTConverter) convert_foreach_stmt(node *sitter.Node, source []byte) as
 }
 
 func (c *ASTConverter) convert_foreach_var(node *sitter.Node, source []byte) ast.ForeachValue {
-	value := ast.ForeachValue{}
+	value := ast.ForeachValue{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+	}
 
 	//debugNode(node, source, fmt.Sprint(node.ChildCount()))
 	for i := 0; i < int(node.ChildCount()); i++ {
