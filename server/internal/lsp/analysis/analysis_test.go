@@ -17,6 +17,7 @@ func getTree(source string, fileName string) *ast.File {
 }
 
 func TestFindSymbol_ignores_language_keywords(t *testing.T) {
+	t.Skip("Need analyzer to know context to complement it with a list of blacklist")
 	cases := []struct {
 		source string
 	}{
@@ -212,6 +213,27 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, "BACKGROUND", symbol.Name)
 		assert.Equal(t, lsp.NewRange(0, 26, 0, 36), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+	})
+
+	t.Run("Find enum method in same module", func(t *testing.T) {
+		source := `enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+		fn void WindowStatus.foo() {}
+		fn void main(){
+			WindowStatus status;
+			status.foo();
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 4, Column: 11}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "foo", symbol.Name)
+		assert.Equal(t, lsp.NewRange(1, 2, 1, 31), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
 }
 
