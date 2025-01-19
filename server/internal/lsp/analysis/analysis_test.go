@@ -186,9 +186,10 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 	})
 
 	t.Run("Find enum member in same module", func(t *testing.T) {
-		source := `enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+		source := `
 		const OPEN = 0; 		// To confuse algorithm
 		const BACKGROUND = 1; 	// To confuse algorithm
+		enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 		fn void main(){
 			WindowStatus status = OPEN;
 			WindowStatus back = WindowStatus.BACKGROUND;
@@ -198,20 +199,20 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		tree := getTree(source, fileName)
 		symbolTable := BuildSymbolTable(tree, fileName)
 
-		cursorPosition := lsp.Position{Line: 4, Column: 26}
+		cursorPosition := lsp.Position{Line: 5, Column: 26}
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "OPEN", symbol.Name)
-		assert.Equal(t, lsp.NewRange(0, 20, 0, 24), symbol.NodeDecl.GetRange())
+		assert.Equal(t, lsp.NewRange(3, 22, 3, 26), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 
-		cursorPosition = lsp.Position{Line: 5, Column: 37}
+		cursorPosition = lsp.Position{Line: 6, Column: 37}
 		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		assert.True(t, symbolOpt.IsSome())
 		symbol = symbolOpt.Get()
 		assert.Equal(t, "BACKGROUND", symbol.Name)
-		assert.Equal(t, lsp.NewRange(0, 26, 0, 36), symbol.NodeDecl.GetRange())
+		assert.Equal(t, lsp.NewRange(3, 28, 3, 38), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
 
