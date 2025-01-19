@@ -101,6 +101,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 
 			module := convert_module(node, source)
 			prg.AddModule(module)
+			lastMod = &prg.Modules[len(prg.Modules)-1]
 
 		case "import_declaration":
 			anImport := c.convert_imports(node, source).(*ast.Import)
