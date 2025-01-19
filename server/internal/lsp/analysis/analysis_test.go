@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
@@ -55,7 +56,7 @@ func TestFindSymbol_ignores_language_keywords(t *testing.T) {
 			cursorPosition := lsp.Position{Line: 0, Column: 12}
 			symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 
-			assert.True(t, symbolOpt.IsNone())
+			assert.True(t, symbolOpt.IsNone(), fmt.Sprintf("Found symbol for keyword %s", tt.source))
 		})
 	}
 }
@@ -217,6 +218,23 @@ func TestFindsSymbol_Declaration_fault(t *testing.T) {
 		assert.Equal(t, "WindowError", symbol.Name)
 		assert.Equal(t, lsp.NewRange(0, 0, 0, 58), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FAULT), symbol.Kind)
+	})
+
+	t.Run("Find fault member in same module", func(t *testing.T) {
+		source := `fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+		fn void main(){WindowError err = UNEXPECTED_ERROR;}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 1, Column: 36}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "UNEXPECTED_ERROR", symbol.Name)
+		assert.Equal(t, lsp.NewRange(0, 20, 0, 36), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
 }
 

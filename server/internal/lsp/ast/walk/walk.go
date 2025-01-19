@@ -96,13 +96,6 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 	case *ast.ExpressionStmt:
 		Walk(v, n.Expr, "Expr")
 
-	case *ast.FunctionCall:
-		Walk(v, n.Identifier, "Identifier")
-		walkList(v, n.Arguments, "Arguments")
-		if n.TrailingBlock.IsSome() {
-			Walk(v, n.TrailingBlock.Get(), "TrailingBlock")
-		}
-
 	case *ast.GenDecl:
 		Walk(v, n.Spec, "Spec")
 
@@ -139,6 +132,13 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		Walk(v, n.Signature, "Signature")
 		Walk(v, n.Body, "Body")
 
+	case *ast.FunctionCall:
+		Walk(v, n.Identifier, "Identifier")
+		walkList(v, n.Arguments, "Arguments")
+		if n.TrailingBlock.IsSome() {
+			Walk(v, n.TrailingBlock.Get(), "TrailingBlock")
+		}
+		
 	case ast.FunctionSignature:
 		Walk(v, n.Name, "URI")
 		walkList(v, n.Parameters, "Parameters")
