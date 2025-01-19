@@ -188,6 +188,16 @@ func solveSelAtSelectorExpr(
 			return nil
 		}
 
+	case ast.TypeInfo:
+		result := symbolTable.FindSymbolByPosition(
+			base.StartPosition(),
+			fileName,
+			base.Identifier.Name,
+			moduleName,
+			0,
+		)
+		parentSymbol = result.GetOrElse(nil)
+
 	case *ast.SelectorExpr:
 		// X is a SelectorExpr itself, we need to solve the type of base.Sel
 		parentSymbol = solveSelAtSelectorExpr(base, pos, fileName, moduleName, context, symbolTable, deepLevel+1)
