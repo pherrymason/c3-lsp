@@ -272,6 +272,28 @@ func TestFindsSymbol_Declaration_fault(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(0, 20, 0, 36), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
+
+	t.Run("Find fault method in same module", func(t *testing.T) {
+		source := `fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+		fn int foo() {} // To confuse algorithm
+		fn void WindowError.foo() {}
+		fn void main(){
+			WindowError err;
+			err.foo();
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 5, Column: 8}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "foo", symbol.Name)
+		assert.Equal(t, lsp.NewRange(2, 2, 2, 30), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
 }
 
 func TestFindsSymbol_Declaration_struct(t *testing.T) {

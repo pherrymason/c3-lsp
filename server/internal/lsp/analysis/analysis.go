@@ -181,6 +181,15 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 	}
 
 	switch symbol.Kind {
+	case ast.ENUM, ast.FAULT:
+		for _, childRel := range symbol.Children {
+			if childRel.Tag == Field && childRel.Child.Name == nextIdent {
+				return childRel.Child
+			} else if childRel.Tag == Method && childRel.Child.Name == nextIdent {
+				return childRel.Child
+			}
+		}
+
 	case ast.STRUCT:
 		// Search In Members
 		for _, member := range symbol.NodeDecl.(*ast.StructDecl).Members {
