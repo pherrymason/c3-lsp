@@ -48,7 +48,7 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 	//case *CommentGroup:
 	// Nothing to do
 
-	case ast.File:
+	case *ast.File:
 		walkList(v, n.Modules, "Modules")
 
 	case ast.Module:
@@ -109,6 +109,28 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 	case *ast.ValueSpec:
 		Walk(v, n.Type, "Type")
 		walkList(v, n.Names, "Names")
+		Walk(v, n.Value, "Value")
+
+	case *ast.TypeSpec:
+		Walk(v, n.Name, "Name")
+		walkList(v, n.TypeParams, "TypeParams")
+		Walk(v, n.TypeDescription, "TypeDescription")
+
+	case *ast.EnumType:
+		if n.BaseType.IsSome() {
+			Walk(v, n.BaseType.Get(), "BaseType")
+		}
+		walkList(v, n.StaticValues, "StaticValues")
+		walkList(v, n.Values, "Values")
+
+	case *ast.FaultDecl:
+		Walk(v, n.Name, "Name")
+		if n.BackingType.IsSome() {
+			Walk(v, n.BackingType.Get(), "BackingType")
+		}
+		walkList(v, n.Members, "Members")
+	case ast.FaultMember:
+		Walk(v, n.Name, "Name")
 
 	case *ast.FunctionDecl:
 		if n.ParentTypeId.IsSome() {
@@ -118,7 +140,7 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		Walk(v, n.Body, "Body")
 
 	case ast.FunctionSignature:
-		Walk(v, n.Name, "Name")
+		Walk(v, n.Name, "URI")
 		walkList(v, n.Parameters, "Parameters")
 		Walk(v, n.ReturnType, "ReturnType")
 
@@ -134,6 +156,12 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 
 	case ast.TypeInfo:
 		Walk(v, n.Identifier, "Identifier")
+
+	case *ast.StructDecl:
+		walkList(v, n.Members, "Members")
+	case ast.StructMemberDecl:
+		Walk(v, n.Type, "Type")
+		walkList(v, n.Names, "Names")
 		/*
 			case *AssignExpression:
 				if n != nil {
@@ -220,7 +248,7 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 				}
 			case *FunctionLiteral:
 				if n != nil {
-					Walk(v, n.Name)
+					Walk(v, n.URI)
 					for _, p := range n.ParameterList.List {
 						Walk(v, p)
 					}

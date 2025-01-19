@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/pkg/featureflags"
 
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
@@ -11,6 +12,10 @@ import (
 
 // Support "Hover"
 func (srv *Server) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+	if featureflags.IsActive(featureflags.UseGeneratedAST) {
+		return nil, nil
+	}
+	
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
 	docId := utils.NormalizePath(params.TextDocument.URI)
 	foundSymbolOption := srv.search.FindSymbolDeclarationInWorkspace(docId, pos, srv.state)

@@ -160,7 +160,7 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
 	assert.Equal(t, option.None[ast.TypeInfo](), enumType.BaseType)
 
-	assert.Equal(t, []ast.Expression{}, enumType.Fields, "No fields should be present")
+	assert.Equal(t, []ast.Expression{}, enumType.StaticValues, "No fields should be present")
 	assert.Len(t, enumType.Values, 3)
 	assert.Equal(t, "RED", enumType.Values[0].Name.Name)
 	assert.Equal(t, lsp.NewRange(1, 15, 1, 18), enumType.Values[0].Name.Range)
@@ -186,30 +186,30 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 
 	enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 	enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
-	assert.Len(t, enumType.Fields, 3)
+	assert.Len(t, enumType.StaticValues, 3)
 
 	assert.Equal(t,
 		ast.NewIdentifierBuilder().
 			WithName("desc").
 			WithStartEnd(1, 26, 1, 30).BuildPtr(),
-		enumType.Fields[0].(*ast.Field).Name,
+		enumType.StaticValues[0].(*ast.Field).Name,
 	)
-	assert.Equal(t, "String", enumType.Fields[0].(*ast.Field).Type.Identifier.Name)
-	assert.Equal(t, lsp.NewRange(1, 19, 1, 25), enumType.Fields[0].(*ast.Field).Type.Identifier.Range)
+	assert.Equal(t, "String", enumType.StaticValues[0].(*ast.Field).Type.Identifier.Name)
+	assert.Equal(t, lsp.NewRange(1, 19, 1, 25), enumType.StaticValues[0].(*ast.Field).Type.Identifier.Range)
 
 	assert.Equal(t, ast.NewIdentifierBuilder().
 		WithName("active").
 		WithStartEnd(1, 37, 1, 43).BuildPtr(),
-		enumType.Fields[1].(*ast.Field).Name,
+		enumType.StaticValues[1].(*ast.Field).Name,
 	)
-	assert.Equal(t, "bool", enumType.Fields[1].(*ast.Field).Type.Identifier.Name)
+	assert.Equal(t, "bool", enumType.StaticValues[1].(*ast.Field).Type.Identifier.Name)
 
 	assert.Equal(t, ast.NewIdentifierBuilder().
 		WithName("ke").
 		WithStartEnd(1, 50, 1, 52).BuildPtr(),
-		enumType.Fields[2].(*ast.Field).Name,
+		enumType.StaticValues[2].(*ast.Field).Name,
 	)
-	assert.Equal(t, "char", enumType.Fields[2].(*ast.Field).Type.Identifier.Name)
+	assert.Equal(t, "char", enumType.StaticValues[2].(*ast.Field).Type.Identifier.Name)
 	return
 
 	// Test enum with associated parameters declaration
@@ -227,13 +227,13 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 					Optional:       false,
 					NodeAttributes: aWithPos(row, 14, row, 17),
 				}),
-				Fields: []ast.Expression{},
-				Values: []*ast.EnumValue{},
+				StaticValues: []ast.Expression{},
+				Values:       []*ast.EnumValue{},
 			}, /*
 				Properties: []ast.EnumProperty{
 					{
-						Name: ast.Ident{
-							Name:           "desc",
+						URI: ast.Ident{
+							URI:           "desc",
 							NodeAttributes: aWithPos(row, 19, row, 30),
 						},
 						Type: ast.TypeInfo{
@@ -245,8 +245,8 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 						NodeAttributes: aWithPos(row, 19, row, 30),
 					},
 					{
-						Name: ast.Ident{
-							Name:           "active",
+						URI: ast.Ident{
+							URI:           "active",
 							NodeAttributes: aWithPos(row, 32, row, 43),
 						},
 						Type: ast.TypeInfo{
@@ -258,8 +258,8 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 						NodeAttributes: aWithPos(row, 32, row, 43),
 					},
 					{
-						Name: ast.Ident{
-							Name:           "ke",
+						URI: ast.Ident{
+							URI:           "ke",
 							NodeAttributes: aWithPos(row, 45, row, 52),
 						},
 						Type: ast.TypeInfo{
@@ -274,8 +274,8 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 
 				Members: []ast.EnumMember{
 					{
-						Name: ast.Ident{
-							Name:           "PENDING",
+						URI: ast.Ident{
+							URI:           "PENDING",
 							NodeAttributes: aWithPos(row+1, 2, row+1, 9),
 						},
 						Value: ast.CompositeLiteral{
@@ -288,8 +288,8 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 						NodeAttributes: aWithPos(row+1, 2, row+1, 41),
 					},
 					{
-						Name: ast.Ident{
-							Name:           "RUNNING",
+						URI: ast.Ident{
+							URI:           "RUNNING",
 							NodeAttributes: aWithPos(row+2, 2, row+2, 9),
 						},
 						Value: ast.CompositeLiteral{

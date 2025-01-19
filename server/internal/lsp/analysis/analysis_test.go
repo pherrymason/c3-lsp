@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func getTree(source string, fileName string) ast.File {
+func getTree(source string, fileName string) *ast.File {
 	astConverter := factory.NewASTConverter()
 	tree := astConverter.ConvertToAST(factory.GetCST(source), source, fileName)
 
@@ -181,6 +181,23 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, "WindowStatus", symbol.Name)
 		assert.Equal(t, lsp.NewRange(0, 0, 0, 49), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.ENUM), symbol.Kind)
+	})
+
+	t.Run("Find enum member in same module", func(t *testing.T) {
+		source := `enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+		fn void main(){WindowStatus status = OPEN;}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 1, Column: 40}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "OPEN", symbol.Name)
+		assert.Equal(t, lsp.NewRange(0, 20, 0, 24), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
 }
 

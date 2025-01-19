@@ -4,6 +4,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 // This package is heavily inspired by the official go/ast.go package.
@@ -98,14 +99,15 @@ func ChangeNodePosition(n *NodeAttributes, start sitter.Point, end sitter.Point)
 
 type File struct {
 	NodeAttributes
-	Name    string
+	URI     string
 	Modules []Module
 }
 
-func NewFile(nodeId NodeId, name string, aRange lsp.Range, modules []Module) *File {
+func NewFile(nodeId NodeId, uri protocol.URI, aRange lsp.Range, modules []Module) *File {
 	node := &File{
-		Name: name,
+		URI: uri,
 		NodeAttributes: NewNodeAttributesBuilder().
+			WithId(nodeId).
 			WithRange(aRange).Build(),
 		Modules: modules,
 	}
@@ -141,18 +143,22 @@ type Import struct {
 
 func (*Import) stmtNode() {}
 
+// Deprecated: using GenDecl for enums
 type EnumProperty struct {
 	NodeAttributes
 	Type TypeInfo
 	Name Ident
 }
 
+// EnumMember
+// Deprecated: using GenDecl for enums
 type EnumMember struct {
 	NodeAttributes
 	Name  Ident
 	Value CompositeLiteral
 }
 
+// Deprecated not used
 type PropertyValue struct {
 	NodeAttributes
 	Name  string

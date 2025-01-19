@@ -80,3 +80,10 @@ func (r Range) HasPosition(position Position) bool {
 func (r Range) IsInside(or Range) bool {
 	return r.Start.IsAfter(or.Start) && r.End.IsBefore(or.End)
 }
+
+func (r Range) ToProtocol() protocol.Range {
+	return protocol.Range{
+		Start: protocol.Position{Line: protocol.UInteger(r.Start.Line), Character: protocol.UInteger(r.Start.Column)},
+		End:   protocol.Position{Line: protocol.UInteger(r.End.Line), Character: protocol.UInteger(r.End.Column)},
+	}
+}
