@@ -217,6 +217,7 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 
 	t.Run("Find enum method in same module", func(t *testing.T) {
 		source := `enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+		fn int foo() {} // To confuse algorithm
 		fn void WindowStatus.foo() {}
 		fn void main(){
 			WindowStatus status;
@@ -227,12 +228,12 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		tree := getTree(source, fileName)
 		symbolTable := BuildSymbolTable(tree, fileName)
 
-		cursorPosition := lsp.Position{Line: 4, Column: 11}
+		cursorPosition := lsp.Position{Line: 5, Column: 11}
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "foo", symbol.Name)
-		assert.Equal(t, lsp.NewRange(1, 2, 1, 31), symbol.NodeDecl.GetRange())
+		assert.Equal(t, lsp.NewRange(2, 2, 2, 31), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
 }
