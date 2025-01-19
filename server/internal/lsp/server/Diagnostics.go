@@ -27,7 +27,7 @@ func (srv *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp
 			return
 		}
 
-		log.Println("An error:", err)
+		//log.Println("An error:", err)
 		errorsInfo, diagnosticsDisabled := extractErrorDiagnostics(stdErr.String())
 
 		if diagnosticsDisabled {

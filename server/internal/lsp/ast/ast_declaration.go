@@ -15,6 +15,7 @@ type (
 		specNode()
 	}
 
+	// TODO Not yet used
 	ImportSpec struct {
 		NodeAttributes
 		Path string

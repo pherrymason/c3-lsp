@@ -142,7 +142,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 	if node != nil {
 		lastMod.NodeAttributes.Range.End = lsp.Position{Line: uint(node.EndPoint().Row), Column: uint(node.EndPoint().Column)}
 	}
-	
+
 	return prg
 }
 
@@ -241,7 +241,7 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 
 	nodeId := c.getNextID()
 	enumType := &ast.EnumType{
-		Fields: []ast.Expression{},
+		StaticValues: []ast.Expression{},
 	}
 	spec := &ast.TypeSpec{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(nodeId, node),
@@ -263,8 +263,8 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 					paramNode := paramList.Child(p)
 					if paramNode.Type() == "enum_param_declaration" {
 						convertType := c.convert_type(paramNode.Child(0), sourceCode)
-						enumType.Fields = append(
-							enumType.Fields,
+						enumType.StaticValues = append(
+							enumType.StaticValues,
 							&ast.Field{
 								NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), paramNode),
 								Name: ast.NewIdentifierBuilder().
@@ -317,15 +317,13 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 				nameNode := enumeratorNode.ChildByFieldName("name")
 				enumType.Values = append(enumType.Values,
 					&ast.EnumValue{
+						NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), nameNode),
 						Name: ast.NewIdentifierBuilder().
 							WithId(c.getNextID()).
 							WithName(nameNode.Content(sourceCode)).
 							WithSitterRange(nameNode).
 							BuildPtr(),
 						Value: compositeLiteral,
-						/*NodeAttributes: NewNodeAttributesBuilder().
-						WithSitterStartEnd(enumeratorNode.StartPoint(), enumeratorNode.EndPoint()).
-						Build(),*/
 					},
 				)
 

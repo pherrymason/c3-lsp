@@ -17,7 +17,7 @@ type Document struct {
 	Text            string
 	Owned           bool
 	DiagnosedErrors bool
-	Ast             ast.File
+	Ast             *ast.File
 	Version         uint
 	Imports         []Module
 }

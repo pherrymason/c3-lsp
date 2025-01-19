@@ -21,7 +21,7 @@ func (srv *Server) TextDocumentDidOpen(context *glsp.Context, params *protocol.D
 		// Build AST tree node
 		doc.Ast = srv.astConverter.ConvertToAST(factory.GetCST(doc.Text), doc.Text, doc.Uri)
 		// Extract Symbols
-		analysis.UpdateSymbolTable(srv.symbolTable, &doc.Ast, "")
+		analysis.UpdateSymbolTable(srv.symbolTable, doc.Ast, "")
 
 	} else {
 		doc := document.NewDocumentFromDocURI(params.TextDocument.URI, params.TextDocument.Text, params.TextDocument.Version)

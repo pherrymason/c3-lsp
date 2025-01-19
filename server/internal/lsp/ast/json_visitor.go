@@ -43,7 +43,7 @@ func (v *JSONVisitor) VisitFile(node *File) {
 
 	v.Result = map[string]interface{}{
 		PNodeType: "File",
-		"name":    node.Name,
+		"name":    node.URI,
 		"modules": jsonModules,
 	}
 }
