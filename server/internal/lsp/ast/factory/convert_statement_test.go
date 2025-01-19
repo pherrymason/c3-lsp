@@ -903,8 +903,9 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 			expected: &ast.ForeachStatement{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 3, 3, 25).Build(),
 				Value: ast.ForeachValue{
-					Type:       ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
-					Identifier: ast.NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 12, 3, 17).Build(),
+					Type:           ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).BuildPtr(),
 				},
 				Collection: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).BuildPtr(),
 				Body: &ast.CompoundStmt{
@@ -920,8 +921,9 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 			expected: &ast.ForeachStatement{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 3, 3, 26).Build(),
 				Value: ast.ForeachValue{
-					Type:       ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().IsReference().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
-					Identifier: ast.NewIdentifierBuilder().WithName("x").WithStartEnd(3, 17, 3, 18).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 12, 3, 18).Build(),
+					Type:           ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().IsReference().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("x").WithStartEnd(3, 17, 3, 18).BuildPtr(),
 				},
 				Collection: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(3, 21, 3, 22).BuildPtr(),
 				Body: &ast.CompoundStmt{
@@ -938,12 +940,14 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 3, 3, 39).Build(),
 
 				Index: ast.ForeachValue{
-					Type:       ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
-					Identifier: ast.NewIdentifierBuilder().WithName("idx").WithStartEnd(3, 16, 3, 19).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 12, 3, 19).Build(),
+					Type:           ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("idx").WithStartEnd(3, 16, 3, 19).BuildPtr(),
 				},
 				Value: ast.ForeachValue{
-					Type:       ast.NewTypeInfoBuilder().WithName("char").IsBuiltin().WithNameStartEnd(3, 21, 3, 25).WithStartEnd(3, 21, 3, 25).Build(),
-					Identifier: ast.NewIdentifierBuilder().WithName("value").WithStartEnd(3, 26, 3, 31).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 21, 3, 31).Build(),
+					Type:           ast.NewTypeInfoBuilder().WithName("char").IsBuiltin().WithNameStartEnd(3, 21, 3, 25).WithStartEnd(3, 21, 3, 25).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("value").WithStartEnd(3, 26, 3, 31).BuildPtr(),
 				},
 				Collection: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(3, 34, 3, 35).BuildPtr(),
 				Body: &ast.CompoundStmt{
@@ -961,8 +965,9 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 			expected: &ast.ForeachStatement{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 3, 5, 4).Build(),
 				Value: ast.ForeachValue{
-					Type:       ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
-					Identifier: ast.NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).BuildPtr(),
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 12, 3, 17).Build(),
+					Type:           ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(3, 12, 3, 15).WithStartEnd(3, 12, 3, 15).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("x").WithStartEnd(3, 16, 3, 17).BuildPtr(),
 				},
 				Collection: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(3, 20, 3, 21).BuildPtr(),
 				Body: &ast.CompoundStmt{
