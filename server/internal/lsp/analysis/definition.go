@@ -20,7 +20,16 @@ func GetDefinitionLocation(document *document.Document, pos lsp.Position, storag
 		}
 	}
 
-	FindSymbolAtPosition(pos, document.FullPath, symbolTable, document.Ast)
+	symbol := FindSymbolAtPosition(pos, document.Uri, symbolTable, document.Ast)
+	if symbol.IsSome() {
+		s := symbol.Get()
+		return []protocol.Location{
+			{
+				URI:   s.URI,
+				Range: s.Range.ToProtocol(),
+			},
+		}
+	}
 
 	return []protocol.Location{}
 }

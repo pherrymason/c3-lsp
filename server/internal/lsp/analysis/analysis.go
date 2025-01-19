@@ -189,7 +189,7 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 					return &Symbol{
 						Name:     member.Names[0].Name,
 						Module:   moduleName,
-						FilePath: fileName,
+						URI:      fileName,
 						Range:    member.Range,
 						NodeDecl: member,
 						Kind:     ast.FIELD,

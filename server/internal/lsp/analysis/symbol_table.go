@@ -158,7 +158,7 @@ type SymbolID int
 type Symbol struct {
 	Name     string
 	Module   ModuleName
-	FilePath string
+	URI      string
 	Range    lsp.Range
 	NodeDecl ast.Node // Declaration node of this symbol
 	Kind     ast.Token
@@ -182,8 +182,8 @@ type TypeDefinition struct {
 type RelationType string
 
 const (
-	Method   RelationType = "method"   // It's a method of parent
-	Property RelationType = "property" // It's a property of parent
+	Method RelationType = "method"   // It's a method of parent
+	Field  RelationType = "property" // It's a field of parent
 )
 
 // Relation represents a relation between a symbol and its parent.

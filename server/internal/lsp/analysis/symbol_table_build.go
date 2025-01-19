@@ -40,8 +40,8 @@ func newSymbolTableVisitor(symbolTable *SymbolTable) symbolTableGenerator {
 
 func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Visitor {
 	switch n := node.(type) {
-	case ast.File:
-		v.currentFilePath = &n
+	case *ast.File:
+		v.currentFilePath = n
 
 	case ast.Module:
 		v.currentModule = ast.Module{
@@ -49,7 +49,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 			GenericParameters: n.GenericParameters,
 			NodeAttributes:    n.NodeAttributes,
 		}
-		v.currentScope = v.table.RegisterNewRootScope(v.currentFilePath.Name, n.GetRange())
+		v.currentScope = v.table.RegisterNewRootScope(v.currentFilePath.URI, n.GetRange())
 		v.scopePushed++
 
 	case *ast.GenDecl:
@@ -59,7 +59,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 				n.Range,
 				n,
 				v.currentModule,
-				v.currentFilePath.Name,
+				v.currentFilePath.URI,
 				n.Token,
 			)
 
@@ -71,27 +71,52 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 			}
 
 		} else if n.Token == ast.ENUM {
-			v.currentScope.RegisterSymbol(
+			_, enumSym := v.currentScope.RegisterSymbol(
 				n.Spec.(*ast.TypeSpec).Name.Name,
 				n.Range,
 				n,
 				v.currentModule,
-				v.currentFilePath.Name,
+				v.currentFilePath.URI,
 				ast.ENUM,
 			)
+
+			enumType := n.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
+			for _, value := range enumType.Values {
+				_, enumFieldSym := v.currentScope.RegisterSymbol(
+					value.Name.Name,
+					value.Range,
+					value,
+					v.currentModule,
+					v.currentFilePath.URI,
+					ast.FIELD,
+				)
+				enumSym.AppendChild(enumFieldSym, Field)
+			}
 		}
 
 	case *ast.StructDecl:
-		v.currentScope.RegisterSymbol(n.Name, n.Range, n, v.currentModule, v.currentFilePath.Name, ast.STRUCT)
+		v.currentScope.RegisterSymbol(n.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.STRUCT)
 
 	case *ast.FaultDecl:
-		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.Name, ast.FAULT)
+		_, fault := v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FAULT)
+
+		for _, f := range n.Members {
+			_, m := v.currentScope.RegisterSymbol(
+				f.Name.Name,
+				f.GetRange(),
+				f,
+				v.currentModule,
+				v.currentFilePath.URI,
+				ast.FIELD,
+			)
+			fault.AppendChild(m, Field)
+		}
 
 	case *ast.DefDecl:
-		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.Name, ast.DEF)
+		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
 
 	case *ast.FunctionDecl:
-		_, symbol := v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.Name, ast.FUNCTION)
+		_, symbol := v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FUNCTION)
 		if n.Body != nil {
 			v.pushScope(n)
 		}
@@ -113,7 +138,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 				param.GetRange(),
 				param,
 				v.currentModule,
-				v.currentFilePath.Name,
+				v.currentFilePath.URI,
 				ast.VAR,
 			)
 
