@@ -27,19 +27,24 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	result := BuildSymbolTable(tree, "")
 
 	scope := result.scopeTree["file.c3"]
-	assert.Equal(t, 9, len(scope.Symbols))
+	assert.Equal(t, 14, len(scope.Symbols))
 	assert.Equal(t, "cat", scope.Symbols[0].Name)
 	assert.Equal(t, "dog", scope.Symbols[1].Name)
 	assert.Equal(t, "Colors", scope.Symbols[2].Name)
-	assert.Equal(t, "Obj", scope.Symbols[3].Name)
-	assert.Equal(t, "Err", scope.Symbols[4].Name)
-	assert.Equal(t, "A_CONSTANT", scope.Symbols[5].Name)
-	assert.Equal(t, "Int32", scope.Symbols[6].Name)
-	assert.Equal(t, "foo", scope.Symbols[7].Name)
-	assert.Equal(t, "method", scope.Symbols[8].Name)
+	assert.Equal(t, "RED", scope.Symbols[3].Name)
+	assert.Equal(t, "BLUE", scope.Symbols[4].Name)
+	assert.Equal(t, "GREEN", scope.Symbols[5].Name)
+	assert.Equal(t, "Obj", scope.Symbols[6].Name)
+	assert.Equal(t, "Err", scope.Symbols[7].Name)
+	assert.Equal(t, "OOPS", scope.Symbols[8].Name)
+	assert.Equal(t, "FIAL", scope.Symbols[9].Name)
+	assert.Equal(t, "A_CONSTANT", scope.Symbols[10].Name)
+	assert.Equal(t, "Int32", scope.Symbols[11].Name)
+	assert.Equal(t, "foo", scope.Symbols[12].Name)
+	assert.Equal(t, "method", scope.Symbols[13].Name)
 
 	for _, symbol := range scope.Symbols {
-		assert.Equal(t, "file.c3", symbol.FilePath, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.FilePath))
+		assert.Equal(t, "file.c3", symbol.URI, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.URI))
 	}
 }
 
@@ -62,7 +67,7 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 	assert.Equal(t, "cat", scope.Symbols[0].Name)
 
 	for _, symbol := range scope.Symbols {
-		assert.Equal(t, "file.c3", symbol.FilePath, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.FilePath))
+		assert.Equal(t, "file.c3", symbol.URI, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.URI))
 	}
 }
 

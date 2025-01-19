@@ -28,7 +28,7 @@ func (s *Scope) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module
 	symbol := &Symbol{
 		Name:     name,
 		Module:   ModuleName(module.Name),
-		FilePath: filePath,
+		URI:      filePath,
 		NodeDecl: n,
 		Range:    nRange,
 		Scope:    s,
