@@ -145,7 +145,7 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 
 	t.Run("Find global exported variable declaration", func(t *testing.T) {
 		source := `
-		module not_imported;
+		module foo_alt;
 		char tick;
 		
 		module foo;
@@ -153,13 +153,65 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		
 		module foo2;
 		import foo;
-		char fps = tick * 60;`
+		char fps = tick * 60;
+		`
 
 		fileName := "app.c3"
 		tree := getTree(source, fileName)
 		symbolTable := BuildSymbolTable(tree, fileName)
 
 		cursorPosition := lsp.Position{Line: 9, Column: 14} // Cursor at char fps = t|ick * 60;
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbol := symbolOpt.Get()
+
+		assert.Equal(t, "tick", symbol.Name)
+		assert.Equal(t, lsp.NewRange(5, 2, 5, 12), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "char", symbol.Type.Name)
+		assert.Equal(t, NewModuleName("foo"), symbol.Module)
+	})
+
+	t.Run("Find global implicitly imported variable declaration", func(t *testing.T) {
+		source := `
+		module foo::bar;
+		char tick;
+		
+		module foo;
+		char fps = tick * 60;
+		`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 5, Column: 14} // Cursor at char fps = t|ick * 60;
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbol := symbolOpt.Get()
+
+		assert.Equal(t, "tick", symbol.Name)
+		assert.Equal(t, lsp.NewRange(2, 2, 2, 12), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "char", symbol.Type.Name)
+		assert.Equal(t, NewModuleName("foo::bar"), symbol.Module)
+	})
+
+	t.Run("Find global exported variable declaration", func(t *testing.T) {
+		t.Skip()
+		source := `
+		module foo_alt;
+		char tick;
+		
+		module foo;
+		char tick;
+		
+		module foo2;
+		import foo;
+		char fps = foo::tick * 60;
+		`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 9, Column: 19} // Cursor at char fps = foo::t|ick * 60;
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		symbol := symbolOpt.Get()
 

@@ -184,7 +184,7 @@ func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, na
 		symbolFound = s.findSymbolInScope(name, scope)
 		if symbolFound == nil {
 			// Check if there are imported modules
-			toVisit, visitedFiles = findImportedFiles(s, scope, visitedFiles, toVisit)
+			toVisit, visitedFiles = findImportedFiles(s, scope, module, visitedFiles, toVisit)
 		}
 		iteration++
 	}
@@ -195,12 +195,25 @@ func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, na
 	return option.Some(symbolFound)
 }
 
-func findImportedFiles(s *SymbolTable, scope *Scope, visited map[string]bool, toVisit []FileModulePtr) ([]FileModulePtr, map[string]bool) {
+func findImportedFiles(s *SymbolTable, scope *Scope, currentModule ModuleName, visited map[string]bool, toVisit []FileModulePtr) ([]FileModulePtr, map[string]bool) {
 	// look for implicit imports
 	for _, importedModule := range scope.RootScope().Imports {
 		for _, fileModule := range s.moduleFileMap[importedModule.String()] {
-			if !visited[fileModule.fileName] {
+			key := fileModule.fileName + "+" + fileModule.module.String()
+			if !visited[key] {
 				toVisit = append(toVisit, fileModule)
+			}
+		}
+	}
+
+	// Look for submodules, as they are also implicitly imported
+	for _, fileModuleCollection := range s.moduleFileMap {
+		for _, fileModule := range fileModuleCollection {
+			if fileModule.module.IsSubModuleOf(currentModule) {
+				key := fileModule.fileName + "+" + fileModule.module.String()
+				if !visited[key] {
+					toVisit = append(toVisit, fileModule)
+				}
 			}
 		}
 	}
@@ -290,6 +303,26 @@ func (m ModuleName) IsEqual(other ModuleName) bool {
 	}
 
 	return true
+}
+
+func (m ModuleName) IsSubModuleOf(parentModule ModuleName) bool {
+	if len(m.tokens) < len(parentModule.tokens) {
+		return false
+	}
+
+	isChild := true
+	for i, pm := range parentModule.tokens {
+		if i > len(m.tokens) {
+			break
+		}
+
+		if m.tokens[i] != pm {
+			isChild = false
+			break
+		}
+	}
+
+	return isChild
 }
 
 func (m ModuleName) String() string {
