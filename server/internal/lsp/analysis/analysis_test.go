@@ -575,6 +575,29 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
 
+	t.Run("Find struct member that is inlined", func(t *testing.T) {
+		source := `
+		struct Foo {
+		  int a;
+		  int b;
+		}
+		struct Bar {
+			inline Foo sub;
+		}
+		fn void main() {
+			Bar obj;
+			obj.a = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 10, Column: 7}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
+	})
+
 	t.Run("Find interface struct is implementing", func(t *testing.T) {
 		source := `
 		interface Animal{fn void run();}
@@ -595,6 +618,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(1, 2, 1, 34), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.INTERFACE), symbol.Kind)
 	})
+
 }
 
 func TestFindsSymbol_Declaration_def(t *testing.T) {

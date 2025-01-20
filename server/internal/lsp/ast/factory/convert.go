@@ -444,7 +444,6 @@ func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCo
 
 		switch child.Type() {
 		case "interface_impl":
-			// TODO
 			for x := 0; x < int(child.ChildCount()); x++ {
 				n := child.Child(x)
 				if n.Type() == "interface" {

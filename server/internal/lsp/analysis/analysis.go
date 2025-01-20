@@ -230,6 +230,8 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 		}
 
 	case ast.STRUCT:
+		inlinedCandidates := []ast.Ident{}
+
 		// Search In Members
 		for _, member := range symbol.NodeDecl.(*ast.StructDecl).Members {
 			if member.Names[0].Name == nextIdent {
@@ -263,6 +265,8 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 				} else {
 					return nil
 				}
+			} else if member.IsInlined {
+				inlinedCandidates = append(inlinedCandidates, member.Type.Identifier)
 			}
 		}
 
@@ -270,6 +274,31 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 		for _, relatedSymbol := range symbol.Children {
 			if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == nextIdent {
 				return relatedSymbol.Child
+			}
+		}
+
+		// Not found, look inside each inlinedCandidates, maybe is a subproperty of them
+		for _, inlinedTypeIdent := range inlinedCandidates {
+			inlinedTypeSymbol := symbolTable.FindSymbolByPosition(
+				inlinedTypeIdent.Range.Start,
+				fileName,
+				inlinedTypeIdent.Name,
+				moduleName,
+				0,
+			)
+			if inlinedTypeSymbol.IsSome() {
+				inlinedStructSymbol := inlinedTypeSymbol.Get()
+				child := resolveChildSymbol(
+					inlinedStructSymbol,
+					nextIdent,
+					moduleName,
+					fileName,
+					symbolTable,
+					solveType,
+				)
+				if child != nil && child.Name == nextIdent {
+					return child
+				}
 			}
 		}
 
