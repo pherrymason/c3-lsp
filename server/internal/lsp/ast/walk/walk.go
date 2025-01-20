@@ -232,6 +232,7 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 	case *ast.StarExpr:
 
 	case *ast.StructDecl:
+		walkList(v, n.Implements, "Implements")
 		walkList(v, n.Members, "Members")
 
 	case ast.StructMemberDecl:

@@ -386,10 +386,12 @@ func TestConvertToAST_struct_decl_with_interface(t *testing.T) {
 	cv := newTestAstConverter()
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	expected := []string{"MyInterface", "MySecondInterface"}
-
 	structDecl := tree.Modules[0].Declarations[0].(*ast.StructDecl)
-	assert.Equal(t, expected, structDecl.Implements)
+	assert.Equal(t, "MyInterface", structDecl.Implements[0].Name)
+	assert.Equal(t, lsp.NewRange(1, 18, 1, 29), structDecl.Implements[0].Range)
+
+	assert.Equal(t, "MySecondInterface", structDecl.Implements[1].Name)
+	assert.Equal(t, lsp.NewRange(1, 31, 1, 48), structDecl.Implements[1].Range)
 }
 
 func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {

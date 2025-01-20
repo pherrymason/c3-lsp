@@ -357,7 +357,14 @@ func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode 
 				n := child.Child(x)
 				if n.Type() == "interface" {
 					// TODO: Must store ranges of each n, so cursor can be properly detected.
-					structDecl.Implements = append(structDecl.Implements, n.Content(sourceCode))
+					structDecl.Implements = append(
+						structDecl.Implements,
+						ast.NewIdentifierBuilder().
+							WithId(c.getNextID()).
+							WithName(n.Content(sourceCode)).
+							WithSitterPos(n).
+							BuildPtr(),
+					)
 				}
 			}
 		case "attributes":
@@ -441,8 +448,14 @@ func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCo
 			for x := 0; x < int(child.ChildCount()); x++ {
 				n := child.Child(x)
 				if n.Type() == "interface" {
-					// TODO: Must store ranges of each interface so cursor can be properly detected over them
-					structDecl.Implements = append(structDecl.Implements, n.Content(sourceCode))
+					structDecl.Implements = append(
+						structDecl.Implements,
+						ast.NewIdentifierBuilder().
+							WithId(c.getNextID()).
+							WithName(n.Content(sourceCode)).
+							WithSitterPos(n).
+							BuildPtr(),
+					)
 				}
 			}
 

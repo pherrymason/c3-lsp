@@ -97,6 +97,9 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 	case *ast.StructDecl:
 		v.currentScope.RegisterSymbol(n.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.STRUCT)
 
+	case *ast.InterfaceDecl:
+		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.INTERFACE)
+
 	case *ast.FaultDecl:
 		_, fault := v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FAULT)
 

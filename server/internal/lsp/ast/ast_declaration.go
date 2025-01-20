@@ -87,7 +87,7 @@ type (
 		BackingType option.Option[TypeInfo]
 		Members     []StructMemberDecl
 		StructType  StructType
-		Implements  []string
+		Implements  []*Ident
 	}
 
 	FunctionDecl struct {

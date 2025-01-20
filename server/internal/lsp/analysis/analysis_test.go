@@ -574,6 +574,27 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(8, 2, 8, 24), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
+
+	t.Run("Find interface struct is implementing", func(t *testing.T) {
+		source := `
+		interface Animal{fn void run();}
+		struct Dog (Animal) {
+			bool a;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 2, Column: 15}
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "Animal", symbol.Name)
+		assert.Equal(t, NewModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(1, 2, 1, 34), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.INTERFACE), symbol.Kind)
+	})
 }
 
 func TestFindsSymbol_Declaration_def(t *testing.T) {
