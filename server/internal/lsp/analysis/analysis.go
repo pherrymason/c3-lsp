@@ -44,6 +44,7 @@ type findContext struct {
 	selfType           *ast.Ident
 	pathStep           []PathStep
 	lowestSelExprIndex int
+	moduleName         ModuleName
 }
 
 func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *SymbolTable, tree ast.Node) option.Option[*Symbol] {
@@ -57,33 +58,26 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 		name = n.Name
 	}
 
-	//scopeStack := []lsp.Range{}
-
 	// Analyze parent nodes to better understand context
 	// -------------------------------------------------
-	var moduleName ModuleName
-	for _, step := range path {
-		if moduleNode, ok := step.node.(ast.Module); ok {
-			moduleName = ModuleName(moduleNode.Name)
-			break
-			//	scopeStack = append(scopeStack, moduleNode.GetRange())
-		} // else if fnDecl, ok := step.node.(*ast.FunctionDecl); ok {
-		//	scopeStack = append(scopeStack, fnDecl.Body.GetRange())
-		//}
-	}
-	// If parent is a SelectExpr, we will need to first search chain of elements to be able to find `name`.
 
 	totalSteps := len(path)
 	parentNodeIsSelectorExpr := false
 	var parentSelectorExpr *ast.SelectorExpr
 
+	// --------------------------------------
+	// Get context info
 	selectorsChained := 0
-	context := findContext{
+	scopeCtxt := findContext{
 		pathStep:           path,
 		lowestSelExprIndex: 0,
+		moduleName:         NewModuleName(""),
 	}
 	for i := totalSteps - 1; i >= 0; i-- {
 		switch stepNode := path[i].node.(type) {
+		case ast.Module:
+			scopeCtxt.moduleName = NewModuleName(stepNode.Name)
+
 		case *ast.Ident, ast.Ident:
 
 		case *ast.SelectorExpr:
@@ -91,7 +85,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 			parentSelectorExpr = stepNode
 			if !parentNodeIsSelectorExpr {
 				parentNodeIsSelectorExpr = true
-				context.lowestSelExprIndex = i
+				scopeCtxt.lowestSelExprIndex = i
 			}
 
 		case *ast.FunctionDecl:
@@ -100,7 +94,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 				if param.Name.Name == "self" {
 					if stepNode.ParentTypeId.IsSome() {
 						ident := stepNode.ParentTypeId.Get()
-						context.selfType = &ident
+						scopeCtxt.selfType = &ident
 					}
 				}
 			}
@@ -111,24 +105,18 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 			//}
 		}
 	}
+	// End of getting context info
+	// --------------------------------------
 
 	if parentNodeIsSelectorExpr {
-		step := path[context.lowestSelExprIndex+1]
+		step := path[scopeCtxt.lowestSelExprIndex+1]
 		if step.propertyName == "Sel" {
 			if selectorsChained > 1 {
 				// Even if we are resolving final part of a SelectorExpr, we are in the middle of a bigger chain of SelectorExpr. This means
 			}
 
 			// We need to solve first SelectorExpr.X!
-			symbol := solveSelAtSelectorExpr(
-				path[context.lowestSelExprIndex].node.(*ast.SelectorExpr),
-				pos,
-				fileName,
-				moduleName,
-				context,
-				symbolTable,
-				0,
-			)
+			symbol := solveSelAtSelectorExpr(path[scopeCtxt.lowestSelExprIndex].node.(*ast.SelectorExpr), pos, fileName, scopeCtxt, symbolTable, 0)
 
 			if symbol != nil {
 				return option.Some(symbol)
@@ -143,20 +131,13 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 	}
 	// -------------------------------------------------
 	// Normal search
-	sym := symbolTable.FindSymbolByPosition(pos, fileName, name, moduleName, 0)
+	sym := symbolTable.FindSymbolByPosition(pos, fileName, name, scopeCtxt.moduleName, 0)
 
 	return sym
 }
 
 // solveSelAtSelectorExpr resolves Sel Ident symbol.
-func solveSelAtSelectorExpr(
-	selectorExpr *ast.SelectorExpr,
-	pos lsp.Position,
-	fileName string,
-	moduleName ModuleName,
-	context findContext,
-	symbolTable *SymbolTable,
-	deepLevel uint) *Symbol {
+func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, context findContext, symbolTable *SymbolTable, deepLevel uint) *Symbol {
 	// To be able to resolve selectorExpr.Sel, we need to know first what is selectorExpr.X is or what does it return.
 	var parentSymbol *Symbol
 	switch base := selectorExpr.X.(type) {
@@ -173,7 +154,7 @@ func solveSelAtSelectorExpr(
 					context.selfType.StartPosition(),
 					fileName,
 					context.selfType.Name,
-					moduleName,
+					context.moduleName,
 					0,
 				)
 				parentSymbol = result.GetOrElse(nil)
@@ -181,7 +162,7 @@ func solveSelAtSelectorExpr(
 				// !!!!! we've found a self, but function is not flagged as method! Confusion triggered!!!
 			}
 		} else {
-			parentSymbol = symbolTable.SolveType(base.Name, pos, fileName)
+			parentSymbol = symbolTable.SolveType(base.Name, pos, fileName, context.moduleName)
 		}
 
 		if parentSymbol == nil {
@@ -193,14 +174,14 @@ func solveSelAtSelectorExpr(
 			base.StartPosition(),
 			fileName,
 			base.Identifier.Name,
-			moduleName,
+			context.moduleName,
 			0,
 		)
 		parentSymbol = result.GetOrElse(nil)
 
 	case *ast.SelectorExpr:
 		// X is a SelectorExpr itself, we need to solve the type of base.Sel
-		parentSymbol = solveSelAtSelectorExpr(base, pos, fileName, moduleName, context, symbolTable, deepLevel+1)
+		parentSymbol = solveSelAtSelectorExpr(base, pos, fileName, context, symbolTable, deepLevel+1)
 		if parentSymbol == nil {
 			return nil
 		}
@@ -209,12 +190,12 @@ func solveSelAtSelectorExpr(
 		ident := base.Identifier
 		switch i := ident.(type) {
 		case *ast.SelectorExpr:
-			parentSymbol = solveSelAtSelectorExpr(i, pos, fileName, moduleName, context, symbolTable, deepLevel+1)
+			parentSymbol = solveSelAtSelectorExpr(i, pos, fileName, context, symbolTable, deepLevel+1)
 			if parentSymbol == nil {
 				return nil
 			}
 		case *ast.Ident:
-			sym := symbolTable.FindSymbolByPosition(pos, fileName, i.Name, moduleName, 0)
+			sym := symbolTable.FindSymbolByPosition(pos, fileName, i.Name, context.moduleName, 0)
 			if sym.IsNone() {
 				return nil
 			}
@@ -230,7 +211,7 @@ func solveSelAtSelectorExpr(
 	if deepLevel == 0 {
 		solveElementType = false
 	}
-	return resolveChildSymbol(parentSymbol, selectorExpr.Sel.Name, moduleName, fileName, symbolTable, solveElementType)
+	return resolveChildSymbol(parentSymbol, selectorExpr.Sel.Name, context.moduleName, fileName, symbolTable, solveElementType)
 }
 
 func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName, fileName string, symbolTable *SymbolTable, solveType bool) *Symbol {

@@ -12,7 +12,9 @@ type ScopeID int
 // It also contains relations to parent and children scopes.
 type Scope struct {
 	Range    lsp.Range
+	Module   option.Option[ModuleName]
 	Parent   option.Option[*Scope] // Parent Scope (if any)
+	Imports  []ModuleName          // Module imports (if any)
 	Children []*Scope              // Children Scope (if any)
 	Symbols  []*Symbol             // List of symbols defined in this scope
 }
@@ -27,7 +29,7 @@ func (s *Scope) pushScope(Range lsp.Range) *Scope {
 func (s *Scope) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module ast.Module, filePath string, kind ast.Token) (SymbolID, *Symbol) {
 	symbol := &Symbol{
 		Name:     name,
-		Module:   ModuleName(module.Name),
+		Module:   NewModuleName(module.Name),
 		URI:      filePath,
 		NodeDecl: n,
 		Range:    nRange,
@@ -39,15 +41,24 @@ func (s *Scope) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module
 	return SymbolID(len(s.Symbols)), symbol
 }
 
-func FindScope(scope *Scope, pos lsp.Position) *Scope {
+func (s *Scope) RootScope() *Scope {
+	if s.Parent.IsNone() {
+		return s
+	}
+
+	return s.Parent.Get().RootScope()
+}
+
+// FindClosestScope given a scope, searches inside to select the closes to a given position
+func FindClosestScope(scope *Scope, pos lsp.Position) *Scope {
 	if !scope.Range.HasPosition(pos) {
 		// If the position is not within the current scope, return nil
 		return nil
 	}
 
 	// Check children scopes
-	for _, child := range scope.Children {
-		if found := FindScope(child, pos); found != nil {
+	for _, childScope := range scope.Children {
+		if found := FindClosestScope(childScope, pos); found != nil {
 			return found
 		}
 	}

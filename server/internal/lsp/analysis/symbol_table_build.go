@@ -49,7 +49,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 			GenericParameters: n.GenericParameters,
 			NodeAttributes:    n.NodeAttributes,
 		}
-		v.currentScope = v.table.RegisterNewRootScope(v.currentFilePath.URI, n.GetRange())
+		v.currentScope = v.table.RegisterNewRootScope(v.currentFilePath.URI, n)
 		v.scopePushed++
 
 	case *ast.GenDecl:

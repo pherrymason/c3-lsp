@@ -4,6 +4,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/pkg/option"
+	"strings"
 )
 
 // SymbolTable stores list of symbols defined in the project.
@@ -50,20 +51,62 @@ import (
 */
 type SymbolTable struct {
 	// Each position inside symbols is the ID of the symbol which can be referenced in other index tables.
-	scopeTree map[string]*Scope // scope trees for each file
+	scopeTree map[string]*ModulesList // scope trees for each file
+
+	moduleFileMap map[string][]FileModulePtr // List of files containing a given module
+}
+
+type FileModulePtr struct {
+	fileName string
+	module   ModuleName
+	scope    *Scope
+}
+
+type ModulesList struct {
+	modules map[string]*Scope
+}
+
+func (mg *ModulesList) GetModuleScope(name string) *Scope {
+	scope, exists := mg.modules[name]
+	if !exists {
+		return nil
+	}
+
+	return scope
 }
 
 func NewSymbolTable() *SymbolTable {
 	return &SymbolTable{
-		scopeTree: make(map[string]*Scope),
+		scopeTree:     make(map[string]*ModulesList),
+		moduleFileMap: make(map[string][]FileModulePtr),
 	}
 }
 
-func (s *SymbolTable) RegisterNewRootScope(file string, Range lsp.Range) *Scope {
-	scope := &Scope{
-		Range: Range,
+func (s *SymbolTable) RegisterNewRootScope(file string, node ast.Module) *Scope {
+	_, exists := s.scopeTree[file]
+	if !exists {
+		s.scopeTree[file] = &ModulesList{
+			modules: make(map[string]*Scope),
+		}
 	}
-	s.scopeTree[file] = scope
+
+	scope := &Scope{
+		Module:  option.Some(NewModuleName(node.Name)),
+		Range:   node.GetRange(),
+		Imports: []ModuleName{},
+	}
+	s.scopeTree[file].modules[node.Name] = scope
+
+	for _, imp := range node.Imports {
+		scope.Imports = append(scope.Imports, NewModuleName(imp.Path))
+	}
+
+	// Register it in moduleFileMap
+	s.moduleFileMap[node.Name] = append(s.moduleFileMap[node.Name], FileModulePtr{
+		fileName: file,
+		module:   NewModuleName(node.Name),
+		scope:    scope,
+	})
 
 	return scope
 }
@@ -99,27 +142,79 @@ func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, na
 		rangeScope lsp.Range
 	}
 
-	// Search current scope
-	scope := FindScope(s.scopeTree[fileName], pos)
-	if scope == nil {
-		return option.None[*Symbol]()
+	var symbolFound *Symbol
+
+	moduleScope := s.scopeTree[fileName].GetModuleScope(module.String())
+
+	visitedFiles := make(map[string]bool)
+	toVisit := []FileModulePtr{
+		{
+			fileName: fileName,
+			module:   module,
+			scope:    moduleScope,
+		},
 	}
 
-	// Search inside the scope and go up until find its declaration
-	symbolFound := s.findSymbolInScope(name, scope)
+	iteration := 0
+	for len(toVisit) > 0 {
+		currentFile := toVisit[0].fileName
+		moduleScope = toVisit[0].scope
+		module = toVisit[0].module
+		toVisit = toVisit[1:]
+
+		visitedKey := currentFile + "+" + module.String()
+		if visitedFiles[visitedKey] {
+			continue
+		}
+		visitedFiles[visitedKey] = true
+
+		// Search current scope
+		var scope *Scope
+		if iteration == 0 {
+			scope = FindClosestScope(moduleScope, pos)
+		} else {
+			// other iterations, are searching in root scope of impored module, position is not relevant
+			scope = moduleScope
+		}
+		if scope == nil {
+			return option.None[*Symbol]()
+		}
+
+		// Search inside the scope and go up until find its declaration
+		symbolFound = s.findSymbolInScope(name, scope)
+		if symbolFound == nil {
+			// Check if there are imported modules
+			toVisit, visitedFiles = findImportedFiles(s, scope, visitedFiles, toVisit)
+		}
+		iteration++
+	}
 
 	if symbolFound == nil {
 		return option.None[*Symbol]()
 	}
-
 	return option.Some(symbolFound)
+}
+
+func findImportedFiles(s *SymbolTable, scope *Scope, visited map[string]bool, toVisit []FileModulePtr) ([]FileModulePtr, map[string]bool) {
+	// look for implicit imports
+	for _, importedModule := range scope.RootScope().Imports {
+		for _, fileModule := range s.moduleFileMap[importedModule.String()] {
+			if !visited[fileModule.fileName] {
+				toVisit = append(toVisit, fileModule)
+			}
+		}
+	}
+
+	return toVisit, visited
 }
 
 // SolveType Finds type of Symbol with `name` based on a position and a fileName.
 // TODO Be able to specify module to which name belongs to. This will be needed to be able to find types imported from different modules
-func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName string) *Symbol {
+func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName string, currentModule ModuleName) *Symbol {
 	// 1- Find the scope
-	scope := FindScope(s.scopeTree[fileName], ctxPosition)
+	moduleGroup := s.scopeTree[fileName]
+	scope := moduleGroup.GetModuleScope(currentModule.String())
+	scope = FindClosestScope(scope, ctxPosition)
 	// TODO If `module` is specified, check if scope belongs to that module, else, see if there are any imports to select the proper scope.
 
 	// 2- Try to find the symbol in the scope stack
@@ -142,7 +237,7 @@ func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName 
 		}
 
 		// Second search, we need to search for symbol with typeName
-		symbol := s.FindSymbolByPosition(symbolFound.Range.Start, fileName, typeName, "", 0)
+		symbol := s.FindSymbolByPosition(symbolFound.Range.Start, fileName, typeName, currentModule, 0)
 		if symbol.IsNone() {
 			return nil
 		} else {
@@ -171,7 +266,35 @@ func (s *Symbol) AppendChild(child *Symbol, relationType RelationType) {
 	s.Children = append(s.Children, Relation{child, relationType})
 }
 
-type ModuleName string
+type ModuleName struct {
+	tokens []string
+}
+
+func NewModuleName(module string) ModuleName {
+	var tokens []string
+	if len(module) > 0 {
+		tokens = strings.Split(module, "::")
+	}
+	return ModuleName{tokens: tokens}
+}
+
+func (m ModuleName) IsEqual(other ModuleName) bool {
+	if len(m.tokens) != len(other.tokens) {
+		return false
+	}
+
+	for i, token := range m.tokens {
+		if token != other.tokens[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (m ModuleName) String() string {
+	return strings.Join(m.tokens, "::")
+}
 
 type TypeDefinition struct {
 	Name      string

@@ -26,7 +26,8 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 
 	result := BuildSymbolTable(tree, "")
 
-	scope := result.scopeTree["file.c3"]
+	modulesGroup := result.scopeTree["file.c3"]
+	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 14, len(scope.Symbols))
 	assert.Equal(t, "cat", scope.Symbols[0].Name)
 	assert.Equal(t, "dog", scope.Symbols[1].Name)
@@ -60,7 +61,8 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 
 	result := BuildSymbolTable(tree, "")
 
-	scope := result.scopeTree["file.c3"]
+	modulesGroup := result.scopeTree["file.c3"]
+	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 1, len(scope.Symbols))
 	assert.Equal(t, "main", scope.Symbols[0].Name)
 	scope = scope.Children[0]
@@ -83,7 +85,8 @@ func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 
 	result := BuildSymbolTable(tree, "")
 
-	scope := result.scopeTree["file.c3"]
+	modulesGroup := result.scopeTree["file.c3"]
+	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 2, len(scope.Symbols))
 	assert.Equal(t, "Obj", scope.Symbols[0].Name)
 	assert.Equal(t, Relation{Child: scope.Symbols[1], Tag: Method}, scope.Symbols[0].Children[0])
