@@ -2,6 +2,8 @@ package server
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis"
 	"github.com/pherrymason/c3-lsp/pkg/featureflags"
 
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
@@ -13,9 +15,21 @@ import (
 // Support "Hover"
 func (srv *Server) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
 	if featureflags.IsActive(featureflags.UseGeneratedAST) {
+		doc, _ := srv.documents.GetDocument(params.TextDocument.URI)
+		hoverInfo := analysis.GetHoverInfo(
+			doc,
+			lsp.NewLSPPosition(params.Position),
+			srv.documents,
+			srv.symbolTable,
+		)
+
+		if hoverInfo != nil {
+			return hoverInfo, nil
+		}
+
 		return nil, nil
 	}
-	
+
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
 	docId := utils.NormalizePath(params.TextDocument.URI)
 	foundSymbolOption := srv.search.FindSymbolDeclarationInWorkspace(docId, pos, srv.state)
