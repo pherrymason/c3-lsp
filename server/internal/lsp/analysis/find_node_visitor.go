@@ -58,5 +58,10 @@ func FindNode(root ast.Node, pos lsp.Position) (ast.Node, []PathStep) {
 	visitor := &FindNodeVisitor{pos: pos}
 	walk.Walk(visitor, root, "")
 
+	if len(visitor.Path) == 0 {
+		// When Path is empty, it means node was not found
+		return nil, visitor.Path
+	}
+
 	return visitor.found, visitor.Path
 }

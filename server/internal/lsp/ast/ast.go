@@ -139,7 +139,7 @@ func NewModule(nodeId NodeId, name string, aRange lsp.Range, file *File) *Module
 
 type Import struct {
 	NodeAttributes
-	Path string
+	Path *Ident
 }
 
 func (*Import) stmtNode() {}

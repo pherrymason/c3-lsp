@@ -79,10 +79,10 @@ func TestConvertToAST_module_with_imports(t *testing.T) {
 	cv := newTestAstConverter()
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	assert.Equal(t, "foo", tree.Modules[0].Imports[0].Path)
+	assert.Equal(t, "foo", tree.Modules[0].Imports[0].Path.Name)
 	assert.Equal(t, lsp.NewRange(1, 1, 1, 12), tree.Modules[0].Imports[0].Range)
 
-	assert.Equal(t, "foo2::subfoo", tree.Modules[0].Imports[1].Path)
+	assert.Equal(t, "foo2::subfoo", tree.Modules[0].Imports[1].Path.Name)
 	assert.Equal(t, lsp.NewRange(2, 1, 2, 21), tree.Modules[0].Imports[1].Range)
 }
 
@@ -194,7 +194,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 			WithStartEnd(1, 26, 1, 30).BuildPtr(),
 		enumType.StaticValues[0].(*ast.Field).Name,
 	)
-	assert.Equal(t, "String", enumType.StaticValues[0].(*ast.Field).Type.Identifier.Name)
+	assert.Equal(t, "String", enumType.StaticValues[0].(*ast.Field).Type.Identifier.String())
 	assert.Equal(t, lsp.NewRange(1, 19, 1, 25), enumType.StaticValues[0].(*ast.Field).Type.Identifier.Range)
 
 	assert.Equal(t, ast.NewIdentifierBuilder().
@@ -202,109 +202,14 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 		WithStartEnd(1, 37, 1, 43).BuildPtr(),
 		enumType.StaticValues[1].(*ast.Field).Name,
 	)
-	assert.Equal(t, "bool", enumType.StaticValues[1].(*ast.Field).Type.Identifier.Name)
+	assert.Equal(t, "bool", enumType.StaticValues[1].(*ast.Field).Type.Identifier.String())
 
 	assert.Equal(t, ast.NewIdentifierBuilder().
 		WithName("ke").
 		WithStartEnd(1, 50, 1, 52).BuildPtr(),
 		enumType.StaticValues[2].(*ast.Field).Name,
 	)
-	assert.Equal(t, "char", enumType.StaticValues[2].(*ast.Field).Type.Identifier.Name)
-	return
-
-	// Test enum with associated parameters declaration
-	row := uint(1)
-	expected := &ast.GenDecl{
-		NodeAttributes: aWithPos(row, 1, row+3, 2),
-		Token:          ast.ENUM,
-		Spec: &ast.TypeSpec{
-			NodeAttributes: aWithPos(row, 2, row+3, 2),
-			Name:           ast.NewIdentifierBuilder().WithName("State").BuildPtr(),
-			TypeDescription: &ast.EnumType{
-				BaseType: option.Some(ast.TypeInfo{
-					Identifier:     ast.NewIdentifierBuilder().WithName("int").WithStartEnd(1, 14, 1, 17).Build(),
-					BuiltIn:        true,
-					Optional:       false,
-					NodeAttributes: aWithPos(row, 14, row, 17),
-				}),
-				StaticValues: []ast.Expression{},
-				Values:       []*ast.EnumValue{},
-			}, /*
-				Properties: []ast.EnumProperty{
-					{
-						URI: ast.Ident{
-							URI:           "desc",
-							NodeAttributes: aWithPos(row, 19, row, 30),
-						},
-						Type: ast.TypeInfo{
-							Identifier:     ast.NewIdentifierBuilder().WithName("String").WithStartEnd(1, 19, 1, 25).Build(),
-							BuiltIn:        false,
-							Optional:       false,
-							NodeAttributes: aWithPos(row, 19, row, 25),
-						},
-						NodeAttributes: aWithPos(row, 19, row, 30),
-					},
-					{
-						URI: ast.Ident{
-							URI:           "active",
-							NodeAttributes: aWithPos(row, 32, row, 43),
-						},
-						Type: ast.TypeInfo{
-							Identifier:     ast.NewIdentifierBuilder().WithName("bool").WithStartEnd(1, 32, 1, 36).Build(),
-							BuiltIn:        true,
-							Optional:       false,
-							NodeAttributes: aWithPos(row, 32, row, 36),
-						},
-						NodeAttributes: aWithPos(row, 32, row, 43),
-					},
-					{
-						URI: ast.Ident{
-							URI:           "ke",
-							NodeAttributes: aWithPos(row, 45, row, 52),
-						},
-						Type: ast.TypeInfo{
-							Identifier:     ast.NewIdentifierBuilder().WithName("char").WithStartEnd(1, 45, 1, 49).Build(),
-							BuiltIn:        true,
-							Optional:       false,
-							NodeAttributes: aWithPos(row, 45, row, 49),
-						},
-						NodeAttributes: aWithPos(row, 45, row, 52),
-					},
-				},
-
-				Members: []ast.EnumMember{
-					{
-						URI: ast.Ident{
-							URI:           "PENDING",
-							NodeAttributes: aWithPos(row+1, 2, row+1, 9),
-						},
-						Value: ast.CompositeLiteral{
-							Elements: []ast.Expression{
-								&ast.BasicLit{NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 28).Build(), Kind: ast.STRING, Value: "\"pending start\""},
-								&ast.BasicLit{NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 30, 2, 35).Build(), Kind: ast.BOOLEAN, Value: "false"},
-								&ast.BasicLit{NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 37, 2, 40).Build(), Kind: ast.CHAR, Value: "'c'"},
-							},
-						},
-						NodeAttributes: aWithPos(row+1, 2, row+1, 41),
-					},
-					{
-						URI: ast.Ident{
-							URI:           "RUNNING",
-							NodeAttributes: aWithPos(row+2, 2, row+2, 9),
-						},
-						Value: ast.CompositeLiteral{
-							Elements: []ast.Expression{
-								&ast.BasicLit{NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 13, 3, 22).Build(), Kind: ast.STRING, Value: "\"running\""},
-								&ast.BasicLit{NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 24, 3, 28).Build(), Kind: ast.BOOLEAN, Value: "true"},
-								&ast.BasicLit{NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 30, 3, 33).Build(), Kind: ast.CHAR, Value: "'e'"},
-							},
-						},
-						NodeAttributes: aWithPos(row+2, 2, row+2, 34),
-					},
-				},*/
-		},
-	}
-	assert.Equal(t, expected, tree.Modules[0].Declarations[0])
+	assert.Equal(t, "char", enumType.StaticValues[2].(*ast.Field).Type.Identifier.String())
 }
 
 func TestConvertToAST_struct_decl(t *testing.T) {
@@ -333,7 +238,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 				},
 				Type: ast.TypeInfo{
 					NodeAttributes: aWithPos(2, 2, 2, 5),
-					Identifier:     ast.NewIdentifierBuilder().WithName("int").WithStartEnd(2, 2, 2, 5).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("int").WithStartEnd(2, 2, 2, 5).BuildPtr(),
 					BuiltIn:        true,
 				},
 			},
@@ -347,7 +252,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 				},
 				Type: ast.TypeInfo{
 					NodeAttributes: aWithPos(3, 2, 3, 6),
-					Identifier:     ast.NewIdentifierBuilder().WithName("char").WithStartEnd(3, 2, 3, 6).Build(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("char").WithStartEnd(3, 2, 3, 6).BuildPtr(),
 					BuiltIn:        true,
 				},
 			},
@@ -361,10 +266,13 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 				},
 				Type: ast.TypeInfo{
 					NodeAttributes: aWithPos(4, 2, 4, 16),
-					Identifier: ast.Ident{
-						ModulePath:     "raylib",
-						Name:           "Camera",
-						NodeAttributes: aWithPos(4, 2, 4, 16),
+					Identifier: &ast.Ident{
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 2, 4, 16).Build(),
+						ModulePath: ast.NewIdentifierBuilder().
+							WithName("raylib").
+							WithStartEnd(4, 2, 4, 10).
+							BuildPtr(),
+						Name: "Camera",
 					},
 					BuiltIn: false,
 				},
@@ -428,7 +336,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 				Identifier: ast.NewIdentifierBuilder().
 					WithName("Register16").
 					WithStartEnd(4, 3, 4, 13).
-					Build(),
+					BuildPtr(),
 			},
 			BitRange: option.Some([2]uint{0, 15}),
 		},
@@ -450,7 +358,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 				Identifier: ast.NewIdentifierBuilder().
 					WithName("Register").
 					WithStartEnd(5, 3, 5, 11).
-					Build(),
+					BuildPtr(),
 			},
 			BitRange: option.Some([2]uint{8, 15}),
 		},
@@ -472,7 +380,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 				Identifier: ast.NewIdentifierBuilder().
 					WithName("Register").
 					WithStartEnd(6, 3, 6, 11).
-					Build(),
+					BuildPtr(),
 			},
 			BitRange: option.Some([2]uint{0, 7}),
 		},
@@ -494,7 +402,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 				Identifier: ast.NewIdentifierBuilder().
 					WithName("Register16").
 					WithStartEnd(8, 2, 8, 12).
-					Build(),
+					BuildPtr(),
 			},
 		},
 		structDecl.Members[3],
@@ -515,7 +423,7 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 				Identifier: ast.NewIdentifierBuilder().
 					WithName("Register16").
 					WithStartEnd(9, 2, 9, 12).
-					Build(),
+					BuildPtr(),
 			},
 		},
 		structDecl.Members[4],
@@ -576,10 +484,11 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 		Identifier: ast.NewIdentifierBuilder().
 			WithName("uint").
 			WithStartEnd(1, 32, 1, 36).
-			Build(),
+			BuildPtr(),
 	}
 	assert.Equal(t, expectedType, bitstructDecl.BackingType.Get())
-	assert.Equal(t, []string{"AnInterface"}, bitstructDecl.Implements)
+	assert.Equal(t, 1, len(bitstructDecl.Implements))
+	assert.Equal(t, "AnInterface", bitstructDecl.Implements[0].Name)
 
 	expect := ast.StructMemberDecl{
 		NodeAttributes: aWithPos(3, 2, 3, 19),
@@ -595,7 +504,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 			Identifier: ast.NewIdentifierBuilder().
 				WithName("ushort").
 				WithStartEnd(3, 2, 3, 8).
-				Build(),
+				BuildPtr(),
 		},
 		BitRange: option.Some([2]uint{0, 15}),
 	}
@@ -665,7 +574,8 @@ func TestConvertToAST_def_declares_type(t *testing.T) {
 			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(0, 0, 0, 15).Build(),
 			Name:           ast.NewIdentifierBuilder().WithName("Kilo").WithStartEnd(0, 4, 0, 8).Build(),
 			Expr: ast.NewTypeInfoBuilder().
-				WithName("int").WithNameStartEnd(0, 11, 0, 14).
+				WithName("int").
+				WithNameStartEnd(0, 11, 0, 14).
 				IsBuiltin().
 				WithStartEnd(0, 11, 0, 14).
 				Build(),

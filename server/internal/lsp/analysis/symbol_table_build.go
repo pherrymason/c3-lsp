@@ -64,8 +64,9 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 			)
 
 			typeExpression := n.Spec.(*ast.ValueSpec).Type
+			typeName := typeExpression.Identifier.String()
 			symbol.Type = TypeDefinition{
-				Name:      typeExpression.Identifier.Name,
+				Name:      typeName, // TODO does this having module path break anything?
 				IsBuiltIn: typeExpression.BuiltIn,
 				NodeDecl:  typeExpression,
 			}
@@ -145,8 +146,9 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 				ast.VAR,
 			)
 
+			typeName := param.Type.Identifier.String()
 			sym.Type = TypeDefinition{
-				Name:      param.Type.Identifier.Name,
+				Name:      typeName, // TODO does this having module path break anything?
 				IsBuiltIn: param.Type.BuiltIn,
 				NodeDecl:  param.Type,
 			}

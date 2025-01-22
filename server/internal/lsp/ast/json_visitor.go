@@ -1,6 +1,8 @@
 package ast
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 // ---------------------------------------------------------------
 // Visitor that generates a JSON representation of the AST program
@@ -186,10 +188,18 @@ func VisitType(node *TypeInfo) JSONObject {
 	collection := map[string]interface{}{
 		"isCollection": false,
 	}
-
+	/*
+		var name string
+		switch n := node.Identifier.(type) {
+		case *ast.Ident:
+			name = n.Name
+		case *ast.PathIdent:
+			name = n.
+		}
+	*/
 	return map[string]interface{}{
 		PNodeType:    "TypeDescription",
-		"name":       node.Identifier.Name,
+		"name":       "???",
 		"builtin":    node.BuiltIn,
 		"optional":   node.Optional,
 		"collection": collection,

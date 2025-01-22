@@ -30,11 +30,14 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 			description = fmt.Sprintf("%s", symbol.Name)
 		}
 
+	case ast.FIELD:
+		description = fmt.Sprintf("%s %s", symbol.Type.Name, symbol.Name)
+
 	case ast.FUNCTION:
 		f := symbol.NodeDecl.(*ast.FunctionDecl)
 		args := []string{}
 		for _, arg := range f.Signature.Parameters {
-			args = append(args, arg.Type.Identifier.Name+" "+arg.Name.Name)
+			args = append(args, arg.Type.Identifier.String()+" "+arg.Name.Name)
 		}
 
 		description = fmt.Sprintf(

@@ -364,17 +364,7 @@ func (c *ASTConverter) convert_local_declaration_after_type(node *sitter.Node, s
 	if right != nil {
 		init = c.convert_expression(right, source).(ast.Expression)
 	}
-	/*
-		varDec2l := &ast.VariableDecl{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(node),
-			Names: []*ast.Ident{
-				ast.NewIdentifierBuilder().
-					WithName(node.ChildByFieldName("name").Content(source)).
-					WithSitterPos(node.ChildByFieldName("name")).
-					BuildPtr(),
-			},
-			Initializer: init,
-		}*/
+	
 	varDecl := &ast.GenDecl{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.VAR,

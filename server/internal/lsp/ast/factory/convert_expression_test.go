@@ -131,8 +131,15 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		},
 		// module_ident_expr:
 		{
-			literal:  "path::ident",
-			expected: ast.NewIdentifierBuilder().WithPath("path").WithName("ident").WithStartEnd(2, 13, 2, 24).BuildPtr(),
+			literal: "path::ident",
+			expected: &ast.Ident{
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 24).Build(),
+				ModulePath: ast.NewIdentifierBuilder().
+					WithName("path").
+					WithStartEnd(2, 13, 2, 19).
+					BuildPtr(),
+				Name: "ident",
+			},
 		},
 		{
 			literal:  "$_abc",
@@ -1328,11 +1335,10 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 			}`,
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 32).Build(),
-				Identifier: &ast.Ident{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 8).Build(),
-					Name:           "test",
-					ModulePath:     "",
-				},
+				Identifier: ast.NewIdentifierBuilder().
+					WithStartEnd(2, 4, 2, 8).
+					WithName("test").
+					BuildPtr(),
 				GenericArguments: option.Some([]ast.Expression{
 					ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(2, 10, 2, 13).WithStartEnd(2, 10, 2, 13).Build(),
 					ast.NewTypeInfoBuilder().WithName("double").IsBuiltin().WithNameStartEnd(2, 15, 2, 21).WithStartEnd(2, 15, 2, 21).Build(),
@@ -1357,11 +1363,14 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 			}`,
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 42).Build(),
-				Identifier: ast.NewIdentifierBuilder().
-					WithName("test").
-					WithPath("foo_test").
-					WithStartEnd(2, 4, 2, 18).
-					BuildPtr(),
+				Identifier: &ast.Ident{
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 18).Build(),
+					ModulePath: ast.NewIdentifierBuilder().
+						WithName("foo_test").
+						WithStartEnd(2, 4, 2, 14).
+						BuildPtr(),
+					Name: "test",
+				},
 				GenericArguments: option.Some([]ast.Expression{
 					ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(2, 20, 2, 23).WithStartEnd(2, 20, 2, 23).Build(),
 					ast.NewTypeInfoBuilder().WithName("double").IsBuiltin().WithNameStartEnd(2, 25, 2, 31).WithStartEnd(2, 25, 2, 31).Build(),

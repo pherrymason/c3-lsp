@@ -598,6 +598,66 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
 	})
 
+	t.Run("Find struct method when it is inlined", func(t *testing.T) {
+		source := `
+		struct Foo {}
+		fn void Foo.jump(&self) {}
+		fn void Foo.overloaded(&self) {}
+		struct Bar {
+			inline Foo sub;
+		}
+		fn void Bar.overloaded(&self) {}
+		fn void Bar.init(&self) {
+    		self.sub.jump();
+			self.jump();
+			self.overloaded();
+			self.sub.overloaded();
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 9, Column: 16} // Cursor at self.sub.j|ump();
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "jump", symbol.Name)
+		assert.Equal(t, NewModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(2, 2, 2, 28), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+
+		// Testing cursor at `self.j|ump();` should find `fn void Foo.jump(&self)`
+		cursorPosition = lsp.Position{Line: 10, Column: 9} //
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol = symbolOpt.Get()
+		assert.Equal(t, "jump", symbol.Name)
+		assert.Equal(t, NewModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(2, 2, 2, 28), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+
+		// Testing cursor at `self.o|verloaded();` should find `fn void Bar.overloaded(&self)`
+		cursorPosition = lsp.Position{Line: 11, Column: 9} //
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol = symbolOpt.Get()
+		assert.Equal(t, "overloaded", symbol.Name)
+		assert.Equal(t, NewModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(7, 2, 7, 34), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+
+		// Testing cursor at `self.sub.o|verloaded();` should find `fn void For.jump(&self)`
+		cursorPosition = lsp.Position{Line: 12, Column: 13}
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol = symbolOpt.Get()
+		assert.Equal(t, "overloaded", symbol.Name)
+		assert.Equal(t, NewModuleName("app"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(3, 2, 3, 34), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
+
 	t.Run("Find interface struct is implementing", func(t *testing.T) {
 		source := `
 		interface Animal{fn void run();}
@@ -664,13 +724,15 @@ func TestFindsSymbol_Declaration_function(t *testing.T) {
 	t.Run("Should find function definition without body", func(t *testing.T) {
 		source := `
 	fn void init_window(int width, int height, char* title) @extern("InitWindow");
-	init_window(200, 200, "hello");`
+	fn void main() {
+		init_window(200, 200, "hello");
+	}`
 
 		fileName := "app.c3"
 		tree := getTree(source, fileName)
 		symbolTable := BuildSymbolTable(tree, fileName)
 
-		cursorPosition := lsp.Position{Line: 2, Column: 2}
+		cursorPosition := lsp.Position{Line: 3, Column: 3}
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()

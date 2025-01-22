@@ -59,7 +59,12 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		// Do nothing
 
 	// Expressions
-	case *ast.Ident, *ast.BasicLit:
+	case *ast.Ident:
+		if n.ModulePath != nil {
+			Walk(v, n.ModulePath, "ModulePath")
+		}
+
+	case *ast.BasicLit:
 	// Nothing to do
 
 	case *ast.ArgFieldSet:

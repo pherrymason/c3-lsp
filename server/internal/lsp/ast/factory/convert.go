@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
-	"log"
-	"strconv"
-	"strings"
-
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	sitter "github.com/smacker/go-tree-sitter"
+	"log"
+	"strconv"
+	"strings"
 )
 
 var ConvertDebug bool = false
@@ -183,7 +182,10 @@ func convert_module(node *sitter.Node, source []byte) ast.Module {
 func (c *ASTConverter) convert_imports(node *sitter.Node, source []byte) ast.Statement {
 	imports := &ast.Import{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-		Path:           node.ChildByFieldName("path").Content(source),
+		Path: ast.NewIdentifierBuilder().
+			WithId(c.getNextID()).
+			WithName(node.ChildByFieldName("path").Content(source)).
+			BuildPtr(),
 	}
 
 	return imports
@@ -758,6 +760,58 @@ func (c *ASTConverter) convert_ident(node *sitter.Node, source []byte) ast.Expre
 		BuildPtr()
 }
 
+func (c *ASTConverter) convert_module_ident_expr(node *sitter.Node, source []byte) ast.Expression {
+	return c.convert_module_type_ident(node, source)
+
+	/*
+		return ast.NewIdentifierBuilder().
+			WithId(c.getNextID()).
+			WithName(node.ChildByFieldName("ident").Content(source)).
+			WithPath(
+				node.Child(0).Child(0).Content(source)
+			).
+			WithSitterPos(node).BuildPtr()*/
+}
+
+func (c *ASTConverter) convert_module_type_ident(node *sitter.Node, sourceCode []byte) *ast.Ident {
+	rootId := c.getNextID()
+	var ident *ast.Ident
+	pathTokens := []string{}
+	modulePathRange := lsp.Range{}
+	firstModuleFound := false
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		nodeType := n.Type()
+		switch nodeType {
+		case "module_type_resolution", "module_resolution":
+			pathTokens = append(pathTokens, n.Child(0).Content(sourceCode))
+			if !firstModuleFound {
+				firstModuleFound = true
+				modulePathRange.Start = lsp.Position{Line: uint(n.StartPoint().Row), Column: uint(n.StartPoint().Column)}
+			}
+			modulePathRange.End = lsp.Position{Line: uint(n.EndPoint().Row), Column: uint(n.EndPoint().Column)}
+
+		case "type_ident", "ident":
+			ident = ast.NewIdentifierBuilder().
+				WithId(rootId).
+				WithSitterPos(node).
+				WithName(n.Content(sourceCode)).
+				BuildPtr()
+		}
+	}
+
+	if len(pathTokens) > 0 {
+		ident.ModulePath = ast.NewIdentifierBuilder().
+			WithId(c.getNextID()).
+			WithName(strings.Join(pathTokens, "::")).
+			WithRange(modulePathRange).
+			BuildPtr()
+	}
+
+	return ident
+}
+
 func (c *ASTConverter) convert_var_decl(node *sitter.Node, source []byte) ast.Declaration {
 	//for i := 0; i < int(node.ChildCount()); i++ {
 
@@ -792,17 +846,19 @@ func (c *ASTConverter) convert_type(node *sitter.Node, sourceCode []byte) ast.Ty
 					typeInfo.Identifier = ast.NewIdentifierBuilder().
 						WithId(c.getNextID()).
 						WithName(bn.Content(sourceCode)).
-						WithSitterPos(bn).
-						WithSitterRange(bn).
-						Build()
+						WithSitterPos(n).
+						WithSitterRange(n).
+						BuildPtr()
+
 					typeInfo.BuiltIn = true
 				case "type_ident":
 					typeInfo.Identifier = ast.NewIdentifierBuilder().
 						WithId(c.getNextID()).
 						WithName(bn.Content(sourceCode)).
-						WithSitterPos(bn).
-						WithSitterRange(bn).
-						Build()
+						WithSitterPos(n).
+						WithSitterRange(n).
+						BuildPtr()
+
 				case "generic_arguments":
 					for g := 0; g < int(bn.ChildCount()); g++ {
 						gn := bn.Child(g)
@@ -813,14 +869,8 @@ func (c *ASTConverter) convert_type(node *sitter.Node, sourceCode []byte) ast.Ty
 					}
 
 				case "module_type_ident":
-					//fmt.Println(bn)
-					typeInfo.Identifier = ast.NewIdentifierBuilder().
-						WithId(c.getNextID()).
-						WithPath(strings.Trim(bn.Child(0).Content(sourceCode), ":")).
-						WithName(bn.Child(1).Content(sourceCode)).
-						WithSitterPos(bn).
-						WithSitterRange(bn).
-						Build()
+					identifier := c.convert_module_type_ident(bn, sourceCode)
+					typeInfo.Identifier = identifier
 				}
 			}
 
@@ -989,11 +1039,13 @@ func (c *ASTConverter) convert_function_parameter(argNode *sitter.Node, methodId
 				}
 
 				argType = ast.TypeInfo{
-					Identifier: ast.NewIdentifierBuilder().
+					Identifier: //&ast.PathIdent{
+					//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), n),
+					ast.NewIdentifierBuilder().
 						WithId(c.getNextID()).
 						WithName(methodIdentifier.Get().Name).
 						WithSitterPos(n).
-						Build(),
+						BuildPtr(),
 					Pointer: pointer,
 					NodeAttributes: ast.NewNodeAttributesBuilder().
 						WithId(c.getNextID()).
@@ -1518,14 +1570,6 @@ func (c *ASTConverter) convert_type_with_initializer_list(node *sitter.Node, sou
 	}
 
 	return expression
-}
-
-func (c *ASTConverter) convert_module_ident_expr(node *sitter.Node, source []byte) ast.Expression {
-	return ast.NewIdentifierBuilder().
-		WithId(c.getNextID()).
-		WithName(node.ChildByFieldName("ident").Content(source)).
-		WithPath(node.Child(0).Child(0).Content(source)).
-		WithSitterPos(node).BuildPtr()
 }
 
 func (c *ASTConverter) convert_literal(node *sitter.Node, sourceCode []byte) ast.Expression {

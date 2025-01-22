@@ -98,7 +98,7 @@ func (s *SymbolTable) RegisterNewRootScope(file string, node ast.Module) *Scope 
 	s.scopeTree[file].modules[node.Name] = scope
 
 	for _, imp := range node.Imports {
-		scope.Imports = append(scope.Imports, NewModuleName(imp.Path))
+		scope.Imports = append(scope.Imports, NewModuleName(imp.Path.Name))
 	}
 
 	// Register it in moduleFileMap
@@ -173,7 +173,7 @@ func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, na
 		if iteration == 0 {
 			scope = FindClosestScope(moduleScope, pos)
 		} else {
-			// other iterations, are searching in root scope of impored module, position is not relevant
+			// other iterations, are searching in root scope of imported module, position is not relevant
 			scope = moduleScope
 		}
 		if scope == nil {
@@ -245,7 +245,7 @@ func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName 
 		case *ast.GenDecl:
 			switch spec := n.Spec.(type) {
 			case *ast.ValueSpec:
-				typeName = spec.Type.Identifier.Name
+				typeName = spec.Type.Identifier.String() // TODO this will fail if type contains Module path
 			}
 		}
 

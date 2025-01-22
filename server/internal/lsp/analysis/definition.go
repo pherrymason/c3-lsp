@@ -39,7 +39,7 @@ func getAllModuleLocations(importStmt *ast.Import, storage *document.Storage) []
 
 	for _, doc := range storage.Documents {
 		for _, mod := range doc.Ast.Modules {
-			if mod.Name == importStmt.Path {
+			if mod.Name == importStmt.Path.Name {
 				locations = append(locations, protocol.Location{
 					URI: doc.Uri,
 					Range: protocol.Range{

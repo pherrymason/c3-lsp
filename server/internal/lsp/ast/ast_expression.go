@@ -21,8 +21,8 @@ type (
 	// It can be built
 	Ident struct {
 		NodeAttributes
+		ModulePath *Ident
 		Name       string // Identifier name
-		ModulePath string // Module path. Some identifiers, specify module path.
 	}
 
 	Path struct {
@@ -218,13 +218,21 @@ func (arg *ArgFieldSet) SetExpr(expr Expression) {
 	arg.Expr = expr
 }
 
+func (p *Ident) String() string {
+	if p.ModulePath != nil {
+		return p.ModulePath.Name + "::" + p.Name
+	}
+
+	return p.Name
+}
+
 // A type is represented by a tree consisting of one
 // or more of the following type-specific expression nodes.
 type (
 	TypeInfo struct {
 		NodeAttributes
 		ResolveStatus int
-		Identifier    Ident
+		Identifier    *Ident
 		Pointer       uint
 		Optional      bool
 		BuiltIn       bool
@@ -303,7 +311,7 @@ type (
 func (*ArgFieldSet) exprNode()             {}
 func (*ArgParamPathSet) exprNode()         {}
 func (e *AssignmentExpression) exprNode()  {}
-func (Ident) exprNode()                    {}
+func (*Ident) exprNode()                   {}
 func (*ParenExpr) exprNode()               {}
 func (*SelectorExpr) exprNode()            {}
 func (Path) exprNode()                     {}

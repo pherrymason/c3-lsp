@@ -50,6 +50,10 @@ type findContext struct {
 func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *SymbolTable, tree ast.Node) option.Option[*Symbol] {
 	nodeAtPosition, path := FindNode(tree, pos)
 
+	if nodeAtPosition == nil {
+		return option.None[*Symbol]()
+	}
+
 	var name string
 	switch n := nodeAtPosition.(type) {
 	case *ast.Ident:
@@ -173,7 +177,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 		result := symbolTable.FindSymbolByPosition(
 			base.StartPosition(),
 			fileName,
-			base.Identifier.Name,
+			base.Identifier.String(),
 			context.moduleName,
 			0,
 		)
@@ -230,7 +234,7 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 		}
 
 	case ast.STRUCT:
-		inlinedCandidates := []ast.Ident{}
+		inlinedCandidates := []*ast.Ident{}
 
 		// Search In Members
 		for _, member := range symbol.NodeDecl.(*ast.StructDecl).Members {
@@ -244,7 +248,7 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 						NodeDecl: member,
 						Kind:     ast.FIELD,
 						Type: TypeDefinition{
-							member.Type.Identifier.Name,
+							member.Type.Identifier.String(),
 							member.Type.BuiltIn,
 							member.Type,
 						},
@@ -256,7 +260,7 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 				value := symbolTable.FindSymbolByPosition(
 					member.Range.Start,
 					fileName,
-					member.Type.Identifier.Name,
+					member.Type.Identifier.String(),
 					moduleName,
 					0,
 				)
@@ -282,7 +286,7 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 			inlinedTypeSymbol := symbolTable.FindSymbolByPosition(
 				inlinedTypeIdent.Range.Start,
 				fileName,
-				inlinedTypeIdent.Name,
+				inlinedTypeIdent.String(),
 				moduleName,
 				0,
 			)
@@ -308,7 +312,7 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 		returnTypeSymbol := symbolTable.FindSymbolByPosition(
 			returnType.Range.Start,
 			fileName,
-			returnType.Identifier.Name,
+			returnType.Identifier.String(),
 			moduleName,
 			0,
 		)
