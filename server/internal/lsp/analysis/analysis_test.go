@@ -193,8 +193,7 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		assert.Equal(t, NewModuleName("foo::bar"), symbol.Module)
 	})
 
-	t.Run("Find global exported variable declaration", func(t *testing.T) {
-		t.Skip()
+	t.Run("Find explicitly exported variable declared in different module, same file", func(t *testing.T) {
 		source := `
 		module foo_alt;
 		char tick;
@@ -217,6 +216,38 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 
 		assert.Equal(t, "tick", symbol.Name)
 		assert.Equal(t, lsp.NewRange(5, 2, 5, 12), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "char", symbol.Type.Name)
+		assert.Equal(t, NewModuleName("foo"), symbol.Module)
+	})
+
+	t.Run("Find explicitly exported variable declared in different module, different file", func(t *testing.T) {
+		source := `
+		module foo_alt;
+		char tick;
+		
+		module foo2;
+		import foo;
+		char fps = foo::tick * 60;
+		`
+
+		symbolTable := NewSymbolTable()
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		UpdateSymbolTable(symbolTable, tree, fileName)
+
+		secondFileName := "foo.c3"
+		source = `module foo;
+		char tick;`
+		tree = getTree(source, secondFileName)
+		UpdateSymbolTable(symbolTable, tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 6, Column: 19} // Cursor at char fps = foo::t|ick * 60;
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbol := symbolOpt.Get()
+
+		assert.Equal(t, "tick", symbol.Name)
+		assert.Equal(t, lsp.NewRange(1, 2, 1, 12), symbol.NodeDecl.GetRange())
 		assert.Equal(t, "char", symbol.Type.Name)
 		assert.Equal(t, NewModuleName("foo"), symbol.Module)
 	})
