@@ -184,15 +184,17 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 				structFields = append(structFields, &structMember)
 			}
 		} else if isInline {
-			membersNeedingSubtypingResolve = append(membersNeedingSubtypingResolve, fieldType)
-			structMember := idx.NewInlineSubtype(
-				identifier,
-				fieldType,
-				currentModule.GetModuleString(),
-				*docId,
-				identifiersRange[0],
-			)
-			structFields = append(structFields, &structMember)
+			if len(identifiersRange) > 0 {
+				membersNeedingSubtypingResolve = append(membersNeedingSubtypingResolve, fieldType)
+				structMember := idx.NewInlineSubtype(
+					identifier,
+					fieldType,
+					currentModule.GetModuleString(),
+					*docId,
+					identifiersRange[0],
+				)
+				structFields = append(structFields, &structMember)
+			}
 		} else if len(identifier) > 0 {
 			structMember := idx.NewStructMember(
 				identifier,

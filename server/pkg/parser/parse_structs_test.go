@@ -243,6 +243,25 @@ func TestParse_struct_subtyping_members_should_be_flagged(t *testing.T) {
 		assert.True(t, members[0].IsInlinePendingToResolve(), "Member should be flagged to be inlined")
 		assert.Equal(t, idx.NewRange(6, 16, 6, 22), members[0].GetIdRange(), "Identifier range is wrong")
 	})
+
+	t.Run("should not break when inline substruct still has no identifier written", func(t *testing.T) {
+		source := `module x;
+	struct Person {
+		int age;
+		String name;
+	}
+	struct ImportantPerson {
+		inline Person
+	}`
+		doc := document.NewDocument("docId", source)
+		parser := createParser()
+
+		symbols, _ := parser.ParseSymbols(&doc)
+		module := symbols.Get("x")
+
+		_, ok := module.Structs["ImportantPerson"]
+		assert.True(t, ok)
+	})
 }
 
 func TestParse_Unions(t *testing.T) {
