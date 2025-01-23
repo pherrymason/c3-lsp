@@ -337,9 +337,9 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		state.registerDoc(
 			"app.c3",
 			`enum WindowStatus : int (int counter) {
-				OPEN(1), 
-				BACKGROUND(2), 
-				MINIMIZED(3) 
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
 			}
 			fn void main() {
 				int status = WindowStatus.BACKGROUND.counter;
@@ -380,7 +380,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 			"app.c3",
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 			fn bool WindowStatus.isOpen(){}
-			
+
 			fn void main() {
 				WindowStatus val = OPEN;
 				val.isOpen();
@@ -528,7 +528,7 @@ func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 		state.registerDoc(
 			"app.c3",
 			`fn void init_window(int width, int height, char* title) @extern("InitWindow");
-			
+
 			init_window(200, 200, "hello");
 			`,
 		)
