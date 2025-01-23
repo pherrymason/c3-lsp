@@ -251,7 +251,7 @@ func TestParse_struct_subtyping_members_should_be_flagged(t *testing.T) {
 		String name;
 	}
 	struct ImportantPerson {
-		inline Person
+		inline Person;
 	}`
 		doc := document.NewDocument("docId", source)
 		parser := createParser()
@@ -265,7 +265,7 @@ func TestParse_struct_subtyping_members_should_be_flagged(t *testing.T) {
 }
 
 func TestParse_Unions(t *testing.T) {
-	source := `module x; 
+	source := `module x;
 	union MyUnion{
 		short as_short;
 		int as_int;
