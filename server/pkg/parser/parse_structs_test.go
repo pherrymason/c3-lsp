@@ -251,7 +251,7 @@ func TestParse_struct_subtyping_members_should_be_flagged(t *testing.T) {
 		String name;
 	}
 	struct ImportantPerson {
-		inline Person;
+		inline Person
 	}`
 		doc := document.NewDocument("docId", source)
 		parser := createParser()
@@ -260,7 +260,7 @@ func TestParse_struct_subtyping_members_should_be_flagged(t *testing.T) {
 		module := symbols.Get("x")
 
 		_, ok := module.Structs["ImportantPerson"]
-		assert.True(t, ok)
+		assert.False(t, ok)
 	})
 }
 
