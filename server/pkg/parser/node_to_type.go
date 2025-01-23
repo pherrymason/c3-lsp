@@ -10,15 +10,6 @@ import (
 )
 
 func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module, sourceCode []byte) symbols.Type {
-
-	if node.Type() == "optional_type" {
-		return p.extTypeNodeToType(node.Child(0), true, currentModule, sourceCode)
-	}
-
-	return p.extTypeNodeToType(node, false, currentModule, sourceCode)
-}
-
-func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, currentModule *symbols.Module, sourceCode []byte) symbols.Type {
 	//fmt.Println(node, node.Content(sourceCode))
 	baseTypeLanguage := false
 	baseType := ""
@@ -26,6 +17,9 @@ func (p *Parser) extTypeNodeToType(node *sitter.Node, isOptional bool, currentMo
 	generic_arguments := []symbols.Type{}
 
 	parsedType := symbols.Type{}
+
+	tailChild := node.Child(int(node.ChildCount()) - 1)
+	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "!"
 
 	//fmt.Println(node.Type(), node.Content(sourceCode), node.ChildCount())
 	isCollection := false
