@@ -907,24 +907,15 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 }
 
 func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
-	if node.Type() == "optional_type" {
-		return extTypeNodeToType(node.Child(0), true, sourceCode)
-	}
-
-	return extTypeNodeToType(node, false, sourceCode)
-}
-
-func extTypeNodeToType(
-	node *sitter.Node,
-	isOptional bool,
-	sourceCode []byte,
-) TypeInfo {
 	/*
 		baseTypeLanguage := false
 		baseType := ""
 		modulePath := ""
 		generic_arguments := []TypeInfo{}
 		pointerCount := 0*/
+
+	tailChild := node.Child(int(node.ChildCount()) - 1)
+	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "!"
 
 	typeInfo := TypeInfo{
 		Optional: isOptional,
