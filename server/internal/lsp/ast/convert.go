@@ -257,13 +257,26 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 
 				compositeLiteral := CompositeLiteral{}
 				args := enumeratorNode.ChildByFieldName("args")
-				if args != nil {
-					for a := 0; a < int(args.ChildCount()); a++ {
-						arg := args.Child(a)
-						if arg.Type() == "arg" {
-							compositeLiteral.Values = append(compositeLiteral.Values,
-								convert_literal(arg.Child(0), sourceCode),
-							)
+				if args != nil && args.ChildCount() > 0 {
+					args := args.Child(int(args.ChildCount()) - 1)
+					if is_literal(args) {
+						compositeLiteral.Values = append(compositeLiteral.Values,
+							convert_literal(args, sourceCode),
+						)
+					} else if args.Type() == "initializer_list" {
+						for a := 0; a < int(args.ChildCount()); a++ {
+							arg := args.Child(a)
+							if arg.Type() == "arg" {
+								if !is_literal(arg.Child(0)) {
+									// Exit early to ensure correspondence between
+									// index of each value and index of each predefined
+									// enum parameter
+									break
+								}
+								compositeLiteral.Values = append(compositeLiteral.Values,
+									convert_literal(arg.Child(0), sourceCode),
+								)
+							}
 						}
 					}
 				}
