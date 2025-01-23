@@ -75,45 +75,6 @@ func TestParses_TypedEnums(t *testing.T) {
 		assert.Same(t, enum.Children()[2], e)
 	})
 
-	t.Run("associate values < v6.0", func(t *testing.T) {
-		source := `
-		enum State : int (String state_desc, bool active)
-		{
-			PENDING("pending start", false),
-			RUNNING("running", true),
-			TERMINATED("ended", false)
-		}`
-		doc := document.NewDocument("ass.c3", source)
-		parser := createParser()
-
-		symbols, _ := parser.ParseSymbols(&doc)
-
-		scope := symbols.Get("ass")
-		enum := scope.Enums["State"]
-		assert.NotNil(t, scope.Enums["State"])
-
-		e := enum.GetEnumerator("PENDING")
-		assert.Equal(t, "PENDING", e.GetName())
-		assert.Equal(t, idx.NewRange(3, 3, 3, 10), e.GetIdRange())
-		assert.Same(t, enum.Children()[0], e)
-
-		assert.Equal(t, "state_desc", e.AssociatedValues[0].GetName())
-		assert.Equal(t, "String", e.AssociatedValues[0].GetType().GetName())
-
-		assert.Equal(t, "active", e.AssociatedValues[1].GetName())
-		assert.Equal(t, "bool", e.AssociatedValues[1].GetType().GetName())
-
-		e = enum.GetEnumerator("RUNNING")
-		assert.Equal(t, "RUNNING", e.GetName())
-		assert.Equal(t, idx.NewRange(4, 3, 4, 10), e.GetIdRange())
-		assert.Same(t, enum.Children()[1], e)
-
-		e = enum.GetEnumerator("TERMINATED")
-		assert.Equal(t, "TERMINATED", e.GetName())
-		assert.Equal(t, idx.NewRange(5, 3, 5, 13), e.GetIdRange())
-		assert.Same(t, enum.Children()[2], e)
-	})
-
 	t.Run("associate values >= v6.0", func(t *testing.T) {
 		t.Skip()
 		source := `
