@@ -444,6 +444,9 @@ func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) StructD
 		StructType:  StructTypeBitStruct,
 	}
 
+	membersNode := node.ChildByFieldName("body")
+	structDecl.Members = convert_bitstruct_members(membersNode, sourceCode)
+
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
 		//fmt.Println("type:", child.Type(), child.Content(sourceCode))
@@ -463,9 +466,6 @@ func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) StructD
 
 		case "type":
 			structDecl.BackingType = option.Some(typeNodeToType(child, sourceCode))
-
-		case "bitstruct_body":
-			structDecl.Members = convert_bitstruct_members(child, sourceCode)
 		}
 	}
 
@@ -483,7 +483,7 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 				Build(),
 		}
 
-		if bType == "bitstruct_def" {
+		if bType == "bitstruct_member_declaration" {
 			for x := 0; x < int(bdefnode.ChildCount()); x++ {
 				xNode := bdefnode.Child(x)
 				//fmt.Println(xNode.Type())
@@ -503,8 +503,11 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 			}
 
 			bitRanges := [2]uint{}
-			lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
-			bitRanges[0] = uint(lowBit)
+
+			if bdefnode.ChildCount() >= 4 {
+				lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
+				bitRanges[0] = uint(lowBit)
+			}
 
 			if bdefnode.ChildCount() >= 6 {
 				highBit, _ := strconv.ParseInt(bdefnode.Child(5).Content(sourceCode), 10, 32)
@@ -521,8 +524,6 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 				idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
 			)*/
 			members = append(members, member)
-		} else if bType == "_bitstruct_simple_defs" {
-			// Could not make examples with these to parse.
 		}
 	}
 
