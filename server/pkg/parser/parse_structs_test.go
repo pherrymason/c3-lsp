@@ -332,3 +332,50 @@ func TestParse_bitstructs(t *testing.T) {
 		assert.Same(t, found.Children()[2], members[2])
 	})
 }
+
+func TestParse_incomplete_bitstructs(t *testing.T) {
+	source := `module x;
+	bitstruct Test : uint
+	{
+		ushort a;
+		ushort b;
+		bool c;
+	}`
+	doc := document.NewDocument("docId", source)
+	parser := createParser()
+
+	t.Run("parses bitstruct", func(t *testing.T) {
+
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		found := symbols.Get("x").Bitstructs["Test"]
+		assert.Same(t, symbols.Get("x").Children()[0], found)
+		assert.Equal(t, "Test", found.GetName())
+		assert.Equal(t, "uint", found.Type().GetName())
+
+		members := found.Members()
+		assert.Equal(t, 3, len(members))
+
+		// Check field a
+		member := members[0]
+		assert.Equal(t, "a", member.GetName())
+		assert.Equal(t, "ushort", members[0].GetType().GetName())
+		assert.Equal(t, [2]uint{0}, members[0].GetBitRange())
+		assert.Equal(t, idx.NewRange(3, 9, 3, 10), members[0].GetIdRange())
+		assert.Same(t, found.Children()[0], member)
+
+		// Check field b
+		assert.Equal(t, "b", members[1].GetName())
+		assert.Equal(t, "ushort", members[1].GetType().GetName())
+		assert.Equal(t, [2]uint{0}, members[1].GetBitRange())
+		assert.Equal(t, idx.NewRange(4, 9, 4, 10), members[1].GetIdRange())
+		assert.Same(t, found.Children()[1], members[1])
+
+		// Check field c
+		assert.Equal(t, "c", members[2].GetName())
+		assert.Equal(t, "bool", members[2].GetType().GetName())
+		assert.Equal(t, [2]uint{0}, members[2].GetBitRange())
+		assert.Equal(t, idx.NewRange(5, 7, 5, 8), members[2].GetIdRange())
+		assert.Same(t, found.Children()[2], members[2])
+	})
+}
