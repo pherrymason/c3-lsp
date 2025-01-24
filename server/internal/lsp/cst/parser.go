@@ -4,8 +4,9 @@ package cst
 //TSLanguage *tree_sitter_c3();
 import "C"
 import (
-	sitter "github.com/smacker/go-tree-sitter"
 	"unsafe"
+
+	sitter "github.com/smacker/go-tree-sitter"
 )
 
 func NewSitterParser() *sitter.Parser {

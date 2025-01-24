@@ -61,6 +61,7 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, "", fn.Get().GetDocComment())
 		assert.Equal(t, idx.NewRange(0, 8, 0, 19), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 0, 78), fn.Get().GetDocumentRange())
 	})
@@ -81,6 +82,7 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(3, 10, 3, 21), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(3, 2, 3, 80), fn.Get().GetDocumentRange())
+		assert.Equal(t, "abc", fn.Get().GetDocComment())
 	})
 
 	t.Run("Resolves function with unnamed parameters correctly", func(t *testing.T) {
@@ -151,9 +153,31 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(0, 8, 0, 12), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 2, 2), fn.Get().GetDocumentRange())
+		assert.Equal(t, "", fn.Get().GetDocComment())
 	})
 
-	t.Run("Finds function with doc comment", func(t *testing.T) {
+	t.Run("Finds function with simple doc comment", func(t *testing.T) {
+		source := `<*
+			abc
+		*>
+		fn void test(int number, char ch, int* pointer) {
+			return 1;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(3, 10, 3, 14), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(3, 2, 5, 3), fn.Get().GetDocumentRange())
+		assert.Equal(t, "abc", fn.Get().GetDocComment())
+	})
+
+	t.Run("Finds function with doc comment with contracts", func(t *testing.T) {
 		source := `<*
 			abc
 			@pure
@@ -175,6 +199,11 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(7, 10, 7, 14), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(7, 2, 9, 3), fn.Get().GetDocumentRange())
+		assert.Equal(t, `abc
+@pure
+@param [in] pointer
+@require number > 0, number < 1000 : "invalid number"
+@ensure return == 1`, fn.Get().GetDocComment())
 	})
 
 	t.Run("Finds function arguments", func(t *testing.T) {

@@ -13,6 +13,8 @@ import (
 func TestFindsGlobalStructs(t *testing.T) {
 	source := `
 module x;
+
+<* docs *>
 struct MyStruct (MyInterface, MySecondInterface) {
 	int data;
 	char key;
@@ -37,8 +39,9 @@ fn void MyStruct.init(&self)
 		assert.Same(t, symbols.Get("x").Children()[0], found)
 		assert.Equal(t, "MyStruct", found.GetName())
 		assert.False(t, found.IsUnion())
-		assert.Equal(t, idx.NewRange(2, 0, 6, 1), found.GetDocumentRange())
-		assert.Equal(t, idx.NewRange(2, 7, 2, 15), found.GetIdRange())
+		assert.Equal(t, idx.NewRange(4, 0, 8, 1), found.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(4, 7, 4, 15), found.GetIdRange())
+		assert.Equal(t, "docs", found.GetDocComment())
 	})
 
 	t.Run("finds struct members", func(t *testing.T) {
@@ -48,7 +51,7 @@ fn void MyStruct.init(&self)
 		member := found.GetMembers()[0]
 		assert.Equal(t, "data", member.GetName())
 		assert.Equal(t, "int", member.GetType().GetName())
-		assert.Equal(t, idx.NewRange(3, 5, 3, 9), member.GetIdRange())
+		assert.Equal(t, idx.NewRange(5, 5, 5, 9), member.GetIdRange())
 		assert.Equal(t, "docId", member.GetDocumentURI())
 		assert.Equal(t, "x", member.GetModuleString())
 		assert.Same(t, found.Children()[0], member)
@@ -56,7 +59,7 @@ fn void MyStruct.init(&self)
 		member = found.GetMembers()[1]
 		assert.Equal(t, "key", member.GetName())
 		assert.Equal(t, "char", member.GetType().GetName())
-		assert.Equal(t, idx.NewRange(4, 6, 4, 9), member.GetIdRange())
+		assert.Equal(t, idx.NewRange(6, 6, 6, 9), member.GetIdRange())
 		assert.Equal(t, "docId", member.GetDocumentURI())
 		assert.Equal(t, "x", member.GetModuleString())
 		assert.Same(t, found.Children()[1], member)
@@ -67,7 +70,7 @@ fn void MyStruct.init(&self)
 		assert.Equal(t, "Camera", member.GetType().GetName())
 		assert.Equal(t, "raylib::Camera", member.GetType().GetFullQualifiedName())
 
-		assert.Equal(t, idx.NewRange(5, 16, 5, 22), member.GetIdRange())
+		assert.Equal(t, idx.NewRange(7, 16, 7, 22), member.GetIdRange())
 		assert.Equal(t, "docId", member.GetDocumentURI())
 		assert.Equal(t, "x", member.GetModuleString())
 		assert.Same(t, found.Children()[2], member)
@@ -124,6 +127,40 @@ struct Foo {
 	assert.Equal(t, "char", member.GetType().GetName())
 	assert.Equal(t, idx.NewRange(5, 6, 5, 10), member.GetIdRange())
 	assert.Same(t, substruct.Children()[1], member)
+}
+
+func TestParses_substructs_with_invalid_docs(t *testing.T) {
+	source := `
+module x;
+struct Foo {
+  <* this doc comment does not compile, but parses *>
+  struct data {
+    int print;
+	char name;
+  }
+}
+`
+	docId := "docId"
+	doc := document.NewDocument(docId, source)
+	parser := createParser()
+
+	symbols, _ := parser.ParseSymbols(&doc)
+
+	found := symbols.Get("x").Structs["Foo"]
+	assert.Same(t, symbols.Get("x").Children()[0], found)
+	assert.Equal(t, "Foo", found.GetName())
+	assert.False(t, found.IsUnion())
+	assert.Equal(t, idx.NewRange(2, 0, 8, 1), found.GetDocumentRange())
+	assert.Equal(t, idx.NewRange(2, 7, 2, 10), found.GetIdRange())
+
+	member := found.GetMembers()[0]
+	assert.Equal(t, "data", member.GetName())
+	assert.Equal(t, true, member.IsStruct())
+	assert.Equal(t, idx.NewRange(4, 9, 4, 13), member.GetIdRange())
+	assert.Same(t, found.Children()[0], member)
+
+	// Docs here are invalid
+	assert.Equal(t, "", member.GetDocComment())
 }
 
 func TestParses_anonymous_substructs(t *testing.T) {
@@ -266,6 +303,7 @@ func TestParse_struct_subtyping_members_should_be_flagged(t *testing.T) {
 
 func TestParse_Unions(t *testing.T) {
 	source := `module x;
+	<* docs *>
 	union MyUnion{
 		short as_short;
 		int as_int;
@@ -280,14 +318,16 @@ func TestParse_Unions(t *testing.T) {
 		found := module.Structs["MyUnion"]
 		assert.Equal(t, "MyUnion", found.GetName())
 		assert.True(t, found.IsUnion())
-		assert.Equal(t, idx.NewRange(1, 1, 4, 2), found.GetDocumentRange())
-		assert.Equal(t, idx.NewRange(1, 7, 1, 14), found.GetIdRange())
+		assert.Equal(t, idx.NewRange(2, 1, 5, 2), found.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(2, 7, 2, 14), found.GetIdRange())
+		assert.Equal(t, "docs", found.GetDocComment())
 		assert.Same(t, module.Children()[0], found)
 	})
 }
 
 func TestParse_bitstructs(t *testing.T) {
 	source := `module x;
+	<* docs *>
 	bitstruct Test : uint
 	{
 		ushort a : 0..15;
@@ -305,6 +345,7 @@ func TestParse_bitstructs(t *testing.T) {
 		assert.Same(t, symbols.Get("x").Children()[0], found)
 		assert.Equal(t, "Test", found.GetName())
 		assert.Equal(t, "uint", found.Type().GetName())
+		assert.Equal(t, "docs", found.GetDocComment())
 
 		members := found.Members()
 		assert.Equal(t, 3, len(members))
@@ -314,21 +355,21 @@ func TestParse_bitstructs(t *testing.T) {
 		assert.Equal(t, "a", member.GetName())
 		assert.Equal(t, "ushort", members[0].GetType().GetName())
 		assert.Equal(t, [2]uint{0, 15}, members[0].GetBitRange())
-		assert.Equal(t, idx.NewRange(3, 9, 3, 10), members[0].GetIdRange())
+		assert.Equal(t, idx.NewRange(4, 9, 4, 10), members[0].GetIdRange())
 		assert.Same(t, found.Children()[0], member)
 
 		// Check field b
 		assert.Equal(t, "b", members[1].GetName())
 		assert.Equal(t, "ushort", members[1].GetType().GetName())
 		assert.Equal(t, [2]uint{16, 31}, members[1].GetBitRange())
-		assert.Equal(t, idx.NewRange(4, 9, 4, 10), members[1].GetIdRange())
+		assert.Equal(t, idx.NewRange(5, 9, 5, 10), members[1].GetIdRange())
 		assert.Same(t, found.Children()[1], members[1])
 
 		// Check field c
 		assert.Equal(t, "c", members[2].GetName())
 		assert.Equal(t, "bool", members[2].GetType().GetName())
 		assert.Equal(t, [2]uint{7}, members[2].GetBitRange())
-		assert.Equal(t, idx.NewRange(5, 7, 5, 8), members[2].GetIdRange())
+		assert.Equal(t, idx.NewRange(6, 7, 6, 8), members[2].GetIdRange())
 		assert.Same(t, found.Children()[2], members[2])
 	})
 }

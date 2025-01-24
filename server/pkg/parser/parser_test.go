@@ -27,8 +27,9 @@ func TestParses_empty_document(t *testing.T) {
 func TestParses_TypedEnums(t *testing.T) {
 	docId := "doc"
 	source := `
+	<* abc *>
 	enum Colors:int { RED, BLUE, GREEN }
-	fn bool Colors.hasRed(Colors color) 
+	fn bool Colors.hasRed(Colors color)
 	{}
 	`
 	doc := document.NewDocument(docId, source)
@@ -51,8 +52,17 @@ func TestParses_TypedEnums(t *testing.T) {
 		scope := symbols.Get("doc")
 		enum := scope.Enums["Colors"]
 
-		assert.Equal(t, idx.NewRange(1, 1, 1, 37), enum.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(1, 6, 1, 12), enum.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, idx.NewRange(2, 1, 2, 37), enum.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(2, 6, 2, 12), enum.GetIdRange(), "Wrong identifier range")
+	})
+
+	t.Run("finds doc comment", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		scope := symbols.Get("doc")
+		enum := scope.Enums["Colors"]
+
+		assert.Equal(t, "abc", enum.GetDocComment())
 	})
 
 	t.Run("finds defined enumerators", func(t *testing.T) {
@@ -61,17 +71,17 @@ func TestParses_TypedEnums(t *testing.T) {
 		enum := symbols.Get("doc").Enums["Colors"]
 		e := enum.GetEnumerator("RED")
 		assert.Equal(t, "RED", e.GetName())
-		assert.Equal(t, idx.NewRange(1, 19, 1, 22), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(2, 19, 2, 22), e.GetIdRange())
 		assert.Same(t, enum.Children()[0], e)
 
 		e = enum.GetEnumerator("BLUE")
 		assert.Equal(t, "BLUE", e.GetName())
-		assert.Equal(t, idx.NewRange(1, 24, 1, 28), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(2, 24, 2, 28), e.GetIdRange())
 		assert.Same(t, enum.Children()[1], e)
 
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
-		assert.Equal(t, idx.NewRange(1, 30, 1, 35), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(2, 30, 2, 35), e.GetIdRange())
 		assert.Same(t, enum.Children()[2], e)
 	})
 
@@ -103,7 +113,10 @@ func TestParses_TypedEnums(t *testing.T) {
 
 func TestParses_UnTypedEnums(t *testing.T) {
 	docId := "doc"
-	source := `enum Colors { RED, BLUE, GREEN };`
+	source := `<*
+		abc
+	*>
+	enum Colors { RED, BLUE, GREEN };`
 	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
@@ -122,8 +135,17 @@ func TestParses_UnTypedEnums(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		enum := symbols.Get("doc").Enums["Colors"]
-		assert.Equal(t, idx.NewRange(0, 0, 0, 32), enum.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(0, 5, 0, 11), enum.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, idx.NewRange(3, 1, 3, 33), enum.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(3, 6, 3, 12), enum.GetIdRange(), "Wrong identifier range")
+	})
+
+	t.Run("finds doc comment", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		scope := symbols.Get("doc")
+		enum := scope.Enums["Colors"]
+
+		assert.Equal(t, "abc", enum.GetDocComment())
 	})
 
 	t.Run("finds defined enumerators", func(t *testing.T) {
@@ -132,21 +154,22 @@ func TestParses_UnTypedEnums(t *testing.T) {
 		enum := symbols.Get("doc").Enums["Colors"]
 		e := enum.GetEnumerator("RED")
 		assert.Equal(t, "RED", e.GetName())
-		assert.Equal(t, idx.NewRange(0, 14, 0, 17), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(3, 15, 3, 18), e.GetIdRange())
 
 		e = enum.GetEnumerator("BLUE")
 		assert.Equal(t, "BLUE", e.GetName())
-		assert.Equal(t, idx.NewRange(0, 19, 0, 23), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(3, 20, 3, 24), e.GetIdRange())
 
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
-		assert.Equal(t, idx.NewRange(0, 25, 0, 30), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(3, 26, 3, 31), e.GetIdRange())
 	})
 }
 
 func TestParse_fault(t *testing.T) {
 	docId := "doc"
-	source := `fault IOResult
+	source := `<* docs *>
+	fault IOResult
 	{
 	  IO_ERROR,
 	  PARSE_ERROR
@@ -169,8 +192,16 @@ func TestParse_fault(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("doc").Faults["IOResult"]
-		assert.Equal(t, idx.NewRange(0, 0, 4, 2), found.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(0, 6, 0, 14), found.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, idx.NewRange(1, 1, 5, 2), found.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(1, 7, 1, 15), found.GetIdRange(), "Wrong identifier range")
+	})
+
+	t.Run("finds doc comment", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fault := symbols.Get("doc").Faults["IOResult"]
+
+		assert.Equal(t, "docs", fault.GetDocComment())
 	})
 
 	t.Run("finds defined fault constants", func(t *testing.T) {
@@ -179,12 +210,12 @@ func TestParse_fault(t *testing.T) {
 		fault := symbols.Get("doc").Faults["IOResult"]
 		e := fault.GetConstant("IO_ERROR")
 		assert.Equal(t, "IO_ERROR", e.GetName())
-		assert.Equal(t, idx.NewRange(2, 3, 2, 11), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetIdRange())
 		assert.Same(t, fault.Children()[0], e)
 
 		e = fault.GetConstant("PARSE_ERROR")
 		assert.Equal(t, "PARSE_ERROR", e.GetName())
-		assert.Equal(t, idx.NewRange(3, 3, 3, 14), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetIdRange())
 		assert.Same(t, fault.Children()[1], e)
 	})
 }
@@ -192,7 +223,8 @@ func TestParse_fault(t *testing.T) {
 func TestParse_interface(t *testing.T) {
 	module := "x"
 	docId := "doc"
-	source := `interface MyName
+	source := `<* docs *>
+	interface MyName
 	{
 		fn String method();
 	};`
@@ -218,8 +250,15 @@ func TestParse_interface(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("doc").Interfaces["MyName"]
-		assert.Equal(t, idx.NewRange(0, 0, 3, 2), found.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(0, 10, 0, 16), found.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, idx.NewRange(1, 1, 4, 2), found.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(1, 11, 1, 17), found.GetIdRange(), "Wrong identifier range")
+	})
+
+	t.Run("finds doc comment", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		found := symbols.Get("doc").Interfaces["MyName"]
+		assert.Equal(t, "docs", found.GetDocComment())
 	})
 
 	t.Run("finds defined methods in interface", func(t *testing.T) {
@@ -230,13 +269,14 @@ func TestParse_interface(t *testing.T) {
 		m := _interface.GetMethod("method")
 		assert.Equal(t, "method", m.GetName())
 		assert.Equal(t, "String", m.GetReturnType().GetName())
-		assert.Equal(t, idx.NewRange(2, 12, 2, 18), m.GetIdRange())
+		assert.Equal(t, idx.NewRange(3, 12, 3, 18), m.GetIdRange())
 		assert.Equal(t, module.Children()[0], _interface)
 	})
 }
 
 func TestExtractSymbols_finds_definition(t *testing.T) {
 	source := `module mod;
+	<* docs *>
 	def Kilo = int;
 	def KiloPtr = Kilo*;
 	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
@@ -255,9 +295,10 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithResolvesToType(
 			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
 		).
-		WithIdentifierRange(1, 5, 1, 9).
-		WithDocumentRange(1, 1, 1, 16).
+		WithIdentifierRange(2, 5, 2, 9).
+		WithDocumentRange(2, 1, 2, 16).
 		Build()
+	expectedDefKilo.SetDocComment("docs")
 	assert.Equal(t, expectedDefKilo, module.Defs["Kilo"])
 	assert.Same(t, module.Children()[0], module.Defs["Kilo"])
 
@@ -265,16 +306,16 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithResolvesToType(
 			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
 		).
-		WithIdentifierRange(2, 5, 2, 12).
-		WithDocumentRange(2, 1, 2, 21).
+		WithIdentifierRange(3, 5, 3, 12).
+		WithDocumentRange(3, 1, 3, 21).
 		Build()
 	assert.Equal(t, expectedDefKiloPtr, module.Defs["KiloPtr"])
 	assert.Same(t, module.Children()[1], module.Defs["KiloPtr"])
 
 	expectedDefFunction := idx.NewDefBuilder("MyFunction", mod, doc.URI).
 		WithResolvesTo("fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)").
-		WithIdentifierRange(3, 5, 3, 15).
-		WithDocumentRange(3, 1, 3, 74).
+		WithIdentifierRange(4, 5, 4, 15).
+		WithDocumentRange(4, 1, 4, 74).
 		Build()
 
 	assert.Equal(t, expectedDefFunction, module.Defs["MyFunction"])
@@ -292,8 +333,8 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 					idx.NewType(false, "Feature", 0, false, false, option.None[int](), "mod"),
 				}, "mod"),
 		).
-		WithIdentifierRange(4, 5, 4, 10).
-		WithDocumentRange(4, 1, 4, 40).
+		WithIdentifierRange(5, 5, 5, 10).
+		WithDocumentRange(5, 1, 5, 40).
 		Build()
 
 	assert.Equal(t, expectedDefTypeWithGenerics, module.Defs["MyMap"])
@@ -303,8 +344,8 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithResolvesToType(
 			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
 		).
-		WithIdentifierRange(5, 5, 5, 11).
-		WithDocumentRange(5, 1, 5, 29).
+		WithIdentifierRange(6, 5, 6, 11).
+		WithDocumentRange(6, 1, 6, 29).
 		Build()
 
 	assert.Equal(t, expectedDefTypeWithModulePath, module.Defs["Camera"])
@@ -321,6 +362,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 			}
 		}`*/
 	source := `
+	<* docs *>
 	macro m(x) {
     	return x + 2;
 	}`
@@ -335,6 +377,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 	assert.Equal(t, "m", fn.Get().GetName())
 	assert.Equal(t, "x", fn.Get().Variables["x"].GetName())
 	assert.Equal(t, "", fn.Get().Variables["x"].GetType().String())
+	assert.Equal(t, "docs", fn.Get().GetDocComment())
 	assert.Same(t, module.NestedScopes()[0], fn.Get())
 }
 
@@ -352,6 +395,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 
 	t.Run("finds single module in single file", func(t *testing.T) {
 		source := `
+	<* docs *>
 	module foo;
 	int value = 1;
 	`
@@ -362,13 +406,16 @@ func TestExtractSymbols_find_module(t *testing.T) {
 
 		module := symbols.Get("foo")
 		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
+		assert.Equal(t, "docs", module.GetDocComment(), "module doc comment is wrong")
 	})
 
 	t.Run("finds different modules defined in single file", func(t *testing.T) {
 		source := `
+	<* docs foo *>
 	module foo;
 	int value = 1;
 
+	<* docs foo2 *>
 	module foo2;
 	int value = 2;`
 
@@ -379,12 +426,14 @@ func TestExtractSymbols_find_module(t *testing.T) {
 		module := symbols.Get("foo")
 		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
 		assert.Equal(t, "foo", module.GetName(), "module name is wrong")
-		assert.Equal(t, idx.NewRange(1, 1, 2, 15), module.GetDocumentRange(), "Wrong range for foo module")
+		assert.Equal(t, "docs foo", module.GetDocComment(), "module doc comment is wrong")
+		assert.Equal(t, idx.NewRange(2, 1, 3, 15), module.GetDocumentRange(), "Wrong range for foo module")
 
 		module = symbols.Get("foo2")
 		assert.Equal(t, "foo2", module.GetModuleString(), "module name is wrong")
 		assert.Equal(t, "foo2", module.GetName(), "module name is wrong")
-		assert.Equal(t, idx.NewRange(4, 1, 5, 15), module.GetDocumentRange(), "Wrong range for foo2 module")
+		assert.Equal(t, "docs foo2", module.GetDocComment(), "module doc comment is wrong")
+		assert.Equal(t, idx.NewRange(6, 1, 7, 15), module.GetDocumentRange(), "Wrong range for foo2 module")
 	})
 
 	t.Run("finds named module with attributes", func(t *testing.T) {
@@ -428,7 +477,7 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 		{
 			return foo.a + b;
 		}
-		
+
 		module foo::another::deep(<Type>);
 		int bar = 0;`
 
