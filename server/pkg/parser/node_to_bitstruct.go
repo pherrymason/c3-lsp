@@ -13,7 +13,9 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, currentModule *idx.Module, d
 	name := nameNode.Content(sourceCode)
 	var interfaces []string
 	var bakedType idx.Type
-	structFields := []*idx.StructMember{}
+
+	fieldsNode := node.ChildByFieldName("body")
+	structFields := p.nodeToBitStructMembers(fieldsNode, currentModule, docId, sourceCode)
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
@@ -32,8 +34,6 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, currentModule *idx.Module, d
 			// TODO attributes
 		case "type":
 			bakedType = p.typeNodeToType(child, currentModule, sourceCode)
-		case "bitstruct_body":
-			structFields = p.nodeToBitStructMembers(child, currentModule, docId, sourceCode)
 		}
 	}
 
@@ -58,7 +58,7 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, currentModule *idx.Mo
 	for i := 0; i < int(node.ChildCount()); i++ {
 		bdefnode := node.Child(i)
 		bType := bdefnode.Type()
-		if bType == "bitstruct_def" {
+		if bType == "bitstruct_member_declaration" {
 			var memberType idx.Type
 			var identity string
 			for x := 0; x < int(bdefnode.ChildCount()); x++ {
@@ -74,8 +74,11 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, currentModule *idx.Mo
 			}
 
 			bitRanges := [2]uint{}
-			lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
-			bitRanges[0] = uint(lowBit)
+
+			if bdefnode.ChildCount() >= 4 {
+				lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
+				bitRanges[0] = uint(lowBit)
+			}
 
 			if bdefnode.ChildCount() >= 6 {
 				highBit, _ := strconv.ParseInt(bdefnode.Child(5).Content(sourceCode), 10, 32)
@@ -91,8 +94,6 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, currentModule *idx.Mo
 				idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
 			)
 			structFields = append(structFields, &member)
-		} else if bType == "_bitstruct_simple_defs" {
-			// Could not make examples with these to parse.
 		}
 	}
 

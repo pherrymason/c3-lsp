@@ -257,13 +257,26 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 
 				compositeLiteral := CompositeLiteral{}
 				args := enumeratorNode.ChildByFieldName("args")
-				if args != nil {
-					for a := 0; a < int(args.ChildCount()); a++ {
-						arg := args.Child(a)
-						if arg.Type() == "arg" {
-							compositeLiteral.Values = append(compositeLiteral.Values,
-								convert_literal(arg.Child(0), sourceCode),
-							)
+				if args != nil && args.ChildCount() > 0 {
+					args := args.Child(int(args.ChildCount()) - 1)
+					if is_literal(args) {
+						compositeLiteral.Values = append(compositeLiteral.Values,
+							convert_literal(args, sourceCode),
+						)
+					} else if args.Type() == "initializer_list" {
+						for a := 0; a < int(args.ChildCount()); a++ {
+							arg := args.Child(a)
+							if arg.Type() == "arg" {
+								if !is_literal(arg.Child(0)) {
+									// Exit early to ensure correspondence between
+									// index of each value and index of each predefined
+									// enum parameter
+									break
+								}
+								compositeLiteral.Values = append(compositeLiteral.Values,
+									convert_literal(arg.Child(0), sourceCode),
+								)
+							}
 						}
 					}
 				}
@@ -444,6 +457,9 @@ func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) StructD
 		StructType:  StructTypeBitStruct,
 	}
 
+	membersNode := node.ChildByFieldName("body")
+	structDecl.Members = convert_bitstruct_members(membersNode, sourceCode)
+
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
 		//fmt.Println("type:", child.Type(), child.Content(sourceCode))
@@ -463,9 +479,6 @@ func convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) StructD
 
 		case "type":
 			structDecl.BackingType = option.Some(typeNodeToType(child, sourceCode))
-
-		case "bitstruct_body":
-			structDecl.Members = convert_bitstruct_members(child, sourceCode)
 		}
 	}
 
@@ -483,7 +496,7 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 				Build(),
 		}
 
-		if bType == "bitstruct_def" {
+		if bType == "bitstruct_member_declaration" {
 			for x := 0; x < int(bdefnode.ChildCount()); x++ {
 				xNode := bdefnode.Child(x)
 				//fmt.Println(xNode.Type())
@@ -503,8 +516,11 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 			}
 
 			bitRanges := [2]uint{}
-			lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
-			bitRanges[0] = uint(lowBit)
+
+			if bdefnode.ChildCount() >= 4 {
+				lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
+				bitRanges[0] = uint(lowBit)
+			}
 
 			if bdefnode.ChildCount() >= 6 {
 				highBit, _ := strconv.ParseInt(bdefnode.Child(5).Content(sourceCode), 10, 32)
@@ -521,8 +537,6 @@ func convert_bitstruct_members(node *sitter.Node, sourceCode []byte) []StructMem
 				idx.NewRangeFromTreeSitterPositions(bdefnode.Child(1).StartPoint(), bdefnode.Child(1).EndPoint()),
 			)*/
 			members = append(members, member)
-		} else if bType == "_bitstruct_simple_defs" {
-			// Could not make examples with these to parse.
 		}
 	}
 
@@ -906,24 +920,15 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 }
 
 func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
-	if node.Type() == "optional_type" {
-		return extTypeNodeToType(node.Child(0), true, sourceCode)
-	}
-
-	return extTypeNodeToType(node, false, sourceCode)
-}
-
-func extTypeNodeToType(
-	node *sitter.Node,
-	isOptional bool,
-	sourceCode []byte,
-) TypeInfo {
 	/*
 		baseTypeLanguage := false
 		baseType := ""
 		modulePath := ""
 		generic_arguments := []TypeInfo{}
 		pointerCount := 0*/
+
+	tailChild := node.Child(int(node.ChildCount()) - 1)
+	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "!"
 
 	typeInfo := TypeInfo{
 		Optional: isOptional,
