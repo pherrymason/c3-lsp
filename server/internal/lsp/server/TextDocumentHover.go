@@ -22,8 +22,13 @@ func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hover
 
 	// expected behaviour:
 	// hovering on variables: display variable type + any description
-	// hovering on functions: display function signature
+	// hovering on functions: display function signature + docs
 	// hovering on members: same as variable
+
+	docComment := foundSymbol.GetDocComment()
+	if docComment != "" {
+		docComment = "\n\n" + docComment
+	}
 
 	extraLine := ""
 
@@ -45,7 +50,8 @@ func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hover
 			Value: "```c3" + "\n" +
 				sizeInfo +
 				foundSymbol.GetHoverInfo() + "\n```" +
-				extraLine,
+				extraLine +
+				docComment,
 		},
 	}
 
