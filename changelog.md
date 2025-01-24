@@ -1,5 +1,16 @@
 # C3LSP Release Notes
 
+## 0.3.4
+- Fix crash while writing an inline struct member. (#97)
+- Support `<*` and `*>` comments. (#91)
+- Optimizations to reduce CPU usage by 6-7x. Thanks @PgBiel! [More info](https://github.com/pherrymason/c3-lsp/pull/99)  
+
+## 0.3.3
+- Support named and anonymous sub structs.
+- Fix clearing old diagnostics. (#89, #83, #71, #62)
+- Fixed crash in some scenarios where no results were found.
+- Fix crash when using with Helix editor (#87)
+
 ## 0.3.2
 
 - Fix function unnamed argument types not being resolved correctly. Thanks to @insertt
