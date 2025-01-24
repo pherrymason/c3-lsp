@@ -111,10 +111,17 @@ func (st *SymbolsTable) tryToSolveType(typeContext *PendingTypeContext, moduleNa
 }
 
 func (st *SymbolsTable) findTypeInModules(vType *symbols.Type) option.Option[string] {
+	vTypeName := vType.GetName()
 	for _, parsedModules := range st.parsedModulesByDocument {
-		for _, module := range parsedModules.Modules() {
-			for _, x := range module.Children() {
-				if x.GetName() == vType.GetName() {
+		// Use ModuleIds() to cheaply copy the slice of module names
+		// Using Modules() appears to lead to expensive clones
+		for _, moduleName := range parsedModules.ModuleIds() {
+			module := parsedModules.Get(moduleName)
+
+			// Use ChildrenNames() since we are only comparing names
+			// Avoid expensive cloning of children
+			for _, childName := range module.ChildrenNames() {
+				if childName == vTypeName {
 					// Found!
 					return option.Some(module.GetName())
 				}

@@ -37,6 +37,7 @@ type Indexable interface {
 	HasSourceCode() bool // This will return false for that code that is not accesible either because it belongs to the stdlib, or inside a .c3lib library. This results in disabling "Go to definition" / "Go to declaration" on these symbols
 
 	Children() []Indexable
+	ChildrenNames() []string
 	NestedScopes() []Indexable
 	ChildrenWithoutScopes() []Indexable
 	Insert(symbol Indexable)
@@ -60,31 +61,32 @@ type BaseIndexable struct {
 	Kind          protocol.CompletionItemKind
 	attributes    []string
 
-	children     []Indexable
-	nestedScopes []Indexable
+	children      []Indexable
+	childrenNames []string
+	nestedScopes  []Indexable
 }
 
-func (b BaseIndexable) GetName() string {
+func (b *BaseIndexable) GetName() string {
 	return b.name
 }
 
-func (b BaseIndexable) GetFQN() string {
+func (b *BaseIndexable) GetFQN() string {
 	return fmt.Sprintf("%s::%s", b.module.GetName(), b.GetName())
 }
 
-func (b BaseIndexable) GetKind() protocol.CompletionItemKind {
+func (b *BaseIndexable) GetKind() protocol.CompletionItemKind {
 	return b.Kind
 }
 
-func (b BaseIndexable) GetModuleString() string {
+func (b *BaseIndexable) GetModuleString() string {
 	return b.moduleString
 }
 
-func (b BaseIndexable) GetModule() ModulePath {
+func (b *BaseIndexable) GetModule() ModulePath {
 	return b.module
 }
 
-func (b BaseIndexable) IsSubModuleOf(module ModulePath) bool {
+func (b *BaseIndexable) IsSubModuleOf(module ModulePath) bool {
 	if module.IsEmpty() {
 		return false
 	}
@@ -92,23 +94,23 @@ func (b BaseIndexable) IsSubModuleOf(module ModulePath) bool {
 	return b.module.IsSubModuleOf(module)
 }
 
-func (b BaseIndexable) GetDocumentURI() string {
+func (b *BaseIndexable) GetDocumentURI() string {
 	return b.documentURI
 }
 
-func (b BaseIndexable) GetDocumentRange() Range {
+func (b *BaseIndexable) GetDocumentRange() Range {
 	return b.docRange
 }
 
-func (b BaseIndexable) GetIdRange() Range {
+func (b *BaseIndexable) GetIdRange() Range {
 	return b.idRange
 }
 
-func (b BaseIndexable) HasSourceCode() bool {
+func (b *BaseIndexable) HasSourceCode() bool {
 	return b.hasSourceCode
 }
 
-func (b BaseIndexable) IsPrivate() bool {
+func (b *BaseIndexable) IsPrivate() bool {
 	for _, attr := range b.attributes {
 		if attr == "@private" {
 			return true
@@ -129,27 +131,32 @@ func (b *BaseIndexable) SetAttributes(attributes []string) {
 	b.attributes = attributes
 }
 
-func (b BaseIndexable) Children() []Indexable {
+func (b *BaseIndexable) Children() []Indexable {
 	return b.children
 }
 
-func (b BaseIndexable) NestedScopes() []Indexable {
+func (b *BaseIndexable) ChildrenNames() []string {
+	return b.childrenNames
+}
+
+func (b *BaseIndexable) NestedScopes() []Indexable {
 	return b.nestedScopes
 }
 
-func (b BaseIndexable) ChildrenWithoutScopes() []Indexable {
+func (b *BaseIndexable) ChildrenWithoutScopes() []Indexable {
 	return b.children
 }
 
 func (b *BaseIndexable) Insert(child Indexable) {
 	b.children = append(b.children, child)
+	b.childrenNames = append(b.childrenNames, child.GetName())
 }
 
 func (b *BaseIndexable) InsertNestedScope(symbol Indexable) {
 	b.nestedScopes = append(b.nestedScopes, symbol)
 }
 
-func (b BaseIndexable) formatSource(source string) string {
+func (b *BaseIndexable) formatSource(source string) string {
 	return fmt.Sprintf("```c3\n%s```", source)
 }
 

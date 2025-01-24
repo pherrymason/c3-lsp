@@ -72,7 +72,7 @@ func (ps *UnitModules) RegisterModule(symbol *idx.Module) {
 	ps.modules.Set(symbol.GetModule().GetName(), symbol)
 }
 
-func (ps UnitModules) Get(moduleName string) *idx.Module {
+func (ps *UnitModules) Get(moduleName string) *idx.Module {
 	mod, ok := ps.modules.Get(moduleName)
 	if ok {
 		return mod
