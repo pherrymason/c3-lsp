@@ -135,11 +135,11 @@ func (m *Module) SetGenericParameters(generics map[string]*GenericParameter) *Mo
 	return m
 }
 
-func (m Module) GetHoverInfo() string {
+func (m *Module) GetHoverInfo() string {
 	return m.name
 }
 
-func (m Module) GetChildrenFunctionByName(name string) option.Option[*Function] {
+func (m *Module) GetChildrenFunctionByName(name string) option.Option[*Function] {
 	for _, fun := range m.ChildrenFunctions {
 		if fun.GetFullName() == name {
 			return option.Some(fun)
