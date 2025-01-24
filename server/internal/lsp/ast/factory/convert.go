@@ -342,25 +342,35 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 }
 
 func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
-	structDecl := ast.StructDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-		StructType:     ast.StructTypeNormal,
+	specId := c.getNextID()
+	typeId := c.getNextID()
+	structType := &ast.StructType{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(typeId, node),
+		Type:           ast.StructTypeNormal,
+		Fields:         []*ast.StructField{},
 	}
-
-	structDecl.Name = node.ChildByFieldName("name").Content(sourceCode)
+	spec := &ast.TypeSpec{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(specId, node),
+		Name: ast.NewIdentifierBuilder().
+			WithId(c.getNextID()).
+			WithSitterPos(node.ChildByFieldName("name")).
+			WithName(node.ChildByFieldName("name").Content(sourceCode)).
+			BuildPtr(),
+		TypeParams:      nil, // Generic parameters
+		TypeDescription: structType,
+	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
 		switch child.Type() {
 		case "union":
-			structDecl.StructType = ast.StructTypeUnion
+			structType.Type = ast.StructTypeUnion
 		case "interface_impl":
 			for x := 0; x < int(child.ChildCount()); x++ {
 				n := child.Child(x)
 				if n.Type() == "interface" {
-					// TODO: Must store ranges of each n, so cursor can be properly detected.
-					structDecl.Implements = append(
-						structDecl.Implements,
+					structType.Implements = append(
+						structType.Implements,
 						ast.NewIdentifierBuilder().
 							WithId(c.getNextID()).
 							WithName(n.Content(sourceCode)).
@@ -374,19 +384,28 @@ func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode 
 		}
 	}
 
-	// TODO parse attributes
 	bodyNode := node.ChildByFieldName("body")
+	structType.Fields = c.convert_struct_members(bodyNode, sourceCode)
+
+	return &ast.GenDecl{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		Token:          ast.Token(ast.STRUCT),
+		Spec:           spec,
+	}
+}
+
+func (c *ASTConverter) convert_struct_members(bodyNode *sitter.Node, sourceCode []byte) []*ast.StructField {
+	fields := []*ast.StructField{}
 
 	// Search Struct members
 	for i := 0; i < int(bodyNode.ChildCount()); i++ {
 		memberNode := bodyNode.Child(i)
-
 		if memberNode.Type() != "struct_member_declaration" {
 			continue
 		}
 
 		fieldType := ast.TypeInfo{}
-		member := ast.StructMemberDecl{
+		structField := &ast.StructField{
 			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), memberNode),
 		}
 
@@ -397,44 +416,70 @@ func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode 
 			switch n.Type() {
 			case "type":
 				fieldType = c.convert_type(n, sourceCode)
-				member.Type = fieldType
+				structField.Type = fieldType
 			case "identifier_list":
 				for j := 0; j < int(n.ChildCount()); j++ {
-					member.Names = append(
-						member.Names,
-						*(c.convert_ident(n.Child(j), sourceCode).(*ast.Ident)),
+					structField.Names = append(
+						structField.Names,
+						c.convert_ident(n.Child(j), sourceCode).(*ast.Ident),
 					)
 				}
 			case "attributes":
 				// TODO
 
 			case "bitstruct_body":
+				// is an anonymous bitstruct
 				bitStructsMembers := c.convert_bitstruct_members(n, sourceCode)
-				structDecl.Members = append(structDecl.Members, bitStructsMembers...)
-				//structFields = append(structFields, bitStructsMembers...)
+				fields = append(fields, bitStructsMembers...)
+
+			case "struct_body":
+				// Is an anonymous struct
+				subStructFieldType := ast.NewNodeAttributesBuilder().
+					WithRange(structField.Range).
+					Build()
+				structField.Type = &ast.StructType{
+					NodeAttributes: subStructFieldType,
+					Type:           ast.StructTypeNormal,
+					Fields:         c.convert_struct_members(n, sourceCode),
+				}
 
 			case "inline":
-				member.IsInlined = true
+				structField.Inlined = true
 
 			case "ident":
-				member.Names = append(member.Names,
-					*(c.convert_ident(n, sourceCode).(*ast.Ident)),
+				structField.Names = append(
+					structField.Names,
+					c.convert_ident(n, sourceCode).(*ast.Ident),
 				)
 			}
 		}
 
-		if len(member.Names) > 0 {
-			structDecl.Members = append(structDecl.Members, member)
+		if len(structField.Names) > 0 {
+			fields = append(fields, structField)
 		}
 	}
 
-	return &structDecl
+	return fields
 }
 
 func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
 	structDecl := ast.StructDecl{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		StructType:     ast.StructTypeBitStruct,
+	}
+	structType := &ast.StructType{
+		Type:   ast.StructTypeBitStruct,
+		Fields: []*ast.StructField{},
+	}
+	spec := &ast.TypeSpec{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		Name: ast.NewIdentifierBuilder().
+			WithId(c.getNextID()).
+			WithSitterPos(node).
+			WithName(node.ChildByFieldName("name").Content(sourceCode)).
+			BuildPtr(),
+		TypeParams:      nil, // Generic parameters
+		TypeDescription: structType,
 	}
 
 	membersNode := node.ChildByFieldName("body")
@@ -457,6 +502,14 @@ func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCo
 							WithSitterPos(n).
 							BuildPtr(),
 					)
+					structType.Implements = append(
+						structType.Implements,
+						ast.NewIdentifierBuilder().
+							WithId(c.getNextID()).
+							WithName(n.Content(sourceCode)).
+							WithSitterPos(n).
+							BuildPtr(),
+					)
 				}
 			}
 
@@ -465,21 +518,27 @@ func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCo
 
 		case "type":
 			structDecl.BackingType = option.Some(c.convert_type(child, sourceCode))
+			structType.BackingType = option.Some(c.convert_type(child, sourceCode))
 
 		case "bitstruct_body":
-			structDecl.Members = c.convert_bitstruct_members(child, sourceCode)
+			//structDecl.Members = c.convert_bitstruct_members(child, sourceCode)
+			structType.Fields = c.convert_bitstruct_members(child, sourceCode)
 		}
 	}
 
-	return &structDecl
+	return &ast.GenDecl{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		Token:          ast.Token(ast.STRUCT),
+		Spec:           spec,
+	}
 }
 
-func (c *ASTConverter) convert_bitstruct_members(node *sitter.Node, source []byte) []ast.StructMemberDecl {
-	members := []ast.StructMemberDecl{}
+func (c *ASTConverter) convert_bitstruct_members(node *sitter.Node, source []byte) []*ast.StructField {
+	members := []*ast.StructField{}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		bDefNode := node.Child(i)
 		bType := bDefNode.Type()
-		member := ast.StructMemberDecl{
+		member := &ast.StructField{
 			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), bDefNode),
 		}
 
@@ -494,7 +553,7 @@ func (c *ASTConverter) convert_bitstruct_members(node *sitter.Node, source []byt
 				case "ident":
 					member.Names = append(
 						member.Names,
-						*(c.convert_ident(xNode, source).(*ast.Ident)),
+						c.convert_ident(xNode, source).(*ast.Ident),
 					)
 				}
 			}

@@ -3,7 +3,6 @@ package factory
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	sitter "github.com/smacker/go-tree-sitter"
-	"log"
 )
 
 // Here lays methods to help define expected CST nodes
@@ -132,10 +131,11 @@ func (t TryConversionFunc) Validate(node *sitter.Node, source []byte, c *ASTConv
 	}
 
 	var expr ast.Expression
+
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("Error validating node: %s\nNode type: %s. Content: %s. Cv: %s", r, node.Type(), node.Content(source), t.FuncName)
+				//		log.Printf("Error validating node: %s\nNode type: %s. Content: %s. Cv: %s", r, node.Type(), node.Content(source), t.FuncName)
 				expr = nil
 			}
 		}()

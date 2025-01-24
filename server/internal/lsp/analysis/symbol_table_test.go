@@ -49,6 +49,25 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	}
 }
 
+func TestSymbolBuild_registers_structs(t *testing.T) {
+	t.Run("Registers struct member with anonymous sub struct", func(t *testing.T) {
+		source := `module test;
+		struct Bar {
+			struct data {
+			  int a;
+			}
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+		modulesGroup := symbolTable.scopeTree[fileName]
+		scope := modulesGroup.GetModuleScope("test")
+
+		assert.Equal(t, "Bar", scope.Symbols[0].Name)
+	})
+}
+
 func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 	source := `
 	module foo;

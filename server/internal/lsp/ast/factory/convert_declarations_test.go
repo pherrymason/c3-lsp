@@ -213,24 +213,32 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 }
 
 func TestConvertToAST_struct_decl(t *testing.T) {
-	source := `module foo;
+	t.Run("Test basic struct declaration", func(t *testing.T) {
+		source := `module foo;
 	struct MyStruct {
 		int data;
 		char key;
 		raylib::Camera camera;
 	}`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	expected := &ast.StructDecl{
-		NodeAttributes: aWithPos(1, 1, 5, 2),
-		Name:           "MyStruct",
-		StructType:     ast.StructTypeNormal,
-		Members: []ast.StructMemberDecl{
-			{
+		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		spec := decl.Spec.(*ast.TypeSpec)
+		structType := spec.TypeDescription.(*ast.StructType)
+
+		structRange := lsp.NewRange(1, 1, 5, 2)
+		assert.Equal(t, structRange, decl.Range)
+		assert.Equal(t, structRange, spec.Range)
+		assert.Equal(t, structRange, structType.Range)
+		assert.Equal(t, "MyStruct", spec.Name.Name)
+		assert.Equal(t, lsp.NewRange(1, 8, 1, 16), spec.Name.Range)
+
+		assert.Equal(t,
+			&ast.StructField{
 				NodeAttributes: aWithPos(2, 2, 2, 11),
-				Names: []ast.Ident{
+				Names: []*ast.Ident{
 					{
 						NodeAttributes: aWithPos(2, 6, 2, 10),
 						Name:           "data",
@@ -241,10 +249,11 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 					Identifier:     ast.NewIdentifierBuilder().WithName("int").WithStartEnd(2, 2, 2, 5).BuildPtr(),
 					BuiltIn:        true,
 				},
-			},
-			{
+			}, structType.Fields[0])
+		assert.Equal(t,
+			&ast.StructField{
 				NodeAttributes: aWithPos(3, 2, 3, 11),
-				Names: []ast.Ident{
+				Names: []*ast.Ident{
 					{
 						NodeAttributes: aWithPos(3, 7, 3, 10),
 						Name:           "key",
@@ -255,10 +264,11 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 					Identifier:     ast.NewIdentifierBuilder().WithName("char").WithStartEnd(3, 2, 3, 6).BuildPtr(),
 					BuiltIn:        true,
 				},
-			},
-			{
+			}, structType.Fields[1])
+		assert.Equal(t,
+			&ast.StructField{
 				NodeAttributes: aWithPos(4, 2, 4, 24),
-				Names: []ast.Ident{
+				Names: []*ast.Ident{
 					{
 						NodeAttributes: aWithPos(4, 17, 4, 23),
 						Name:           "camera",
@@ -276,34 +286,61 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 					},
 					BuiltIn: false,
 				},
-			},
-		},
-	}
+			}, structType.Fields[2])
+	})
 
-	assert.Equal(t, expected, tree.Modules[0].Declarations[0])
-}
-
-func TestConvertToAST_struct_decl_with_interface(t *testing.T) {
-	source := `module foo;
+	t.Run("struct with interface", func(t *testing.T) {
+		source := `module foo;
 	struct MyStruct (MyInterface, MySecondInterface) {
 		int data;
 		char key;
 		raylib::Camera camera;
 	}`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	structDecl := tree.Modules[0].Declarations[0].(*ast.StructDecl)
-	assert.Equal(t, "MyInterface", structDecl.Implements[0].Name)
-	assert.Equal(t, lsp.NewRange(1, 18, 1, 29), structDecl.Implements[0].Range)
+		structDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		structType := structDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
+		assert.Equal(t, "MyInterface", structType.Implements[0].Name)
+		assert.Equal(t, lsp.NewRange(1, 18, 1, 29), structType.Implements[0].Range)
 
-	assert.Equal(t, "MySecondInterface", structDecl.Implements[1].Name)
-	assert.Equal(t, lsp.NewRange(1, 31, 1, 48), structDecl.Implements[1].Range)
-}
+		assert.Equal(t, "MySecondInterface", structType.Implements[1].Name)
+		assert.Equal(t, lsp.NewRange(1, 31, 1, 48), structType.Implements[1].Range)
+	})
 
-func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
-	source := `module x;
+	t.Run("struct with anonymous sub struct", func(t *testing.T) {
+		source := `module x;
+		struct MyStruct {
+			struct data {
+			  int a;
+			}
+		}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+
+		structDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		structType := structDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
+
+		assert.Equal(t, "data", structType.Fields[0].Names[0].Name)
+		assert.Equal(t, lsp.NewRange(2, 3, 4, 4), structType.Fields[0].Range)
+
+		fieldType := structType.Fields[0].Type.(*ast.StructType)
+		assert.Equal(t, lsp.NewRange(2, 3, 4, 4), fieldType.Range)
+		assert.Equal(t, ast.StructTypeNormal, int(fieldType.Type))
+
+		subField := fieldType.Fields[0]
+		assert.Equal(t, lsp.NewRange(3, 5, 3, 11), subField.Range)
+		assert.Equal(t, "a", subField.Names[0].Name)
+		assert.Equal(t, lsp.NewRange(3, 9, 3, 10), subField.Names[0].Range)
+		assert.Equal(t, "int", subField.Type.(ast.TypeInfo).Identifier.Name)
+		assert.Equal(t, true, subField.Type.(ast.TypeInfo).BuiltIn)
+		assert.Equal(t, lsp.NewRange(3, 5, 3, 8), subField.Type.(ast.TypeInfo).Range)
+	})
+
+	t.Run("struct with anonymous bit-structs", func(t *testing.T) {
+		source := `module x;
 	def Register16 = UInt16;
 	struct Registers {
 		bitstruct : Register16 @overlap {
@@ -315,123 +352,124 @@ func TestConvertToAST_struct_decl_with_anonymous_bitstructs(t *testing.T) {
 		Register16 pc;
 	}`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
-	structDecl := tree.Modules[0].Declarations[1].(*ast.StructDecl)
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		structDecl := tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		members := structDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType).Fields
 
-	assert.Equal(t, 5, len(structDecl.Members))
+		assert.Equal(t, 5, len(members))
 
-	assert.Equal(
-		t,
-		ast.StructMemberDecl{
-			NodeAttributes: aWithPos(4, 3, 4, 25),
-			Names: []ast.Ident{
-				ast.NewIdentifierBuilder().
-					WithName("bc").
-					WithStartEnd(4, 14, 4, 16).
-					Build(),
+		assert.Equal(
+			t,
+			&ast.StructField{
+				NodeAttributes: aWithPos(4, 3, 4, 25),
+				Names: []*ast.Ident{
+					ast.NewIdentifierBuilder().
+						WithName("bc").
+						WithStartEnd(4, 14, 4, 16).
+						BuildPtr(),
+				},
+				Type: ast.TypeInfo{
+					NodeAttributes: aWithPos(4, 3, 4, 13),
+					Identifier: ast.NewIdentifierBuilder().
+						WithName("Register16").
+						WithStartEnd(4, 3, 4, 13).
+						BuildPtr(),
+				},
+				BitRange: option.Some([2]uint{0, 15}),
 			},
-			Type: ast.TypeInfo{
-				NodeAttributes: aWithPos(4, 3, 4, 13),
-				Identifier: ast.NewIdentifierBuilder().
-					WithName("Register16").
-					WithStartEnd(4, 3, 4, 13).
-					BuildPtr(),
-			},
-			BitRange: option.Some([2]uint{0, 15}),
-		},
-		structDecl.Members[0],
-	)
+			members[0],
+		)
 
-	assert.Equal(
-		t,
-		ast.StructMemberDecl{
-			NodeAttributes: aWithPos(5, 3, 5, 22),
-			Names: []ast.Ident{
-				ast.NewIdentifierBuilder().
-					WithName("b").
-					WithStartEnd(5, 12, 5, 13).
-					Build(),
+		assert.Equal(
+			t,
+			&ast.StructField{
+				NodeAttributes: aWithPos(5, 3, 5, 22),
+				Names: []*ast.Ident{
+					ast.NewIdentifierBuilder().
+						WithName("b").
+						WithStartEnd(5, 12, 5, 13).
+						BuildPtr(),
+				},
+				Type: ast.TypeInfo{
+					NodeAttributes: aWithPos(5, 3, 5, 11),
+					Identifier: ast.NewIdentifierBuilder().
+						WithName("Register").
+						WithStartEnd(5, 3, 5, 11).
+						BuildPtr(),
+				},
+				BitRange: option.Some([2]uint{8, 15}),
 			},
-			Type: ast.TypeInfo{
-				NodeAttributes: aWithPos(5, 3, 5, 11),
-				Identifier: ast.NewIdentifierBuilder().
-					WithName("Register").
-					WithStartEnd(5, 3, 5, 11).
-					BuildPtr(),
-			},
-			BitRange: option.Some([2]uint{8, 15}),
-		},
-		structDecl.Members[1],
-	)
+			members[1],
+		)
 
-	assert.Equal(
-		t,
-		ast.StructMemberDecl{
-			NodeAttributes: aWithPos(6, 3, 6, 21),
-			Names: []ast.Ident{
-				ast.NewIdentifierBuilder().
-					WithName("c").
-					WithStartEnd(6, 12, 6, 13).
-					Build(),
+		assert.Equal(
+			t,
+			&ast.StructField{
+				NodeAttributes: aWithPos(6, 3, 6, 21),
+				Names: []*ast.Ident{
+					ast.NewIdentifierBuilder().
+						WithName("c").
+						WithStartEnd(6, 12, 6, 13).
+						BuildPtr(),
+				},
+				Type: ast.TypeInfo{
+					NodeAttributes: aWithPos(6, 3, 6, 11),
+					Identifier: ast.NewIdentifierBuilder().
+						WithName("Register").
+						WithStartEnd(6, 3, 6, 11).
+						BuildPtr(),
+				},
+				BitRange: option.Some([2]uint{0, 7}),
 			},
-			Type: ast.TypeInfo{
-				NodeAttributes: aWithPos(6, 3, 6, 11),
-				Identifier: ast.NewIdentifierBuilder().
-					WithName("Register").
-					WithStartEnd(6, 3, 6, 11).
-					BuildPtr(),
-			},
-			BitRange: option.Some([2]uint{0, 7}),
-		},
-		structDecl.Members[2],
-	)
+			members[2],
+		)
 
-	assert.Equal(
-		t,
-		ast.StructMemberDecl{
-			NodeAttributes: aWithPos(8, 2, 8, 16),
-			Names: []ast.Ident{
-				ast.NewIdentifierBuilder().
-					WithName("sp").
-					WithStartEnd(8, 13, 8, 15).
-					Build(),
+		assert.Equal(
+			t,
+			&ast.StructField{
+				NodeAttributes: aWithPos(8, 2, 8, 16),
+				Names: []*ast.Ident{
+					ast.NewIdentifierBuilder().
+						WithName("sp").
+						WithStartEnd(8, 13, 8, 15).
+						BuildPtr(),
+				},
+				Type: ast.TypeInfo{
+					NodeAttributes: aWithPos(8, 2, 8, 12),
+					Identifier: ast.NewIdentifierBuilder().
+						WithName("Register16").
+						WithStartEnd(8, 2, 8, 12).
+						BuildPtr(),
+				},
 			},
-			Type: ast.TypeInfo{
-				NodeAttributes: aWithPos(8, 2, 8, 12),
-				Identifier: ast.NewIdentifierBuilder().
-					WithName("Register16").
-					WithStartEnd(8, 2, 8, 12).
-					BuildPtr(),
-			},
-		},
-		structDecl.Members[3],
-	)
+			members[3],
+		)
 
-	assert.Equal(
-		t,
-		ast.StructMemberDecl{
-			NodeAttributes: aWithPos(9, 2, 9, 16),
-			Names: []ast.Ident{
-				ast.NewIdentifierBuilder().
-					WithName("pc").
-					WithStartEnd(9, 13, 9, 15).
-					Build(),
+		assert.Equal(
+			t,
+			&ast.StructField{
+				NodeAttributes: aWithPos(9, 2, 9, 16),
+				Names: []*ast.Ident{
+					ast.NewIdentifierBuilder().
+						WithName("pc").
+						WithStartEnd(9, 13, 9, 15).
+						BuildPtr(),
+				},
+				Type: ast.TypeInfo{
+					NodeAttributes: aWithPos(9, 2, 9, 12),
+					Identifier: ast.NewIdentifierBuilder().
+						WithName("Register16").
+						WithStartEnd(9, 2, 9, 12).
+						BuildPtr(),
+				},
 			},
-			Type: ast.TypeInfo{
-				NodeAttributes: aWithPos(9, 2, 9, 12),
-				Identifier: ast.NewIdentifierBuilder().
-					WithName("Register16").
-					WithStartEnd(9, 2, 9, 12).
-					BuildPtr(),
-			},
-		},
-		structDecl.Members[4],
-	)
-}
+			members[4],
+		)
+	})
 
-func TestConvertToAST_struct_decl_with_inline_substructs(t *testing.T) {
-	source := `module x;
+	t.Run("struct with subtype", func(t *testing.T) {
+		source := `module x;
 	struct Person {
 		int age;
 		String name;
@@ -441,11 +479,18 @@ func TestConvertToAST_struct_decl_with_inline_substructs(t *testing.T) {
 		String title;
 	}`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
-	structDecl := tree.Modules[0].Declarations[1].(*ast.StructDecl)
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		structDecl := tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		members := structDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType).Fields
 
-	assert.Equal(t, true, structDecl.Members[0].IsInlined)
+		assert.Equal(t, true, members[0].Inlined)
+		assert.Equal(t, "person", members[0].Names[0].Name)
+		assert.Equal(t, lsp.NewRange(6, 16, 6, 22), members[0].Names[0].Range)
+		memberType := members[0].Type.(ast.TypeInfo)
+		assert.Equal(t, "Person", memberType.Identifier.Name)
+		assert.Equal(t, lsp.NewRange(6, 9, 6, 15), memberType.Identifier.Range)
+	})
 }
 
 func TestConvertToAST_union_decl(t *testing.T) {
@@ -457,9 +502,9 @@ func TestConvertToAST_union_decl(t *testing.T) {
 
 	cv := newTestAstConverter()
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
-	unionDecl := tree.Modules[0].Declarations[0].(*ast.StructDecl)
+	unionDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 
-	assert.Equal(t, ast.StructTypeUnion, int(unionDecl.StructType))
+	assert.Equal(t, ast.StructTypeUnion, int(unionDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType).Type))
 }
 
 func TestConvertToAST_bitstruct_decl(t *testing.T) {
@@ -473,10 +518,11 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 
 	cv := newTestAstConverter()
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
-	bitstructDecl := tree.Modules[0].Declarations[0].(*ast.StructDecl)
+	bitstructDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+	structType := bitstructDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
 
-	assert.Equal(t, ast.StructTypeBitStruct, int(bitstructDecl.StructType))
-	assert.Equal(t, true, bitstructDecl.BackingType.IsSome())
+	assert.Equal(t, ast.StructTypeBitStruct, int(structType.Type))
+	assert.Equal(t, true, structType.BackingType.IsSome())
 
 	expectedType := ast.TypeInfo{
 		NodeAttributes: aWithPos(1, 32, 1, 36),
@@ -486,17 +532,17 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 			WithStartEnd(1, 32, 1, 36).
 			BuildPtr(),
 	}
-	assert.Equal(t, expectedType, bitstructDecl.BackingType.Get())
-	assert.Equal(t, 1, len(bitstructDecl.Implements))
-	assert.Equal(t, "AnInterface", bitstructDecl.Implements[0].Name)
+	assert.Equal(t, expectedType, structType.BackingType.Get())
+	assert.Equal(t, 1, len(structType.Implements))
+	assert.Equal(t, "AnInterface", structType.Implements[0].Name)
 
-	expect := ast.StructMemberDecl{
+	expect := &ast.StructField{
 		NodeAttributes: aWithPos(3, 2, 3, 19),
-		Names: []ast.Ident{
+		Names: []*ast.Ident{
 			ast.NewIdentifierBuilder().
 				WithName("a").
 				WithStartEnd(3, 9, 3, 10).
-				Build(),
+				BuildPtr(),
 		},
 		Type: ast.TypeInfo{
 			NodeAttributes: aWithPos(3, 2, 3, 8),
@@ -508,7 +554,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 		},
 		BitRange: option.Some([2]uint{0, 15}),
 	}
-	assert.Equal(t, expect, bitstructDecl.Members[0])
+	assert.Equal(t, expect, structType.Fields[0])
 }
 
 func TestConvertToAST_fault_decl(t *testing.T) {

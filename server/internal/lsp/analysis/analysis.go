@@ -215,17 +215,19 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 	if deepLevel == 0 {
 		solveElementType = false
 	}
+
 	return resolveChildSymbol(parentSymbol, selectorExpr.Sel.Name, context.moduleName, fileName, symbolTable, solveElementType)
 }
 
-func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName, fileName string, symbolTable *SymbolTable, solveType bool) *Symbol {
-	if symbol == nil {
+func resolveChildSymbol(parentSymbol *Symbol,
+	nextIdent string, moduleName ModuleName, fileName string, symbolTable *SymbolTable, solveType bool) *Symbol {
+	if parentSymbol == nil {
 		return nil
 	}
 
-	switch symbol.Kind {
+	switch parentSymbol.Kind {
 	case ast.ENUM, ast.FAULT:
-		for _, childRel := range symbol.Children {
+		for _, childRel := range parentSymbol.Children {
 			if childRel.Tag == Field && childRel.Child.Name == nextIdent {
 				return childRel.Child
 			} else if childRel.Tag == Method && childRel.Child.Name == nextIdent {
@@ -234,80 +236,119 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 		}
 
 	case ast.STRUCT:
-		inlinedCandidates := []*ast.Ident{}
-
 		// Search In Members
-		for _, member := range symbol.NodeDecl.(*ast.StructDecl).Members {
-			if member.Names[0].Name == nextIdent {
-				if member.Type.BuiltIn || !solveType {
-					return &Symbol{
-						Name:     member.Names[0].Name,
-						Module:   moduleName,
-						URI:      fileName,
-						Range:    member.Range,
-						NodeDecl: member,
-						Kind:     ast.FIELD,
-						Type: TypeDefinition{
-							member.Type.Identifier.String(),
-							member.Type.BuiltIn,
-							member.Type,
-						},
-					}
-				}
+		// There are two cases:
+		// - NodeDecl == *ast.GenDecl
+		// - NodeDecl == *ast.StructType // <-- this case is when traversing an anonymous sub struct
+		var specType *ast.StructType
+		if genDecl, ok := parentSymbol.NodeDecl.(*ast.GenDecl); ok {
+			specType = genDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
+		} else if field, ok2 := parentSymbol.NodeDecl.(*ast.StructField); ok2 {
+			specType = field.Type.(*ast.StructType)
+		} else {
+			panic("????")
+		}
 
-				// If nextIdent is the last element in the chain of SelectorExpr, we don't need to resolve the type.
-				// Else, we need to check for the type to continue resolving each step of the chain
-				value := symbolTable.FindSymbolByPosition(
-					member.Range.Start,
+		return resolveChildSymbolInStructFields(
+			nextIdent,
+			specType,
+			parentSymbol,
+			moduleName,
+			fileName,
+			symbolTable,
+			solveType,
+		)
+		/*
+			inlinedCandidates := []*ast.Ident{}
+
+			for _, member := range specType.Fields {
+				if member.Names[0].Name == nextIdent {
+					switch t := member.Type.(type) {
+					case ast.TypeInfo:
+						if t.BuiltIn || !solveType {
+							typeName := ""
+							if t.Identifier != nil {
+								// It could be an anonymous struct, protect against that
+								typeName = t.Identifier.String()
+							}
+
+							return &Symbol{
+								Name:     member.Names[0].Name,
+								Module:   moduleName,
+								URI:      fileName,
+								Range:    member.Range,
+								NodeDecl: member,
+								Kind:     ast.FIELD,
+								Type: TypeDefinition{
+									typeName,
+									t.BuiltIn,
+									t,
+								},
+							}
+						}
+						value := symbolTable.FindSymbolByPosition(
+							member.Range.Start,
+							fileName,
+							t.Identifier.String(),
+							moduleName,
+							0,
+						)
+						if value.IsSome() {
+							return value.Get()
+						} else {
+							return nil
+						}
+
+					case *ast.StructType:
+						// Anonymous Struct
+						// Search inside struct fields
+						for _, subField := range t.Fields {
+
+						}
+					}
+
+					// If nextIdent is the last element in the chain of SelectorExpr, we don't need to resolve the type.
+					// Else, we need to check for the type to continue resolving each step of the chain
+
+				} else if member.Inlined {
+					inlinedCandidates = append(inlinedCandidates, member.Type.(ast.TypeInfo).Identifier)
+				}
+			}
+
+			// Not found in members, we need to search struct methods
+			for _, relatedSymbol := range parentSymbol.Children {
+				if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == nextIdent {
+					return relatedSymbol.Child
+				}
+			}
+
+			// Not found, look inside each inlinedCandidates, maybe is a subproperty of them
+			for _, inlinedTypeIdent := range inlinedCandidates {
+				inlinedTypeSymbol := symbolTable.FindSymbolByPosition(
+					inlinedTypeIdent.Range.Start,
 					fileName,
-					member.Type.Identifier.String(),
+					inlinedTypeIdent.String(),
 					moduleName,
 					0,
 				)
-				if value.IsSome() {
-					return value.Get()
-				} else {
-					return nil
+				if inlinedTypeSymbol.IsSome() {
+					inlinedStructSymbol := inlinedTypeSymbol.Get()
+					child := resolveChildSymbol(
+						inlinedStructSymbol,
+						nextIdent,
+						moduleName,
+						fileName,
+						symbolTable,
+						solveType,
+					)
+					if child != nil && child.Name == nextIdent {
+						return child
+					}
 				}
-			} else if member.IsInlined {
-				inlinedCandidates = append(inlinedCandidates, member.Type.Identifier)
-			}
-		}
-
-		// Not found in members, we need to search struct methods
-		for _, relatedSymbol := range symbol.Children {
-			if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == nextIdent {
-				return relatedSymbol.Child
-			}
-		}
-
-		// Not found, look inside each inlinedCandidates, maybe is a subproperty of them
-		for _, inlinedTypeIdent := range inlinedCandidates {
-			inlinedTypeSymbol := symbolTable.FindSymbolByPosition(
-				inlinedTypeIdent.Range.Start,
-				fileName,
-				inlinedTypeIdent.String(),
-				moduleName,
-				0,
-			)
-			if inlinedTypeSymbol.IsSome() {
-				inlinedStructSymbol := inlinedTypeSymbol.Get()
-				child := resolveChildSymbol(
-					inlinedStructSymbol,
-					nextIdent,
-					moduleName,
-					fileName,
-					symbolTable,
-					solveType,
-				)
-				if child != nil && child.Name == nextIdent {
-					return child
-				}
-			}
-		}
+			}*/
 
 	case ast.FUNCTION:
-		fn := symbol.NodeDecl.(*ast.FunctionDecl)
+		fn := parentSymbol.NodeDecl.(*ast.FunctionDecl)
 		returnType := fn.Signature.ReturnType
 		returnTypeSymbol := symbolTable.FindSymbolByPosition(
 			returnType.Range.Start,
@@ -326,6 +367,122 @@ func resolveChildSymbol(symbol *Symbol, nextIdent string, moduleName ModuleName,
 				symbolTable,
 				solveType,
 			)
+		}
+	}
+
+	return nil
+}
+
+func resolveChildSymbolInStructFields(searchIdent string, structType *ast.StructType, parentSymbol *Symbol, moduleName ModuleName, fileName string, symbolTable *SymbolTable, solveType bool) *Symbol {
+
+	inlinedCandidates := []*ast.Ident{}
+
+	for _, member := range structType.Fields {
+		if member.Names[0].Name == searchIdent {
+			switch t := member.Type.(type) {
+			case ast.TypeInfo:
+				if t.BuiltIn || !solveType {
+					typeName := ""
+					if t.Identifier != nil {
+						// It could be an anonymous struct, protect against that
+						typeName = t.Identifier.String()
+					}
+
+					return &Symbol{
+						Name:     member.Names[0].Name,
+						Module:   moduleName,
+						URI:      fileName,
+						Range:    member.Range,
+						NodeDecl: member,
+						Kind:     ast.FIELD,
+						Type: TypeDefinition{
+							typeName,
+							t.BuiltIn,
+							t,
+						},
+					}
+				}
+				value := symbolTable.FindSymbolByPosition(
+					member.Range.Start,
+					fileName,
+					t.Identifier.String(),
+					moduleName,
+					0,
+				)
+				if value.IsSome() {
+					return value.Get()
+				} else {
+					return nil
+				}
+
+			case *ast.StructType:
+				//if !solveType {
+				return &Symbol{
+					Name:     member.Names[0].Name,
+					Module:   moduleName,
+					URI:      fileName,
+					Range:    member.Range,
+					NodeDecl: member,
+					Kind:     ast.STRUCT,
+					Type: TypeDefinition{
+						Name:      "",
+						IsBuiltIn: false,
+						NodeDecl:  member,
+					},
+				}
+				/*} else {
+					// Anonymous Struct
+					// Search inside struct fields
+
+					return resolveChildSymbolInStructFields(
+						searchIdent,
+						t,
+						parentSymbol,
+						moduleName,
+						fileName,
+						symbolTable,
+						solveType,
+					)
+				}*/
+			}
+
+			// If nextIdent is the last element in the chain of SelectorExpr, we don't need to resolve the type.
+			// Else, we need to check for the type to continue resolving each step of the chain
+
+		} else if member.Inlined {
+			inlinedCandidates = append(inlinedCandidates, member.Type.(ast.TypeInfo).Identifier)
+		}
+	}
+
+	// Not found in members, we need to search struct methods
+	for _, relatedSymbol := range parentSymbol.Children {
+		if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == searchIdent {
+			return relatedSymbol.Child
+		}
+	}
+
+	// Not found, look inside each inlinedCandidates, maybe is a subproperty of them
+	for _, inlinedTypeIdent := range inlinedCandidates {
+		inlinedTypeSymbol := symbolTable.FindSymbolByPosition(
+			inlinedTypeIdent.Range.Start,
+			fileName,
+			inlinedTypeIdent.String(),
+			moduleName,
+			0,
+		)
+		if inlinedTypeSymbol.IsSome() {
+			inlinedStructSymbol := inlinedTypeSymbol.Get()
+			child := resolveChildSymbol(
+				inlinedStructSymbol,
+				searchIdent,
+				moduleName,
+				fileName,
+				symbolTable,
+				solveType,
+			)
+			if child != nil && child.Name == searchIdent {
+				return child
+			}
 		}
 	}
 

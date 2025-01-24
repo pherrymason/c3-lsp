@@ -30,18 +30,18 @@ func walkList[N ast.Node](v Visitor, list []N, propertyName string) {
 // v for each of the non-nil children of node, followed by a call
 // of v.Exit(node).
 // Alternative Walk method signature Walk(v Visitor, n Node, p *Path)
-func Walk(v Visitor, n ast.Node, propertyName string) {
-	if n == nil {
+func Walk(v Visitor, node ast.Node, propertyName string) {
+	if node == nil {
 		return
 	}
 
-	if v = v.Enter(n, propertyName); v == nil {
+	if v = v.Enter(node, propertyName); v == nil {
 		return
 	}
 
-	defer v.Exit(n, propertyName)
+	defer v.Exit(node, propertyName)
 
-	switch n := n.(type) {
+	switch n := node.(type) {
 	// Comments and fields
 	//case *Comment:
 	// Nothing to do
@@ -59,6 +59,11 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		// Do nothing
 
 	// Expressions
+	case ast.Ident:
+		if n.ModulePath != nil {
+			Walk(v, n.ModulePath, "ModulePath")
+		}
+
 	case *ast.Ident:
 		if n.ModulePath != nil {
 			Walk(v, n.ModulePath, "ModulePath")
@@ -235,14 +240,15 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		Walk(v, n.Sel, "Sel")
 
 	case *ast.StarExpr:
+		/*
+			case *ast.StructDecl:
+				walkList(v, n.Implements, "Implements")
+				walkList(v, n.Members, "Members")
 
-	case *ast.StructDecl:
-		walkList(v, n.Implements, "Implements")
-		walkList(v, n.Members, "Members")
-
-	case ast.StructMemberDecl:
-		Walk(v, n.Type, "Type")
-		walkList(v, n.Names, "Names")
+			case ast.StructMemberDecl:
+				Walk(v, n.Type, "Type")
+				walkList(v, n.Names, "Names")
+		*/
 
 	case *ast.SubscriptExpression:
 		Walk(v, n.Argument, "Argument")
@@ -272,7 +278,9 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		Walk(v, n.TypeDescription, "TypeDescription")
 
 	case ast.TypeInfo:
-		Walk(v, n.Identifier, "Identifier")
+		if n.Identifier != nil {
+			Walk(v, n.Identifier, "Identifier")
+		}
 
 	case *ast.UnaryExpression:
 		Walk(v, n.Argument, "Argument")
@@ -284,6 +292,13 @@ func Walk(v Visitor, n ast.Node, propertyName string) {
 		Walk(v, n.Type, "Type")
 		walkList(v, n.Names, "Names")
 		Walk(v, n.Value, "Value")
+
+	case *ast.StructType:
+		walkList(v, n.Implements, "Implements")
+		if n.BackingType.IsSome() {
+			Walk(v, n.BackingType.Get(), "BackingType")
+		}
+		walkList(v, n.Fields, "Fields")
 
 	case *ast.WhileStatement:
 		if n.Condition != nil {

@@ -225,7 +225,7 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		module foo_alt;
 		char tick;
 		
-		module foo2;
+		module app;
 		import foo;
 		char fps = foo::tick * 60;
 		`
@@ -239,8 +239,8 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		secondFileName := "foo.c3"
 		source = `module foo;
 		char tick;`
-		tree = getTree(source, secondFileName)
-		UpdateSymbolTable(symbolTable, tree, fileName)
+		tree2 := getTree(source, secondFileName)
+		UpdateSymbolTable(symbolTable, tree2, secondFileName)
 
 		cursorPosition := lsp.Position{Line: 6, Column: 19} // Cursor at char fps = foo::t|ick * 60;
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
@@ -624,9 +624,54 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		tree := getTree(source, fileName)
 		symbolTable := BuildSymbolTable(tree, fileName)
 
-		cursorPosition := lsp.Position{Line: 10, Column: 7}
+		cursorPosition := lsp.Position{Line: 10, Column: 7} // Cursor at obj.|a = 3;
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
+	})
+
+	t.Run("Find struct member that is anonymous sub struct", func(t *testing.T) {
+		source := `
+		struct Bar {
+			struct data {
+			  int a;
+			}
+		}
+		fn void main() {
+			Bar obj;
+			obj.data.a = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 8, Column: 8} // Cursor at `obj.d|ata.a = 3`
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
+		assert.Equal(t, "data", symbolOpt.Get().Name)
+	})
+
+	t.Run("Find struct member that is inside anonymous sub struct", func(t *testing.T) {
+		source := `
+		struct Bar {
+			struct data {
+			  int a;
+			}
+		}
+		fn void main() {
+			Bar obj;
+			obj.data.a = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 8, Column: 12} // Cursor at `obj.data.|a = 3`
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
+		assert.Equal(t, "a", symbolOpt.Get().Name)
+		assert.Equal(t, lsp.NewRange(3, 5, 3, 11), symbolOpt.Get().Range)
 	})
 
 	t.Run("Find struct method when it is inlined", func(t *testing.T) {

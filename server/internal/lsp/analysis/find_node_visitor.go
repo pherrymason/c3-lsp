@@ -55,6 +55,10 @@ func (v *FindNodeVisitor) Exit(n ast.Node, propertyName string) {
 
 // FindNode encuentra el nodo del AST que contiene la posición dada.
 func FindNode(root ast.Node, pos lsp.Position) (ast.Node, []PathStep) {
+	if root == nil {
+		panic("FindNode with nil!")
+	}
+
 	visitor := &FindNodeVisitor{pos: pos}
 	walk.Walk(visitor, root, "")
 

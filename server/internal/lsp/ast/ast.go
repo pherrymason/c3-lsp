@@ -166,6 +166,8 @@ type PropertyValue struct {
 	Value Expression
 }
 
+// StructMemberDecl
+// Deprecated
 type StructMemberDecl struct {
 	NodeAttributes
 	Names     []Ident

@@ -254,6 +254,14 @@ type (
 		Value Expression // Value if applicable.
 	}
 
+	StructField struct {
+		NodeAttributes
+		Names    []*Ident
+		Type     Expression
+		BitRange option.Option[[2]uint]
+		Inlined  bool
+	}
+
 	// An ArrayType represents an array or slice type.
 	ArrayType struct {
 		NodeAttributes
@@ -274,19 +282,20 @@ type (
 		Value Expression
 	}
 
+	StructType struct {
+		NodeAttributes
+		Type        StructTypeID // Variant of struct: struct | union | bitstruct
+		Implements  []*Ident
+		BackingType option.Option[TypeInfo] // Used for BitStructs
+		Fields      []*StructField
+	}
+
 	FuncType struct {
 		NodeAttributes
 		ReturnType TypeInfo
 		Params     []FunctionParameter
 	}
 
-	/*
-		FuncType struct {
-			NodeAttributes
-			Params []Expression
-			Result []Expression
-		}
-	*/
 	FunctionSignature struct {
 		NodeAttributes
 		Name       Ident
@@ -338,8 +347,10 @@ func (TypeInfo) exprNode()                      {}
 func (*InitializerList) exprNode()              {}
 func (*InlineTypeWithInitialization) exprNode() {}
 func (l *Field) exprNode()                      {}
+func (l *StructField) exprNode()                {}
 func (l *ArrayType) exprNode()                  {}
 func (l *EnumType) exprNode()                   {}
+func (l *StructType) exprNode()                 {}
 func (l *FuncType) exprNode()                   {}
 func (l *InterfaceType) exprNode()              {}
 func (l *TrailingGenericsExpr) exprNode()       {}

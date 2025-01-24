@@ -35,7 +35,7 @@ type (
 		Name            *Ident       // type name
 		TypeParams      []Expression // Generic type parameters; or nil
 		Assign          token.Pos    // position of '=', if any
-		TypeDescription Expression   // ast node describing the type with detail: EnumType, bStructType
+		TypeDescription Expression   // ast node describing the type with detail: EnumType, bStructType, StructType
 	}
 )
 
@@ -49,7 +49,7 @@ const (
 	StructTypeBitStruct
 )
 
-type StructType int
+type StructTypeID int
 
 type (
 	GenDecl struct {
@@ -81,12 +81,14 @@ type (
 		ResolvesToType option.Option[TypeInfo] // Deprecated
 	}
 
+	// StructDecl
+	// Deprecated
 	StructDecl struct {
 		NodeAttributes
 		Name        string
 		BackingType option.Option[TypeInfo]
 		Members     []StructMemberDecl
-		StructType  StructType
+		StructType  StructTypeID
 		Implements  []*Ident
 	}
 

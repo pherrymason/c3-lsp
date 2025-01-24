@@ -12,6 +12,9 @@ func BuildSymbolTable(astTree ast.Node, fileName string) *SymbolTable {
 	return visitor.table
 }
 func UpdateSymbolTable(symbolTable *SymbolTable, astTree ast.Node, fileName string) {
+	if astTree == nil {
+		panic("astTree is nil")
+	}
 	visitor := newSymbolTableVisitor(symbolTable)
 	walk.Walk(&visitor, astTree, "")
 }
@@ -53,47 +56,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		v.scopePushed++
 
 	case *ast.GenDecl:
-		if n.Token == ast.VAR || n.Token == ast.CONST {
-			_, symbol := v.currentScope.RegisterSymbol(
-				n.Spec.(*ast.ValueSpec).Names[0].Name,
-				n.Range,
-				n,
-				v.currentModule,
-				v.currentFilePath.URI,
-				n.Token,
-			)
-
-			typeExpression := n.Spec.(*ast.ValueSpec).Type
-			typeName := typeExpression.Identifier.String()
-			symbol.Type = TypeDefinition{
-				Name:      typeName, // TODO does this having module path break anything?
-				IsBuiltIn: typeExpression.BuiltIn,
-				NodeDecl:  typeExpression,
-			}
-
-		} else if n.Token == ast.ENUM {
-			_, enumSym := v.currentScope.RegisterSymbol(
-				n.Spec.(*ast.TypeSpec).Name.Name,
-				n.Range,
-				n,
-				v.currentModule,
-				v.currentFilePath.URI,
-				ast.ENUM,
-			)
-
-			enumType := n.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
-			for _, value := range enumType.Values {
-				_, enumFieldSym := v.currentScope.RegisterSymbol(
-					value.Name.Name,
-					value.Range,
-					value,
-					v.currentModule,
-					v.currentFilePath.URI,
-					ast.FIELD,
-				)
-				enumSym.AppendChild(enumFieldSym, Field)
-			}
-		}
+		v.registerGenDecl(n)
 
 	case *ast.StructDecl:
 		v.currentScope.RegisterSymbol(n.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.STRUCT)
@@ -160,6 +123,63 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		v.pushScope(n)
 	}
 	return v
+}
+
+func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
+	switch n.Token {
+	case ast.VAR, ast.CONST:
+		_, symbol := v.currentScope.RegisterSymbol(
+			n.Spec.(*ast.ValueSpec).Names[0].Name,
+			n.Range,
+			n,
+			v.currentModule,
+			v.currentFilePath.URI,
+			n.Token,
+		)
+
+		typeExpression := n.Spec.(*ast.ValueSpec).Type
+		typeName := typeExpression.Identifier.String()
+		symbol.Type = TypeDefinition{
+			Name:      typeName, // TODO does this having module path break anything?
+			IsBuiltIn: typeExpression.BuiltIn,
+			NodeDecl:  typeExpression,
+		}
+
+	case ast.ENUM:
+		_, enumSym := v.currentScope.RegisterSymbol(
+			n.Spec.(*ast.TypeSpec).Name.Name,
+			n.Range,
+			n,
+			v.currentModule,
+			v.currentFilePath.URI,
+			ast.ENUM,
+		)
+
+		enumType := n.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
+		for _, value := range enumType.Values {
+			_, enumFieldSym := v.currentScope.RegisterSymbol(
+				value.Name.Name,
+				value.Range,
+				value,
+				v.currentModule,
+				v.currentFilePath.URI,
+				ast.FIELD,
+			)
+			enumSym.AppendChild(enumFieldSym, Field)
+		}
+
+	case ast.STRUCT:
+		v.currentScope.RegisterSymbol(
+			n.Spec.(*ast.TypeSpec).Name.Name,
+			n.Range,
+			n,
+			v.currentModule,
+			v.currentFilePath.URI,
+			ast.STRUCT,
+		)
+
+	default:
+	}
 }
 
 func (v *symbolTableGenerator) pushScope(n ast.Node) {

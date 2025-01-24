@@ -1,4 +1,22 @@
 # C3LSP Release Notes
+## 0.4
+
+Rewrote parsing by generating an AST from treesitter output. This AST is now the source of analysis for symbol retrieval. This brings saner code for symbol search.  
+Some changes this brought:
+
+- Better handling following chained expressions.
+- Goto on module offers multiple locations.
+
+## 0.3.4
+- Fix crash while writing an inline struct member. (#97)
+- Support `<*` and `*>` comments. (#91)
+- Optimizations to reduce CPU usage by 6-7x. Thanks @PgBiel! [More info](https://github.com/pherrymason/c3-lsp/pull/99)
+
+## 0.3.3
+- Support named and anonymous sub structs.
+- Fix clearing old diagnostics. (#89, #83, #71, #62)
+- Fixed crash in some scenarios where no results were found.
+- Fix crash when using with Helix editor (#87)
 
 ## 0.4.0
 
