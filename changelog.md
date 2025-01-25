@@ -3,7 +3,9 @@
 ## 0.3.4
 - Fix crash while writing an inline struct member. (#97)
 - Support `<*` and `*>` comments. (#91)
-- Optimizations to reduce CPU usage by 6-7x. Thanks @PgBiel! [More info](https://github.com/pherrymason/c3-lsp/pull/99)  
+- Show documentation on hover and completion. Credit to @PgBiel
+- Optimizations to reduce CPU usage by 6-7x. Credit to @PgBiel [More info](https://github.com/pherrymason/c3-lsp/pull/99)
+- Improve syntax highlighting in function information on hovering (Credit to @PgBiel)
 
 ## 0.3.3
 - Support named and anonymous sub structs.
