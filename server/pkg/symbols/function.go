@@ -119,6 +119,15 @@ func (f *Function) GetArguments() []*Variable {
 	return arguments
 }
 
+// Returns 'fn' for functions and 'macro' for macros.
+func (f *Function) GetDeclKeyword() string {
+	if f.fType == Macro {
+		return "macro"
+	} else {
+		return "fn"
+	}
+}
+
 func (f *Function) AddVariables(variables []*Variable) {
 	for _, variable := range variables {
 		f.Variables[variable.name] = variable
@@ -150,7 +159,7 @@ func (f Function) GetHoverInfo() string {
 		args = append(args, f.Variables[arg].Type.String()+" "+f.Variables[arg].name)
 	}
 
-	source := fmt.Sprintf("fn %s %s(%s)", f.GetReturnType(), f.GetFullName(), strings.Join(args, ", "))
+	source := fmt.Sprintf("%s %s %s(%s)", f.GetDeclKeyword(), f.GetReturnType(), f.GetFullName(), strings.Join(args, ", "))
 
 	return source
 }
