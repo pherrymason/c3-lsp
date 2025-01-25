@@ -3,6 +3,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -25,9 +26,14 @@ import (
 func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Function, error) {
 	var typeIdentifier string
 	funcHeader := node.Child(1)
+
+	if funcHeader == nil {
+		return idx.Function{}, errors.New("child node not found")
+	}
+
 	nameNode := funcHeader.ChildByFieldName("name")
 
-	if nameNode == nil || funcHeader == nil {
+	if nameNode == nil {
 		return idx.Function{}, errors.New("child node not found")
 	}
 
@@ -188,12 +194,21 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 		  field('name', $._func_macro_name),
 		),
 */
-func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Function {
+func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Function, error) {
 	var typeIdentifier string
 	var nameNode *sitter.Node
-	funcHeader := node.Child(1)
+	macroHeader := node.Child(1)
 
-	nameNode = funcHeader.ChildByFieldName("name")
+	if macroHeader == nil {
+		return idx.Function{}, errors.New("child node not found")
+	}
+
+	nameNode = macroHeader.ChildByFieldName("name")
+
+	if nameNode == nil {
+		return idx.Function{}, errors.New("child node not found")
+	}
+
 	/*
 		if funcHeader.Type() == "func_header" && funcHeader.ChildByFieldName("method_type") != nil {
 			typeIdentifier = funcHeader.ChildByFieldName("method_type").Content(sourceCode)
@@ -243,5 +258,5 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 		symbol.AddVariables(variables)
 	}
 
-	return symbol
+	return symbol, nil
 }
