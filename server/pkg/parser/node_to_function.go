@@ -198,7 +198,6 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 	    ),
 */
 func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Function, error) {
-	var typeIdentifier string
 	var nameNode *sitter.Node
 	macroHeader := node.Child(1)
 
@@ -212,14 +211,14 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 		return idx.Function{}, errors.New("child node not found")
 	}
 
+	var typeIdentifier string = ""
 	var returnType *idx.Type = nil
 
 	if macroHeader.Type() == "macro_header" {
-		// TODO
-		// methodTypeNode := macroHeader.ChildByFieldName("method_type")
-		// if macroHeader.ChildByFieldName("method_type") != nil {
-		// typeIdentifier = funcHeader.ChildByFieldName("method_type").Content(sourceCode)
-		// }
+		methodTypeNode := macroHeader.ChildByFieldName("method_type")
+		if methodTypeNode != nil {
+			typeIdentifier = methodTypeNode.Content(sourceCode)
+		}
 
 		returnTypeNode := macroHeader.ChildByFieldName("return_type")
 		if returnTypeNode != nil {
@@ -249,22 +248,36 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 		}
 	}
 
-	macroName := "??"
-	if nameNode != nil {
-		macroName = nameNode.Content(sourceCode)
-	}
+	macroName := nameNode.Content(sourceCode)
 
-	symbol := idx.NewMacro(
-		macroName,
-		argumentIds,
-		returnType,
-		currentModule.GetModuleString(),
-		*docId,
-		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
-			nameNode.EndPoint()),
-		idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
-			node.EndPoint()),
-	)
+	var symbol idx.Function
+	if typeIdentifier != "" {
+		symbol = idx.NewTypeMacro(
+			typeIdentifier,
+			macroName,
+			argumentIds,
+			returnType,
+			currentModule.GetModuleString(),
+			*docId,
+			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
+				nameNode.EndPoint()),
+			idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
+				node.EndPoint()),
+			protocol.CompletionItemKindFunction,
+		)
+	} else {
+		symbol = idx.NewMacro(
+			macroName,
+			argumentIds,
+			returnType,
+			currentModule.GetModuleString(),
+			*docId,
+			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
+				nameNode.EndPoint()),
+			idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
+				node.EndPoint()),
+		)
+	}
 
 	if node.ChildByFieldName("body") != nil {
 		variables := p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)
