@@ -382,6 +382,24 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 	assert.Same(t, module.NestedScopes()[0], fn.Get())
 }
 
+func TestExtractSymbols_handle_invalid_macro_signature(t *testing.T) {
+	source := `
+	<* docs *>
+	macro fn void scary() {
+
+	}`
+
+	doc := document.NewDocument("docId", source)
+	parser := createParser()
+	symbols, _ := parser.ParseSymbols(&doc)
+
+	module := symbols.Get("docid")
+	assert.Empty(t, module.ChildrenFunctions)
+	assert.True(t, cast.ToPtr(module.GetChildrenFunctionByName("scary")).IsNone())
+	assert.True(t, cast.ToPtr(module.GetChildrenFunctionByName("void")).IsNone())
+	assert.True(t, cast.ToPtr(module.GetChildrenFunctionByName("fn")).IsNone())
+}
+
 func TestExtractSymbols_find_module(t *testing.T) {
 	t.Run("finds anonymous module", func(t *testing.T) {
 		source := `int value = 1;`
