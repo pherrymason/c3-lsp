@@ -142,6 +142,15 @@ func GetCompletableDocComment(s symbols.Indexable) any {
 	}
 }
 
+func GetCompletionDetail(s symbols.Indexable) *string {
+	detail := s.GetCompletionDetail()
+	if detail == "" {
+		return nil
+	} else {
+		return &detail
+	}
+}
+
 // Returns: []CompletionItem | CompletionList | nil
 func (s *Search) BuildCompletionList(
 	ctx context.CursorContext,
@@ -240,6 +249,8 @@ func (s *Search) BuildCompletionList(
 
 						// At this moment, struct members cannot receive documentation
 						Documentation: nil,
+
+						Detail: GetCompletionDetail(member),
 					})
 				}
 			}
@@ -271,6 +282,7 @@ func (s *Search) BuildCompletionList(
 						Range:   replacementRange,
 					},
 					Documentation: GetCompletableDocComment(fn),
+					Detail:        GetCompletionDetail(fn),
 				})
 			}
 
@@ -284,6 +296,8 @@ func (s *Search) BuildCompletionList(
 
 						// No documentation for enumerators at this time
 						Documentation: nil,
+
+						Detail: GetCompletionDetail(enumerator),
 					})
 				}
 			}
@@ -298,6 +312,8 @@ func (s *Search) BuildCompletionList(
 
 						// No documentation for fault constants at this time
 						Documentation: nil,
+
+						Detail: GetCompletionDetail(constant),
 					})
 				}
 			}
@@ -328,20 +344,21 @@ func (s *Search) BuildCompletionList(
 				editRange := symbolInPosition.FullTextRange().ToLSP()
 
 				items = append(items, protocol.CompletionItem{
-					Label:  storedIdentifier.GetName(),
-					Kind:   cast.ToPtr(storedIdentifier.GetKind()),
-					Detail: cast.ToPtr("Module"),
+					Label: storedIdentifier.GetName(),
+					Kind:  cast.ToPtr(storedIdentifier.GetKind()),
 					TextEdit: protocol.TextEdit{
 						NewText: storedIdentifier.GetName(),
 						Range:   editRange,
 					},
 					Documentation: GetCompletableDocComment(storedIdentifier),
+					Detail:        GetCompletionDetail(storedIdentifier),
 				})
 			} else {
 				items = append(items, protocol.CompletionItem{
 					Label:         storedIdentifier.GetName(),
 					Kind:          cast.ToPtr(storedIdentifier.GetKind()),
 					Documentation: GetCompletableDocComment(storedIdentifier),
+					Detail:        GetCompletionDetail(storedIdentifier),
 				})
 			}
 		}

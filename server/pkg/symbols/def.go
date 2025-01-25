@@ -65,6 +65,18 @@ func (d Def) GetHoverInfo() string {
 	return fmt.Sprintf("def %s = %s", d.name, resolvesTo)
 }
 
+func (d Def) GetCompletionDetail() string {
+	if d.resolvesToType.IsSome() {
+		return "Type"
+	} else if strings.HasPrefix(d.name, "@") {
+		return "Macro Alias"
+	} else {
+		// No semantic information
+		// TODO: Resolve the identifier and display it?
+		return "Alias"
+	}
+}
+
 func (d Def) ResolvesToType() bool {
 	return d.resolvesToType.IsSome()
 }

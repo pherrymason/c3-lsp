@@ -42,3 +42,8 @@ func (b Bitstruct) Members() []*StructMember {
 func (b Bitstruct) GetHoverInfo() string {
 	return b.name
 }
+
+func (b Bitstruct) GetCompletionDetail() string {
+	// Same rationale as for struct
+	return "Type"
+}

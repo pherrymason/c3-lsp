@@ -139,6 +139,10 @@ func (m *Module) GetHoverInfo() string {
 	return m.name
 }
 
+func (m *Module) GetCompletionDetail() string {
+	return "Module"
+}
+
 func (m *Module) GetChildrenFunctionByName(name string) option.Option[*Function] {
 	for _, fun := range m.ChildrenFunctions {
 		if fun.GetFullName() == name {

@@ -223,3 +223,8 @@ func (f *Function) SetEndPosition(position Position) {
 func (f Function) GetHoverInfo() string {
 	return f.DisplaySignature(true)
 }
+
+func (f Function) GetCompletionDetail() string {
+	// Since this is just the type of the function, we don't include its name
+	return f.DisplaySignature(false)
+}

@@ -73,6 +73,11 @@ func (s Struct) GetHoverInfo() string {
 	return fmt.Sprintf("%s", s.name)
 }
 
+func (s Struct) GetCompletionDetail() string {
+	// More information on completion probably isn't needed
+	return "Type"
+}
+
 func (s *Struct) InheritMembersFrom(inlinedMemberName string, otherStruct *Struct) {
 	for _, member := range s.GetMembers() {
 		if member.GetType().GetName() == inlinedMemberName {
@@ -122,6 +127,15 @@ func (m StructMember) GetBitRange() [2]uint {
 
 func (s StructMember) GetHoverInfo() string {
 	return fmt.Sprintf("%s %s", s.baseType, s.name)
+}
+
+func (s StructMember) GetCompletionDetail() string {
+	if s.isStruct {
+		// Anonymous substruct, not much to say
+		return fmt.Sprintf("Struct member '%s'", s.subStruct.Get().name)
+	} else {
+		return s.GetType().String()
+	}
 }
 
 func NewStructMember(name string, fieldType Type, bitRanges option.Option[[2]uint], module string, docId string, idRange Range) StructMember {
