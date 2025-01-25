@@ -48,16 +48,29 @@ func (h *Server) TextDocumentSignatureHelp(context *glsp.Context, params *protoc
 			parameters,
 			protocol.ParameterInformation{
 				Label: arg.GetType().String() + " " + arg.GetName(),
+
+				// TODO: Parse '@param' contract text to get param docs
+				Documentation: nil,
 			},
 		)
 	}
 
 	// Count number of commas (,) written from previous `(`
 	activeParameter := countWrittenArguments(posOption.Get(), doc.SourceCode)
+
+	var docs any = nil
+	docComment := function.GetDocComment()
+	if docComment != nil {
+		docs = protocol.MarkupContent{
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: docComment.DisplayBodyWithContracts(),
+		}
+	}
+
 	signature := protocol.SignatureInformation{
 		Label:         function.GetFQN() + "(" + strings.Join(argsToStringify, ", ") + ")",
 		Parameters:    parameters,
-		Documentation: "", // TODO: Parse comments on functions to include them here.
+		Documentation: docs,
 	}
 	if activeParameter.IsSome() {
 		arg := activeParameter.Get()
