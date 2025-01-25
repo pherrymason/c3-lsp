@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/pherrymason/c3-lsp/pkg/cast"
+	"github.com/pherrymason/c3-lsp/pkg/dedent"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -35,7 +36,8 @@ func (p *Parser) nodeToDocComment(node *sitter.Node, sourceCode []byte) idx.DocC
 	body := ""
 	bodyNode := node.Child(1)
 	if bodyNode.Type() == "doc_comment_text" {
-		body = bodyNode.Content(sourceCode)
+		// Dedent to accept indented doc strings.
+		body = dedent.Dedent(bodyNode.Content(sourceCode))
 	}
 
 	docComment := idx.NewDocComment(body)
@@ -47,6 +49,9 @@ func (p *Parser) nodeToDocComment(node *sitter.Node, sourceCode []byte) idx.DocC
 				name := contractNode.ChildByFieldName("name").Content(sourceCode)
 				body := ""
 				if contractNode.ChildCount() >= 2 {
+					// Right now, contracts can only have a single line, so we don't dedent.
+					// They can also be arbitrary expressions, so it's best to not modify them
+					// at the moment.
 					body = contractNode.Child(1).Content(sourceCode)
 				}
 

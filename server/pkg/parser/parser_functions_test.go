@@ -160,6 +160,11 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 	t.Run("Finds function with simple doc comment", func(t *testing.T) {
 		source := `<*
 			abc
+
+			def
+
+			ghi
+			jkl
 		*>
 		fn void test(int number, char ch, int* pointer) {
 			return 1;
@@ -169,19 +174,28 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 		parser := createParser()
 		symbols, _ := parser.ParseSymbols(&doc)
 
+		expectedDoc := `abc
+
+def
+
+ghi
+jkl`
+
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
-		assert.Equal(t, idx.NewRange(3, 10, 3, 14), fn.Get().GetIdRange())
-		assert.Equal(t, idx.NewRange(3, 2, 5, 3), fn.Get().GetDocumentRange())
-		assert.Equal(t, "abc", fn.Get().GetDocComment().GetBody())
-		assert.Equal(t, "abc", fn.Get().GetDocComment().DisplayBodyWithContracts())
+		assert.Equal(t, idx.NewRange(8, 10, 8, 14), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(8, 2, 10, 3), fn.Get().GetDocumentRange())
+		assert.Equal(t, expectedDoc, fn.Get().GetDocComment().GetBody())
+		assert.Equal(t, expectedDoc, fn.Get().GetDocComment().DisplayBodyWithContracts())
 	})
 
 	t.Run("Finds function with doc comment with contracts", func(t *testing.T) {
 		source := `<*
-			abc
+			Hello world.
+			Hello world.
+
 			@pure
 			@param [in] pointer
 			@require number > 0, number < 1000 : "invalid number"
@@ -199,10 +213,12 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
-		assert.Equal(t, idx.NewRange(7, 10, 7, 14), fn.Get().GetIdRange())
-		assert.Equal(t, idx.NewRange(7, 2, 9, 3), fn.Get().GetDocumentRange())
-		assert.Equal(t, "abc", fn.Get().GetDocComment().GetBody())
-		assert.Equal(t, `abc
+		assert.Equal(t, idx.NewRange(9, 10, 9, 14), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(9, 2, 11, 3), fn.Get().GetDocumentRange())
+		assert.Equal(t, `Hello world.
+Hello world.`, fn.Get().GetDocComment().GetBody())
+		assert.Equal(t, `Hello world.
+Hello world.
 
 **@pure**
 
