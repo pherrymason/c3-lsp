@@ -127,15 +127,18 @@ func extractExplicitModulePath(possibleModulePath string) option.Option[symbols.
 	return option.None[symbols.ModulePath]()
 }
 
-// TODO: Consider only returning the body text, not contracts here
-// Returns: nil | string
+// Obtains a doc comment's representation as markup, or nil.
+// Only the body is included (not contracts) for brevity.
+// Returns: nil | MarkupContent
 func GetCompletableDocComment(s symbols.Indexable) any {
 	docComment := s.GetDocComment()
 	if docComment == nil || docComment.GetBody() == "" {
 		return nil
 	} else {
-		// Don't include contract information in completion, for brevity
-		return docComment.GetBody()
+		return protocol.MarkupContent{
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: docComment.GetBody(),
+		}
 	}
 }
 

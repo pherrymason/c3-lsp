@@ -27,6 +27,13 @@ func filterOutKeywordSuggestions(completionList []protocol.CompletionItem) []pro
 	return filteredCompletionList
 }
 
+func asMarkdown(text string) protocol.MarkupContent {
+	return protocol.MarkupContent{
+		Kind:  protocol.MarkupKindMarkdown,
+		Value: text,
+	}
+}
+
 func Test_isCompletingAChain(t *testing.T) {
 	cases := []struct {
 		name                     string
@@ -354,8 +361,8 @@ func TestBuildCompletionList(t *testing.T) {
 			{"v", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind}},
 			{"va", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind}},
 			{"x", protocol.CompletionItem{Label: "xanadu", Kind: &expectedVarKind}},
-			{"docu", protocol.CompletionItem{Label: "documented", Kind: &expectedVarKind, Documentation: "doc"}},
-			{"MY_C", protocol.CompletionItem{Label: "MY_CONST", Kind: &expectedConstKind, Documentation: "const doc"}},
+			{"docu", protocol.CompletionItem{Label: "documented", Kind: &expectedVarKind, Documentation: asMarkdown("doc")}},
+			{"MY_C", protocol.CompletionItem{Label: "MY_CONST", Kind: &expectedConstKind, Documentation: asMarkdown("const doc")}},
 		}
 
 		for n, tt := range cases {
@@ -479,10 +486,10 @@ func TestBuildCompletionList(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"p", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind, Documentation: "abc"},
+				{Label: "process", Kind: &expectedKind, Documentation: asMarkdown("abc")},
 			}},
 			{"proc", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind, Documentation: "abc"},
+				{Label: "process", Kind: &expectedKind, Documentation: asMarkdown("abc")},
 			}},
 		}
 
@@ -522,7 +529,7 @@ func TestBuildCompletionList(t *testing.T) {
 		}`
 
 		// Contracts are excluded
-		expectedDoc := "abc"
+		expectedDoc := asMarkdown("abc")
 
 		expectedKind := protocol.CompletionItemKindFunction
 		cases := []struct {
@@ -639,7 +646,7 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 				NewText: "toCircle",
 				Range:   protocol_utils.NewLSPRange(6, 7, 6, 8),
 			},
-			Documentation: "member doc",
+			Documentation: asMarkdown("member doc"),
 		},
 		{Label: "width", Kind: &expectedKind},
 	}, completionList)
@@ -1024,7 +1031,7 @@ func TestBuildCompletionList_modules(t *testing.T) {
 						NewText: "app",
 						Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
 					},
-					Documentation: "doc",
+					Documentation: asMarkdown("doc"),
 				},
 				},
 				true,
@@ -1231,7 +1238,7 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 				{
 					Label:         "EmulatorConsole",
 					Kind:          cast.ToPtr(protocol.CompletionItemKindInterface),
-					Documentation: "doc",
+					Documentation: asMarkdown("doc"),
 				},
 			},
 			completionList,
@@ -1244,7 +1251,7 @@ func CreateCompletionItem(label string, kind protocol.CompletionItemKind) protoc
 }
 
 func CreateCompletionItemWithDoc(label string, kind protocol.CompletionItemKind, doc string) protocol.CompletionItem {
-	return protocol.CompletionItem{Label: label, Kind: &kind, Documentation: doc}
+	return protocol.CompletionItem{Label: label, Kind: &kind, Documentation: asMarkdown(doc)}
 }
 
 func TestBuildCompletionList_should_resolve_(t *testing.T) {
