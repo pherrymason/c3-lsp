@@ -191,7 +191,7 @@ jkl`
 		assert.Equal(t, expectedDoc, fn.Get().GetDocComment().DisplayBodyWithContracts())
 	})
 
-	t.Run("Finds function with doc comment with contracts", func(t *testing.T) {
+	t.Run("Finds function with doc comment with body and contracts", func(t *testing.T) {
 		source := `<*
 			Hello world.
 			Hello world.
@@ -221,6 +221,37 @@ Hello world.`, fn.Get().GetDocComment().GetBody())
 Hello world.
 
 **@pure**
+
+**@param** [in] pointer
+
+**@require** number > 0, number < 1000 : "invalid number"
+
+**@ensure** return == 1`, fn.Get().GetDocComment().DisplayBodyWithContracts())
+	})
+
+	t.Run("Finds function with doc comment with only contracts", func(t *testing.T) {
+		source := `<*
+			@pure
+			@param [in] pointer
+			@require number > 0, number < 1000 : "invalid number"
+			@ensure return == 1
+		*>
+		fn void test(int number, char ch, int* pointer) {
+			return 1;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(6, 10, 6, 14), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(6, 2, 8, 3), fn.Get().GetDocumentRange())
+		assert.Equal(t, "", fn.Get().GetDocComment().GetBody())
+		assert.Equal(t, `**@pure**
 
 **@param** [in] pointer
 

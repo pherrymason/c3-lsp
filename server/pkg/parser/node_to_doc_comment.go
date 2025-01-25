@@ -34,17 +34,22 @@ at_ident: _ => token(seq('@', IDENT)),
 */
 func (p *Parser) nodeToDocComment(node *sitter.Node, sourceCode []byte) idx.DocComment {
 	body := ""
+	hasBody := false
 	bodyNode := node.Child(1)
 	if bodyNode.Type() == "doc_comment_text" {
 		// Dedent to accept indented doc strings.
 		body = dedent.Dedent(bodyNode.Content(sourceCode))
+		hasBody = true
 	}
 
 	docComment := idx.NewDocComment(body)
 
-	if node.ChildCount() >= 4 {
-		for i := 2; i <= int(node.ChildCount())-2; i++ {
+	if (hasBody && node.ChildCount() >= 4) || (!hasBody && node.ChildCount() >= 3) {
+		for i := 1; i <= int(node.ChildCount())-2; i++ {
 			contractNode := node.Child(i)
+
+			// Skip the body
+			// (We already skip '<*' and '*>' since we skip first and last indices above)
 			if contractNode.Type() == "doc_comment_contract" {
 				name := contractNode.ChildByFieldName("name").Content(sourceCode)
 				body := ""
