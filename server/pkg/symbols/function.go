@@ -34,8 +34,14 @@ func NewTypeFunction(typeIdentifier string, name string, returnType Type, argume
 	return newFunctionType(Method, typeIdentifier, name, returnType, argumentIds, module, docId, idRange, docRange, kind)
 }
 
-func NewMacro(name string, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
-	return newFunctionType(Macro, "", name, NewTypeFromString("", module), argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
+func NewMacro(name string, argumentIds []string, originalReturnType *Type, module string, docId string, idRange Range, docRange Range) Function {
+	var returnType Type
+	if originalReturnType == nil {
+		returnType = NewTypeFromString("", module)
+	} else {
+		returnType = *originalReturnType
+	}
+	return newFunctionType(Macro, "", name, returnType, argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
 }
 
 func newFunctionType(fType FunctionType, typeIdentifier string, name string, returnType Type, argumentIds []string, module string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/pherrymason/c3-lsp/pkg/cast"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -168,31 +169,33 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 }
 
 /*
-		func_definition: $ => seq(
-	      'fn',
-	      $.func_header,
-	      $.fn_parameter_list,
-	      optional($.attributes),
-	      field('body', $.macro_func_body),
-	    ),
-		func_header: $ => seq(
-			field('return_type', $._type_or_optional_type),
-			optional(seq(field('method_type', $.type), '.')),
-			field('name', $._func_macro_name),
+		macro_parameter_list: $ => seq(
+		  '(',
+		  optional(
+		    choice(
+		      $._parameters,
+		      seq(
+		        optional($._parameters),
+		        ';',
+		        $.trailing_block_param,
+		      ),
+		    ),
+		  ),
+		  ')',
 		),
-
-
 		macro_declaration: $ => seq(
-	      'macro',
-	      choice($.func_header, $.macro_header),
-	      $.macro_parameter_list,
-	      optional($.attributes),
-	      field('body', $.macro_func_body),
-	    ),
-		macro_header: $ => seq(
-		  optional(seq(field('method_type', $.type), '.')),
-		  field('name', $._func_macro_name),
+		  'macro',
+		  $.macro_header,
+		  $.macro_parameter_list,
+		  optional($.attributes),
+		  field('body', $.macro_func_body),
 		),
+
+	    macro_header: $ => seq(
+	      optional(field('return_type', $._type_optional)), // Return type is optional for macros
+	      optional(seq(field('method_type', $.type), '.')),
+	      field('name', $._func_macro_name),
+	    ),
 */
 func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Function, error) {
 	var typeIdentifier string
@@ -209,10 +212,20 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 		return idx.Function{}, errors.New("child node not found")
 	}
 
-	/*
-		if funcHeader.Type() == "func_header" && funcHeader.ChildByFieldName("method_type") != nil {
-			typeIdentifier = funcHeader.ChildByFieldName("method_type").Content(sourceCode)
-		}*/
+	var returnType *idx.Type = nil
+
+	if macroHeader.Type() == "macro_header" {
+		// TODO
+		// methodTypeNode := macroHeader.ChildByFieldName("method_type")
+		// if macroHeader.ChildByFieldName("method_type") != nil {
+		// typeIdentifier = funcHeader.ChildByFieldName("method_type").Content(sourceCode)
+		// }
+
+		returnTypeNode := macroHeader.ChildByFieldName("return_type")
+		if returnTypeNode != nil {
+			returnType = cast.ToPtr(p.typeNodeToType(returnTypeNode, currentModule, sourceCode))
+		}
+	}
 
 	var argumentIds []string
 	arguments := []*idx.Variable{}
@@ -244,6 +257,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 	symbol := idx.NewMacro(
 		macroName,
 		argumentIds,
+		returnType,
 		currentModule.GetModuleString(),
 		*docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
