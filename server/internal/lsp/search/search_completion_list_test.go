@@ -27,6 +27,13 @@ func filterOutKeywordSuggestions(completionList []protocol.CompletionItem) []pro
 	return filteredCompletionList
 }
 
+func asMarkdown(text string) protocol.MarkupContent {
+	return protocol.MarkupContent{
+		Kind:  protocol.MarkupKindMarkdown,
+		Value: text,
+	}
+}
+
 func Test_isCompletingAChain(t *testing.T) {
 	cases := []struct {
 		name                     string
@@ -214,7 +221,7 @@ func TestBuildCompletionList_should_return_nil_when_cursor_is_in_literal(t *test
 	search := NewSearchWithoutLog()
 	state.registerDoc(
 		"test.c3",
-		`module foo; 
+		`module foo;
 		printf("main.");`,
 	)
 
@@ -340,15 +347,22 @@ func TestBuildCompletionList(t *testing.T) {
 	t.Run("Should suggest variable names defined in module", func(t *testing.T) {
 		source := `
 		int variable = 3;
-		int xanadu = 10;`
-		expectedKind := protocol.CompletionItemKindVariable
+		int xanadu = 10;
+		<* doc *>
+		int documented = 50;
+		<* const doc *>
+		const int MY_CONST = 100;`
+		expectedVarKind := protocol.CompletionItemKindVariable
+		expectedConstKind := protocol.CompletionItemKindConstant
 		cases := []struct {
 			input    string
 			expected protocol.CompletionItem
 		}{
-			{"v", protocol.CompletionItem{Label: "variable", Kind: &expectedKind}},
-			{"va", protocol.CompletionItem{Label: "variable", Kind: &expectedKind}},
-			{"x", protocol.CompletionItem{Label: "xanadu", Kind: &expectedKind}},
+			{"v", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind}},
+			{"va", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind}},
+			{"x", protocol.CompletionItem{Label: "xanadu", Kind: &expectedVarKind}},
+			{"docu", protocol.CompletionItem{Label: "documented", Kind: &expectedVarKind, Documentation: asMarkdown("doc")}},
+			{"MY_C", protocol.CompletionItem{Label: "MY_CONST", Kind: &expectedConstKind, Documentation: asMarkdown("const doc")}},
 		}
 
 		for n, tt := range cases {
@@ -358,7 +372,7 @@ func TestBuildCompletionList(t *testing.T) {
 					source+"\n"+tt.input,
 				)
 
-				position := buildPosition(4, 1) // Cursor after `v|`
+				position := buildPosition(8, 1) // Cursor after `v|`
 
 				completionList := search.BuildCompletionList(
 					context.CursorContext{
@@ -430,10 +444,10 @@ func TestBuildCompletionList(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"p", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind},
+				{Label: "process", Kind: &expectedKind, Documentation: nil},
 			}},
 			{"proc", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind},
+				{Label: "process", Kind: &expectedKind, Documentation: nil},
 			}},
 		}
 
@@ -457,6 +471,142 @@ func TestBuildCompletionList(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Should suggest function names with documentation", func(t *testing.T) {
+		sourceStart := `
+		<* abc *>
+		fn void process(){}
+		fn void main() {`
+		sourceEnd := `
+		}`
+
+		expectedKind := protocol.CompletionItemKindFunction
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"p", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind, Documentation: asMarkdown("abc")},
+			}},
+			{"proc", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind, Documentation: asMarkdown("abc")},
+			}},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				state.registerDoc(
+					"test.c3",
+					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
+				)
+				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should suggest function names with contracts in documentation", func(t *testing.T) {
+		sourceStart := `
+		<*
+		abc
+
+		@param [in] a
+		@require a > 0, a < 1000 : "woah"
+		@ensure return > 1
+		*>
+		fn int process(int a){ return 5; }
+		fn void main() {`
+		sourceEnd := `
+		}`
+
+		// Contracts are excluded
+		expectedDoc := asMarkdown("abc")
+
+		expectedKind := protocol.CompletionItemKindFunction
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"p", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind, Documentation: expectedDoc},
+			}},
+			{"proc", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind, Documentation: expectedDoc},
+			}},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				state.registerDoc(
+					"test.c3",
+					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
+				)
+				position := buildPosition(11, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+}
+
+func TestBuildCompletionList_struct_type(t *testing.T) {
+	commonlog.Configure(2, nil)
+	logger := commonlog.GetLogger("C3-LSP.parser")
+
+	source := `
+	struct Cough { int a; }
+	<* doc *>
+	struct Color { int r; int g; int b; }
+`
+	cases := []struct {
+		input    string
+		expected []protocol.CompletionItem
+	}{
+		{"Co", []protocol.CompletionItem{
+			CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindStruct, "doc"),
+			CreateCompletionItem("Cough", protocol.CompletionItemKindStruct),
+		}},
+		{"Col", []protocol.CompletionItem{
+			CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindStruct, "doc"),
+		}},
+	}
+
+	for n, tt := range cases {
+		t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+			state := NewTestState(logger)
+			state.registerDoc("test.c3", source+tt.input+`}`)
+
+			position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+
+			search := NewSearchWithoutLog()
+			completionList := search.BuildCompletionList(
+				context.CursorContext{
+					Position: position,
+					DocURI:   "test.c3",
+				},
+				&state.state)
+
+			assert.Equal(t, len(tt.expected), len(completionList))
+			assert.Equal(t, tt.expected, completionList)
+		})
+	}
 }
 
 func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
@@ -466,12 +616,13 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 
 	source := `struct Color { int red; int green; int blue; }
 	struct Square { int width; int height; Color color; }
+	<* member doc *>
 	fn void Square.toCircle() {}
 	fn void main() {
 		Square inst;
 		inst.
 	}`
-	position := buildPosition(6, 7) // Cursor after `inst.|`
+	position := buildPosition(7, 7) // Cursor after `inst.|`
 
 	state := NewTestState(logger)
 	state.registerDoc("test.c3", source)
@@ -493,8 +644,9 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 			Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 			TextEdit: protocol.TextEdit{
 				NewText: "toCircle",
-				Range:   protocol_utils.NewLSPRange(5, 7, 5, 8),
+				Range:   protocol_utils.NewLSPRange(6, 7, 6, 8),
 			},
+			Documentation: asMarkdown("member doc"),
 		},
 		{Label: "width", Kind: &expectedKind},
 	}, completionList)
@@ -656,6 +808,7 @@ func TestBuildCompletionList_enums(t *testing.T) {
 	t.Run("Should suggest Enum type", func(t *testing.T) {
 		source := `
 		enum Cough { COH, COUGH, COUGHCOUGH}
+		<* doc *>
 		enum Color { RED, GREEN, BLUE }
 `
 		cases := []struct {
@@ -663,11 +816,11 @@ func TestBuildCompletionList_enums(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"Co", []protocol.CompletionItem{
-				CreateCompletionItem("Color", protocol.CompletionItemKindEnum),
+				CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "doc"),
 				CreateCompletionItem("Cough", protocol.CompletionItemKindEnum),
 			}},
 			{"Col", []protocol.CompletionItem{
-				CreateCompletionItem("Color", protocol.CompletionItemKindEnum),
+				CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "doc"),
 			}},
 		}
 
@@ -676,7 +829,7 @@ func TestBuildCompletionList_enums(t *testing.T) {
 				state := NewTestState(logger)
 				state.registerDoc("test.c3", source+tt.input+`}`)
 
-				position := buildPosition(4, uint(len(tt.input))) // Cursor after `<input>|`
+				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
 				search := NewSearchWithoutLog()
 				completionList := search.BuildCompletionList(
@@ -756,6 +909,7 @@ func TestBuildCompletionList_faults(t *testing.T) {
 	t.Run("Should suggest Fault type", func(t *testing.T) {
 		source := `
 		fault WindowError { COH, COUGH, COUGHCOUGH}
+		<* doc *>
 		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS }
 `
 		cases := []struct {
@@ -764,10 +918,10 @@ func TestBuildCompletionList_faults(t *testing.T) {
 		}{
 			{"Wind", []protocol.CompletionItem{
 				CreateCompletionItem("WindowError", protocol.CompletionItemKindEnum),
-				CreateCompletionItem("WindowFileError", protocol.CompletionItemKindEnum),
+				CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "doc"),
 			}},
 			{"WindowFile", []protocol.CompletionItem{
-				CreateCompletionItem("WindowFileError", protocol.CompletionItemKindEnum),
+				CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "doc"),
 			}},
 		}
 
@@ -775,7 +929,7 @@ func TestBuildCompletionList_faults(t *testing.T) {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
 				state := NewTestState()
 				state.registerDoc("test.c3", source+tt.input+`}`)
-				position := buildPosition(4, uint(len(tt.input))) // Cursor after `<input>|`
+				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
 
 				search := NewSearchWithoutLog()
 				completionList := search.BuildCompletionList(
@@ -863,11 +1017,12 @@ func TestBuildCompletionList_modules(t *testing.T) {
 		}{
 			{
 				`
+				<* doc *>
 				module app;
 				int version = 1;
 				a
 				`,
-				buildPosition(4, 5), // Cursor at `a|`
+				buildPosition(5, 5), // Cursor at `a|`
 				[]protocol.CompletionItem{{
 					Label:  "app",
 					Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
@@ -876,6 +1031,7 @@ func TestBuildCompletionList_modules(t *testing.T) {
 						NewText: "app",
 						Range:   protocol_utils.NewLSPRange(3, 4, 3, 5),
 					},
+					Documentation: asMarkdown("doc"),
 				},
 				},
 				true,
@@ -988,7 +1144,7 @@ func TestBuildCompletionList_modules(t *testing.T) {
 				module app;
 				int version = 1;
 				module app::foo;
-				
+
 				app::`,
 				buildPosition(6, 9), // Cursor at `a|`
 				[]protocol.CompletionItem{
@@ -1059,7 +1215,9 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 		state := NewTestState()
 		state.registerDoc(
 			"app.c3",
-			`interface EmulatorConsole
+			`
+		<* doc *>
+		interface EmulatorConsole
 		{
 			fn void run();
 		}
@@ -1068,7 +1226,7 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 		search := NewSearchWithoutLog()
 		completionList := search.BuildCompletionList(
 			context.CursorContext{
-				Position: buildPosition(5, 18),
+				Position: buildPosition(7, 18),
 				DocURI:   "app.c3",
 			},
 			&state.state)
@@ -1078,8 +1236,9 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 			t,
 			[]protocol.CompletionItem{
 				{
-					Label: "EmulatorConsole",
-					Kind:  cast.ToPtr(protocol.CompletionItemKindInterface),
+					Label:         "EmulatorConsole",
+					Kind:          cast.ToPtr(protocol.CompletionItemKindInterface),
+					Documentation: asMarkdown("doc"),
 				},
 			},
 			completionList,
@@ -1088,7 +1247,11 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 }
 
 func CreateCompletionItem(label string, kind protocol.CompletionItemKind) protocol.CompletionItem {
-	return protocol.CompletionItem{Label: label, Kind: &kind}
+	return protocol.CompletionItem{Label: label, Kind: &kind, Documentation: nil}
+}
+
+func CreateCompletionItemWithDoc(label string, kind protocol.CompletionItemKind, doc string) protocol.CompletionItem {
+	return protocol.CompletionItem{Label: label, Kind: &kind, Documentation: asMarkdown(doc)}
 }
 
 func TestBuildCompletionList_should_resolve_(t *testing.T) {

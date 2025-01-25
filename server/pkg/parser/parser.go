@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
+	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/symbols_table"
@@ -9,6 +10,7 @@ import (
 	"github.com/tliron/commonlog"
 )
 
+const DocCommentQuery = `(doc_comment) @doc_comment`
 const VarDeclarationQuery = `(var_declaration
 		name: (identifier) @variable_name
 	)`
@@ -53,6 +55,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 	//fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
 	query := `[
+(source_file ` + DocCommentQuery + `)
 (source_file ` + ModuleDeclaration + `)
 (source_file ` + ImportDeclaration + `)
 (source_file ` + GlobalVarDeclaration + `)
@@ -85,6 +88,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 	var moduleSymbol *idx.Module
 	anonymousModuleName := true
 	lastModuleName := ""
+	var lastDocComment *idx.DocComment = nil
 	//subtyptingToResolve := []StructWithSubtyping{}
 
 	for {
@@ -96,7 +100,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 		for _, c := range m.Captures {
 			nodeType := c.Node.Type()
 			nodeEndPoint := idx.NewPositionFromTreeSitterPoint(c.Node.EndPoint())
-			if nodeType != "module" {
+			if nodeType != "module" && nodeType != "doc_comment" {
 				moduleSymbol = parsedModules.GetOrInitModule(
 					lastModuleName,
 					&doc.URI,
@@ -106,6 +110,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 			}
 
 			switch nodeType {
+			case "doc_comment":
+				lastDocComment = cast.ToPtr(p.nodeToDocComment(c.Node, sourceCode))
 			case "module":
 				anonymousModuleName = false
 				module, _, _ := p.nodeToModule(doc, c.Node, sourceCode)
@@ -122,6 +128,10 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				moduleSymbol.SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
 				moduleSymbol.ChangeModule(lastModuleName)
 
+				if lastDocComment != nil {
+					moduleSymbol.SetDocComment(lastDocComment)
+				}
+
 			case "import_declaration":
 				imports := p.nodeToImport(doc, c.Node, sourceCode)
 				moduleSymbol.AddImports(imports)
@@ -131,16 +141,30 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				moduleSymbol.AddVariables(variables)
 				pendingToResolve.AddVariableType(variables, moduleSymbol)
 
+				if lastDocComment != nil {
+					for _, v := range variables {
+						v.SetDocComment(lastDocComment)
+					}
+				}
+
 			case "func_definition", "func_declaration":
 				function, err := p.nodeToFunction(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				if err == nil {
 					moduleSymbol.AddFunction(&function)
 					pendingToResolve.AddFunctionTypes(&function, moduleSymbol)
+
+					if lastDocComment != nil {
+						function.SetDocComment(lastDocComment)
+					}
 				}
 
 			case "enum_declaration":
 				enum := p.nodeToEnum(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddEnum(&enum)
+
+				if lastDocComment != nil {
+					enum.SetDocComment(lastDocComment)
+				}
 
 			case "struct_declaration":
 				strukt, membersNeedingSubtypingResolve := p.nodeToStruct(c.Node, moduleSymbol, &doc.URI, sourceCode)
@@ -151,30 +175,58 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 
 				pendingToResolve.AddStructMemberTypes(&strukt, moduleSymbol)
 
+				if lastDocComment != nil {
+					strukt.SetDocComment(lastDocComment)
+				}
+
 			case "bitstruct_declaration":
 				bitstruct := p.nodeToBitStruct(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddBitstruct(&bitstruct)
+
+				if lastDocComment != nil {
+					bitstruct.SetDocComment(lastDocComment)
+				}
 
 			case "define_declaration":
 				def := p.nodeToDef(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddDef(&def)
 				pendingToResolve.AddDefType(&def, moduleSymbol)
 
+				if lastDocComment != nil {
+					def.SetDocComment(lastDocComment)
+				}
+
 			case "const_declaration":
 				_const := p.nodeToConstant(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddVariable(&_const)
+
+				if lastDocComment != nil {
+					_const.SetDocComment(lastDocComment)
+				}
 
 			case "fault_declaration":
 				fault := p.nodeToFault(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddFault(&fault)
 
+				if lastDocComment != nil {
+					fault.SetDocComment(lastDocComment)
+				}
+
 			case "interface_declaration":
 				interf := p.nodeToInterface(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddInterface(&interf)
 
+				if lastDocComment != nil {
+					interf.SetDocComment(lastDocComment)
+				}
+
 			case "macro_declaration":
 				macro := p.nodeToMacro(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddFunction(&macro)
+
+				if lastDocComment != nil {
+					macro.SetDocComment(lastDocComment)
+				}
 			default:
 				// TODO test that module ends up with wrong endPosition
 				// when this source code:
@@ -183,10 +235,15 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				// int value = 4;
 				// v
 				// }
+				lastDocComment = nil
 				continue
 			}
 
-			moduleSymbol.SetEndPosition(nodeEndPoint)
+			if nodeType != "doc_comment" {
+				// Ensure the next node won't receive the same doc comment
+				lastDocComment = nil
+				moduleSymbol.SetEndPosition(nodeEndPoint)
+			}
 		}
 	}
 

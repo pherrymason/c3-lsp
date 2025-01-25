@@ -15,8 +15,10 @@ func assertVariableFound(t *testing.T, name string, symbols idx.Function) {
 
 func TestExtractSymbols_find_variables(t *testing.T) {
 	source := `
+	<* docs *>
 	int value = 1;
 	char* character;
+	<* multidocs *>
 	int foo, foo2;
 	char[] message;
 	char[4] message2;
@@ -34,13 +36,14 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		assert.Equal(t, "value", found.GetName(), "Variable name")
 		assert.Equal(t, "int", found.GetType().String(), "Variable type")
 		assert.Equal(t, true, found.GetType().IsBaseTypeLanguage(), "Variable Type should be base type")
-		assert.Equal(t, idx.NewRange(1, 1, 1, 15), found.GetDocumentRange())
-		assert.Equal(t, idx.NewRange(1, 5, 1, 10), found.GetIdRange())
+		assert.Equal(t, idx.NewRange(2, 1, 2, 15), found.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(2, 5, 2, 10), found.GetIdRange())
+		assert.Equal(t, "docs", found.GetDocComment().GetBody(), "Variable docs")
 		assert.Equal(t, 0, len(pendingToResolve.GetTypesByModule(docId)), "Basic types should not be registered as pending to resolve.")
 	})
 
 	t.Run("finds global pointer variable declarations", func(t *testing.T) {
-		line := uint(2)
+		line := uint(3)
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Variables["character"]
@@ -52,7 +55,7 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 	})
 
 	t.Run("finds global variable collection declarations", func(t *testing.T) {
-		line := uint(4)
+		line := uint(6)
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Variables["message"]
@@ -64,7 +67,7 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 	})
 
 	t.Run("finds global variable static collection declarations", func(t *testing.T) {
-		line := uint(5)
+		line := uint(7)
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Variables["message2"]
@@ -76,7 +79,7 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 	})
 
 	t.Run("finds multiple global variables declared in single sentence", func(t *testing.T) {
-		line := uint(3)
+		line := uint(5)
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("x").Variables["foo"]
@@ -85,6 +88,7 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		assert.Equal(t, true, found.GetType().IsBaseTypeLanguage(), "Variable Type should be base type")
 		assert.Equal(t, idx.NewRange(line, 5, line, 8), found.GetIdRange(), "First variable identifier range")
 		assert.Equal(t, idx.NewRange(line, 1, line, 15), found.GetDocumentRange(), "First variable declaration range")
+		assert.Equal(t, "multidocs", found.GetDocComment().GetBody())
 
 		found = symbols.Get("x").Variables["foo2"]
 		assert.Equal(t, "foo2", found.GetName(), "Second variable name")
@@ -92,10 +96,11 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		assert.Equal(t, true, found.GetType().IsBaseTypeLanguage(), "Variable Type should be base type")
 		assert.Equal(t, idx.NewRange(line, 10, line, 14), found.GetIdRange(), "Second variable identifier range")
 		assert.Equal(t, idx.NewRange(line, 1, line, 15), found.GetDocumentRange(), "Second variable declaration range")
+		assert.Equal(t, "multidocs", found.GetDocComment().GetBody())
 	})
 
 	t.Run("finds variables declared inside function", func(t *testing.T) {
-		line := uint(6)
+		line := uint(8)
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		function := symbols.Get("x").GetChildrenFunctionByName("test")
@@ -110,7 +115,7 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 	})
 
 	t.Run("finds multiple local variables declared in single sentence", func(t *testing.T) {
-		line := uint(7)
+		line := uint(9)
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		function := symbols.Get("x").GetChildrenFunctionByName("test2")
@@ -133,7 +138,8 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 
 func TestExtractSymbols_find_constants(t *testing.T) {
 
-	source := `const int A_VALUE = 12;`
+	source := `<* docs *>
+	const int A_VALUE = 12;`
 
 	doc := document.NewDocument("docId", source)
 	parser := createParser()
@@ -144,8 +150,9 @@ func TestExtractSymbols_find_constants(t *testing.T) {
 	assert.Equal(t, "A_VALUE", found.GetName(), "Variable name")
 	assert.Equal(t, "int", found.GetType().String(), "Variable type")
 	assert.True(t, found.IsConstant())
-	assert.Equal(t, idx.NewRange(0, 0, 0, 23), found.GetDocumentRange())
-	assert.Equal(t, idx.NewRange(0, 10, 0, 17), found.GetIdRange())
+	assert.Equal(t, idx.NewRange(1, 1, 1, 24), found.GetDocumentRange())
+	assert.Equal(t, idx.NewRange(1, 11, 1, 18), found.GetIdRange())
+	assert.Equal(t, "docs", found.GetDocComment().GetBody(), "Variable doc comment")
 }
 
 func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
