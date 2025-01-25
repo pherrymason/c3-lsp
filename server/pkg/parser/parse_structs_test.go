@@ -41,7 +41,7 @@ fn void MyStruct.init(&self)
 		assert.False(t, found.IsUnion())
 		assert.Equal(t, idx.NewRange(4, 0, 8, 1), found.GetDocumentRange())
 		assert.Equal(t, idx.NewRange(4, 7, 4, 15), found.GetIdRange())
-		assert.Equal(t, "docs", found.GetDocComment())
+		assert.Equal(t, "docs", found.GetDocComment().GetBody())
 	})
 
 	t.Run("finds struct members", func(t *testing.T) {
@@ -160,7 +160,7 @@ struct Foo {
 	assert.Same(t, found.Children()[0], member)
 
 	// Docs here are invalid
-	assert.Equal(t, "", member.GetDocComment())
+	assert.Nil(t, member.GetDocComment())
 }
 
 func TestParses_anonymous_substructs(t *testing.T) {
@@ -320,7 +320,7 @@ func TestParse_Unions(t *testing.T) {
 		assert.True(t, found.IsUnion())
 		assert.Equal(t, idx.NewRange(2, 1, 5, 2), found.GetDocumentRange())
 		assert.Equal(t, idx.NewRange(2, 7, 2, 14), found.GetIdRange())
-		assert.Equal(t, "docs", found.GetDocComment())
+		assert.Equal(t, "docs", found.GetDocComment().GetBody())
 		assert.Same(t, module.Children()[0], found)
 	})
 }
@@ -345,7 +345,7 @@ func TestParse_bitstructs(t *testing.T) {
 		assert.Same(t, symbols.Get("x").Children()[0], found)
 		assert.Equal(t, "Test", found.GetName())
 		assert.Equal(t, "uint", found.Type().GetName())
-		assert.Equal(t, "docs", found.GetDocComment())
+		assert.Equal(t, "docs", found.GetDocComment().GetBody())
 
 		members := found.Members()
 		assert.Equal(t, 3, len(members))

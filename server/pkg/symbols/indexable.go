@@ -33,7 +33,7 @@ type Indexable interface {
 	GetModule() ModulePath
 	IsSubModuleOf(parentModule ModulePath) bool
 
-	GetDocComment() string
+	GetDocComment() *DocComment
 	GetHoverInfo() string
 	HasSourceCode() bool // This will return false for that code that is not accesible either because it belongs to the stdlib, or inside a .c3lib library. This results in disabling "Go to definition" / "Go to declaration" on these symbols
 
@@ -60,7 +60,7 @@ type BaseIndexable struct {
 	idRange       Range
 	docRange      Range
 	Kind          protocol.CompletionItemKind
-	docComment    string
+	docComment    *DocComment
 	attributes    []string
 
 	children      []Indexable
@@ -125,7 +125,7 @@ func (b *BaseIndexable) SetDocumentURI(docId string) {
 	b.documentURI = docId
 }
 
-func (b *BaseIndexable) GetDocComment() string {
+func (b *BaseIndexable) GetDocComment() *DocComment {
 	return b.docComment
 }
 
@@ -162,7 +162,7 @@ func (b *BaseIndexable) InsertNestedScope(symbol Indexable) {
 	b.nestedScopes = append(b.nestedScopes, symbol)
 }
 
-func (b *BaseIndexable) SetDocComment(docComment string) {
+func (b *BaseIndexable) SetDocComment(docComment *DocComment) {
 	b.docComment = docComment
 }
 
@@ -180,7 +180,7 @@ func NewBaseIndexable(name string, module string, docId protocol.DocumentUri, id
 		docRange:      docRange,
 		Kind:          kind,
 		hasSourceCode: true,
-		docComment:    "",
+		docComment:    nil,
 		attributes:    []string{},
 	}
 }

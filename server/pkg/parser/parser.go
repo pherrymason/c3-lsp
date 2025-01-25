@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
+	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/symbols_table"
@@ -87,7 +88,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 	var moduleSymbol *idx.Module
 	anonymousModuleName := true
 	lastModuleName := ""
-	lastDocComment := ""
+	var lastDocComment *idx.DocComment = nil
 	//subtyptingToResolve := []StructWithSubtyping{}
 
 	for {
@@ -110,22 +111,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 
 			switch nodeType {
 			case "doc_comment":
-				lastDocComment = ""
-				doc_text := c.Node.Child(1)
-				if doc_text.Type() == "doc_comment_text" {
-					lastDocComment = doc_text.Content(sourceCode)
-				}
-				if c.Node.ChildCount() >= 4 {
-					// TODO: Save the contract nodes as structured data for richer information
-					// For now, just append and display their sources
-					for i := 2; i <= int(c.Node.ChildCount())-2; i++ {
-						contract_node := c.Node.Child(i)
-						if contract_node.Type() == "doc_comment_contract" {
-							lastDocComment += "\n" + contract_node.Content(sourceCode)
-						}
-					}
-				}
-
+				lastDocComment = cast.ToPtr(p.nodeToDocComment(c.Node, sourceCode))
 			case "module":
 				anonymousModuleName = false
 				module, _, _ := p.nodeToModule(doc, c.Node, sourceCode)
@@ -142,7 +128,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				moduleSymbol.SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
 				moduleSymbol.ChangeModule(lastModuleName)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					moduleSymbol.SetDocComment(lastDocComment)
 				}
 
@@ -155,7 +141,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				moduleSymbol.AddVariables(variables)
 				pendingToResolve.AddVariableType(variables, moduleSymbol)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					for _, v := range variables {
 						v.SetDocComment(lastDocComment)
 					}
@@ -167,7 +153,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 					moduleSymbol.AddFunction(&function)
 					pendingToResolve.AddFunctionTypes(&function, moduleSymbol)
 
-					if lastDocComment != "" {
+					if lastDocComment != nil {
 						function.SetDocComment(lastDocComment)
 					}
 				}
@@ -176,7 +162,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				enum := p.nodeToEnum(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddEnum(&enum)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					enum.SetDocComment(lastDocComment)
 				}
 
@@ -189,7 +175,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 
 				pendingToResolve.AddStructMemberTypes(&strukt, moduleSymbol)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					strukt.SetDocComment(lastDocComment)
 				}
 
@@ -197,7 +183,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				bitstruct := p.nodeToBitStruct(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddBitstruct(&bitstruct)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					bitstruct.SetDocComment(lastDocComment)
 				}
 
@@ -206,7 +192,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				moduleSymbol.AddDef(&def)
 				pendingToResolve.AddDefType(&def, moduleSymbol)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					def.SetDocComment(lastDocComment)
 				}
 
@@ -214,7 +200,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				_const := p.nodeToConstant(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddVariable(&_const)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					_const.SetDocComment(lastDocComment)
 				}
 
@@ -222,7 +208,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				fault := p.nodeToFault(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddFault(&fault)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					fault.SetDocComment(lastDocComment)
 				}
 
@@ -230,7 +216,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				interf := p.nodeToInterface(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddInterface(&interf)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					interf.SetDocComment(lastDocComment)
 				}
 
@@ -238,7 +224,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				macro := p.nodeToMacro(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddFunction(&macro)
 
-				if lastDocComment != "" {
+				if lastDocComment != nil {
 					macro.SetDocComment(lastDocComment)
 				}
 			default:
@@ -249,13 +235,13 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				// int value = 4;
 				// v
 				// }
-				lastDocComment = ""
+				lastDocComment = nil
 				continue
 			}
 
 			if nodeType != "doc_comment" {
 				// Ensure the next node won't receive the same doc comment
-				lastDocComment = ""
+				lastDocComment = nil
 				moduleSymbol.SetEndPosition(nodeEndPoint)
 			}
 		}

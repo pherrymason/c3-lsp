@@ -131,10 +131,11 @@ func extractExplicitModulePath(possibleModulePath string) option.Option[symbols.
 // Returns: nil | string
 func GetCompletableDocComment(s symbols.Indexable) any {
 	docComment := s.GetDocComment()
-	if docComment == "" {
+	if docComment == nil || docComment.GetBody() == "" {
 		return nil
 	} else {
-		return docComment
+		// Don't include contract information in completion, for brevity
+		return docComment.GetBody()
 	}
 }
 

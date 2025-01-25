@@ -3,6 +3,7 @@ package parser
 import (
 	"testing"
 
+	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
@@ -62,7 +63,7 @@ func TestParses_TypedEnums(t *testing.T) {
 		scope := symbols.Get("doc")
 		enum := scope.Enums["Colors"]
 
-		assert.Equal(t, "abc", enum.GetDocComment())
+		assert.Equal(t, "abc", enum.GetDocComment().GetBody())
 	})
 
 	t.Run("finds defined enumerators", func(t *testing.T) {
@@ -145,7 +146,7 @@ func TestParses_UnTypedEnums(t *testing.T) {
 		scope := symbols.Get("doc")
 		enum := scope.Enums["Colors"]
 
-		assert.Equal(t, "abc", enum.GetDocComment())
+		assert.Equal(t, "abc", enum.GetDocComment().GetBody())
 	})
 
 	t.Run("finds defined enumerators", func(t *testing.T) {
@@ -201,7 +202,7 @@ func TestParse_fault(t *testing.T) {
 
 		fault := symbols.Get("doc").Faults["IOResult"]
 
-		assert.Equal(t, "docs", fault.GetDocComment())
+		assert.Equal(t, "docs", fault.GetDocComment().GetBody())
 	})
 
 	t.Run("finds defined fault constants", func(t *testing.T) {
@@ -258,7 +259,7 @@ func TestParse_interface(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("doc").Interfaces["MyName"]
-		assert.Equal(t, "docs", found.GetDocComment())
+		assert.Equal(t, "docs", found.GetDocComment().GetBody())
 	})
 
 	t.Run("finds defined methods in interface", func(t *testing.T) {
@@ -298,7 +299,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithIdentifierRange(2, 5, 2, 9).
 		WithDocumentRange(2, 1, 2, 16).
 		Build()
-	expectedDefKilo.SetDocComment("docs")
+	expectedDefKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
 	assert.Equal(t, expectedDefKilo, module.Defs["Kilo"])
 	assert.Same(t, module.Children()[0], module.Defs["Kilo"])
 
@@ -377,7 +378,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 	assert.Equal(t, "m", fn.Get().GetName())
 	assert.Equal(t, "x", fn.Get().Variables["x"].GetName())
 	assert.Equal(t, "", fn.Get().Variables["x"].GetType().String())
-	assert.Equal(t, "docs", fn.Get().GetDocComment())
+	assert.Equal(t, "docs", fn.Get().GetDocComment().GetBody())
 	assert.Same(t, module.NestedScopes()[0], fn.Get())
 }
 
@@ -406,7 +407,7 @@ func TestExtractSymbols_find_module(t *testing.T) {
 
 		module := symbols.Get("foo")
 		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
-		assert.Equal(t, "docs", module.GetDocComment(), "module doc comment is wrong")
+		assert.Equal(t, "docs", module.GetDocComment().GetBody(), "module doc comment is wrong")
 	})
 
 	t.Run("finds different modules defined in single file", func(t *testing.T) {
@@ -426,13 +427,13 @@ func TestExtractSymbols_find_module(t *testing.T) {
 		module := symbols.Get("foo")
 		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
 		assert.Equal(t, "foo", module.GetName(), "module name is wrong")
-		assert.Equal(t, "docs foo", module.GetDocComment(), "module doc comment is wrong")
+		assert.Equal(t, "docs foo", module.GetDocComment().GetBody(), "module doc comment is wrong")
 		assert.Equal(t, idx.NewRange(2, 1, 3, 15), module.GetDocumentRange(), "Wrong range for foo module")
 
 		module = symbols.Get("foo2")
 		assert.Equal(t, "foo2", module.GetModuleString(), "module name is wrong")
 		assert.Equal(t, "foo2", module.GetName(), "module name is wrong")
-		assert.Equal(t, "docs foo2", module.GetDocComment(), "module doc comment is wrong")
+		assert.Equal(t, "docs foo2", module.GetDocComment().GetBody(), "module doc comment is wrong")
 		assert.Equal(t, idx.NewRange(6, 1, 7, 15), module.GetDocumentRange(), "Wrong range for foo2 module")
 	})
 

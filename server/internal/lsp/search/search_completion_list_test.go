@@ -521,10 +521,8 @@ func TestBuildCompletionList(t *testing.T) {
 		sourceEnd := `
 		}`
 
-		expectedDoc := `abc
-@param [in] a
-@require a > 0, a < 1000 : "woah"
-@ensure return > 1`
+		// Contracts are excluded
+		expectedDoc := "abc"
 
 		expectedKind := protocol.CompletionItemKindFunction
 		cases := []struct {

@@ -25,9 +25,10 @@ func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hover
 	// hovering on functions: display function signature + docs
 	// hovering on members: same as variable
 
-	docComment := foundSymbol.GetDocComment()
-	if docComment != "" {
-		docComment = "\n\n" + docComment
+	docCommentData := foundSymbol.GetDocComment()
+	docComment := ""
+	if docCommentData != nil {
+		docComment = "\n\n" + docCommentData.DisplayBodyWithContracts()
 	}
 
 	extraLine := ""

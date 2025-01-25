@@ -38,7 +38,7 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		assert.Equal(t, true, found.GetType().IsBaseTypeLanguage(), "Variable Type should be base type")
 		assert.Equal(t, idx.NewRange(2, 1, 2, 15), found.GetDocumentRange())
 		assert.Equal(t, idx.NewRange(2, 5, 2, 10), found.GetIdRange())
-		assert.Equal(t, "docs", found.GetDocComment(), "Variable docs")
+		assert.Equal(t, "docs", found.GetDocComment().GetBody(), "Variable docs")
 		assert.Equal(t, 0, len(pendingToResolve.GetTypesByModule(docId)), "Basic types should not be registered as pending to resolve.")
 	})
 
@@ -88,7 +88,7 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		assert.Equal(t, true, found.GetType().IsBaseTypeLanguage(), "Variable Type should be base type")
 		assert.Equal(t, idx.NewRange(line, 5, line, 8), found.GetIdRange(), "First variable identifier range")
 		assert.Equal(t, idx.NewRange(line, 1, line, 15), found.GetDocumentRange(), "First variable declaration range")
-		assert.Equal(t, "multidocs", found.GetDocComment())
+		assert.Equal(t, "multidocs", found.GetDocComment().GetBody())
 
 		found = symbols.Get("x").Variables["foo2"]
 		assert.Equal(t, "foo2", found.GetName(), "Second variable name")
@@ -96,7 +96,7 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		assert.Equal(t, true, found.GetType().IsBaseTypeLanguage(), "Variable Type should be base type")
 		assert.Equal(t, idx.NewRange(line, 10, line, 14), found.GetIdRange(), "Second variable identifier range")
 		assert.Equal(t, idx.NewRange(line, 1, line, 15), found.GetDocumentRange(), "Second variable declaration range")
-		assert.Equal(t, "multidocs", found.GetDocComment())
+		assert.Equal(t, "multidocs", found.GetDocComment().GetBody())
 	})
 
 	t.Run("finds variables declared inside function", func(t *testing.T) {
@@ -152,7 +152,7 @@ func TestExtractSymbols_find_constants(t *testing.T) {
 	assert.True(t, found.IsConstant())
 	assert.Equal(t, idx.NewRange(1, 1, 1, 24), found.GetDocumentRange())
 	assert.Equal(t, idx.NewRange(1, 11, 1, 18), found.GetIdRange())
-	assert.Equal(t, "docs", found.GetDocComment(), "Variable doc comment")
+	assert.Equal(t, "docs", found.GetDocComment().GetBody(), "Variable doc comment")
 }
 
 func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
