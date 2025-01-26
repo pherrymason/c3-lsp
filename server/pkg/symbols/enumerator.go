@@ -9,13 +9,15 @@ import (
 type Enumerator struct {
 	value            string
 	AssociatedValues []Variable
+	EnumName         string
 	BaseIndexable
 }
 
-func NewEnumerator(name string, value string, associatedValues []Variable, module string, idRange Range, docId string) *Enumerator {
+func NewEnumerator(name string, value string, associatedValues []Variable, enumName string, module string, idRange Range, docId string) *Enumerator {
 	enumerator := &Enumerator{
 		value:            value,
 		AssociatedValues: associatedValues,
+		EnumName:         enumName,
 		BaseIndexable: NewBaseIndexable(
 			name,
 			module,
@@ -31,6 +33,10 @@ func NewEnumerator(name string, value string, associatedValues []Variable, modul
 	}
 
 	return enumerator
+}
+
+func (e *Enumerator) GetEnumName() string {
+	return e.EnumName
 }
 
 func (e Enumerator) GetHoverInfo() string {

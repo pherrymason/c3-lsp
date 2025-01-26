@@ -84,6 +84,12 @@ func (eb *EnumeratorBuilder) WithAssociativeValues(associativeValues []Variable)
 	return eb
 }
 
+func (eb *EnumeratorBuilder) WithEnumName(name string) *EnumeratorBuilder {
+	eb.enumerator.EnumName = name
+
+	return eb
+}
+
 func (eb *EnumeratorBuilder) Build() *Enumerator {
 	return &eb.enumerator
 }

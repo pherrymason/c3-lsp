@@ -480,6 +480,26 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 		assert.Equal(t, "WindowStatus.isOpen", fun.GetFullName())
 	})
 
+	t.Run("Should find enum method on explicit enumerator", func(t *testing.T) {
+		state.registerDoc(
+			"enums.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			fn bool WindowStatus.isOpen() {}
+			fn void main() {
+				WindowStatus.OPEN.isOpen();
+			}`,
+		)
+		position := buildPosition(4, 23) // Cursor at `WindoWStatus.OPEN.i|sOpen();`
+
+		doc := state.GetDoc("enums.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "WindowStatus.isOpen", fun.GetName())
+		assert.Equal(t, "WindowStatus.isOpen", fun.GetFullName())
+	})
+
 	t.Run("Should find associated value on explicit enumerator", func(t *testing.T) {
 		state.registerDoc(
 			"enums.c3",

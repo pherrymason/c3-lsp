@@ -498,7 +498,7 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		assert.Equal(t, "BACKGROUND", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should find enum method definition", func(t *testing.T) {
+	t.Run("Should find enum method definition on instance variable", func(t *testing.T) {
 		state.registerDoc(
 			"app.c3",
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
@@ -517,6 +517,27 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "WindowStatus.isOpen", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find enum method definition on explicit enumerator", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			fn bool WindowStatus.isOpen(){}
+
+			fn void main() {
+				WindowStatus.OPEN.isOpen();
+			}
+			`,
+		)
+		position := buildPosition(5, 25) // Cursor is at `WindowStatus.OPEN.is|Open();`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "WindowStatus.isOpen", symbolOption.Get().GetName())
 	})
 }

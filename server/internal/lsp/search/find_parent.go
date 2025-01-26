@@ -1,6 +1,8 @@
 package search
 
 import (
+	"fmt"
+
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
@@ -106,12 +108,39 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			enumerator := elm.(*symbols.Enumerator)
 			assocValues := enumerator.AssociatedValues
 			searchingSymbol := state.GetNextSymbol()
+			foundAssoc := false
 			for i := 0; i < len(assocValues); i++ {
 				if assocValues[i].GetName() == searchingSymbol.Text() {
 					elm = &assocValues[i]
 					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
+					foundAssoc = true
 					break
+				}
+			}
+
+			if !foundAssoc && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
+				// Search in methods
+				// First get the enum
+				enumQuery := fmt.Sprintf("%s::%s", enumerator.GetModule().GetName(), enumerator.GetEnumName())
+				enumSymbols := projState.SearchByFQN(enumQuery)
+				if len(enumSymbols) > 0 {
+					// Search the enum's methods
+					newIterSearch, result := s.findMethod(
+						enumSymbols[0].GetName(),
+						searchingSymbol,
+						docId,
+						searchParams,
+						projState,
+						debugger,
+					)
+					if result.IsNone() {
+						return NewSearchResultEmpty(trackedModules)
+					}
+					iterSearch = newIterSearch
+					elm = result.Get()
+					symbolsHierarchy = append(symbolsHierarchy, elm)
+					state.Advance()
 				}
 			}
 

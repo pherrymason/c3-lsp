@@ -129,6 +129,7 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 						jen.Lit(module.GetDocumentURI()),
 					).
 					Dot("WithAssociativeValues").Call(associativeValues).
+					Dot("WithEnumName").Call(jen.Lit(enum.GetName())).
 					Dot("Build").Call(),
 			)
 	}
