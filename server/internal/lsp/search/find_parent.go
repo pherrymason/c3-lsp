@@ -4,8 +4,33 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 )
+
+// Search for a method for 'parentTypeName' given a symbol to search.
+//
+// Returns updated search parameters to progress the search, as well as
+// the search result.
+func (s *Search) findMethod(
+	parentTypeName string,
+	searchingSymbol sourcecode.Word,
+	docId option.Option[string],
+	searchParams search_params.SearchParams,
+	projState *project_state.ProjectState,
+	debugger FindDebugger,
+) (search_params.SearchParams, SearchResult) {
+	// Search in methods
+	methodSymbol := sourcecode.NewWord(parentTypeName+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
+	iterSearch := search_params.NewSearchParamsBuilder().
+		WithSymbolWord(methodSymbol).
+		WithDocId(docId.Get()).
+		WithContextModuleName(searchParams.ModuleInCursor()).
+		WithScopeMode(search_params.InModuleRoot).
+		Build()
+
+	return iterSearch, s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
+}
 
 func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, projState *project_state.ProjectState, debugger FindDebugger) SearchResult {
 	accessPath := searchParams.GetFullAccessPath()
@@ -83,35 +108,57 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			}
 			if !foundMember {
 				// Search in methods
-				methodSymbol := sourcecode.NewWord(_enum.GetName()+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
-				iterSearch = search_params.NewSearchParamsBuilder().
-					WithSymbolWord(methodSymbol).
-					WithDocId(docId.Get()).
-					WithContextModuleName(searchParams.ModuleInCursor()).
-					WithScopeMode(search_params.InModuleRoot).
-					Build()
-				result := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
+				newIterSearch, result := s.findMethod(
+					_enum.GetName(),
+					searchingSymbol,
+					docId,
+					searchParams,
+					projState,
+					debugger,
+				)
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
-
+				iterSearch = newIterSearch
 				elm = result.Get()
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
 			}
 
 		case *symbols.Fault:
-			_enum := elm.(*symbols.Fault)
-			constants := _enum.GetConstants()
+			fault := elm.(*symbols.Fault)
+			constants := fault.GetConstants()
 			searchingSymbol := state.GetNextSymbol()
+			foundMember := false
 			for i := 0; i < len(constants); i++ {
 				if constants[i].GetName() == searchingSymbol.Text() {
 					elm = constants[i]
 					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
+					foundMember = true
 					break
 				}
 			}
+
+			if !foundMember {
+				// Search in methods
+				newIterSearch, result := s.findMethod(
+					fault.GetName(),
+					searchingSymbol,
+					docId,
+					searchParams,
+					projState,
+					debugger,
+				)
+				if result.IsNone() {
+					return NewSearchResultEmpty(trackedModules)
+				}
+				iterSearch = newIterSearch
+				elm = result.Get()
+				symbolsHierarchy = append(symbolsHierarchy, elm)
+				state.Advance()
+			}
+
 		case *symbols.Struct:
 			strukt, _ := elm.(*symbols.Struct)
 			members := strukt.GetMembers()
@@ -129,18 +176,18 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 			if !foundMember {
 				// Search in methods
-				methodSymbol := sourcecode.NewWord(strukt.GetName()+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
-				iterSearch = search_params.NewSearchParamsBuilder().
-					WithSymbolWord(methodSymbol).
-					WithDocId(docId.Get()).
-					WithContextModuleName(searchParams.ModuleInCursor()).
-					WithScopeMode(search_params.InModuleRoot).
-					Build()
-				result := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
+				newIterSearch, result := s.findMethod(
+					strukt.GetName(),
+					searchingSymbol,
+					docId,
+					searchParams,
+					projState,
+					debugger,
+				)
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
-
+				iterSearch = newIterSearch
 				elm = result.Get()
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()

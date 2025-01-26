@@ -442,6 +442,53 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 	})
 }
 
+func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	t.Run("Should find fault constant with path definition", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			WindowError err = WindowError.UNEXPECTED_ERROR;`,
+		)
+		position := buildPosition(2, 34) // Cursor at `WindowStatus stat = WindowStatus.O|PEN;`
+		doc := state.GetDoc("app.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.FaultConstant)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "UNEXPECTED_ERROR", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find fault method", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			fn bool WindowError.isBad() {}
+			fn void main() {
+				WindowError val = WindowError.UNEXPECTED_ERROR;
+				val.isBad();
+			}`,
+		)
+		// Cursor at `val.is|Bad();`
+		doc := state.GetDoc("app.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(5, 10))
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "WindowError.isBad", fun.GetName())
+		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
+	})
+}
+
 func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *testing.T) {
 	state := NewTestState()
 	search := NewSearchWithoutLog()
