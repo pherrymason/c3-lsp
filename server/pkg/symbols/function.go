@@ -135,7 +135,12 @@ func (f *Function) GetArguments() []*Variable {
 	return arguments
 }
 
-// Display the function's signature.
+// Display the function's signature to show in types, on hover etc.
+//
+// Returns either a string like `fn void abc(int param)` if `includeName` is
+// `true`, or `fn void(int param)` otherwise. If this is a macro, returns
+// `macro void abc(int param; @body)` (with the correct keyword, and correctly
+// displaying the trailing body parameter) instead.
 func (f *Function) DisplaySignature(includeName bool) string {
 	var declKeyword string
 	if f.fType == Macro {
