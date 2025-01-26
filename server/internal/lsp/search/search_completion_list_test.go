@@ -951,13 +951,47 @@ func TestBuildCompletionList_enums(t *testing.T) {
 					},
 				},
 			},
+			{
+				"Find enum methods by instance variable prefix",
+				`Color green = Color.GREEN;
+green.`,
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(5, 6, 5, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find matching enum method by instance variable prefix",
+				`Color green = Color.GREEN;
+green.transp`,
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(5, 6, 5, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
 		}
 
 		for _, tt := range cases {
-			t.Run(fmt.Sprintf("Autocomplete enumerables: #%s", tt.name), func(t *testing.T) {
+			t.Run(fmt.Sprintf("Autocomplete enum methods: #%s", tt.name), func(t *testing.T) {
 				state := NewTestState(logger)
 				state.registerDoc("test.c3", source+tt.input+`}`)
-				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+				lines := strings.Split(tt.input, "\n")
+				lastLine := lines[len(lines)-1]
+				position := buildPosition(5+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
 
 				search := NewSearchWithoutLog()
 				completionList := search.BuildCompletionList(
@@ -1139,6 +1173,48 @@ func TestBuildCompletionList_faults(t *testing.T) {
 				state := NewTestState()
 				state.registerDoc("test.c3", source+tt.input+`}`)
 				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should not suggest Fault constant type after instance in struct member", func(t *testing.T) {
+		source := `
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		struct MyStruct { WindowFileError f; }
+		fn void main() {
+			MyStruct st = { WindowFileError.NOT_FOUND };
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find constants prefixed with fault instance in struct member",
+				"st.f.",
+				nil},
+			{
+				"Do not find matching constants prefixed with fault instance in struct member",
+				"st.f.NO_PE",
+				nil},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState()
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				position := buildPosition(6, uint(len(tt.input))) // Cursor after `<input>|`
 
 				search := NewSearchWithoutLog()
 				completionList := search.BuildCompletionList(

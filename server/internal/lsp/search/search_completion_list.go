@@ -272,7 +272,7 @@ func (s *Search) BuildCompletionList(
 
 		//	searchParams.scopeMode = AnyPosition
 
-		prevIndexableOption := s.findParentType(searchParams, state, FindDebugger{depth: 0, enabled: true})
+		membersReadable, prevIndexableOption := s.findParentType(searchParams, state, FindDebugger{depth: 0, enabled: true})
 		if prevIndexableOption.IsNone() {
 			return items
 		}
@@ -284,6 +284,10 @@ func (s *Search) BuildCompletionList(
 		case *symbols.Struct:
 			strukt := prevIndexable.(*symbols.Struct)
 
+			// We don't check for 'membersReadable' here since even variables of structs
+			// can access its members.
+			// TODO: Actually, maybe we should check for NOT membersReadable if it is
+			// impossible to access Struct.member as a type.
 			for _, member := range strukt.GetMembers() {
 				if !filterMembers || strings.HasPrefix(member.GetName(), symbolInPosition.Text()) {
 					items = append(items, protocol.CompletionItem{
@@ -302,17 +306,23 @@ func (s *Search) BuildCompletionList(
 
 		case *symbols.Enum:
 			enum := prevIndexable.(*symbols.Enum)
-			for _, enumerator := range enum.GetEnumerators() {
-				if !filterMembers || strings.HasPrefix(enumerator.GetName(), symbolInPosition.Text()) {
-					items = append(items, protocol.CompletionItem{
-						Label: enumerator.GetName(),
-						Kind:  &enumerator.Kind,
 
-						// No documentation for enumerators at this time
-						Documentation: nil,
+			// Accessing MyEnum.VALUE is ok, but not MyEnum.VALUE.VALUE,
+			// so don't search for enumerators within enumerators
+			// (membersReadable = false).
+			if membersReadable {
+				for _, enumerator := range enum.GetEnumerators() {
+					if !filterMembers || strings.HasPrefix(enumerator.GetName(), symbolInPosition.Text()) {
+						items = append(items, protocol.CompletionItem{
+							Label: enumerator.GetName(),
+							Kind:  &enumerator.Kind,
 
-						Detail: GetCompletionDetail(enumerator),
-					})
+							// No documentation for enumerators at this time
+							Documentation: nil,
+
+							Detail: GetCompletionDetail(enumerator),
+						})
+					}
 				}
 			}
 
@@ -320,17 +330,23 @@ func (s *Search) BuildCompletionList(
 
 		case *symbols.Fault:
 			fault := prevIndexable.(*symbols.Fault)
-			for _, constant := range fault.GetConstants() {
-				if !filterMembers || strings.HasPrefix(constant.GetName(), symbolInPosition.Text()) {
-					items = append(items, protocol.CompletionItem{
-						Label: constant.GetName(),
-						Kind:  &constant.Kind,
 
-						// No documentation for fault constants at this time
-						Documentation: nil,
+			// Accessing MyFault.VALUE is ok, but not MyFault.VALUE.VALUE,
+			// so don't search for constants within constants
+			// (membersReadable = false).
+			if membersReadable {
+				for _, constant := range fault.GetConstants() {
+					if !filterMembers || strings.HasPrefix(constant.GetName(), symbolInPosition.Text()) {
+						items = append(items, protocol.CompletionItem{
+							Label: constant.GetName(),
+							Kind:  &constant.Kind,
 
-						Detail: GetCompletionDetail(constant),
-					})
+							// No documentation for fault constants at this time
+							Documentation: nil,
+
+							Detail: GetCompletionDetail(constant),
+						})
+					}
 				}
 			}
 		}
@@ -387,10 +403,12 @@ func (s *Search) BuildCompletionList(
 	return items
 }
 
-func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectState, debugger FindDebugger) option.Option[symbols.Indexable] {
+// Returns whether members can be read from the found symbol, as well as the found symbol itself.
+func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectState, debugger FindDebugger) (bool, option.Option[symbols.Indexable]) {
 	prevIndexableResult := s.findInParentSymbols(searchParams, state, debugger)
+	membersReadable := prevIndexableResult.membersReadable
 	if prevIndexableResult.IsNone() {
-		return prevIndexableResult.result
+		return membersReadable, prevIndexableResult.result
 	}
 	symbolsHierarchy := []symbols.Indexable{}
 
@@ -401,7 +419,7 @@ func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectSt
 			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, symbolsHierarchy, debugger)
 
 			if prevIndexable == nil {
-				return option.None[symbols.Indexable]()
+				return true, option.None[symbols.Indexable]()
 			}
 		} else {
 			break
@@ -424,8 +442,8 @@ func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectSt
 
 		prevIndexableResult = s.findClosestSymbolDeclaration(levelSearchParams, state, debugger.goIn())
 	default:
-		return option.Some(prevIndexable)
+		return membersReadable, option.Some(prevIndexable)
 	}
 
-	return prevIndexableResult.result
+	return membersReadable, prevIndexableResult.result
 }

@@ -70,13 +70,19 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 	elm := result.Get()
 	protection := 0
+	membersReadable := true
 
 	for {
 		if protection > 500 {
 			return searchResult
 		}
 		protection++
-		membersReadable := canReadMembersOf(elm)
+
+		// Check for readable members before converting the element from a variable
+		// to its parent type, so we can know whether we were originally searching
+		// a variable, from which we cannot read members (enum values and fault
+		// constants).
+		membersReadable = canReadMembersOf(elm)
 
 		for {
 			if !isInspectable(elm) {
@@ -230,6 +236,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			break
 		}
 	}
+	searchResult.SetMembersReadable(membersReadable)
 	searchResult.Set(elm)
 
 	return searchResult
