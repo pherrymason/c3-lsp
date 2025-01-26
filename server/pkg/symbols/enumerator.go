@@ -36,3 +36,7 @@ func NewEnumerator(name string, value string, associatedValues []Variable, modul
 func (e Enumerator) GetHoverInfo() string {
 	return fmt.Sprintf("%s: %s", e.name, e.value)
 }
+
+func (e Enumerator) GetCompletionDetail() string {
+	return "Enum Value"
+}

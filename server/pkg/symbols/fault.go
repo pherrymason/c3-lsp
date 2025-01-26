@@ -83,12 +83,20 @@ func (e Fault) GetHoverInfo() string {
 	return e.name
 }
 
+func (e Fault) GetCompletionDetail() string {
+	return "Fault"
+}
+
 type FaultConstant struct {
 	BaseIndexable
 }
 
 func (e FaultConstant) GetHoverInfo() string {
 	return e.name
+}
+
+func (e FaultConstant) GetCompletionDetail() string {
+	return "Fault Constant"
 }
 
 func NewFaultConstant(name string, idRange Range) *FaultConstant {

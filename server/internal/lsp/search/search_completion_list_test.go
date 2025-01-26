@@ -346,10 +346,10 @@ func TestBuildCompletionList(t *testing.T) {
 
 	t.Run("Should suggest variable names defined in module", func(t *testing.T) {
 		source := `
-		int variable = 3;
-		int xanadu = 10;
+		int! variable = 3;
+		float xanadu = 10.0;
 		<* doc *>
-		int documented = 50;
+		float* documented = &xanadu;
 		<* const doc *>
 		const int MY_CONST = 100;`
 		expectedVarKind := protocol.CompletionItemKindVariable
@@ -358,11 +358,11 @@ func TestBuildCompletionList(t *testing.T) {
 			input    string
 			expected protocol.CompletionItem
 		}{
-			{"v", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind}},
-			{"va", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind}},
-			{"x", protocol.CompletionItem{Label: "xanadu", Kind: &expectedVarKind}},
-			{"docu", protocol.CompletionItem{Label: "documented", Kind: &expectedVarKind, Documentation: asMarkdown("doc")}},
-			{"MY_C", protocol.CompletionItem{Label: "MY_CONST", Kind: &expectedConstKind, Documentation: asMarkdown("const doc")}},
+			{"v", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind, Detail: cast.ToPtr("int!")}},
+			{"va", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind, Detail: cast.ToPtr("int!")}},
+			{"x", protocol.CompletionItem{Label: "xanadu", Kind: &expectedVarKind, Detail: cast.ToPtr("float")}},
+			{"docu", protocol.CompletionItem{Label: "documented", Kind: &expectedVarKind, Detail: cast.ToPtr("float*"), Documentation: asMarkdown("doc")}},
+			{"MY_C", protocol.CompletionItem{Label: "MY_CONST", Kind: &expectedConstKind, Detail: cast.ToPtr("int"), Documentation: asMarkdown("const doc")}},
 		}
 
 		for n, tt := range cases {
@@ -400,11 +400,11 @@ func TestBuildCompletionList(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"v", []protocol.CompletionItem{
-				{Label: "value", Kind: &expectedKind},
-				{Label: "variable", Kind: &expectedKind},
+				{Label: "value", Kind: &expectedKind, Detail: cast.ToPtr("int")},
+				{Label: "variable", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 			}},
 			{"val", []protocol.CompletionItem{
-				{Label: "value", Kind: &expectedKind},
+				{Label: "value", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 			}},
 		}
 
@@ -444,10 +444,10 @@ func TestBuildCompletionList(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"p", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind, Documentation: nil},
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("fn void()"), Documentation: nil},
 			}},
 			{"proc", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind, Documentation: nil},
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("fn void()"), Documentation: nil},
 			}},
 		}
 
@@ -486,10 +486,10 @@ func TestBuildCompletionList(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"p", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind, Documentation: asMarkdown("abc")},
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("fn void()"), Documentation: asMarkdown("abc")},
 			}},
 			{"proc", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind, Documentation: asMarkdown("abc")},
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("fn void()"), Documentation: asMarkdown("abc")},
 			}},
 		}
 
@@ -537,10 +537,10 @@ func TestBuildCompletionList(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"p", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind, Documentation: expectedDoc},
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("fn int(int a)"), Documentation: expectedDoc},
 			}},
 			{"proc", []protocol.CompletionItem{
-				{Label: "process", Kind: &expectedKind, Documentation: expectedDoc},
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("fn int(int a)"), Documentation: expectedDoc},
 			}},
 		}
 
@@ -580,11 +580,11 @@ func TestBuildCompletionList_struct_type(t *testing.T) {
 		expected []protocol.CompletionItem
 	}{
 		{"Co", []protocol.CompletionItem{
-			CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindStruct, "doc"),
-			CreateCompletionItem("Cough", protocol.CompletionItemKindStruct),
+			CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindStruct, "Type", "doc"),
+			CreateCompletionItem("Cough", protocol.CompletionItemKindStruct, "Type"),
 		}},
 		{"Col", []protocol.CompletionItem{
-			CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindStruct, "doc"),
+			CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindStruct, "Type", "doc"),
 		}},
 	}
 
@@ -637,8 +637,8 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 
 	assert.Equal(t, 4, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
-		{Label: "color", Kind: &expectedKind},
-		{Label: "height", Kind: &expectedKind},
+		{Label: "color", Kind: &expectedKind, Detail: cast.ToPtr("Color")},
+		{Label: "height", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 		{
 			Label: "Square.toCircle",
 			Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
@@ -646,9 +646,10 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 				NewText: "toCircle",
 				Range:   protocol_utils.NewLSPRange(6, 7, 6, 8),
 			},
+			Detail:        cast.ToPtr("fn void()"),
 			Documentation: asMarkdown("member doc"),
 		},
-		{Label: "width", Kind: &expectedKind},
+		{Label: "width", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 	}, completionList)
 }
 
@@ -680,7 +681,7 @@ func TestBuildCompletionList_struct_suggest_members_starting_with_prefix(t *test
 
 	assert.Equal(t, 1, len(filteredCompletionList))
 	assert.Equal(t, []protocol.CompletionItem{
-		{Label: "width", Kind: &expectedKind},
+		{Label: "width", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 	},
 		filteredCompletionList)
 }
@@ -693,7 +694,7 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 	source := `
 	struct Color { int red; int green; int blue; }
 	struct Square { int width; int height; Color color; }
-	fn uint Color.toHex() {}
+	fn uint Color.toHex(Color* color) {}
 	fn void main() {
 		Square inst;
 		inst.color.
@@ -713,7 +714,7 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 
 	assert.Equal(t, 4, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
-		{Label: "blue", Kind: &expectedKind},
+		{Label: "blue", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 		{
 			Label: "Color.toHex",
 			Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
@@ -721,9 +722,10 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 				NewText: "toHex",
 				Range:   protocol_utils.NewLSPRange(6, 13, 6, 14),
 			},
+			Detail: cast.ToPtr("fn uint(Color* color)"),
 		},
-		{Label: "green", Kind: &expectedKind},
-		{Label: "red", Kind: &expectedKind},
+		{Label: "green", Kind: &expectedKind, Detail: cast.ToPtr("int")},
+		{Label: "red", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 	},
 		completionList)
 }
@@ -758,7 +760,7 @@ func TestBuildCompletionList_struct_suggest_members_with_prefix_of_substruct(t *
 
 	assert.Equal(t, 1, len(filteredCompletionList))
 	assert.Equal(t, []protocol.CompletionItem{
-		{Label: "red", Kind: &expectedKind},
+		{Label: "red", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 	},
 		filteredCompletionList)
 }
@@ -797,6 +799,7 @@ func TestBuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *t
 				NewText: "toHex",
 				Range:   protocol_utils.NewLSPRange(6, 13, 6, 14),
 			},
+			Detail: cast.ToPtr("fn uint()"),
 		},
 	},
 		filteredCompletionList)
@@ -816,11 +819,11 @@ func TestBuildCompletionList_enums(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"Co", []protocol.CompletionItem{
-				CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "doc"),
-				CreateCompletionItem("Cough", protocol.CompletionItemKindEnum),
+				CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "Enum", "doc"),
+				CreateCompletionItem("Cough", protocol.CompletionItemKindEnum, "Enum"),
 			}},
 			{"Col", []protocol.CompletionItem{
-				CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "doc"),
+				CreateCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "Enum", "doc"),
 			}},
 		}
 
@@ -860,26 +863,26 @@ func TestBuildCompletionList_enums(t *testing.T) {
 				"Find enumerables starting with string",
 				"CO",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Enum Value"),
 				}},
 
 			{
 				"Find all enum enumerables when prefixed with enum name",
 				"Color.",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("BLUE", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("GREEN", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("RED", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value"),
 				}},
 			{
 				"Find matching enum enumerables",
 				"Color.COB",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value"),
 				},
 			},
 		}
@@ -917,11 +920,11 @@ func TestBuildCompletionList_faults(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"Wind", []protocol.CompletionItem{
-				CreateCompletionItem("WindowError", protocol.CompletionItemKindEnum),
-				CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "doc"),
+				CreateCompletionItem("WindowError", protocol.CompletionItemKindEnum, "Fault"),
+				CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "Fault", "doc"),
 			}},
 			{"WindowFile", []protocol.CompletionItem{
-				CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "doc"),
+				CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "Fault", "doc"),
 			}},
 		}
 
@@ -960,25 +963,25 @@ func TestBuildCompletionList_faults(t *testing.T) {
 				"Find constants starting with string",
 				"CO",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COULD_NOT_CREATE", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					CreateCompletionItem("COULD_NOT_CREATE", protocol.CompletionItemKindEnumMember, "Fault Constant"),
 				}},
 
 			{
 				"Find all fault constants when prefixed with fault name",
 				"WindowError.",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember),
-					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
 				}},
 			{
 				"Find matching fault constants",
 				"WindowFileError.NOT",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("NOT_FOUND", protocol.CompletionItemKindEnumMember),
+					CreateCompletionItem("NOT_FOUND", protocol.CompletionItemKindEnumMember, "Fault Constant"),
 				},
 			},
 		}
@@ -1057,7 +1060,7 @@ func TestBuildCompletionList_modules(t *testing.T) {
 							},
 						},
 					},
-					CreateCompletionItem("version", protocol.CompletionItemKindVariable),
+					CreateCompletionItem("version", protocol.CompletionItemKindVariable, "int"),
 				},
 				false,
 			},
@@ -1175,7 +1178,7 @@ func TestBuildCompletionList_modules(t *testing.T) {
 							Range:   protocol_utils.NewLSPRange(5, 4, 5, 9),
 						},
 					},
-					CreateCompletionItem("version", protocol.CompletionItemKindVariable),
+					CreateCompletionItem("version", protocol.CompletionItemKindVariable, "int"),
 				},
 				false,
 			},
@@ -1201,6 +1204,148 @@ func TestBuildCompletionList_modules(t *testing.T) {
 
 				assert.Equal(t, len(tt.expected), len(filteredCompletionList), "Different items to suggest")
 				assert.Equal(t, tt.expected, filteredCompletionList)
+			})
+		}
+	})
+}
+
+func TestBuildCompletionList_macros(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	t.Run("Should suggest macro names", func(t *testing.T) {
+		// TODO: Support '@' at the start of macro names
+		// (See issue https://github.com/pherrymason/c3-lsp/issues/104)
+		sourceStart := `
+		<* abc *>
+		macro process(x){}
+		macro empty(){}
+		macro int transform(int x; @body){ return 5; }
+		macro replace(float* x; @body(int* a, float b)){}
+		fn void main() {`
+		sourceEnd := `
+		}`
+
+		expectedKind := protocol.CompletionItemKindFunction
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"p", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("macro(x)"), Documentation: asMarkdown("abc")},
+			}},
+			{"proc", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("macro(x)"), Documentation: asMarkdown("abc")},
+			}},
+			{"emp", []protocol.CompletionItem{
+				{Label: "empty", Kind: &expectedKind, Detail: cast.ToPtr("macro()"), Documentation: nil},
+			}},
+			{"transf", []protocol.CompletionItem{
+				{Label: "transform", Kind: &expectedKind, Detail: cast.ToPtr("macro int(int x; @body)"), Documentation: nil},
+			}},
+			{"repla", []protocol.CompletionItem{
+				{Label: "replace", Kind: &expectedKind, Detail: cast.ToPtr("macro(float* x; @body(int* a, float b))"), Documentation: nil},
+			}},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				state.registerDoc(
+					"test.c3",
+					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
+				)
+				position := buildPosition(8, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+}
+
+func TestBuildCompletionList_definitions(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	t.Run("Should suggest definitions", func(t *testing.T) {
+		// TODO: Support '@' at the start of macro names
+		// (See issue https://github.com/pherrymason/c3-lsp/issues/104)
+		sourceStart := `
+		<* abc *>
+		def Kilo = int;
+		def KiloPtr = Kilo*;
+		def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
+		def MyMap = HashMap(<String, Feature>);
+		def Camera = raylib::Camera;
+
+		def func = a(<String>);
+		def aliased_global = global_var;
+		def CONST_ALIAS = MY_CONST;
+		def @macro_alias = @a;
+		fn void main() {`
+		sourceEnd := `
+		}`
+
+		expectedKind := protocol.CompletionItemKindTypeParameter
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"Kil", []protocol.CompletionItem{
+				{Label: "Kilo", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: asMarkdown("abc")},
+				{Label: "KiloPtr", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+			{"KiloP", []protocol.CompletionItem{
+				{Label: "KiloPtr", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+			{"MyFunct", []protocol.CompletionItem{
+				{Label: "MyFunction", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)'"), Documentation: nil},
+			}},
+			{"MyMa", []protocol.CompletionItem{
+				{Label: "MyMap", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+			{"Came", []protocol.CompletionItem{
+				{Label: "Camera", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+			{"fun", []protocol.CompletionItem{
+				{Label: "func", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'a(<String>)'"), Documentation: nil},
+			}},
+			{"aliased_g", []protocol.CompletionItem{
+				{Label: "aliased_global", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'global_var'"), Documentation: nil},
+			}},
+			{"CONST_AL", []protocol.CompletionItem{
+				{Label: "CONST_ALIAS", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'MY_CONST'"), Documentation: nil},
+			}},
+			// TODO: Support @ident
+			// {"@macro_alias", []protocol.CompletionItem{
+			// 	{Label: "@macro_alias", Kind: &expectedKind, Detail: cast.ToPtr("Alias for '@a'"), Documentation: nil},
+			// }},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				state.registerDoc(
+					"test.c3",
+					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
+				)
+				position := buildPosition(14, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
 			})
 		}
 	})
@@ -1238,6 +1383,7 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 				{
 					Label:         "EmulatorConsole",
 					Kind:          cast.ToPtr(protocol.CompletionItemKindInterface),
+					Detail:        cast.ToPtr("Interface"),
 					Documentation: asMarkdown("doc"),
 				},
 			},
@@ -1246,12 +1392,12 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 	})
 }
 
-func CreateCompletionItem(label string, kind protocol.CompletionItemKind) protocol.CompletionItem {
-	return protocol.CompletionItem{Label: label, Kind: &kind, Documentation: nil}
+func CreateCompletionItem(label string, kind protocol.CompletionItemKind, detail string) protocol.CompletionItem {
+	return protocol.CompletionItem{Label: label, Kind: &kind, Detail: &detail, Documentation: nil}
 }
 
-func CreateCompletionItemWithDoc(label string, kind protocol.CompletionItemKind, doc string) protocol.CompletionItem {
-	return protocol.CompletionItem{Label: label, Kind: &kind, Documentation: asMarkdown(doc)}
+func CreateCompletionItemWithDoc(label string, kind protocol.CompletionItemKind, detail string, doc string) protocol.CompletionItem {
+	return protocol.CompletionItem{Label: label, Kind: &kind, Detail: &detail, Documentation: asMarkdown(doc)}
 }
 
 func TestBuildCompletionList_should_resolve_(t *testing.T) {
@@ -1290,8 +1436,9 @@ func TestBuildCompletionList_should_resolve_(t *testing.T) {
 		t,
 		[]protocol.CompletionItem{
 			{
-				Label: "suggestion",
-				Kind:  cast.ToPtr(protocol.CompletionItemKindVariable),
+				Label:  "suggestion",
+				Kind:   cast.ToPtr(protocol.CompletionItemKindVariable),
+				Detail: cast.ToPtr("int"),
 			},
 		},
 		completionList,

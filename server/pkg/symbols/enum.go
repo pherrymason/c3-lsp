@@ -72,3 +72,10 @@ func (e Enum) GetEnumerators() []*Enumerator {
 func (e Enum) GetHoverInfo() string {
 	return e.name
 }
+
+func (e Enum) GetCompletionDetail() string {
+	// While we could specify 'Type' here like in struct,
+	// enums behave quite differently overall, especially
+	// regarding instantiation
+	return "Enum"
+}

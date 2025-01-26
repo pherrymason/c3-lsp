@@ -50,3 +50,7 @@ func (v Variable) IsConstant() bool {
 func (v Variable) GetHoverInfo() string {
 	return fmt.Sprintf("%s %s", v.GetType(), v.GetName())
 }
+
+func (v Variable) GetCompletionDetail() string {
+	return v.GetType().String()
+}

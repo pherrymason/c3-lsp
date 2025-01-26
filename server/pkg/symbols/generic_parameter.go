@@ -22,3 +22,7 @@ func NewGenericParameter(name string, module string, docId string, idRange Range
 func (g GenericParameter) GetHoverInfo() string {
 	return g.GetName()
 }
+
+func (g GenericParameter) GetCompletionDetail() string {
+	return "Type Parameter"
+}
