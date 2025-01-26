@@ -80,6 +80,9 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 		for _, def := range module.Defs {
 			symbolsCollection = append(symbolsCollection, def)
 		}
+		for _, distinct := range module.Distincts {
+			symbolsCollection = append(symbolsCollection, distinct)
+		}
 		for _, fault := range module.Faults {
 			symbolsCollection = append(symbolsCollection, fault)
 			for _, constant := range fault.GetConstants() {
