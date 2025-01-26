@@ -38,5 +38,5 @@ func (e Enumerator) GetHoverInfo() string {
 }
 
 func (e Enumerator) GetCompletionDetail() string {
-	return "Enumerator"
+	return "Enum Value"
 }

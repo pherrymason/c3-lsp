@@ -863,26 +863,26 @@ func TestBuildCompletionList_enums(t *testing.T) {
 				"Find enumerables starting with string",
 				"CO",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enumerator"),
-					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Enumerator"),
-					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Enumerator"),
-					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Enumerator"),
+					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Enum Value"),
 				}},
 
 			{
 				"Find all enum enumerables when prefixed with enum name",
 				"Color.",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enumerator"),
-					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enumerator"),
-					CreateCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enumerator"),
-					CreateCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enumerator"),
+					CreateCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value"),
 				}},
 			{
 				"Find matching enum enumerables",
 				"Color.COB",
 				[]protocol.CompletionItem{
-					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enumerator"),
+					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value"),
 				},
 			},
 		}
