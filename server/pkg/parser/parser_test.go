@@ -647,6 +647,27 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 	assert.Same(t, module.Children()[3], module.Distincts["Camera"])
 }
 
+func TestExtractSymbols_finds_distinct_with_methods(t *testing.T) {
+	source := `module mod;
+	distinct SuperInt = inline int;
+
+	fn SuperInt SuperInt.addOne(self) {
+	    return self + 1;
+	}`
+	mod := "mod"
+	doc := document.NewDocument("x", source)
+	parser := createParser()
+
+	symbols, _ := parser.ParseSymbols(&doc)
+	module := symbols.Get(mod)
+
+	_, success := module.Distincts["SuperInt"]
+	assert.True(t, success)
+
+	f := module.GetChildrenFunctionByName("SuperInt.addOne")
+	assert.True(t, f.IsSome())
+}
+
 func TestExtractSymbols_find_macro(t *testing.T) {
 	/*
 		sourceCode := `
