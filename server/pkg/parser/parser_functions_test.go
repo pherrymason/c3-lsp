@@ -381,6 +381,8 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.@method")
 		assert.True(t, fn.IsSome(), "Method was not found")
 
+		assert.Equal(t, "macro Object* UserStruct.@method(UserStruct self, int* pointer; @body)", fn.Get().GetHoverInfo())
+
 		variable := fn.Get().Variables["self"]
 		assert.Equal(t, "self", variable.GetName())
 		assert.Equal(t, "UserStruct", variable.GetType().String())
@@ -411,6 +413,8 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.@method")
 		assert.True(t, fn.IsSome(), "Method was not found")
+
+		assert.Equal(t, "macro Object* UserStruct.@method(UserStruct self, int* pointer; @body(&something, int a, float* b))", fn.Get().GetHoverInfo())
 
 		variable := fn.Get().Variables["self"]
 		assert.Equal(t, "self", variable.GetName())

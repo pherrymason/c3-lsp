@@ -135,13 +135,46 @@ func (f *Function) GetArguments() []*Variable {
 	return arguments
 }
 
-// Returns 'fn' for functions and 'macro' for macros.
-func (f *Function) GetDeclKeyword() string {
+// Display the function's signature.
+func (f *Function) DisplaySignature(includeName bool) string {
+	var declKeyword string
 	if f.fType == Macro {
-		return "macro"
+		declKeyword = "macro"
 	} else {
-		return "fn"
+		declKeyword = "fn"
 	}
+
+	name := ""
+	if includeName {
+		name = " " + f.GetFullName()
+	}
+
+	args := ""
+	for _, arg := range f.argumentIds {
+		variable := f.Variables[arg]
+		if f.fType == Macro && strings.HasPrefix(variable.name, "@") {
+			// Trailing @body in a macro
+			// TODO: Maybe store this information properly, without needing string
+			// manipulation at some point
+			// However, this will do for now
+			bodyParams := strings.TrimPrefix(variable.Type.String(), "fn void")
+			if bodyParams == "()" {
+				// Show '@body' instead of '@body()'
+				bodyParams = ""
+			}
+
+			args += fmt.Sprintf("; %s%s", variable.name, bodyParams)
+		} else {
+			comma := ""
+			if args != "" {
+				comma = ", "
+			}
+
+			args += fmt.Sprintf("%s%s %s", comma, variable.Type.String(), variable.name)
+		}
+	}
+
+	return fmt.Sprintf("%s %s%s(%s)", declKeyword, f.GetReturnType(), name, args)
 }
 
 func (f *Function) AddVariables(variables []*Variable) {
@@ -169,13 +202,5 @@ func (f *Function) SetEndPosition(position Position) {
 }
 
 func (f Function) GetHoverInfo() string {
-
-	args := []string{}
-	for _, arg := range f.argumentIds {
-		args = append(args, f.Variables[arg].Type.String()+" "+f.Variables[arg].name)
-	}
-
-	source := fmt.Sprintf("%s %s %s(%s)", f.GetDeclKeyword(), f.GetReturnType(), f.GetFullName(), strings.Join(args, ", "))
-
-	return source
+	return f.DisplaySignature(true)
 }
