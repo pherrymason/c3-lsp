@@ -151,6 +151,49 @@ func GetCompletionDetail(s symbols.Indexable) *string {
 	}
 }
 
+// Search for a type's methods.
+func (s *Search) BuildMethodCompletions(
+	state *l.ProjectState,
+	parentTypeFQN string,
+	filterMembers bool,
+	symbolToSearch sourcecode.Word,
+) []protocol.CompletionItem {
+	var items []protocol.CompletionItem
+
+	// Search in enum methods
+	var methods []symbols.Indexable
+	var query string
+	if !filterMembers {
+		query = parentTypeFQN + "."
+	} else {
+		query = parentTypeFQN + "." + symbolToSearch.Text() + "*"
+	}
+
+	replacementRange := protocol_utils.NewLSPRange(
+		uint32(symbolToSearch.PrevAccessPath().TextRange().Start.Line),
+		uint32(symbolToSearch.PrevAccessPath().TextRange().End.Character+1),
+		uint32(symbolToSearch.PrevAccessPath().TextRange().Start.Line),
+		uint32(symbolToSearch.PrevAccessPath().TextRange().End.Character+2),
+	)
+	methods = state.SearchByFQN(query)
+	for _, idx := range methods {
+		fn, _ := idx.(*symbols.Function)
+		kind := idx.GetKind()
+		items = append(items, protocol.CompletionItem{
+			Label: fn.GetName(),
+			Kind:  &kind,
+			TextEdit: protocol.TextEdit{
+				NewText: fn.GetMethodName(),
+				Range:   replacementRange,
+			},
+			Documentation: GetCompletableDocComment(fn),
+			Detail: GetCompletionDetail(fn),
+		})
+	}
+
+	return items
+}
+
 // Returns: []CompletionItem | CompletionList | nil
 func (s *Search) BuildCompletionList(
 	ctx context.CursorContext,
@@ -255,36 +298,7 @@ func (s *Search) BuildCompletionList(
 				}
 			}
 
-			// Search in struct methods
-			var methods []symbols.Indexable
-			var query string
-			if !filterMembers {
-				query = strukt.GetFQN() + "."
-			} else {
-				query = strukt.GetFQN() + "." + symbolInPosition.Text() + "*"
-			}
-
-			replacementRange := protocol_utils.NewLSPRange(
-				uint32(symbolInPosition.PrevAccessPath().TextRange().Start.Line),
-				uint32(symbolInPosition.PrevAccessPath().TextRange().End.Character+1),
-				uint32(symbolInPosition.PrevAccessPath().TextRange().Start.Line),
-				uint32(symbolInPosition.PrevAccessPath().TextRange().End.Character+2),
-			)
-			methods = state.SearchByFQN(query)
-			for _, idx := range methods {
-				fn, _ := idx.(*symbols.Function)
-				kind := idx.GetKind()
-				items = append(items, protocol.CompletionItem{
-					Label: fn.GetName(),
-					Kind:  &kind,
-					TextEdit: protocol.TextEdit{
-						NewText: fn.GetMethodName(),
-						Range:   replacementRange,
-					},
-					Documentation: GetCompletableDocComment(fn),
-					Detail:        GetCompletionDetail(fn),
-				})
-			}
+			items = append(items, s.BuildMethodCompletions(state, strukt.GetFQN(), filterMembers, symbolInPosition)...)
 
 		case *symbols.Enum:
 			enum := prevIndexable.(*symbols.Enum)
@@ -301,6 +315,8 @@ func (s *Search) BuildCompletionList(
 					})
 				}
 			}
+
+			items = append(items, s.BuildMethodCompletions(state, enum.GetFQN(), filterMembers, symbolInPosition)...)
 
 		case *symbols.Fault:
 			fault := prevIndexable.(*symbols.Fault)

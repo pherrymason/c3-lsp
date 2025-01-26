@@ -906,6 +906,72 @@ func TestBuildCompletionList_enums(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Should suggest Enum methods", func(t *testing.T) {
+		source := `
+		enum Color { RED, GREEN, BLUE, COBALT }
+		fn Color Color.transparentize(self) {}
+		fn void main() {
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find enum methods by type name prefix",
+				"Color.",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(4, 6, 4, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+					CreateCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value"),
+				}},
+			{
+				"Find matching enum method by type name prefix",
+				"Color.transpa",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(4, 6, 4, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete enumerables: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState(logger)
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
 }
 
 func TestBuildCompletionList_faults(t *testing.T) {

@@ -14,28 +14,6 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	state := NewTestState()
 	search := NewSearchWithoutLog()
 
-	t.Run("Should find enumerator with path definition", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
-			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
-			WindowStatus stat = WindowStatus.OPEN;`,
-		)
-		position := buildPosition(2, 37) // Cursor at `WindowStatus stat = WindowStatus.O|PEN;`
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
-
-		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(*idx.Enumerator)
-		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(symbolOption.Get())))
-		assert.Equal(t, "OPEN", symbolOption.Get().GetName())
-	})
-
 	t.Run("Should find method from std collection", func(t *testing.T) {
 		state := NewTestStateWithStdLibVersion("0.5.5")
 		state.registerDoc(
@@ -170,13 +148,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 			struct Camera3D {
 				int target;
 			}
-			def Camera = Camera3D; 
-			
+			def Camera = Camera3D;
+
 			struct Widget {
 				int count;
 				Camera camera;
 			}
-			
+
 			Widget view = {};
 			view.camera.target = 3;
 			`,
@@ -417,6 +395,53 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	})
 }
 
+func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	t.Run("Should find enumerator with path definition", func(t *testing.T) {
+		state.registerDoc(
+			"enums.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			WindowStatus stat = WindowStatus.OPEN;`,
+		)
+		position := buildPosition(2, 37) // Cursor at `WindowStatus stat = WindowStatus.O|PEN;`
+		doc := state.GetDoc("enums.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Enumerator)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "OPEN", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find enum method", func(t *testing.T) {
+		state.registerDoc(
+			"enums.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			fn bool WindowStatus.isOpen() {}
+			fn void main() {
+				WindowStatus val = WindowStatus.OPEN;
+				val.isOpen();
+			}`,
+		)
+		// Cursor at `val.is|Open();`
+		doc := state.GetDoc("enums.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(5, 10))
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "WindowStatus.isOpen", fun.GetName())
+		assert.Equal(t, "WindowStatus.isOpen", fun.GetFullName())
+	})
+}
+
 func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *testing.T) {
 	state := NewTestState()
 	search := NewSearchWithoutLog()
@@ -426,7 +451,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *
 			"app.c3",
 			`module app;
 			import list;
-			
+
 			struct Home {
 				List(<Room>) rooms;
 			}
