@@ -411,6 +411,74 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		assert.Equal(t, "int", variable.GetType().GetName())
 	})
 
+	t.Run("Should find associated value on enum instance variable", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`enum WindowStatus : int (int counter) {
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
+			}
+			fn void main() {
+				WindowStatus status = WindowStatus.BACKGROUND;
+				int value = status.counter;
+			}`,
+		)
+		position := buildPosition(8, 24) // Cursor is at `int value = status.c|ounter;`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		variable, ok := symbolOption.Get().(*idx.Variable)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not an associated value, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "counter", variable.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should find associated value on enum instance struct member", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`enum WindowStatus : int (int counter) {
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
+			}
+			struct MyStruct { WindowStatus stat; }
+			fn void main() {
+				MyStruct wrapper = { WindowStatus.BACKGROUND };
+				int value = wrapper.stat.counter;
+			}`,
+		)
+		position := buildPosition(9, 30) // Cursor is at `int value = wrapper.stat.c|ounter;`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		variable, ok := symbolOption.Get().(*idx.Variable)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not an associated value, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "counter", variable.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should not find associated value on enum type", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`enum WindowStatus : int (int counter) {
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
+			}
+			fn void main() {
+				WindowStatus.counter;
+			}`,
+		)
+		position := buildPosition(7, 18) // Cursor is at `WindowStatus.c|ounter;`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.True(t, symbolOption.IsNone(), "Element was found")
+	})
+
 	t.Run("Should find local implicit enumerator definition", func(t *testing.T) {
 		state.registerDoc(
 			"app.c3",

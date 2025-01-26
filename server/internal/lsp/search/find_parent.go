@@ -117,7 +117,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 		case *symbols.Enum:
 			_enum := elm.(*symbols.Enum)
-			foundMember := false
+			foundMemberOrAssoc := false
 			searchingSymbol := state.GetNextSymbol()
 
 			// 'CoolEnum.VARIANT.VARIANT' is invalid (member not readable on member)
@@ -130,13 +130,25 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 						elm = enumerators[i]
 						symbolsHierarchy = append(symbolsHierarchy, elm)
 						state.Advance()
-						foundMember = true
+						foundMemberOrAssoc = true
+						break
+					}
+				}
+			} else {
+				// Members not readable => this is an instance, so we can read associated values.
+				assocs := _enum.GetAssociatedValues()
+				for i := 0; i < len(assocs); i++ {
+					if assocs[i].GetName() == searchingSymbol.Text() {
+						elm = &assocs[i]
+						symbolsHierarchy = append(symbolsHierarchy, elm)
+						state.Advance()
+						foundMemberOrAssoc = true
 						break
 					}
 				}
 			}
 
-			if !foundMember {
+			if !foundMemberOrAssoc {
 				// Search in methods
 				newIterSearch, result := s.findMethod(
 					_enum.GetName(),
