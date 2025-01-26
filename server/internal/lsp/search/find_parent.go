@@ -311,13 +311,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 func isInspectable(elm symbols.Indexable) bool {
 	isInspectable := true
 	switch elm.(type) {
-	case *symbols.Variable:
-		isInspectable = false
-	case *symbols.Function:
-		isInspectable = false
-	case *symbols.StructMember:
-		isInspectable = false
-	case *symbols.Def:
+	case *symbols.Variable, *symbols.Function, *symbols.StructMember, *symbols.Def, *symbols.Distinct:
 		isInspectable = false
 	}
 
@@ -363,6 +357,17 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 			// ??? This was first version of this search
 			query = def.GetModuleString() + "::" + def.GetResolvesTo()
 		}
+
+		symbols := projState.SearchByFQN(query)
+		if len(symbols) > 0 {
+			return symbols[0]
+			// Do not advance state, we need to look inside
+		}
+
+	case *symbols.Distinct:
+		// Translate to the real symbol
+		distinct := elm.(*symbols.Distinct)
+		query := distinct.GetBaseType().GetFullQualifiedName()
 
 		symbols := projState.SearchByFQN(query)
 		if len(symbols) > 0 {

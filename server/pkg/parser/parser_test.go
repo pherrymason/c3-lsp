@@ -505,6 +505,148 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	assert.Same(t, module.Children()[10], module.Defs["@macro_alias"])
 }
 
+func TestExtractSymbols_finds_distinct(t *testing.T) {
+	source := `module mod;
+	<* docs *>
+	distinct Kilo = int;
+	distinct KiloPtr = Kilo*;
+	distinct MyMap = HashMap(<String, Feature>);
+	distinct Camera = raylib::Camera;
+	`
+	mod := "mod"
+	doc := document.NewDocument("x", source)
+	parser := createParser()
+
+	symbols, _ := parser.ParseSymbols(&doc)
+	module := symbols.Get(mod)
+
+	expectedDistinctKilo := idx.NewDistinctBuilder("Kilo", mod, doc.URI).
+		WithInline(false).
+		WithBaseType(
+			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
+		).
+		WithIdentifierRange(2, 10, 2, 14).
+		WithDocumentRange(2, 1, 2, 21).
+		Build()
+	expectedDistinctKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
+	assert.Equal(t, expectedDistinctKilo, module.Distincts["Kilo"])
+	assert.Same(t, module.Children()[0], module.Distincts["Kilo"])
+
+	expectedDistinctKiloPtr := idx.NewDistinctBuilder("KiloPtr", mod, doc.URI).
+		WithInline(false).
+		WithBaseType(
+			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
+		).
+		WithIdentifierRange(3, 10, 3, 17).
+		WithDocumentRange(3, 1, 3, 26).
+		Build()
+	assert.Equal(t, expectedDistinctKiloPtr, module.Distincts["KiloPtr"])
+	assert.Same(t, module.Children()[1], module.Distincts["KiloPtr"])
+
+	expectedDistinctTypeWithGenerics := idx.NewDistinctBuilder("MyMap", mod, doc.URI).
+		WithInline(false).
+		WithBaseType(
+			idx.NewTypeWithGeneric(
+				false,
+				false,
+				"HashMap",
+				0,
+				[]idx.Type{
+					idx.NewType(false, "String", 0, false, false, option.None[int](), "mod"),
+					idx.NewType(false, "Feature", 0, false, false, option.None[int](), "mod"),
+				}, "mod"),
+		).
+		WithIdentifierRange(4, 10, 4, 15).
+		WithDocumentRange(4, 1, 4, 45).
+		Build()
+
+	assert.Equal(t, expectedDistinctTypeWithGenerics, module.Distincts["MyMap"])
+	assert.Same(t, module.Children()[2], module.Distincts["MyMap"])
+
+	expectedDistinctTypeWithModulePath := idx.NewDistinctBuilder("Camera", mod, doc.URI).
+		WithInline(false).
+		WithBaseType(
+			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
+		).
+		WithIdentifierRange(5, 10, 5, 16).
+		WithDocumentRange(5, 1, 5, 34).
+		Build()
+
+	assert.Equal(t, expectedDistinctTypeWithModulePath, module.Distincts["Camera"])
+	assert.Same(t, module.Children()[3], module.Distincts["Camera"])
+}
+
+func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
+	source := `module mod;
+	<* docs *>
+	distinct Kilo = inline int;
+	distinct KiloPtr = inline Kilo*;
+	distinct MyMap = inline HashMap(<String, Feature>);
+	distinct Camera = inline raylib::Camera;
+	`
+	mod := "mod"
+	doc := document.NewDocument("x", source)
+	parser := createParser()
+
+	symbols, _ := parser.ParseSymbols(&doc)
+	module := symbols.Get(mod)
+
+	expectedDistinctKilo := idx.NewDistinctBuilder("Kilo", mod, doc.URI).
+		WithInline(true).
+		WithBaseType(
+			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
+		).
+		WithIdentifierRange(2, 10, 2, 14).
+		WithDocumentRange(2, 1, 2, 28).
+		Build()
+	expectedDistinctKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
+	assert.Equal(t, expectedDistinctKilo, module.Distincts["Kilo"])
+	assert.Same(t, module.Children()[0], module.Distincts["Kilo"])
+
+	expectedDistinctKiloPtr := idx.NewDistinctBuilder("KiloPtr", mod, doc.URI).
+		WithInline(true).
+		WithBaseType(
+			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
+		).
+		WithIdentifierRange(3, 10, 3, 17).
+		WithDocumentRange(3, 1, 3, 33).
+		Build()
+	assert.Equal(t, expectedDistinctKiloPtr, module.Distincts["KiloPtr"])
+	assert.Same(t, module.Children()[1], module.Distincts["KiloPtr"])
+
+	expectedDistinctTypeWithGenerics := idx.NewDistinctBuilder("MyMap", mod, doc.URI).
+		WithInline(true).
+		WithBaseType(
+			idx.NewTypeWithGeneric(
+				false,
+				false,
+				"HashMap",
+				0,
+				[]idx.Type{
+					idx.NewType(false, "String", 0, false, false, option.None[int](), "mod"),
+					idx.NewType(false, "Feature", 0, false, false, option.None[int](), "mod"),
+				}, "mod"),
+		).
+		WithIdentifierRange(4, 10, 4, 15).
+		WithDocumentRange(4, 1, 4, 52).
+		Build()
+
+	assert.Equal(t, expectedDistinctTypeWithGenerics, module.Distincts["MyMap"])
+	assert.Same(t, module.Children()[2], module.Distincts["MyMap"])
+
+	expectedDistinctTypeWithModulePath := idx.NewDistinctBuilder("Camera", mod, doc.URI).
+		WithInline(true).
+		WithBaseType(
+			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
+		).
+		WithIdentifierRange(5, 10, 5, 16).
+		WithDocumentRange(5, 1, 5, 41).
+		Build()
+
+	assert.Equal(t, expectedDistinctTypeWithModulePath, module.Distincts["Camera"])
+	assert.Same(t, module.Children()[3], module.Distincts["Camera"])
+}
+
 func TestExtractSymbols_find_macro(t *testing.T) {
 	/*
 		sourceCode := `

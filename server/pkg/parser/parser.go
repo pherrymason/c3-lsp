@@ -26,6 +26,7 @@ const FaultDeclaration = `(fault_declaration) @fault_doc`
 const StructDeclaration = `(struct_declaration) @struct_dec`
 const BitstructDeclaration = `(bitstruct_declaration) @bitstruct_dec`
 const DefineDeclaration = `(define_declaration) @def_dec`
+const DistinctDeclaration = `(distinct_declaration) @distinct_dec`
 const InterfaceDeclaration = `(interface_declaration) @interface_dec`
 const MacroDeclaration = `(macro_declaration) @macro_dec`
 const ModuleDeclaration = `(module) @module_dec`
@@ -64,6 +65,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 (source_file ` + FunctionDefinitionQuery + `)
 (source_file ` + FunctionDeclarationQuery + `)
 (source_file ` + DefineDeclaration + `)
+(source_file ` + DistinctDeclaration + `)
 (source_file ` + StructDeclaration + `)
 (source_file ` + BitstructDeclaration + `)
 (source_file ` + EnumDeclaration + `)
@@ -194,6 +196,15 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 
 				if lastDocComment != nil {
 					def.SetDocComment(lastDocComment)
+				}
+
+			case "distinct_declaration":
+				distinct := p.nodeToDistinct(c.Node, moduleSymbol, &doc.URI, sourceCode)
+				moduleSymbol.AddDistinct(&distinct)
+				pendingToResolve.AddDistinctType(&distinct, moduleSymbol)
+
+				if lastDocComment != nil {
+					distinct.SetDocComment(lastDocComment)
 				}
 
 			case "const_declaration":
