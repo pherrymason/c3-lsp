@@ -243,8 +243,6 @@ func resolveChildSymbol(parentSymbol *Symbol,
 		var specType *ast.StructType
 		if genDecl, ok := parentSymbol.NodeDecl.(*ast.GenDecl); ok {
 			specType = genDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
-		} else if field, ok2 := parentSymbol.NodeDecl.(*ast.StructField); ok2 {
-			specType = field.Type.(*ast.StructType)
 		} else {
 			panic("????")
 		}
@@ -258,94 +256,18 @@ func resolveChildSymbol(parentSymbol *Symbol,
 			symbolTable,
 			solveType,
 		)
-		/*
-			inlinedCandidates := []*ast.Ident{}
-
-			for _, member := range specType.Fields {
-				if member.Names[0].Name == nextIdent {
-					switch t := member.Type.(type) {
-					case ast.TypeInfo:
-						if t.BuiltIn || !solveType {
-							typeName := ""
-							if t.Identifier != nil {
-								// It could be an anonymous struct, protect against that
-								typeName = t.Identifier.String()
-							}
-
-							return &Symbol{
-								Name:     member.Names[0].Name,
-								Module:   moduleName,
-								URI:      fileName,
-								Range:    member.Range,
-								NodeDecl: member,
-								Kind:     ast.FIELD,
-								Type: TypeDefinition{
-									typeName,
-									t.BuiltIn,
-									t,
-								},
-							}
-						}
-						value := symbolTable.FindSymbolByPosition(
-							member.Range.Start,
-							fileName,
-							t.Identifier.String(),
-							moduleName,
-							0,
-						)
-						if value.IsSome() {
-							return value.Get()
-						} else {
-							return nil
-						}
-
-					case *ast.StructType:
-						// Anonymous Struct
-						// Search inside struct fields
-						for _, subField := range t.Fields {
-
-						}
-					}
-
-					// If nextIdent is the last element in the chain of SelectorExpr, we don't need to resolve the type.
-					// Else, we need to check for the type to continue resolving each step of the chain
-
-				} else if member.Inlined {
-					inlinedCandidates = append(inlinedCandidates, member.Type.(ast.TypeInfo).Identifier)
-				}
-			}
-
-			// Not found in members, we need to search struct methods
-			for _, relatedSymbol := range parentSymbol.Children {
-				if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == nextIdent {
-					return relatedSymbol.Child
-				}
-			}
-
-			// Not found, look inside each inlinedCandidates, maybe is a subproperty of them
-			for _, inlinedTypeIdent := range inlinedCandidates {
-				inlinedTypeSymbol := symbolTable.FindSymbolByPosition(
-					inlinedTypeIdent.Range.Start,
-					fileName,
-					inlinedTypeIdent.String(),
-					moduleName,
-					0,
-				)
-				if inlinedTypeSymbol.IsSome() {
-					inlinedStructSymbol := inlinedTypeSymbol.Get()
-					child := resolveChildSymbol(
-						inlinedStructSymbol,
-						nextIdent,
-						moduleName,
-						fileName,
-						symbolTable,
-						solveType,
-					)
-					if child != nil && child.Name == nextIdent {
-						return child
-					}
-				}
-			}*/
+	case ast.AnonymousStructField:
+		field, _ := parentSymbol.NodeDecl.(*ast.StructField)
+		specType := field.Type.(*ast.StructType)
+		return resolveChildSymbolInStructFields(
+			nextIdent,
+			specType,
+			parentSymbol,
+			moduleName,
+			fileName,
+			symbolTable,
+			solveType,
+		)
 
 	case ast.FUNCTION:
 		fn := parentSymbol.NodeDecl.(*ast.FunctionDecl)
@@ -416,34 +338,19 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 				}
 
 			case *ast.StructType:
-				//if !solveType {
 				return &Symbol{
 					Name:     member.Names[0].Name,
 					Module:   moduleName,
 					URI:      fileName,
 					Range:    member.Range,
 					NodeDecl: member,
-					Kind:     ast.STRUCT,
+					Kind:     ast.AnonymousStructField,
 					Type: TypeDefinition{
 						Name:      "",
 						IsBuiltIn: false,
 						NodeDecl:  member,
 					},
 				}
-				/*} else {
-					// Anonymous Struct
-					// Search inside struct fields
-
-					return resolveChildSymbolInStructFields(
-						searchIdent,
-						t,
-						parentSymbol,
-						moduleName,
-						fileName,
-						symbolTable,
-						solveType,
-					)
-				}*/
 			}
 
 			// If nextIdent is the last element in the chain of SelectorExpr, we don't need to resolve the type.

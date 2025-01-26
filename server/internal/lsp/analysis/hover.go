@@ -23,15 +23,14 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 	case ast.VAR, ast.CONST:
 		description = fmt.Sprintf("%s %s", symbol.Type.Name, symbol.Name)
 
-	case ast.STRUCT:
-		if symbol.Name == "" {
-			description = fmt.Sprintf("Anonymous struct")
-		} else {
-			description = fmt.Sprintf("%s", symbol.Name)
-		}
+	case ast.STRUCT, ast.AnonymousStructField:
+		description = fmt.Sprintf("%s", symbol.Name)
 
 	case ast.FIELD:
-		description = fmt.Sprintf("%s %s", symbol.Type.Name, symbol.Name)
+		switch symbol.Type.NodeDecl.(type) {
+		case ast.TypeInfo:
+			description = fmt.Sprintf("%s %s", symbol.Type.Name, symbol.Name)
+		}
 
 	case ast.FUNCTION:
 		f := symbol.NodeDecl.(*ast.FunctionDecl)
@@ -41,7 +40,7 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 		}
 
 		description = fmt.Sprintf(
-			"%s %s(%s)",
+			"fn %s %s(%s)",
 			f.Signature.ReturnType.Identifier.Name,
 			f.Signature.Name.Name,
 			strings.Join(args, ", "),

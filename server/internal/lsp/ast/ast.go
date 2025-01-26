@@ -27,6 +27,7 @@ const (
 	VAR
 	CONST
 	STRUCT
+	AnonymousStructField
 	UNION
 	INTERFACE
 	ENUM
