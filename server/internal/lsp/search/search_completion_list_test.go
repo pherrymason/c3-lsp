@@ -1229,6 +1229,104 @@ func TestBuildCompletionList_faults(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Should suggest Fault methods", func(t *testing.T) {
+		source := `
+		fault WindowError { UNEXPECTED_ERROR, NORMAL_ERROR }
+		fn void WindowError.display(self) {}
+		fn void main() {
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find fault methods by type name prefix",
+				"WindowError.",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("NORMAL_ERROR", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					CreateCompletionItem("UNEXPECTED_ERROR", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				}},
+			{
+				"Find matching fault method by type name prefix",
+				"WindowError.disp",
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+			{
+				"Find fault methods by instance variable prefix",
+				`WindowError e = WindowError.UNEXPECTED_ERROR;
+e.`,
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(5, 2, 5, 3),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+			{
+				"Find matching fault methods by instance variable prefix",
+				`WindowError e = WindowError.UNEXPECTED_ERROR;
+e.disp`,
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(5, 2, 5, 3),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete enumerables: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState()
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				lines := strings.Split(tt.input, "\n")
+				lastLine := lines[len(lines)-1]
+				position := buildPosition(5+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
 }
 
 func TestBuildCompletionList_modules(t *testing.T) {

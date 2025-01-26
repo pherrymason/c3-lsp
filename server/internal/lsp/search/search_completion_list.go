@@ -349,6 +349,8 @@ func (s *Search) BuildCompletionList(
 					}
 				}
 			}
+
+			items = append(items, s.BuildMethodCompletions(state, fault.GetFQN(), filterMembers, symbolInPosition)...)
 		}
 	} else {
 		// Find all symbols in module
