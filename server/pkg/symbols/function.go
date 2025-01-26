@@ -34,8 +34,24 @@ func NewTypeFunction(typeIdentifier string, name string, returnType Type, argume
 	return newFunctionType(Method, typeIdentifier, name, returnType, argumentIds, module, docId, idRange, docRange, kind)
 }
 
-func NewMacro(name string, argumentIds []string, module string, docId string, idRange Range, docRange Range) Function {
-	return newFunctionType(Macro, "", name, NewTypeFromString("", module), argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
+func NewTypeMacro(typeIdentifier string, name string, argumentIds []string, originalReturnType *Type, module string, docId string, idRange Range, docRange Range, kind protocol.CompletionItemKind) Function {
+	var returnType Type
+	if originalReturnType == nil {
+		returnType = NewTypeFromString("", module)
+	} else {
+		returnType = *originalReturnType
+	}
+	return newFunctionType(Macro, typeIdentifier, name, returnType, argumentIds, module, docId, idRange, docRange, kind)
+}
+
+func NewMacro(name string, argumentIds []string, originalReturnType *Type, module string, docId string, idRange Range, docRange Range) Function {
+	var returnType Type
+	if originalReturnType == nil {
+		returnType = NewTypeFromString("", module)
+	} else {
+		returnType = *originalReturnType
+	}
+	return newFunctionType(Macro, "", name, returnType, argumentIds, module, docId, idRange, docRange, protocol.CompletionItemKindFunction)
 }
 
 func newFunctionType(fType FunctionType, typeIdentifier string, name string, returnType Type, argumentIds []string, module string, docId string, identifierRangePosition Range, docRange Range, kind protocol.CompletionItemKind) Function {
@@ -119,6 +135,67 @@ func (f *Function) GetArguments() []*Variable {
 	return arguments
 }
 
+// Display the function's signature to show in types, on hover etc.
+//
+// Returns either a string like `fn void abc(int param)` if `includeName` is
+// `true`, or `fn void(int param)` otherwise. If this is a macro, returns
+// `macro void abc(int param; @body)` (with the correct keyword, and correctly
+// displaying the trailing body parameter) instead.
+func (f *Function) DisplaySignature(includeName bool) string {
+	var declKeyword string
+	if f.fType == Macro {
+		declKeyword = "macro"
+	} else {
+		declKeyword = "fn"
+	}
+
+	name := ""
+	if includeName {
+		name = " " + f.GetFullName()
+	}
+
+	returnTypeData := f.GetReturnType()
+	returnType := ""
+	if returnTypeData != nil {
+		returnType = returnTypeData.String()
+	}
+	if returnType != "" {
+		returnType = " " + returnType
+	}
+
+	args := ""
+	for _, arg := range f.argumentIds {
+		variable := f.Variables[arg]
+		if f.fType == Macro && strings.HasPrefix(variable.name, "@") {
+			// Trailing @body in a macro
+			// TODO: Maybe store this information properly, without needing string
+			// manipulation at some point
+			// However, this will do for now
+			bodyParams := strings.TrimPrefix(variable.Type.String(), "fn void")
+			if bodyParams == "()" {
+				// Show '@body' instead of '@body()'
+				bodyParams = ""
+			}
+
+			args += fmt.Sprintf("; %s%s", variable.name, bodyParams)
+		} else {
+			comma := ""
+			if args != "" {
+				comma = ", "
+			}
+
+			argType := variable.Type.String()
+			if argType != "" {
+				argType = argType + " "
+			}
+
+			args += fmt.Sprintf("%s%s%s", comma, argType, variable.name)
+		}
+	}
+
+	return fmt.Sprintf("%s%s%s(%s)", declKeyword, returnType, name, args)
+}
+
 func (f *Function) AddVariables(variables []*Variable) {
 	for _, variable := range variables {
 		f.Variables[variable.name] = variable
@@ -144,13 +221,5 @@ func (f *Function) SetEndPosition(position Position) {
 }
 
 func (f Function) GetHoverInfo() string {
-
-	args := []string{}
-	for _, arg := range f.argumentIds {
-		args = append(args, f.Variables[arg].Type.String()+" "+f.Variables[arg].name)
-	}
-
-	source := fmt.Sprintf("fn %s %s(%s)", f.GetReturnType(), f.GetFullName(), strings.Join(args, ", "))
-
-	return source
+	return f.DisplaySignature(true)
 }

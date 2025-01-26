@@ -375,11 +375,62 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 	module := symbols.Get("docid")
 	fn := module.GetChildrenFunctionByName("m")
 	assert.True(t, fn.IsSome())
+	assert.Equal(t, "macro m(x)", fn.Get().GetHoverInfo())
 	assert.Equal(t, "m", fn.Get().GetName())
+	assert.Equal(t, "", fn.Get().GetReturnType().String())
 	assert.Equal(t, "x", fn.Get().Variables["x"].GetName())
 	assert.Equal(t, "", fn.Get().Variables["x"].GetType().String())
 	assert.Equal(t, "docs", fn.Get().GetDocComment().GetBody())
 	assert.Same(t, module.NestedScopes()[0], fn.Get())
+}
+
+func TestExtractSymbols_find_macro_with_return_type(t *testing.T) {
+	/*
+		sourceCode := `
+		macro void log(LogLevel $level, String format, args...) {
+			if (log_level != OFF && $level <= log_level) {
+				io::fprintf(&log_file, "[%s] ", $level)!!;
+				io::fprintfn(&log_file, format, ...args)!!;
+			}
+		}`*/
+	source := `
+	<* docs *>
+	macro int m(int x) {
+    	return x + 2;
+	}`
+
+	doc := document.NewDocument("docId", source)
+	parser := createParser()
+	symbols, _ := parser.ParseSymbols(&doc)
+
+	module := symbols.Get("docid")
+	fn := module.GetChildrenFunctionByName("m")
+	assert.True(t, fn.IsSome())
+	assert.Equal(t, "macro int m(int x)", fn.Get().GetHoverInfo())
+	assert.Equal(t, "m", fn.Get().GetName())
+	assert.Equal(t, "int", fn.Get().GetReturnType().String())
+	assert.Equal(t, "x", fn.Get().Variables["x"].GetName())
+	assert.Equal(t, "int", fn.Get().Variables["x"].GetType().String())
+	assert.Equal(t, "docs", fn.Get().GetDocComment().GetBody())
+	assert.Same(t, module.NestedScopes()[0], fn.Get())
+}
+
+func TestExtractSymbols_handle_invalid_macro_signature(t *testing.T) {
+	source := `
+	<* docs *>
+	macro fn void scary() {
+
+	}`
+
+	doc := document.NewDocument("docId", source)
+	parser := createParser()
+	symbols, _ := parser.ParseSymbols(&doc)
+
+	module := symbols.Get("docid")
+	assert.Empty(t, module.ChildrenFunctions)
+	assert.True(t, cast.ToPtr(module.GetChildrenFunctionByName("scary")).IsNone())
+	assert.True(t, cast.ToPtr(module.GetChildrenFunctionByName("void")).IsNone())
+	assert.True(t, cast.ToPtr(module.GetChildrenFunctionByName("fn")).IsNone())
 }
 
 func TestExtractSymbols_find_module(t *testing.T) {

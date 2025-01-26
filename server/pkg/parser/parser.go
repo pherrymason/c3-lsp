@@ -221,11 +221,13 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				}
 
 			case "macro_declaration":
-				macro := p.nodeToMacro(c.Node, moduleSymbol, &doc.URI, sourceCode)
-				moduleSymbol.AddFunction(&macro)
+				macro, err := p.nodeToMacro(c.Node, moduleSymbol, &doc.URI, sourceCode)
+				if err == nil {
+					moduleSymbol.AddFunction(&macro)
 
-				if lastDocComment != nil {
-					macro.SetDocComment(lastDocComment)
+					if lastDocComment != nil {
+						macro.SetDocComment(lastDocComment)
+					}
 				}
 			default:
 				// TODO test that module ends up with wrong endPosition

@@ -76,8 +76,10 @@ func (t Type) String() string {
 }
 
 func NewTypeFromString(_type string, modulePath string) Type {
-	pointerCount := strings.Count(_type, "*")
 	baseType := strings.TrimSuffix(_type, "*")
+
+	// Only consider '*'s at the end
+	pointerCount := strings.Count(strings.TrimPrefix(_type, baseType), "*")
 
 	return Type{
 		name:    baseType,
