@@ -649,7 +649,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance variable")
 	})
 
-	t.Run("Should find fault method", func(t *testing.T) {
+	t.Run("Should find fault method on instance variable", func(t *testing.T) {
 		state.registerDoc(
 			"app.c3",
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
@@ -662,6 +662,29 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 		// Cursor at `val.is|Bad();`
 		doc := state.GetDoc("app.c3")
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(5, 10))
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "WindowError.isBad", fun.GetName())
+		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
+	})
+
+	t.Run("Should find fault method after instance variable in struct member", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			fn bool WindowError.isBad() {}
+			struct MyStruct { WindowError f; }
+			MyStruct st = { WindowError.UNEXPECTED_ERROR };
+			WindowError bad = st.f.isBad();`,
+		)
+		position := buildPosition(5, 27) // Cursor at `WindowError bad = st.f.i|sBad();`
+		doc := state.GetDoc("app.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
 
 		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
