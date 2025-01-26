@@ -6,6 +6,17 @@ import (
 )
 
 /*
+define_ident: $ => seq(
+
+	choice(
+	  seq($.ident, '=', $.define_path_ident),
+	  seq($.const_ident, '=', $.path_const_ident),
+	  seq($.at_ident, '=', $.define_path_at_ident),
+	),
+	optional($.generic_arguments),
+
+),
+
 define_declaration: $ => seq(
 
 	  'def',
@@ -36,7 +47,7 @@ func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		switch n.Type() {
-		case "type_ident", "define_ident":
+		case "type_ident":
 			defBuilder.WithName(n.Content(sourceCode)).
 				WithIdentifierRange(
 					uint(n.StartPoint().Row),
@@ -44,6 +55,24 @@ func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *
 					uint(n.EndPoint().Row),
 					uint(n.EndPoint().Column),
 				)
+
+		case "define_ident":
+			nameNode := n.Child(0)
+			resolvesTo := n.Child(2).Content(sourceCode)
+
+			if n.ChildCount() >= 4 {
+				// Also include applied generic arguments
+				resolvesTo += n.Child(3).Content(sourceCode)
+			}
+
+			defBuilder.WithName(nameNode.Content(sourceCode)).
+				WithIdentifierRange(
+					uint(nameNode.StartPoint().Row),
+					uint(nameNode.StartPoint().Column),
+					uint(nameNode.EndPoint().Row),
+					uint(nameNode.EndPoint().Column),
+				).
+				WithResolvesTo(resolvesTo)
 
 		case "typedef_type":
 			var _type idx.Type
