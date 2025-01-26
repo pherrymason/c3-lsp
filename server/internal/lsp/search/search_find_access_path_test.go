@@ -479,6 +479,60 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 		assert.Equal(t, "WindowStatus.isOpen", fun.GetName())
 		assert.Equal(t, "WindowStatus.isOpen", fun.GetFullName())
 	})
+
+	t.Run("Should find associated value on explicit enumerator", func(t *testing.T) {
+		state.registerDoc(
+			"enums.c3",
+			`enum WindowStatus : int (int assoc) {
+				OPEN = 5,
+				BACKGROUND = 6,
+				MINIMIZED = 7
+			}
+			int stat = WindowStatus.OPEN.assoc;`,
+		)
+		position := buildPosition(6, 33) // Cursor at `int stat = WindowStatus.OPEN.a|ssoc;`
+		doc := state.GetDoc("enums.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		variable, ok := symbolOption.Get().(*idx.Variable)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a variable, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "assoc", variable.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should find associated value on explicit enumerator without custom backing type", func(t *testing.T) {
+		state.registerDoc(
+			"enums.c3",
+			`enum WindowStatus : (int assoc) {
+				OPEN = 5,
+				BACKGROUND = 6,
+				MINIMIZED = 7
+			}
+			int stat = WindowStatus.OPEN.assoc;`,
+		)
+		position := buildPosition(6, 33) // Cursor at `int stat = WindowStatus.OPEN.a|ssoc;`
+		doc := state.GetDoc("enums.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		variable, ok := symbolOption.Get().(*idx.Variable)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a variable, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "assoc", variable.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
 }
 
 func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing.T) {
@@ -552,9 +606,9 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 			struct MyStruct { WindowError f; }
 			MyStruct st = { WindowError.UNEXPECTED_ERROR };
-			WindowError bad = st.SOMETHING_HAPPENED;`,
+			WindowError bad = st.f.SOMETHING_HAPPENED;`,
 		)
-		position := buildPosition(4, 25) // Cursor at `WindowError bad = st.S|OMETHING_HAPPENED;`
+		position := buildPosition(4, 27) // Cursor at `WindowError bad = st.f.S|OMETHING_HAPPENED;`
 		doc := state.GetDoc("app.c3")
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(
 			&doc,

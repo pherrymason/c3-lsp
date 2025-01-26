@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/pkg/cast"
@@ -86,8 +87,7 @@ func TestParses_TypedEnums(t *testing.T) {
 		assert.Same(t, enum.Children()[2], e)
 	})
 
-	t.Run("associate values >= v6.0", func(t *testing.T) {
-		t.Skip()
+	t.Run("associate values >= v0.6.0", func(t *testing.T) {
 		source := `
 		enum State : int (String state_desc, bool active)
 		{
@@ -102,6 +102,83 @@ func TestParses_TypedEnums(t *testing.T) {
 
 		scope := symbols.Get("ass")
 		assert.NotNil(t, scope.Enums["State"])
+		enum := scope.Enums["State"]
+		enumerators := enum.GetEnumerators()
+
+		assert.Len(t, enumerators, 3, "Missing enumerators")
+
+		expectedAssocValues := []struct {
+			type_ string
+			name  string
+		}{
+			{
+				type_: "String",
+				name:  "state_desc",
+			},
+			{
+				type_: "bool",
+				name:  "active",
+			},
+		}
+
+		for enum_i, enumerator := range enumerators {
+			t.Run(fmt.Sprintf("Enumerator #%d", enum_i), func(t *testing.T) {
+				assert.Equal(t, len(expectedAssocValues), len(enumerator.AssociatedValues))
+				for i, assoc := range enumerator.AssociatedValues {
+					assocIndex := fmt.Sprintf("Associated value #%d", i)
+					expected := expectedAssocValues[i]
+					assert.Equal(t, expected.name, assoc.GetName(), assocIndex+" didn't match")
+					assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
+				}
+			})
+		}
+	})
+
+	t.Run("associated values without backing type", func(t *testing.T) {
+		source := `
+		enum State : (String state_desc, bool active)
+		{
+			PENDING = {"pending start", false},
+			RUNNING = {"running", true},
+			TERMINATED = {"ended", false}
+		}`
+		doc := document.NewDocument("ass.c3", source)
+		parser := createParser()
+
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		scope := symbols.Get("ass")
+		assert.NotNil(t, scope.Enums["State"])
+		enum := scope.Enums["State"]
+		enumerators := enum.GetEnumerators()
+
+		assert.Len(t, enumerators, 3, "Missing enumerators")
+
+		expectedAssocValues := []struct {
+			type_ string
+			name  string
+		}{
+			{
+				type_: "String",
+				name:  "state_desc",
+			},
+			{
+				type_: "bool",
+				name:  "active",
+			},
+		}
+
+		for enum_i, enumerator := range enumerators {
+			t.Run(fmt.Sprintf("Enumerator #%d", enum_i), func(t *testing.T) {
+				assert.Equal(t, len(expectedAssocValues), len(enumerator.AssociatedValues))
+				for i, assoc := range enumerator.AssociatedValues {
+					assocIndex := fmt.Sprintf("Associated value #%d", i)
+					expected := expectedAssocValues[i]
+					assert.Equal(t, expected.name, assoc.GetName(), assocIndex+" didn't match")
+					assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
+				}
+			})
+		}
 	})
 
 	t.Run("finds enum method", func(t *testing.T) {

@@ -388,6 +388,29 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		assert.Equal(t, "int", variable.GetType().GetName())
 	})
 
+	t.Run("Should find local enumerator definition associated value without custom backing type", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`enum WindowStatus : (int counter) {
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
+			}
+			fn void main() {
+				int status = WindowStatus.BACKGROUND.counter;
+			}`,
+		)
+		position := buildPosition(7, 42) // Cursor is at `status = WindowStatus.BACKGROUND.c|ounter`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		variable, ok := symbolOption.Get().(*idx.Variable)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an associated value, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "counter", variable.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
 	t.Run("Should find local implicit enumerator definition", func(t *testing.T) {
 		state.registerDoc(
 			"app.c3",
