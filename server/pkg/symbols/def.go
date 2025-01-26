@@ -69,11 +69,11 @@ func (d Def) GetCompletionDetail() string {
 	if d.resolvesToType.IsSome() {
 		return "Type"
 	} else if strings.HasPrefix(d.name, "@") {
-		return "Macro Alias"
+		return "Alias for macro '" + d.resolvesTo + "'"
 	} else {
 		// No semantic information
-		// TODO: Resolve the identifier and display it?
-		return "Alias"
+		// TODO: Resolve the identifier and display its information?
+		return "Alias for '" + d.resolvesTo + "'"
 	}
 }
 

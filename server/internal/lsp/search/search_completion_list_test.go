@@ -1270,6 +1270,87 @@ func TestBuildCompletionList_macros(t *testing.T) {
 	})
 }
 
+func TestBuildCompletionList_definitions(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	t.Run("Should suggest definitions", func(t *testing.T) {
+		// TODO: Support '@' at the start of macro names
+		// (See issue https://github.com/pherrymason/c3-lsp/issues/104)
+		sourceStart := `
+		<* abc *>
+		def Kilo = int;
+		def KiloPtr = Kilo*;
+		def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
+		def MyMap = HashMap(<String, Feature>);
+		def Camera = raylib::Camera;
+
+		def func = a(<String>);
+		def aliased_global = global_var;
+		def CONST_ALIAS = MY_CONST;
+		def @macro_alias = @a;
+		fn void main() {`
+		sourceEnd := `
+		}`
+
+		expectedKind := protocol.CompletionItemKindTypeParameter
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"Kil", []protocol.CompletionItem{
+				{Label: "Kilo", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: asMarkdown("abc")},
+				{Label: "KiloPtr", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+			{"KiloP", []protocol.CompletionItem{
+				{Label: "KiloPtr", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+			{"MyFunct", []protocol.CompletionItem{
+				{Label: "MyFunction", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)'"), Documentation: nil},
+			}},
+			{"MyMa", []protocol.CompletionItem{
+				{Label: "MyMap", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+			{"Came", []protocol.CompletionItem{
+				{Label: "Camera", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+			{"fun", []protocol.CompletionItem{
+				{Label: "func", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'a(<String>)'"), Documentation: nil},
+			}},
+			{"aliased_g", []protocol.CompletionItem{
+				{Label: "aliased_global", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'global_var'"), Documentation: nil},
+			}},
+			{"CONST_AL", []protocol.CompletionItem{
+				{Label: "CONST_ALIAS", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'MY_CONST'"), Documentation: nil},
+			}},
+			// TODO: Support @ident
+			// {"@macro_alias", []protocol.CompletionItem{
+			// 	{Label: "@macro_alias", Kind: &expectedKind, Detail: cast.ToPtr("Alias for '@a'"), Documentation: nil},
+			// }},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				state.registerDoc(
+					"test.c3",
+					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
+				)
+				position := buildPosition(14, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+}
+
 func TestBuildCompletionList_interfaces(t *testing.T) {
 	t.Run("should complete interface name", func(t *testing.T) {
 
