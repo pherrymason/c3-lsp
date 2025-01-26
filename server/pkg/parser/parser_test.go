@@ -283,6 +283,16 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
 	def MyMap = HashMap(<String, Feature>);
 	def Camera = raylib::Camera;
+
+	int global_var = 10;
+	const int MY_CONST = 5;
+	macro @ad(; @body) { @body(); }
+	fn void a() {}
+
+	def func = a(<String>);
+	def aliased_global = global_var;
+	def CONST_ALIAS = MY_CONST;
+	def @macro_alias = @a;
 	`
 	// TODO: Missing def different definition examples. See parser.nodeToDef
 	mod := "mod"
@@ -351,6 +361,42 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	assert.Equal(t, expectedDefTypeWithModulePath, module.Defs["Camera"])
 	assert.Same(t, module.Children()[4], module.Defs["Camera"])
+
+	expectedDefTypeAliasingToFunc := idx.NewDefBuilder("func", mod, doc.URI).
+		WithResolvesTo("a(<String>)").
+		WithIdentifierRange(13, 5, 13, 9).
+		WithDocumentRange(13, 1, 13, 24).
+		Build()
+
+	assert.Equal(t, expectedDefTypeAliasingToFunc, module.Defs["func"])
+	assert.Same(t, module.Children()[7], module.Defs["func"])
+
+	expectedDefTypeAliasingToGlobalVar := idx.NewDefBuilder("aliased_global", mod, doc.URI).
+		WithResolvesTo("global_var").
+		WithIdentifierRange(14, 5, 14, 19).
+		WithDocumentRange(14, 1, 14, 33).
+		Build()
+
+	assert.Equal(t, expectedDefTypeAliasingToGlobalVar, module.Defs["aliased_global"])
+	assert.Same(t, module.Children()[8], module.Defs["aliased_global"])
+
+	expectedDefTypeAliasingToConst := idx.NewDefBuilder("CONST_ALIAS", mod, doc.URI).
+		WithResolvesTo("MY_CONST").
+		WithIdentifierRange(15, 5, 15, 16).
+		WithDocumentRange(15, 1, 15, 28).
+		Build()
+
+	assert.Equal(t, expectedDefTypeAliasingToConst, module.Defs["CONST_ALIAS"])
+	assert.Same(t, module.Children()[9], module.Defs["CONST_ALIAS"])
+
+	expectedDefTypeAliasingToMacro := idx.NewDefBuilder("@macro_alias", mod, doc.URI).
+		WithResolvesTo("@a").
+		WithIdentifierRange(16, 5, 16, 17).
+		WithDocumentRange(16, 1, 16, 23).
+		Build()
+
+	assert.Equal(t, expectedDefTypeAliasingToMacro, module.Defs["@macro_alias"])
+	assert.Same(t, module.Children()[10], module.Defs["@macro_alias"])
 }
 
 func TestExtractSymbols_find_macro(t *testing.T) {
