@@ -634,7 +634,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		assert.True(t, symbolOption.IsNone(), "Element found")
 	})
 
-	t.Run("Should find fault method definition", func(t *testing.T) {
+	t.Run("Should find fault method definition on instance variable", func(t *testing.T) {
 		state.registerDoc(
 			"app.c3",
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
@@ -647,6 +647,27 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 			`,
 		)
 		position := buildPosition(6, 10) // Cursor is at `e.is|Bad()`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.False(t, symbolOption.IsNone(), "Method not found")
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "WindowError.isBad", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find fault method definition on explicit fault constant", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			fn bool WindowError.isBad(){}
+
+			fn void main() {
+				WindowError.UNEXPECTED_ERROR.isBad();
+			}
+			`,
+		)
+		position := buildPosition(5, 36) // Cursor is at `WindowError.UNEXPECTED_ERROR.is|Bad();`
 
 		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
 

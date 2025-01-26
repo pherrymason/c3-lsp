@@ -144,6 +144,35 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
+		case *symbols.FaultConstant:
+			constant := elm.(*symbols.FaultConstant)
+
+			if constant.GetModuleString() != "" && constant.GetFaultName() != "" {
+				// Search in methods
+				// First get the fault
+				faultQuery := fmt.Sprintf("%s::%s", constant.GetModule().GetName(), constant.GetFaultName())
+				faultSymbols := projState.SearchByFQN(faultQuery)
+				if len(faultSymbols) > 0 {
+					// Search the fault's methods
+					searchingSymbol := state.GetNextSymbol()
+					newIterSearch, result := s.findMethod(
+						faultSymbols[0].GetName(),
+						searchingSymbol,
+						docId,
+						searchParams,
+						projState,
+						debugger,
+					)
+					if result.IsNone() {
+						return NewSearchResultEmpty(trackedModules)
+					}
+					iterSearch = newIterSearch
+					elm = result.Get()
+					symbolsHierarchy = append(symbolsHierarchy, elm)
+					state.Advance()
+				}
+			}
+
 		case *symbols.Enum:
 			_enum := elm.(*symbols.Enum)
 			foundMemberOrAssoc := false

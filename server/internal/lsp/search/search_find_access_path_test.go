@@ -711,6 +711,27 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 		assert.Equal(t, "WindowError.isBad", fun.GetName())
 		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
 	})
+
+	t.Run("Should find fault method on explicit constant", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			fn bool WindowError.isBad() {}
+			fn void main() {
+				WindowError.UNEXPECTED_ERROR.isBad();
+			}`,
+		)
+		// Cursor at `WindowError.UNEXPECTED_ERROR.is|Bad();`
+		position := buildPosition(4, 36)
+
+		doc := state.GetDoc("app.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "WindowError.isBad", fun.GetName())
+		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
+	})
 }
 
 func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *testing.T) {
