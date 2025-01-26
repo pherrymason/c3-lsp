@@ -296,6 +296,39 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
 			}
+
+		case *symbols.Distinct:
+			distinct := elm.(*symbols.Distinct)
+
+			// Search in the distinct's own methods first
+			searchingSymbol := state.GetNextSymbol()
+			methodSymbol := sourcecode.NewWord(distinct.GetName()+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
+			iterSearch = search_params.NewSearchParamsBuilder().
+				WithSymbolWord(methodSymbol).
+				WithDocId(docId.Get()).
+				WithContextModuleName(searchParams.ModuleInCursor()).
+				WithScopeMode(search_params.InModuleRoot).
+				Build()
+			methodResult := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
+
+			if methodResult.IsSome() {
+				elm = methodResult.Get()
+				symbolsHierarchy = append(symbolsHierarchy, elm)
+				state.Advance()
+			} else if distinct.GetInline() {
+				// Distinct is inline, so let's try to access something under its base type,
+				// as its methods are available.
+				// Translate to its base type's symbol and continue searching.
+				elm = s.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), projState, symbolsHierarchy, debugger)
+				if elm == nil {
+					return NewSearchResultEmptyWithTraversedModules(result.traversedModules)
+				}
+				symbolsHierarchy = append(symbolsHierarchy, elm)
+			} else {
+				// Nothing found, and it isn't inline, meaning only the distinct's own
+				// methods are available, not those of the type it represents.
+				return NewSearchResultEmpty(trackedModules)
+			}
 		}
 
 		if state.IsEnd() {
@@ -311,7 +344,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 func isInspectable(elm symbols.Indexable) bool {
 	isInspectable := true
 	switch elm.(type) {
-	case *symbols.Variable, *symbols.Function, *symbols.StructMember, *symbols.Def, *symbols.Distinct:
+	case *symbols.Variable, *symbols.Function, *symbols.StructMember, *symbols.Def:
 		isInspectable = false
 	}
 
@@ -367,12 +400,14 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 	case *symbols.Distinct:
 		// Translate to the real symbol
 		distinct := elm.(*symbols.Distinct)
-		query := distinct.GetBaseType().GetFullQualifiedName()
+		if distinct.GetInline() {
+			query := distinct.GetBaseType().GetFullQualifiedName()
 
-		symbols := projState.SearchByFQN(query)
-		if len(symbols) > 0 {
-			return symbols[0]
-			// Do not advance state, we need to look inside
+			symbols := projState.SearchByFQN(query)
+			if len(symbols) > 0 {
+				return symbols[0]
+				// Do not advance state, we need to look inside
+			}
 		}
 	}
 
