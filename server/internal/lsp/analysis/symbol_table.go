@@ -136,7 +136,15 @@ func (s *SymbolTable) findSymbolInScope(name string, scope *Scope) *Symbol {
 	return symbolFound
 }
 
-func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, name string, module ModuleName, hint ast.Token) option.Option[*Symbol] {
+type FromPosition struct {
+	pos      lsp.Position
+	fileName string
+	module   ModuleName
+}
+
+// FindSymbolByPosition Searches a symbol with ident=identName.
+// Takes into account current scope, defined by pos, fileName and module.
+func (s *SymbolTable) FindSymbolByPosition(identName string, from FromPosition) option.Option[*Symbol] {
 	type SymbolScope struct {
 		symbol     *Symbol
 		rangeScope lsp.Range
@@ -144,13 +152,13 @@ func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, na
 
 	var symbolFound *Symbol
 
-	moduleScope := s.scopeTree[fileName].GetModuleScope(module.String())
+	moduleScope := s.scopeTree[from.fileName].GetModuleScope(from.module.String())
 
 	visitedFiles := make(map[string]bool)
 	toVisit := []FileModulePtr{
 		{
-			fileName: fileName,
-			module:   module,
+			fileName: from.fileName,
+			module:   from.module,
 			scope:    moduleScope,
 		},
 	}
@@ -159,7 +167,7 @@ func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, na
 	for len(toVisit) > 0 {
 		currentFile := toVisit[0].fileName
 		moduleScope = toVisit[0].scope
-		module = toVisit[0].module
+		module := toVisit[0].module
 		toVisit = toVisit[1:]
 
 		visitedKey := currentFile + "+" + module.String()
@@ -171,7 +179,7 @@ func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, na
 		// Search current scope
 		var scope *Scope
 		if iteration == 0 {
-			scope = FindClosestScope(moduleScope, pos)
+			scope = FindClosestScope(moduleScope, from.pos)
 		} else {
 			// other iterations, are searching in root scope of imported module, position is not relevant
 			scope = moduleScope
@@ -181,7 +189,7 @@ func (s *SymbolTable) FindSymbolByPosition(pos lsp.Position, fileName string, na
 		}
 
 		// Search inside the scope and go up until find its declaration
-		symbolFound = s.findSymbolInScope(name, scope)
+		symbolFound = s.findSymbolInScope(identName, scope)
 		if symbolFound == nil {
 			// Check if there are imported modules
 			toVisit, visitedFiles = findImportedFiles(s, scope, module, visitedFiles, toVisit)
@@ -250,7 +258,8 @@ func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName 
 		}
 
 		// Second search, we need to search for symbol with typeName
-		symbol := s.FindSymbolByPosition(symbolFound.Range.Start, fileName, typeName, currentModule, 0)
+		from := FromPosition{pos: symbolFound.Range.Start, fileName: fileName, module: currentModule}
+		symbol := s.FindSymbolByPosition(typeName, from)
 		if symbol.IsNone() {
 			return nil
 		} else {

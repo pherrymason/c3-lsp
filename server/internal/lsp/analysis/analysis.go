@@ -54,12 +54,12 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 		return option.None[*Symbol]()
 	}
 
-	var name string
+	var identName string
 	switch n := nodeAtPosition.(type) {
 	case *ast.Ident:
-		name = n.Name
+		identName = n.Name
 	case ast.Ident:
-		name = n.Name
+		identName = n.Name
 	}
 
 	// Analyze parent nodes to better understand context
@@ -135,7 +135,8 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 	}
 	// -------------------------------------------------
 	// Normal search
-	sym := symbolTable.FindSymbolByPosition(pos, fileName, name, scopeCtxt.moduleName, 0)
+	from := FromPosition{pos: pos, fileName: fileName, module: scopeCtxt.moduleName}
+	sym := symbolTable.FindSymbolByPosition(identName, from)
 
 	return sym
 }
@@ -154,13 +155,8 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			// We need to go to parent FunctionDecl and see if `self` is a defined argument
 			if context.selfType != nil {
 				parentSymbolName = context.selfType.Name
-				result := symbolTable.FindSymbolByPosition(
-					context.selfType.StartPosition(),
-					fileName,
-					context.selfType.Name,
-					context.moduleName,
-					0,
-				)
+				from := FromPosition{pos: context.selfType.StartPosition(), fileName: fileName, module: context.moduleName}
+				result := symbolTable.FindSymbolByPosition(context.selfType.Name, from)
 				parentSymbol = result.GetOrElse(nil)
 			} else {
 				// !!!!! we've found a self, but function is not flagged as method! Confusion triggered!!!
@@ -174,13 +170,8 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 		}
 
 	case ast.TypeInfo:
-		result := symbolTable.FindSymbolByPosition(
-			base.StartPosition(),
-			fileName,
-			base.Identifier.String(),
-			context.moduleName,
-			0,
-		)
+		from := FromPosition{pos: context.selfType.StartPosition(), fileName: fileName, module: context.moduleName}
+		result := symbolTable.FindSymbolByPosition(base.Identifier.String(), from)
 		parentSymbol = result.GetOrElse(nil)
 
 	case *ast.SelectorExpr:
@@ -199,7 +190,8 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 				return nil
 			}
 		case *ast.Ident:
-			sym := symbolTable.FindSymbolByPosition(pos, fileName, i.Name, context.moduleName, 0)
+			from := FromPosition{pos: pos, fileName: fileName, module: context.moduleName}
+			sym := symbolTable.FindSymbolByPosition(i.Name, from)
 			if sym.IsNone() {
 				return nil
 			}
@@ -272,13 +264,8 @@ func resolveChildSymbol(parentSymbol *Symbol,
 	case ast.FUNCTION:
 		fn := parentSymbol.NodeDecl.(*ast.FunctionDecl)
 		returnType := fn.Signature.ReturnType
-		returnTypeSymbol := symbolTable.FindSymbolByPosition(
-			returnType.Range.Start,
-			fileName,
-			returnType.Identifier.String(),
-			moduleName,
-			0,
-		)
+		from := FromPosition{pos: returnType.Range.Start, fileName: fileName, module: moduleName}
+		returnTypeSymbol := symbolTable.FindSymbolByPosition(returnType.Identifier.String(), from)
 
 		if returnTypeSymbol.IsSome() {
 			return resolveChildSymbol(
@@ -324,13 +311,8 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 						},
 					}
 				}
-				value := symbolTable.FindSymbolByPosition(
-					member.Range.Start,
-					fileName,
-					t.Identifier.String(),
-					moduleName,
-					0,
-				)
+				from := FromPosition{pos: member.Range.Start, fileName: fileName, module: moduleName}
+				value := symbolTable.FindSymbolByPosition(t.Identifier.String(), from)
 				if value.IsSome() {
 					return value.Get()
 				} else {
@@ -370,13 +352,8 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 
 	// Not found, look inside each inlinedCandidates, maybe is a subproperty of them
 	for _, inlinedTypeIdent := range inlinedCandidates {
-		inlinedTypeSymbol := symbolTable.FindSymbolByPosition(
-			inlinedTypeIdent.Range.Start,
-			fileName,
-			inlinedTypeIdent.String(),
-			moduleName,
-			0,
-		)
+		from := FromPosition{pos: inlinedTypeIdent.Range.Start, fileName: fileName, module: moduleName}
+		inlinedTypeSymbol := symbolTable.FindSymbolByPosition(inlinedTypeIdent.String(), from)
 		if inlinedTypeSymbol.IsSome() {
 			inlinedStructSymbol := inlinedTypeSymbol.Get()
 			child := resolveChildSymbol(
