@@ -150,6 +150,7 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn void test(int number, char ch, int* pointer)", fn.Get().GetHoverInfo(), "Function signature")
 		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(0, 8, 0, 12), fn.Get().GetIdRange())

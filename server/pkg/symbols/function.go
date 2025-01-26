@@ -149,6 +149,15 @@ func (f *Function) DisplaySignature(includeName bool) string {
 		name = " " + f.GetFullName()
 	}
 
+	returnTypeData := f.GetReturnType()
+	returnType := ""
+	if returnTypeData != nil {
+		returnType = returnTypeData.String()
+	}
+	if returnType != "" {
+		returnType = " " + returnType
+	}
+
 	args := ""
 	for _, arg := range f.argumentIds {
 		variable := f.Variables[arg]
@@ -170,11 +179,16 @@ func (f *Function) DisplaySignature(includeName bool) string {
 				comma = ", "
 			}
 
-			args += fmt.Sprintf("%s%s %s", comma, variable.Type.String(), variable.name)
+			argType := variable.Type.String()
+			if argType != "" {
+				argType = argType + " "
+			}
+
+			args += fmt.Sprintf("%s%s%s", comma, argType, variable.name)
 		}
 	}
 
-	return fmt.Sprintf("%s %s%s(%s)", declKeyword, f.GetReturnType(), name, args)
+	return fmt.Sprintf("%s%s%s(%s)", declKeyword, returnType, name, args)
 }
 
 func (f *Function) AddVariables(variables []*Variable) {
