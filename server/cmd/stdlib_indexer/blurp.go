@@ -92,6 +92,28 @@ func Generate_definition(def *s.Def, module *s.Module) jen.Code {
 	return defDef
 }
 
+func Generate_distinct(distinct *s.Distinct, module *s.Module) jen.Code {
+	distinctDef := jen.
+		Qual(PackageName+"symbols", "NewDistinctBuilder").
+		Call(
+			jen.Lit(distinct.GetName()),
+			jen.Lit(module.GetName()),
+			jen.Lit(module.GetDocumentURI()),
+		).
+		Dot("WithInline").
+		Call(
+			jen.Lit(distinct.GetInline()),
+		).
+		Dot("WithBaseType").
+		Call(
+			jen.Lit(distinct.GetBaseType().GetName()),
+		).
+		Dot("WithoutSourceCode").Call().
+		Dot("Build").Call()
+
+	return distinctDef
+}
+
 func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 	enumDef := jen.
 		Qual(PackageName+"symbols", "NewEnumBuilder").
