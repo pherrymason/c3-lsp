@@ -613,6 +613,95 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 	})
 }
 
+func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testing.T) {
+	t.Run("Should find distinct method", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`distinct Kilo = int;
+			fn bool Kilo.isLarge(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		fun, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Kilo.isLarge", fun.GetName())
+		assert.Equal(t, "Kilo.isLarge", fun.GetFullName())
+	})
+
+	t.Run("Should not find non-inline distinct base type method", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = Abc;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element found despite inline")
+	})
+
+	t.Run("Should find inline distinct base type method definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Abc.isLarge", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find inline distinct's own method definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Abc.isLarge(){ return false; }
+			fn bool Kilo.isEvenLarger(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||EvenLarger();
+			}
+			`,
+		)
+
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Kilo.isEvenLarger", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should prioritize clashing inline distinct method name", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Unrelated { int b; }
+			struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Unrelated.isLarge() { return false; }
+			fn bool Abc.isLarge(){ return false; }
+			fn bool Kilo.isLarge(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Kilo.isLarge", symbolOption.Get().GetName())
+	})
+}
+
 func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *testing.T) {
 	state := NewTestState()
 	search := NewSearchWithoutLog()
