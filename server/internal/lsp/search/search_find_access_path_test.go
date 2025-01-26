@@ -421,6 +421,45 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 		assert.Equal(t, "OPEN", symbolOption.Get().GetName())
 	})
 
+	t.Run("Should not find enumerator after explicit enumerator path", func(t *testing.T) {
+		state.registerDoc(
+			"enums.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			WindowStatus stat = WindowStatus.OPEN.BACKGROUND;`,
+		)
+		position := buildPosition(2, 42) // Cursor at `WindowStatus stat = WindowStatus.OPEN.B|ACKGROUND;`
+		doc := state.GetDoc("enums.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.True(t, symbolOption.IsNone(), "Element was found")
+	})
+
+	t.Run("Should not find enumerator after instance variable", func(t *testing.T) {
+		state.registerDoc(
+			"enums.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			WindowStatus stat = WindowStatus.OPEN;
+			WindoWStatus bad = stat.BACKGROUND;`,
+		)
+		position := buildPosition(3, 28) // Cursor at `WindoWStatus bad = stat.B|ACKGROUND;`
+		doc := state.GetDoc("enums.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.True(t, symbolOption.IsNone(), "Element was found")
+	})
+
 	t.Run("Should find enum method", func(t *testing.T) {
 		state.registerDoc(
 			"enums.c3",
@@ -452,7 +491,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 			WindowError err = WindowError.UNEXPECTED_ERROR;`,
 		)
-		position := buildPosition(2, 34) // Cursor at `WindowStatus stat = WindowStatus.O|PEN;`
+		position := buildPosition(2, 34) // Cursor at `WindowError err = WindowError.U|NEXPECTED_ERROR;`
 		doc := state.GetDoc("app.c3")
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(
 			&doc,
@@ -466,6 +505,66 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 		_, ok := symbolOption.Get().(*idx.FaultConstant)
 		assert.True(t, ok, fmt.Sprintf("The symbol is not a fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "UNEXPECTED_ERROR", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should not find fault constant after explicit instance", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			WindowError err = WindowError.UNEXPECTED_ERROR.SOMETHING_HAPPENED;`,
+		)
+		position := buildPosition(2, 51) // Cursor at `WindowError err = WindowError.UNEXPECTED_ERROR.S|OMETHING_HAPPENED;`
+		doc := state.GetDoc("app.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance")
+	})
+
+	t.Run("Should not find fault constant after instance variable", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			WindowError err = WindowError.UNEXPECTED_ERROR;
+			WindowError bad = err.SOMETHING_HAPPENED;`,
+		)
+		position := buildPosition(3, 26) // Cursor at `WindowError bad = err.S|OMETHING_HAPPENED;`
+		doc := state.GetDoc("app.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance variable")
+	})
+
+	t.Run("Should not find fault constant after instance variable in struct member", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			struct MyStruct { WindowError f; }
+			MyStruct st = { WindowError.UNEXPECTED_ERROR };
+			WindowError bad = st.SOMETHING_HAPPENED;`,
+		)
+		position := buildPosition(4, 25) // Cursor at `WindowError bad = st.S|OMETHING_HAPPENED;`
+		doc := state.GetDoc("app.c3")
+		searchParams := search_params.BuildSearchBySymbolUnderCursor(
+			&doc,
+			*state.state.GetUnitModulesByDoc(doc.URI),
+			position,
+		)
+
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance variable")
 	})
 
 	t.Run("Should find fault method", func(t *testing.T) {

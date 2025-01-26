@@ -8,6 +8,22 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 )
 
+// If `true`, this indexable is a type, and so one can access its parent type's (itself)
+// associated members, as well as methods.
+// If `false`, this indexable is a variable or similar, so its parent type is distinct
+// from the indexable itself, therefore only methods can be accessed.
+func canReadMembersOf(s symbols.Indexable) bool {
+	switch s.(type) {
+	case *symbols.Struct, *symbols.Enum, *symbols.Fault:
+		return true
+	case *symbols.Def:
+		// If Def resolves to a type, it can receive its members.
+		return s.(*symbols.Def).ResolvesToType()
+	default:
+		return false
+	}
+}
+
 // Search for a method for 'parentTypeName' given a symbol to search.
 //
 // Returns updated search parameters to progress the search, as well as
@@ -60,6 +76,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			return searchResult
 		}
 		protection++
+		membersReadable := canReadMembersOf(elm)
 
 		for {
 			if !isInspectable(elm) {
@@ -94,18 +111,25 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 		case *symbols.Enum:
 			_enum := elm.(*symbols.Enum)
-			enumerators := _enum.GetEnumerators()
-			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
-			for i := 0; i < len(enumerators); i++ {
-				if enumerators[i].GetName() == searchingSymbol.Text() {
-					elm = enumerators[i]
-					symbolsHierarchy = append(symbolsHierarchy, elm)
-					state.Advance()
-					foundMember = true
-					break
+			searchingSymbol := state.GetNextSymbol()
+
+			// 'CoolEnum.VARIANT.VARIANT' is invalid (member not readable on member)
+			// But 'CoolEnum.VARIANT' is ok,
+			// as well as 'AliasForEnum.VARIANT'
+			if membersReadable {
+				enumerators := _enum.GetEnumerators()
+				for i := 0; i < len(enumerators); i++ {
+					if enumerators[i].GetName() == searchingSymbol.Text() {
+						elm = enumerators[i]
+						symbolsHierarchy = append(symbolsHierarchy, elm)
+						state.Advance()
+						foundMember = true
+						break
+					}
 				}
 			}
+
 			if !foundMember {
 				// Search in methods
 				newIterSearch, result := s.findMethod(
@@ -127,16 +151,19 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 		case *symbols.Fault:
 			fault := elm.(*symbols.Fault)
-			constants := fault.GetConstants()
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
-			for i := 0; i < len(constants); i++ {
-				if constants[i].GetName() == searchingSymbol.Text() {
-					elm = constants[i]
-					symbolsHierarchy = append(symbolsHierarchy, elm)
-					state.Advance()
-					foundMember = true
-					break
+
+			if membersReadable {
+				constants := fault.GetConstants()
+				for i := 0; i < len(constants); i++ {
+					if constants[i].GetName() == searchingSymbol.Text() {
+						elm = constants[i]
+						symbolsHierarchy = append(symbolsHierarchy, elm)
+						state.Advance()
+						foundMember = true
+						break
+					}
 				}
 			}
 
@@ -164,6 +191,11 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			members := strukt.GetMembers()
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
+
+			// Members are always readable when the parent type is struct
+			// TODO: Maybe we should actually check for NOT membersReadable,
+			// if anonymous substructs are found to not be usable anywhere
+			// (Can't write methods for them, for example)
 			for i := 0; i < len(members); i++ {
 				if members[i].GetName() == searchingSymbol.Text() {
 					elm = members[i]

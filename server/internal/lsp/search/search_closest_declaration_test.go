@@ -333,6 +333,38 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		assert.Equal(t, "BACKGROUND", symbolOption.Get().GetName())
 	})
 
+	t.Run("Should not find enumerator on enumerator", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			fn void main() {
+				WindowStatus status;
+				status = WindowStatus.BACKGROUND.MINIMIZED;
+			}`,
+		)
+		position := buildPosition(4, 38) // Cursor is at `status = WindowStatus.BACKGROUND.M|INIMIZED`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.True(t, symbolOption.IsNone(), "Element found")
+	})
+
+	t.Run("Should not find enumerator on enumerator variable", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			fn void main() {
+				WindowStatus status = WindowStatus.BACKGROUND;
+				status = status.MINIMIZED;
+			}`,
+		)
+		position := buildPosition(4, 21) // Cursor is at `status = status.M|INIMIZED`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.True(t, symbolOption.IsNone(), "Element found")
+	})
+
 	t.Run("Should find local enumerator definition associated value", func(t *testing.T) {
 		state.registerDoc(
 			"app.c3",
@@ -457,6 +489,37 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		_, ok := symbolOption.Get().(*idx.FaultConstant)
 		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "UNEXPECTED_ERROR", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should not find fault constant on fault constant", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			fn void main() {
+				WindowError.SOMETHING_HAPPENED.UNEXPECTED_ERROR;
+			}`,
+		)
+		position := buildPosition(3, 36) // Cursor at `WindowError.SOMETHING_HAPPENED.U|NEXPECTED_ERROR;`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.True(t, symbolOption.IsNone(), "Element found")
+	})
+
+	t.Run("Should not find fault constant on fault instance", func(t *testing.T) {
+		state.registerDoc(
+			"app.c3",
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			fn void main() {
+				WindowError error = WindowError.SOMETHING_HAPPENED;
+				error.UNEXPECTED_ERROR;
+			}`,
+		)
+		position := buildPosition(4, 11) // Cursor at `error.U|NEXPECTED_ERROR;`
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+		assert.True(t, symbolOption.IsNone(), "Element found")
 	})
 
 	t.Run("Should find fault method definition", func(t *testing.T) {
