@@ -1209,6 +1209,67 @@ func TestBuildCompletionList_modules(t *testing.T) {
 	})
 }
 
+func TestBuildCompletionList_macros(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	t.Run("Should suggest macro names", func(t *testing.T) {
+		// TODO: Support '@' at the start of macro names
+		// (See issue https://github.com/pherrymason/c3-lsp/issues/104)
+		sourceStart := `
+		<* abc *>
+		macro process(x){}
+		macro empty(){}
+		macro int transform(int x; @body){ return 5; }
+		macro replace(float* x; @body(int* a, float b)){}
+		fn void main() {`
+		sourceEnd := `
+		}`
+
+		expectedKind := protocol.CompletionItemKindFunction
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"p", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("macro(x)"), Documentation: asMarkdown("abc")},
+			}},
+			{"proc", []protocol.CompletionItem{
+				{Label: "process", Kind: &expectedKind, Detail: cast.ToPtr("macro(x)"), Documentation: asMarkdown("abc")},
+			}},
+			{"emp", []protocol.CompletionItem{
+				{Label: "empty", Kind: &expectedKind, Detail: cast.ToPtr("macro()"), Documentation: nil},
+			}},
+			{"transf", []protocol.CompletionItem{
+				{Label: "transform", Kind: &expectedKind, Detail: cast.ToPtr("macro int(int x; @body)"), Documentation: nil},
+			}},
+			{"repla", []protocol.CompletionItem{
+				{Label: "replace", Kind: &expectedKind, Detail: cast.ToPtr("macro(float* x; @body(int* a, float b))"), Documentation: nil},
+			}},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+				state.registerDoc(
+					"test.c3",
+					sourceStart+"\n"+tt.input+"\n"+sourceEnd,
+				)
+				position := buildPosition(8, uint(len(tt.input))) // Cursor after `<input>|`
+
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+}
+
 func TestBuildCompletionList_interfaces(t *testing.T) {
 	t.Run("should complete interface name", func(t *testing.T) {
 
