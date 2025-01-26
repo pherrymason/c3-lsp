@@ -393,12 +393,11 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 		assert.Equal(t, idx.NewRange(0, 44, 0, 51), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 39, 0, 51), variable.GetDocumentRange())
 
-		// TODO
-		// variable = fn.Get().Variables["@body"]
-		// assert.Equal(t, "@body", variable.GetName())
-		// assert.Equal(t, "", variable.GetType().String())
-		// assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetIdRange())
-		// assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetDocumentRange())
+		variable = fn.Get().Variables["@body"]
+		assert.Equal(t, "@body", variable.GetName())
+		assert.Equal(t, "", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetDocumentRange())
 	})
 
 	t.Run("Finds method macro arguments, where member reference is a pointer", func(t *testing.T) {
@@ -426,12 +425,11 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 		assert.Equal(t, idx.NewRange(0, 44, 0, 51), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 39, 0, 51), variable.GetDocumentRange())
 
-		// TODO
-		// variable = fn.Get().Variables["@body"]
-		// assert.Equal(t, "@body", variable.GetName())
-		// assert.Equal(t, "", variable.GetType().String())
-		// assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetIdRange())
-		// assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetDocumentRange())
+		variable = fn.Get().Variables["@body"]
+		assert.Equal(t, "@body", variable.GetName())
+		assert.Equal(t, "", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetDocumentRange())
 
 	})
 }

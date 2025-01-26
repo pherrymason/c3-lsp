@@ -169,6 +169,10 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 }
 
 /*
+		trailing_block_param: $ => seq(
+	      $.at_ident,
+	      optional($.fn_parameter_list),
+	    ),
 		macro_parameter_list: $ => seq(
 		  '(',
 		  optional(
@@ -233,12 +237,36 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 
 	if parameters.ChildCount() > 2 {
 		for i := uint32(0); i < parameters.ChildCount(); i++ {
+			var argument *idx.Variable
 			argNode := parameters.Child(int(i))
-			if argNode.Type() != "parameter" {
+
+			// '@body' in macro name(args; @body) { ... }
+			if argNode.Type() == "trailing_block_param" {
+				identNode := argNode.Child(0)
+				identifier := identNode.Content(sourceCode)
+				idRange := idx.NewRangeFromTreeSitterPositions(identNode.StartPoint(), identNode.EndPoint())
+
+				// '@body' is some code
+				// TODO: Actually, it's a function
+				argType := idx.NewTypeFromString("", currentModule.GetModuleString())
+
+				variable := idx.NewVariable(
+					identifier,
+					argType,
+					currentModule.GetModuleString(),
+					*docId,
+					idRange,
+					idx.NewRangeFromTreeSitterPositions(argNode.StartPoint(),
+						argNode.EndPoint()),
+				)
+
+				argument = &variable
+			} else if argNode.Type() == "parameter" {
+				argument = p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode, parameterIndex)
+			} else {
 				continue
 			}
 
-			argument := p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode, parameterIndex)
 			arguments = append(
 				arguments,
 				argument,
