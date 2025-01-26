@@ -395,9 +395,41 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 
 		variable = fn.Get().Variables["@body"]
 		assert.Equal(t, "@body", variable.GetName())
-		assert.Equal(t, "", variable.GetType().String())
+		assert.Equal(t, "fn void()", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds method macro arguments, where @body has parameters", func(t *testing.T) {
+		source := `macro Object* UserStruct.@method(self, int* pointer; @body(&something, int a, float* b)) {
+			return 1;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.@method")
+		assert.True(t, fn.IsSome(), "Method was not found")
+
+		variable := fn.Get().Variables["self"]
+		assert.Equal(t, "self", variable.GetName())
+		assert.Equal(t, "UserStruct", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 33, 0, 37), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 33, 0, 37), variable.GetDocumentRange())
+
+		variable = fn.Get().Variables["pointer"]
+		assert.Equal(t, "pointer", variable.GetName())
+		assert.Equal(t, "int*", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 44, 0, 51), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 39, 0, 51), variable.GetDocumentRange())
+
+		variable = fn.Get().Variables["@body"]
+		assert.Equal(t, "@body", variable.GetName())
+		assert.Equal(t, "fn void(&something, int a, float* b)", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 53, 0, 87), variable.GetDocumentRange())
+
 	})
 
 	t.Run("Finds method macro arguments, where member reference is a pointer", func(t *testing.T) {
@@ -427,7 +459,7 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 
 		variable = fn.Get().Variables["@body"]
 		assert.Equal(t, "@body", variable.GetName())
-		assert.Equal(t, "", variable.GetType().String())
+		assert.Equal(t, "fn void()", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetDocumentRange())
 

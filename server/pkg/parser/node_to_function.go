@@ -246,9 +246,18 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 				identifier := identNode.Content(sourceCode)
 				idRange := idx.NewRangeFromTreeSitterPositions(identNode.StartPoint(), identNode.EndPoint())
 
-				// '@body' is some code
-				// TODO: Actually, it's a function
-				argType := idx.NewTypeFromString("", currentModule.GetModuleString())
+				// Get body function signature
+				// If it's missing, it's just empty args
+				bodyParams := "()"
+				if argNode.ChildCount() >= 2 && argNode.Child(1).Type() == "fn_parameter_list" {
+					// TODO: Maybe we should properly parse the parameters at some point
+					// For now, simple string manipulation suffices
+					bodyParams = argNode.Child(1).Content(sourceCode)
+				}
+
+				// '@body' is equivalent to a function
+				// Use a callback type
+				argType := idx.NewTypeFromString("fn void"+bodyParams, currentModule.GetModuleString())
 
 				variable := idx.NewVariable(
 					identifier,
