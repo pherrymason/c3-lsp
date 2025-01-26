@@ -121,6 +121,17 @@ func TestParses_TypedEnums(t *testing.T) {
 			},
 		}
 
+		t.Run("GetAssociatedValues", func(t *testing.T) {
+			assocs := enum.GetAssociatedValues()
+			assert.Equal(t, len(expectedAssocValues), len(assocs))
+			for i, assoc := range assocs {
+				assocIndex := fmt.Sprintf("Associated value #%d", i)
+				expected := expectedAssocValues[i]
+				assert.Equal(t, expected.name, assoc.GetName(), assocIndex+" didn't match")
+				assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
+			}
+		})
+
 		for enum_i, enumerator := range enumerators {
 			t.Run(fmt.Sprintf("Enumerator #%d", enum_i), func(t *testing.T) {
 				assert.Equal(t, len(expectedAssocValues), len(enumerator.AssociatedValues))
@@ -134,7 +145,7 @@ func TestParses_TypedEnums(t *testing.T) {
 		}
 	})
 
-	t.Run("associated values without backing type", func(t *testing.T) {
+	t.Run("associated values >= 0.6.0 without backing type", func(t *testing.T) {
 		source := `
 		enum State : (String state_desc, bool active)
 		{
@@ -167,6 +178,17 @@ func TestParses_TypedEnums(t *testing.T) {
 				name:  "active",
 			},
 		}
+
+		t.Run("GetAssociatedValues", func(t *testing.T) {
+			assocs := enum.GetAssociatedValues()
+			assert.Equal(t, len(expectedAssocValues), len(assocs))
+			for i, assoc := range assocs {
+				assocIndex := fmt.Sprintf("Associated value #%d", i)
+				expected := expectedAssocValues[i]
+				assert.Equal(t, expected.name, assoc.GetName(), assocIndex+" didn't match")
+				assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
+			}
+		})
 
 		for enum_i, enumerator := range enumerators {
 			t.Run(fmt.Sprintf("Enumerator #%d", enum_i), func(t *testing.T) {

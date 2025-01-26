@@ -45,7 +45,7 @@ func (e *Enum) AddEnumerators(enumerators []*Enumerator) {
 	}
 }
 
-func (e Enum) HasEnumerator(identifier string) bool {
+func (e *Enum) HasEnumerator(identifier string) bool {
 	for _, enumerator := range e.enumerators {
 		if enumerator.name == identifier {
 			return true
@@ -55,7 +55,15 @@ func (e Enum) HasEnumerator(identifier string) bool {
 	return false
 }
 
-func (e Enum) GetEnumerator(identifier string) *Enumerator {
+func (e *Enum) GetAssociatedValues() []Variable {
+	if len(e.enumerators) > 0 {
+		return e.enumerators[0].AssociatedValues
+	} else {
+		return []Variable{}
+	}
+}
+
+func (e *Enum) GetEnumerator(identifier string) *Enumerator {
 	for _, enumerator := range e.enumerators {
 		if enumerator.name == identifier {
 			return enumerator
@@ -65,7 +73,7 @@ func (e Enum) GetEnumerator(identifier string) *Enumerator {
 	panic(fmt.Sprint(identifier, " enumerator not found"))
 }
 
-func (e Enum) GetEnumerators() []*Enumerator {
+func (e *Enum) GetEnumerators() []*Enumerator {
 	return e.enumerators
 }
 
