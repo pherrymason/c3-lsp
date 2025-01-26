@@ -65,25 +65,26 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 
 	var prg *ast.File
 	if cstNode.Type() == "source_file" {
-		prg = ast.NewFile(c.getNextID(), fileName, lsp.NewRangeFromSitterNode(cstNode), []ast.Module{})
+		prg = ast.NewFile(c.getNextID(), fileName, lsp.NewRangeFromSitterNode(cstNode), []*ast.Module{})
 	}
 
 	anonymousModule := false
 	var lastMod *ast.Module
+	var lastNode *sitter.Node
 	var node *sitter.Node
 	for i := 0; i < int(cstNode.ChildCount()); i++ {
 		node = cstNode.Child(i)
-		parsedModules := len(prg.Modules)
-		if parsedModules == 0 && node.Type() != "module" {
+		parsedModulesCount := len(prg.Modules)
+		if parsedModulesCount == 0 && node.Type() != "module" {
 			anonymousModule = true
 			prg.AddModule(
-				*ast.NewModule(0, symbols.NormalizeModuleName(fileName), lsp.NewRangeFromSitterNode(node), prg),
+				ast.NewModule(0, symbols.NormalizeModuleName(fileName), lsp.NewRangeFromSitterNode(node), prg),
 			)
-			parsedModules = len(prg.Modules)
+			parsedModulesCount = len(prg.Modules)
 		}
 
-		if parsedModules > 0 {
-			lastMod = &prg.Modules[len(prg.Modules)-1]
+		if parsedModulesCount > 0 {
+			lastMod = prg.Modules[len(prg.Modules)-1]
 
 			if anonymousModule && node.Type() != "module" {
 				// Update end position
@@ -100,7 +101,14 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 
 			module := convert_module(node, source)
 			prg.AddModule(module)
-			lastMod = &prg.Modules[len(prg.Modules)-1]
+			if lastMod != nil && lastNode != nil {
+				// Update range end of module
+				lastMod.NodeAttributes.Range.End = lsp.Position{
+					Line:   uint(lastNode.EndPoint().Row),
+					Column: uint(lastNode.EndPoint().Column),
+				}
+			}
+			lastMod = prg.Modules[len(prg.Modules)-1]
 
 		case "import_declaration":
 			anImport := c.convert_imports(node, source).(*ast.Import)
@@ -137,6 +145,8 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 		case "macro_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, c.convert_macro_declaration(node, source))
 		}
+
+		lastNode = node
 	}
 
 	if node != nil {
@@ -154,7 +164,7 @@ func convertSourceFile(node *sitter.Node, source []byte) ast.File {
 	return file
 }
 
-func convert_module(node *sitter.Node, source []byte) ast.Module {
+func convert_module(node *sitter.Node, source []byte) *ast.Module {
 	module := ast.NewModule(0, node.ChildByFieldName("path").Content(source), lsp.NewRangeFromSitterNode(node), nil)
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -176,7 +186,7 @@ func convert_module(node *sitter.Node, source []byte) ast.Module {
 		}
 	}
 
-	return *module
+	return module
 }
 
 func (c *ASTConverter) convert_imports(node *sitter.Node, source []byte) ast.Statement {
@@ -952,11 +962,21 @@ func (c *ASTConverter) convert_function_declaration(node *sitter.Node, source []
 	//debugNode(funcHeader, source)
 
 	if funcHeader.ChildByFieldName("method_type") != nil {
-		typeIdentifier = option.Some(ast.NewIdentifierBuilder().
-			WithId(c.getNextID()).
-			WithName(funcHeader.ChildByFieldName("method_type").Content(source)).
-			WithSitterPos(funcHeader.ChildByFieldName("method_type")).
-			Build())
+		var ident ast.Ident
+		methodTypeNode := funcHeader.ChildByFieldName("method_type")
+		debugNode(methodTypeNode.Child(0).Child(0), source, "method")
+		if methodTypeNode.Child(0).Child(0).Type() == "module_type_ident" {
+			ptrIdent := c.convert_module_type_ident(methodTypeNode.Child(0).Child(0), source)
+			ident = *ptrIdent
+		} else {
+			ident = ast.NewIdentifierBuilder().
+				WithId(c.getNextID()).
+				WithName(methodTypeNode.Content(source)).
+				WithSitterPos(methodTypeNode).
+				Build()
+		}
+
+		typeIdentifier = option.Some(ident)
 	}
 	signature := c.convert_function_signature(node, source)
 

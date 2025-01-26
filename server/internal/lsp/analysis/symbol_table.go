@@ -82,7 +82,7 @@ func NewSymbolTable() *SymbolTable {
 	}
 }
 
-func (s *SymbolTable) RegisterNewRootScope(file string, node ast.Module) *Scope {
+func (s *SymbolTable) RegisterNewRootScope(file string, node *ast.Module) *Scope {
 	_, exists := s.scopeTree[file]
 	if !exists {
 		s.scopeTree[file] = &ModulesList{
@@ -136,15 +136,16 @@ func (s *SymbolTable) findSymbolInScope(name string, scope *Scope) *Symbol {
 	return symbolFound
 }
 
-type FromPosition struct {
-	pos      lsp.Position
+type fromPosition struct {
+	position lsp.Position
 	fileName string
 	module   ModuleName
 }
 
-// FindSymbolByPosition Searches a symbol with ident=identName.
-// Takes into account current scope, defined by pos, fileName and module.
-func (s *SymbolTable) FindSymbolByPosition(identName string, from FromPosition) option.Option[*Symbol] {
+// FindSymbolByPosition Searches a symbol with ident=identName taking into consideration what is accessible from a given position (`from`)
+// identName: identity to search
+// from: Information about identity position.
+func (s *SymbolTable) FindSymbolByPosition(identName string, explicitIdentModule option.Option[string], from fromPosition) option.Option[*Symbol] {
 	type SymbolScope struct {
 		symbol     *Symbol
 		rangeScope lsp.Range
@@ -169,8 +170,14 @@ func (s *SymbolTable) FindSymbolByPosition(identName string, from FromPosition) 
 		moduleScope = toVisit[0].scope
 		module := toVisit[0].module
 		toVisit = toVisit[1:]
+		skipSymbolSearch := false
 
 		visitedKey := currentFile + "+" + module.String()
+		if explicitIdentModule.IsSome() && explicitIdentModule.Get() != module.String() {
+			// Search is explicitly searching inside a given module, discard if not desired module
+			skipSymbolSearch = true
+		}
+
 		if visitedFiles[visitedKey] {
 			continue
 		}
@@ -178,18 +185,23 @@ func (s *SymbolTable) FindSymbolByPosition(identName string, from FromPosition) 
 
 		// Search current scope
 		var scope *Scope
-		if iteration == 0 {
-			scope = FindClosestScope(moduleScope, from.pos)
-		} else {
-			// other iterations, are searching in root scope of imported module, position is not relevant
-			scope = moduleScope
-		}
-		if scope == nil {
-			return option.None[*Symbol]()
+		scope = moduleScope
+
+		if !skipSymbolSearch {
+			if iteration == 0 {
+				// other iterations, are searching in root scope of imported module, position is not relevant
+				scope = FindClosestScope(moduleScope, from.position)
+			}
+			if scope == nil {
+				return option.None[*Symbol]()
+			}
 		}
 
 		// Search inside the scope and go up until find its declaration
-		symbolFound = s.findSymbolInScope(identName, scope)
+		if !skipSymbolSearch {
+			symbolFound = s.findSymbolInScope(identName, scope)
+		}
+
 		if symbolFound == nil {
 			// Check if there are imported modules
 			toVisit, visitedFiles = findImportedFiles(s, scope, module, visitedFiles, toVisit)
@@ -258,8 +270,8 @@ func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName 
 		}
 
 		// Second search, we need to search for symbol with typeName
-		from := FromPosition{pos: symbolFound.Range.Start, fileName: fileName, module: currentModule}
-		symbol := s.FindSymbolByPosition(typeName, from)
+		from := fromPosition{position: symbolFound.Range.Start, fileName: fileName, module: currentModule}
+		symbol := s.FindSymbolByPosition(typeName, option.None[string](), from)
 		if symbol.IsNone() {
 			return nil
 		} else {

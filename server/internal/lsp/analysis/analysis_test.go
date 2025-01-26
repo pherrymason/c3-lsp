@@ -201,8 +201,10 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		module foo;
 		char tick;
 		
-		module foo2;
+		module app;
 		import foo;
+		import foo_alt;		// Importing module with also a 'tick' defined in it after correct module will confuse the algorithm.
+		
 		char fps = foo::tick * 60;
 		`
 
@@ -210,7 +212,7 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		tree := getTree(source, fileName)
 		symbolTable := BuildSymbolTable(tree, fileName)
 
-		cursorPosition := lsp.Position{Line: 9, Column: 19} // Cursor at char fps = foo::t|ick * 60;
+		cursorPosition := lsp.Position{Line: 11, Column: 19} // Cursor at char fps = foo::t|ick * 60;
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		symbol := symbolOpt.Get()
 
@@ -271,7 +273,7 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.ENUM), symbol.Kind)
 	})
 
-	t.Run("Find enum member in same module", func(t *testing.T) {
+	t.Run("Find enum member in same module selecting the right inferred type", func(t *testing.T) {
 		// This is testing the ability of understanding that OPEN in `WindowStatus status = OPEN`
 		// should be of type WindowStatus and should not suggest
 		t.Skip("Not yet implemented")
@@ -325,6 +327,52 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, "foo", symbol.Name)
 		assert.Equal(t, lsp.NewRange(2, 2, 2, 31), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
+
+	t.Run("Find enum declaration in explictly imported module", func(t *testing.T) {
+		source := `
+		module foo;
+		enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+
+		module app;
+		import foo;
+		fn void main(){foo::WindowStatus status;}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 6, Column: 23} // Cursor at foo::W|indowStatus status;
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "WindowStatus", symbol.Name)
+		assert.Equal(t, "foo", symbol.Module.String())
+		assert.Equal(t, lsp.NewRange(2, 2, 2, 51), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.ENUM), symbol.Kind)
+	})
+
+	t.Run("Find enum constant in explictly imported module", func(t *testing.T) {
+		source := `
+		module foo;
+		enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+
+		module app;
+		import foo;
+		fn void main(){foo::WindowStatus status = foo::WindowStatus.BACKGROUND;}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 6, Column: 62} // Cursor at foo::WindowStatus.B|ACKGROUND;
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "BACKGROUND", symbol.Name)
+		assert.Equal(t, "foo", symbol.Module.String())
+		assert.Equal(t, lsp.NewRange(2, 28, 2, 38), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
 }
 
@@ -501,7 +549,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		tree := getTree(source, fileName)
 		symbolTable := BuildSymbolTable(tree, fileName)
 
-		cursorPosition := lsp.Position{Line: 10, Column: 14}
+		cursorPosition := lsp.Position{Line: 10, Column: 14} // cursor at dog.being.l|ife = 3
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
@@ -522,6 +570,40 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, NewModuleName("app"), symbol.Module)
 		assert.Equal(t, lsp.NewRange(6, 3, 6, 15), symbol.NodeDecl.GetRange())
 		assert.Equal(t, "Being", symbol.Type.Name)
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+	})
+
+	t.Run("Find indirect struct field definition, located in an explicit different module", func(t *testing.T) {
+		source := `
+		module foo2;
+		struct Alien {int life;}
+
+		module foo;
+		struct Alien {int life;}
+
+		module app;
+		import foo;
+		import foo2;
+		struct Animal { 
+			foo::Alien xeno; // Alien is referenced by specifying module
+		}
+		fn void main(){
+			Animal dog;
+			dog.xeno.life = 10;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 15, Column: 13} // Cursor at `dog.xeno.l|ife = 10;`
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "life", symbol.Name)
+		assert.Equal(t, NewModuleName("foo"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(5, 16, 5, 25), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "int", symbol.Type.Name)
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
 
@@ -555,6 +637,40 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
 
+	t.Run("Find indirect struct field in a method chain in different explicit module", func(t *testing.T) {
+		source := `
+		module foo;
+		struct Sound {
+			int length;
+		}
+
+		module app;
+		import foo;
+		struct Animal { 
+			String name;
+			Being being;
+		}
+		fn foo::Sound Animal.bark() {}
+		fn void main(){
+			Animal dog;
+			dog.bark().length = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 15, Column: 15} // Cursor at dog.bark().l|ength = 3;
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "length", symbol.Name)
+		assert.Equal(t, NewModuleName("foo"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(3, 3, 3, 14), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "int", symbol.Type.Name)
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+	})
+
 	t.Run("Find indirect struct field in a function chain in same module", func(t *testing.T) {
 		source := `
 		struct Sound {
@@ -577,6 +693,36 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, "length", symbol.Name)
 		assert.Equal(t, NewModuleName("app"), symbol.Module)
 		assert.Equal(t, lsp.NewRange(2, 3, 2, 14), symbol.NodeDecl.GetRange())
+		assert.Equal(t, "int", symbol.Type.Name)
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+	})
+
+	t.Run("Find indirect struct field in an explicitly imported function chain in same module", func(t *testing.T) {
+		source := `
+		module foo;
+		struct Sound {
+			int length;
+		}
+		fn Sound bark() {}
+
+		module app;
+		import foo;
+		fn void main(){
+			Animal dog;
+			foo::bark().length = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 11, Column: 16} // Cursor at `foo::bark().l|ength = 3;`
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "length", symbol.Name)
+		assert.Equal(t, NewModuleName("foo"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(3, 3, 3, 14), symbol.NodeDecl.GetRange())
 		assert.Equal(t, "int", symbol.Type.Name)
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
@@ -606,6 +752,33 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
 
+	t.Run("Find struct property when referencing it with self", func(t *testing.T) {
+		source := `
+		module foo;
+		struct Sound {
+			bool playing;
+		}
+
+		module app;
+		import foo;
+		fn void foo::Sound.play(&self) {
+			self.playing = true
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 9, Column: 9} // Cursor at `self.p|laying = true;`
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "playing", symbol.Name)
+		assert.Equal(t, NewModuleName("foo"), symbol.Module)
+		assert.Equal(t, lsp.NewRange(3, 3, 3, 16), symbol.NodeDecl.GetRange())
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+	})
+
 	t.Run("Find struct member that is inlined", func(t *testing.T) {
 		source := `
 		struct Foo {
@@ -627,6 +800,33 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		cursorPosition := lsp.Position{Line: 10, Column: 7} // Cursor at obj.|a = 3;
 		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
 		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
+	})
+
+	t.Run("Find explicitly imported struct member that is inlined", func(t *testing.T) {
+		source := `
+		module foo;
+		struct Foo {
+		  int a;
+		  int b;
+		}
+		module app;
+		import foo;
+		struct Bar {
+			inline foo::Foo sub;
+		}
+		fn void main() {
+			Bar obj;
+			obj.a = 3;
+		}`
+
+		fileName := "app.c3"
+		tree := getTree(source, fileName)
+		symbolTable := BuildSymbolTable(tree, fileName)
+
+		cursorPosition := lsp.Position{Line: 13, Column: 7} // Cursor at obj.|a = 3;
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
+		assert.Equal(t, "foo", symbolOpt.Get().Module.String())
 	})
 
 	t.Run("Find struct member that is anonymous sub struct", func(t *testing.T) {
@@ -754,11 +954,10 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(1, 2, 1, 34), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.INTERFACE), symbol.Kind)
 	})
-
 }
 
 func TestFindsSymbol_Declaration_def(t *testing.T) {
-	t.Run("Find enum declaration in same module", func(t *testing.T) {
+	t.Run("Find def declaration in same module", func(t *testing.T) {
 		source := `def Kilo = int;
 		Kilo value = 3;`
 
@@ -774,6 +973,7 @@ func TestFindsSymbol_Declaration_def(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(0, 0, 0, 15), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.DEF), symbol.Kind)
 	})
+
 }
 
 func TestFindsSymbol_Declaration_function(t *testing.T) {

@@ -102,10 +102,10 @@ func ChangeNodePosition(n *NodeAttributes, start sitter.Point, end sitter.Point)
 type File struct {
 	NodeAttributes
 	URI     string
-	Modules []Module
+	Modules []*Module
 }
 
-func NewFile(nodeId NodeId, uri protocol.URI, aRange lsp.Range, modules []Module) *File {
+func NewFile(nodeId NodeId, uri protocol.URI, aRange lsp.Range, modules []*Module) *File {
 	node := &File{
 		URI: uri,
 		NodeAttributes: NewNodeAttributesBuilder().
@@ -116,7 +116,7 @@ func NewFile(nodeId NodeId, uri protocol.URI, aRange lsp.Range, modules []Module
 
 	return node
 }
-func (f *File) AddModule(module Module) {
+func (f *File) AddModule(module *Module) {
 	f.Modules = append(f.Modules, module)
 }
 

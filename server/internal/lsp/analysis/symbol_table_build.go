@@ -23,7 +23,7 @@ type symbolTableGenerator struct {
 	table *SymbolTable
 
 	// State properties to keep track
-	currentModule   ast.Module
+	currentModule   *ast.Module
 	currentFilePath *ast.File
 	currentScope    *Scope
 	scopePushed     uint
@@ -46,8 +46,8 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 	case *ast.File:
 		v.currentFilePath = n
 
-	case ast.Module:
-		v.currentModule = ast.Module{
+	case *ast.Module:
+		v.currentModule = &ast.Module{
 			Name:              n.Name,
 			GenericParameters: n.GenericParameters,
 			NodeAttributes:    n.NodeAttributes,

@@ -16,29 +16,14 @@ func aWithPos(startRow uint, startCol uint, endRow uint, endCol uint) ast.NodeAt
 }
 
 func TestConvertToAST_module(t *testing.T) {
-	source := `module foo;
+	t.Run("convert module", func(t *testing.T) {
+		source := `module foo;
 	int dummy;`
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
-
-	assert.Equal(t, "foo", tree.Modules[0].Name)
-	assert.Equal(t, lsp.NewRange(0, 0, 1, 11), tree.Modules[0].Range)
-}
-
-func TestConvertToAST_module_implicit(t *testing.T) {
-	t.Run("First module is anonymous, second is named", func(t *testing.T) {
-		source := `
-	int variable = 0;
-	module foo;`
-
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-		assert.Equal(t, "path_file_xxx", tree.Modules[0].Name)
-		assert.Equal(t, lsp.NewRange(1, 1, 2, 1), tree.Modules[0].Range)
-
-		assert.Equal(t, "foo", tree.Modules[1].Name)
-		assert.Equal(t, lsp.NewRange(2, 1, 2, 12), tree.Modules[1].Range)
+		assert.Equal(t, "foo", tree.Modules[0].Name)
+		assert.Equal(t, lsp.NewRange(0, 0, 1, 11), tree.Modules[0].Range)
 	})
 
 	t.Run("Single anonymous module", func(t *testing.T) {
@@ -51,6 +36,40 @@ func TestConvertToAST_module_implicit(t *testing.T) {
 		assert.Equal(t, "path_file_xxx", tree.Modules[0].Name)
 		assert.Equal(t, lsp.NewRange(0, 0, 1, 13), tree.Modules[0].Range)
 	})
+
+	t.Run("first module is anonymous, second is named", func(t *testing.T) {
+		source := `
+	int variable = 0;
+	module foo;`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
+
+		assert.Equal(t, "path_file_xxx", tree.Modules[0].Name)
+		assert.Equal(t, lsp.NewRange(1, 1, 1, 18), tree.Modules[0].Range, "Wrong range in anonymous module")
+
+		assert.Equal(t, "foo", tree.Modules[1].Name)
+		assert.Equal(t, lsp.NewRange(2, 1, 2, 12), tree.Modules[1].Range, "Wrong range in module foo")
+	})
+
+	t.Run("multiple named modules", func(t *testing.T) {
+		source := `
+	module foo;
+	int variable = 0;
+	module app;
+	fn void main() {
+	};`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
+
+		assert.Equal(t, "foo", tree.Modules[0].Name)
+		assert.Equal(t, lsp.NewRange(1, 1, 2, 18), tree.Modules[0].Range, "Range of module foo is wrong")
+
+		assert.Equal(t, "app", tree.Modules[1].Name)
+		assert.Equal(t, lsp.NewRange(3, 1, 5, 3), tree.Modules[1].Range, "Range of module app is wrong")
+	})
+
 }
 
 func TestConvertToAST_module_with_generics(t *testing.T) {
@@ -758,55 +777,71 @@ func TestConvertToAST_function_with_arguments_declaration(t *testing.T) {
 }
 
 func TestConvertToAST_method_declaration(t *testing.T) {
-	source := `module foo;
+	t.Run("basic method declaration", func(t *testing.T) {
+		source := `module foo;
 	fn Object* UserStruct.method(self, int* pointer) {
 		return 1;
 	}`
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	methodDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
+		methodDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
-	assert.Equal(t, lsp.Position{1, 1}, methodDecl.NodeAttributes.Range.Start)
-	assert.Equal(t, lsp.Position{3, 2}, methodDecl.NodeAttributes.Range.End)
+		assert.Equal(t, lsp.Position{1, 1}, methodDecl.NodeAttributes.Range.Start)
+		assert.Equal(t, lsp.Position{3, 2}, methodDecl.NodeAttributes.Range.End)
 
-	assert.Equal(t, true, methodDecl.ParentTypeId.IsSome(), "Function is flagged as method")
-	assert.Equal(t, "method", methodDecl.Signature.Name.Name, "Function name")
-	assert.Equal(t, lsp.Position{1, 23}, methodDecl.Signature.Name.NodeAttributes.Range.Start)
-	assert.Equal(t, lsp.Position{1, 29}, methodDecl.Signature.Name.NodeAttributes.Range.End)
+		assert.Equal(t, true, methodDecl.ParentTypeId.IsSome(), "Function is flagged as method")
+		assert.Equal(t, "method", methodDecl.Signature.Name.Name, "Function name")
+		assert.Equal(t, lsp.Position{1, 23}, methodDecl.Signature.Name.NodeAttributes.Range.Start)
+		assert.Equal(t, lsp.Position{1, 29}, methodDecl.Signature.Name.NodeAttributes.Range.End)
 
-	assert.Equal(t, "Object", methodDecl.Signature.ReturnType.Identifier.Name, "Return type")
-	assert.Equal(t, uint(1), methodDecl.Signature.ReturnType.Pointer, "Return type is pointer")
-	assert.Equal(t, lsp.Position{1, 4}, methodDecl.Signature.ReturnType.NodeAttributes.Range.Start)
-	assert.Equal(t, lsp.Position{1, 10}, methodDecl.Signature.ReturnType.NodeAttributes.Range.End)
+		assert.Equal(t, "Object", methodDecl.Signature.ReturnType.Identifier.Name, "Return type")
+		assert.Equal(t, uint(1), methodDecl.Signature.ReturnType.Pointer, "Return type is pointer")
+		assert.Equal(t, lsp.Position{1, 4}, methodDecl.Signature.ReturnType.NodeAttributes.Range.Start)
+		assert.Equal(t, lsp.Position{1, 10}, methodDecl.Signature.ReturnType.NodeAttributes.Range.End)
 
-	assert.Equal(t, 2, len(methodDecl.Signature.Parameters))
-	assert.Equal(t,
-		ast.FunctionParameter{
-			Name: ast.NewIdentifierBuilder().WithName("self").WithStartEnd(1, 30, 1, 34).Build(),
-			Type: ast.NewTypeInfoBuilder().
-				WithName("UserStruct").WithNameStartEnd(1, 30, 1, 34).
-				WithStartEnd(1, 30, 1, 34).
-				Build(),
-			NodeAttributes: ast.NewNodeAttributesBuilder().
-				WithRangePositions(1, 30, 1, 34).Build(),
-		},
-		methodDecl.Signature.Parameters[0],
-	)
-	assert.Equal(t,
-		ast.FunctionParameter{
-			Name: ast.NewIdentifierBuilder().WithName("pointer").WithStartEnd(1, 41, 1, 48).Build(),
-			Type: ast.NewTypeInfoBuilder().
-				WithName("int").WithNameStartEnd(1, 36, 1, 39).
-				IsBuiltin().
-				IsPointer().
-				WithStartEnd(1, 36, 1, 39).
-				Build(),
-			NodeAttributes: ast.NewNodeAttributesBuilder().
-				WithRangePositions(1, 36, 1, 48).Build(),
-		},
-		methodDecl.Signature.Parameters[1],
-	)
+		assert.Equal(t, 2, len(methodDecl.Signature.Parameters))
+		assert.Equal(t,
+			ast.FunctionParameter{
+				Name: ast.NewIdentifierBuilder().WithName("self").WithStartEnd(1, 30, 1, 34).Build(),
+				Type: ast.NewTypeInfoBuilder().
+					WithName("UserStruct").WithNameStartEnd(1, 30, 1, 34).
+					WithStartEnd(1, 30, 1, 34).
+					Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().
+					WithRangePositions(1, 30, 1, 34).Build(),
+			},
+			methodDecl.Signature.Parameters[0],
+		)
+		assert.Equal(t,
+			ast.FunctionParameter{
+				Name: ast.NewIdentifierBuilder().WithName("pointer").WithStartEnd(1, 41, 1, 48).Build(),
+				Type: ast.NewTypeInfoBuilder().
+					WithName("int").WithNameStartEnd(1, 36, 1, 39).
+					IsBuiltin().
+					IsPointer().
+					WithStartEnd(1, 36, 1, 39).
+					Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().
+					WithRangePositions(1, 36, 1, 48).Build(),
+			},
+			methodDecl.Signature.Parameters[1],
+		)
+	})
+
+	t.Run("external module method declaration", func(t *testing.T) {
+		source := `module foo;
+	fn Object* foo2::UserStruct.method(self, int* pointer) {
+		return 1;
+	}`
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+
+		methodDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
+
+		assert.Equal(t, "foo2", methodDecl.ParentTypeId.Get().ModulePath.Name)
+		assert.Equal(t, "UserStruct", methodDecl.ParentTypeId.Get().Name)
+	})
 }
 
 func TestConvertToAST_method_declaration_mutable(t *testing.T) {

@@ -37,7 +37,7 @@ func (v *JSONVisitor) VisitFile(node *File) {
 	modulesVisitor := JSONVisitor{}
 	jsonModules := []interface{}{}
 	for _, mod := range node.Modules {
-		Visit(&mod, &modulesVisitor)
+		Visit(mod, &modulesVisitor)
 		if modulesVisitor.Result != nil {
 			jsonModules = append(jsonModules, modulesVisitor.Result)
 		}

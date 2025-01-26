@@ -51,7 +51,7 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 	case *ast.File:
 		walkList(v, n.Modules, "Modules")
 
-	case ast.Module:
+	case *ast.Module:
 		walkList(v, n.Imports, "Imports")
 		walkList(v, n.Declarations, "Declarations")
 
