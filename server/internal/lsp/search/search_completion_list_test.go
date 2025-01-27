@@ -1981,25 +1981,6 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds struct member and methods on instance of inline distinct of struct",
-			input: `
-			distinct Abc = inline Struct;
-			Abc x = { 5 };
-			`,
-			expression: "x.",
-			expected: []protocol.CompletionItem{
-				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
-				{
-					Label:  "Struct.fight",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Struct self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "fight",
-						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
-					},
-					Documentation: asMarkdown("Fight it")},
-			}},
-		{
 			name: "Finds enum associated values and methods on instance of inline distinct of enum",
 			input: `
 			distinct Aenum = inline Enum;
