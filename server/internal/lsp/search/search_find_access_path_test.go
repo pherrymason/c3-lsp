@@ -366,7 +366,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 		assert.True(t, symbolOption.IsNone(), "Element was found")
 	})
 
-	t.Run("Should find enum method", func(t *testing.T) {
+	t.Run("Should find enum method on instance variable", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 			fn bool WindowStatus.isOpen() {}
@@ -445,6 +445,54 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 		assert.True(t, ok, fmt.Sprintf("The symbol is not a variable, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "assoc", variable.GetName())
 		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should find enumerator on def-aliased enum", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			def AliasStatus = WindowStatus;
+			WindowStatus stat = AliasStatus.O|||PEN;`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Enumerator)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "OPEN", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find associated value on def-aliased instance", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum WindowStatus : (int assoc) {
+				OPEN = 5,
+				BACKGROUND = 6,
+				MINIMIZED = 7
+			}
+			WindowStatus stat = WindowStatus.OPEN;
+			def alias_stat = stat;
+			int val = alias_stat.a|||ssoc;`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		variable, ok := symbolOption.Get().(*idx.Variable)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a variable, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "assoc", variable.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should find enum method on def-aliased global variable", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			WindowStatus stat = WindowStatus.OPEN;
+			def aliased_stat = stat;
+			fn bool WindowStatus.isOpen() {}
+			fn void main() {
+				aliased_stat.is|||Open();
+			}`,
+		)
+
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "WindowStatus.isOpen", fun.GetName())
+		assert.Equal(t, "WindowStatus.isOpen", fun.GetFullName())
 	})
 }
 
@@ -526,6 +574,36 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 			fn bool WindowError.isBad() {}
 			fn void main() {
 				WindowError.UNEXPECTED_ERROR.is|||Bad();
+			}`,
+		)
+
+		fun := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, "WindowError.isBad", fun.GetName())
+		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
+	})
+
+	t.Run("Should find fault constant on def-aliased fault", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			WindowError constant = WindowError.UNEXPECTED_ERROR;
+			def AliasedFault = WindowError;
+			WindowError value = AliasedFault.U|||NEXPECTED_ERROR;`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.FaultConstant)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "UNEXPECTED_ERROR", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find fault method on def-aliased global variable", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			WindowError constant = WindowError.UNEXPECTED_ERROR;
+			def ct_alias = constant;
+			fn bool WindowError.isBad() {}
+			fn void main() {
+				ct_alias.is|||Bad();
 			}`,
 		)
 

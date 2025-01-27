@@ -313,7 +313,7 @@ func (s *Search) BuildCompletionList(
 						Label: assoc.GetName(),
 						Kind:  &assoc.Kind,
 
-						// No documentation for enumerators at this time
+						// No documentation for associated values at this time
 						Documentation: nil,
 
 						Detail: GetCompletionDetail(&assoc),
@@ -362,7 +362,7 @@ func (s *Search) BuildCompletionList(
 							Label: assoc.GetName(),
 							Kind:  &assoc.Kind,
 
-							// No documentation for enumerators at this time
+							// No documentation for associated values at this time
 							Documentation: nil,
 
 							Detail: GetCompletionDetail(&assoc),
