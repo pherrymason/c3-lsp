@@ -99,6 +99,10 @@ func (e *FaultConstant) GetFaultName() string {
 	return e.faultName
 }
 
+func (e *FaultConstant) GetFaultFQN() string {
+	return fmt.Sprintf("%s::%s", e.GetModule().GetName(), e.GetFaultName())
+}
+
 func (e FaultConstant) GetHoverInfo() string {
 	return e.name
 }

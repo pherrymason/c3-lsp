@@ -39,6 +39,10 @@ func (e *Enumerator) GetEnumName() string {
 	return e.EnumName
 }
 
+func (e *Enumerator) GetEnumFQN() string {
+	return fmt.Sprintf("%s::%s", e.GetModule().GetName(), e.GetEnumName())
+}
+
 func (e Enumerator) GetHoverInfo() string {
 	return fmt.Sprintf("%s: %s", e.name, e.value)
 }

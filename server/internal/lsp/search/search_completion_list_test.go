@@ -1026,6 +1026,36 @@ clr.asso`,
 				},
 			},
 			{
+				"Find enum methods with explicit enum value prefix",
+				"Color.GREEN.",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find matching enum methods with explicit enum value prefix",
+				"Color.GREEN.transp",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
 				"Find enum methods by instance variable prefix",
 				`Color green = Color.GREEN;
 green.`,
@@ -1341,6 +1371,36 @@ func TestBuildCompletionList_faults(t *testing.T) {
 						TextEdit: protocol.TextEdit{
 							NewText: "display",
 							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+			{
+				"Find fault methods with explicit constant prefix",
+				"WindowError.UNEXPECTED_ERROR.",
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(4, 29, 4, 30),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+			{
+				"Find matching fault methods with explicit constant prefix",
+				"WindowError.UNEXPECTED_ERROR.disp",
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(4, 29, 4, 30),
 						},
 						Detail: cast.ToPtr("fn void(WindowError self)"),
 					},

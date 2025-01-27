@@ -1,8 +1,6 @@
 package search
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
@@ -122,8 +120,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			if !foundAssoc && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
 				// Search in methods
 				// First get the enum
-				enumQuery := fmt.Sprintf("%s::%s", enumerator.GetModule().GetName(), enumerator.GetEnumName())
-				enumSymbols := projState.SearchByFQN(enumQuery)
+				enumSymbols := projState.SearchByFQN(enumerator.GetEnumFQN())
 				if len(enumSymbols) > 0 {
 					// Search the enum's methods
 					newIterSearch, result := s.findMethod(
@@ -150,8 +147,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			if constant.GetModuleString() != "" && constant.GetFaultName() != "" {
 				// Search in methods
 				// First get the fault
-				faultQuery := fmt.Sprintf("%s::%s", constant.GetModule().GetName(), constant.GetFaultName())
-				faultSymbols := projState.SearchByFQN(faultQuery)
+				faultSymbols := projState.SearchByFQN(constant.GetFaultFQN())
 				if len(faultSymbols) > 0 {
 					// Search the fault's methods
 					searchingSymbol := state.GetNextSymbol()

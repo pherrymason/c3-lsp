@@ -321,6 +321,19 @@ func (s *Search) BuildCompletionList(
 				}
 			}
 
+			// Add parent enum's methods
+			if enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
+				items = append(items, s.BuildMethodCompletions(state, enumerator.GetEnumFQN(), filterMembers, symbolInPosition)...)
+			}
+
+		case *symbols.FaultConstant:
+			constant := prevIndexable.(*symbols.FaultConstant)
+
+			// Add parent fault's methods
+			if constant.GetModuleString() != "" && constant.GetFaultName() != "" {
+				items = append(items, s.BuildMethodCompletions(state, constant.GetFaultFQN(), filterMembers, symbolInPosition)...)
+			}
+
 		case *symbols.Enum:
 			enum := prevIndexable.(*symbols.Enum)
 
