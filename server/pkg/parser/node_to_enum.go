@@ -6,31 +6,42 @@ import (
 )
 
 /*
-		enum_declaration: $ => seq(
-			'enum',
-			field('name', $.type_ident),
-			optional($.interface_impl),
-			optional($.enum_spec),
-			optional($.attributes),
-			field('body', $.enum_body),
-		),
+enum_arg: $ => seq('=', $._expr),
+enum_constant: $ => seq(
 
-		enum_spec: $ => seq(
-	      ':',
-	      $.type,
-	      optional($.enum_param_list),
-	    ),
+	field('name', $.const_ident),
+	optional($.attributes),
+	field('args', optional($.enum_arg)),
 
-		enum_body: $ => seq(
-			'{',
-			commaSepTrailing1($.enum_constant),
-			'}'
-		),
-		enum_constant: $ => seq(
-			field('name', $.const_ident),
-			field('args', optional($.enum_arg)),
-			optional($.attributes),
-		),
+),
+enum_param_declaration: $ => seq(
+
+	field('type', $.type),
+	field('name', $.ident),
+
+),
+enum_param_list: $ => seq('(', commaSep($.enum_param_declaration), ')'),
+enum_spec: $ => prec.right(seq(
+
+	  ':',
+	  field('type', optional($.type)),
+	  optional($.enum_param_list),
+	)),
+	enum_body: $ => seq(
+	  '{',
+	  commaSepTrailing($.enum_constant),
+	  '}'
+	),
+
+enum_declaration: $ => seq(
+
+	  'enum',
+	  field('name', $.type_ident),
+	  optional($.interface_impl),
+	  optional($.enum_spec),
+	  optional($.attributes),
+	  field('body', $.enum_body),
+	),
 */
 func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Enum {
 	// TODO parse attributes
@@ -39,27 +50,51 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 	var enumerators []*idx.Enumerator
 	var associatedParameters []idx.Variable
 
+	module := currentModule.GetModuleString()
+	enumRange := idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint())
+
+	nameNode := node.ChildByFieldName("name")
+	name := ""
+	idRange := idx.NewRange(0, 0, 0, 0)
+	if nameNode != nil {
+		name = nameNode.Content(sourceCode)
+		idRange = idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint())
+	}
+
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		switch n.Type() {
 		case "enum_spec":
-			baseType = n.Child(1).Content(sourceCode)
+			typeNode := n.ChildByFieldName("type")
+			paramListIndex := 1
+			if typeNode != nil {
+				// Custom enum backing type is optional
+				baseType = typeNode.Content(sourceCode)
+				paramListIndex = 2
+			}
+
+			paramList := n.Child(paramListIndex)
 			// Check if has enum_param_list
-			if n.ChildCount() >= 3 {
+			if paramList != nil {
 				// Try to get enum_param_list
-				param_list := n.Child(2)
-				for p := 0; p < int(param_list.ChildCount()); p++ {
-					paramNode := param_list.Child(p)
+				for p := 0; p < int(paramList.ChildCount()); p++ {
+					paramNode := paramList.Child(p)
 					if paramNode.Type() == "enum_param_declaration" {
+						paramTypeNode := paramNode.ChildByFieldName("type")
+						paramNameNode := paramNode.ChildByFieldName("name")
+						if paramTypeNode == nil || paramNameNode == nil {
+							continue
+						}
+
 						//fmt.Println(paramNode.Type(), paramNode.Content(sourceCode))
 						associatedParameters = append(
 							associatedParameters,
 							idx.NewVariable(
-								paramNode.Child(1).Content(sourceCode),
-								idx.NewTypeFromString(paramNode.Child(0).Content(sourceCode), currentModule.GetModuleString()),
-								currentModule.GetModuleString(),
+								paramNameNode.Content(sourceCode),
+								idx.NewTypeFromString(paramTypeNode.Content(sourceCode), module),
+								module,
 								*docId,
-								idx.NewRangeFromTreeSitterPositions(paramNode.Child(0).StartPoint(), paramNode.Child(0).EndPoint()),
+								idx.NewRangeFromTreeSitterPositions(paramNameNode.StartPoint(), paramNameNode.EndPoint()),
 								idx.NewRangeFromTreeSitterPositions(paramNode.StartPoint(), paramNode.EndPoint()),
 							),
 						)
@@ -72,13 +107,18 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 				enumeratorNode := n.Child(i)
 
 				if enumeratorNode.Type() == "enum_constant" {
-					name := enumeratorNode.ChildByFieldName("name")
+					enumeratorName := enumeratorNode.ChildByFieldName("name")
+					if enumeratorName == nil {
+						// Invalid node
+						continue
+					}
 					enumerator := idx.NewEnumerator(
-						name.Content(sourceCode),
+						enumeratorName.Content(sourceCode),
 						"",
 						associatedParameters,
-						currentModule.GetModuleString(),
-						idx.NewRangeFromTreeSitterPositions(name.StartPoint(), name.EndPoint()),
+						name,
+						module,
+						idx.NewRangeFromTreeSitterPositions(enumeratorName.StartPoint(), enumeratorName.EndPoint()),
 						*docId,
 					)
 					enumerators = append(enumerators, enumerator)
@@ -87,15 +127,14 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 		}
 	}
 
-	nameNode := node.ChildByFieldName("name")
 	enum := idx.NewEnum(
-		nameNode.Content(sourceCode),
+		name,
 		baseType,
 		[]*idx.Enumerator{},
-		currentModule.GetModuleString(),
+		module,
 		*docId,
-		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
+		idRange,
+		enumRange,
 	)
 
 	enum.AddEnumerators(enumerators)

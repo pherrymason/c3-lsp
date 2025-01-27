@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/pkg/cast"
@@ -73,21 +74,23 @@ func TestParses_TypedEnums(t *testing.T) {
 		e := enum.GetEnumerator("RED")
 		assert.Equal(t, "RED", e.GetName())
 		assert.Equal(t, idx.NewRange(2, 19, 2, 22), e.GetIdRange())
+		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[0], e)
 
 		e = enum.GetEnumerator("BLUE")
 		assert.Equal(t, "BLUE", e.GetName())
 		assert.Equal(t, idx.NewRange(2, 24, 2, 28), e.GetIdRange())
+		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[1], e)
 
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
 		assert.Equal(t, idx.NewRange(2, 30, 2, 35), e.GetIdRange())
+		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[2], e)
 	})
 
-	t.Run("associate values >= v6.0", func(t *testing.T) {
-		t.Skip()
+	t.Run("associate values >= v0.6.0", func(t *testing.T) {
 		source := `
 		enum State : int (String state_desc, bool active)
 		{
@@ -102,6 +105,105 @@ func TestParses_TypedEnums(t *testing.T) {
 
 		scope := symbols.Get("ass")
 		assert.NotNil(t, scope.Enums["State"])
+		enum := scope.Enums["State"]
+		enumerators := enum.GetEnumerators()
+
+		assert.Len(t, enumerators, 3, "Missing enumerators")
+
+		expectedAssocValues := []struct {
+			type_ string
+			name  string
+		}{
+			{
+				type_: "String",
+				name:  "state_desc",
+			},
+			{
+				type_: "bool",
+				name:  "active",
+			},
+		}
+
+		t.Run("GetAssociatedValues", func(t *testing.T) {
+			assocs := enum.GetAssociatedValues()
+			assert.Equal(t, len(expectedAssocValues), len(assocs))
+			for i, assoc := range assocs {
+				assocIndex := fmt.Sprintf("Associated value #%d", i)
+				expected := expectedAssocValues[i]
+				assert.Equal(t, expected.name, assoc.GetName(), assocIndex+" didn't match")
+				assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
+			}
+		})
+
+		for enum_i, enumerator := range enumerators {
+			t.Run(fmt.Sprintf("Enumerator #%d", enum_i), func(t *testing.T) {
+				assert.Equal(t, len(expectedAssocValues), len(enumerator.AssociatedValues))
+				for i, assoc := range enumerator.AssociatedValues {
+					assocIndex := fmt.Sprintf("Associated value #%d", i)
+					expected := expectedAssocValues[i]
+					assert.Equal(t, expected.name, assoc.GetName(), assocIndex+" didn't match")
+					assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
+				}
+			})
+		}
+	})
+
+	t.Run("associated values >= 0.6.0 without backing type", func(t *testing.T) {
+		source := `
+		enum State : (String state_desc, bool active)
+		{
+			PENDING = {"pending start", false},
+			RUNNING = {"running", true},
+			TERMINATED = {"ended", false}
+		}`
+		doc := document.NewDocument("ass.c3", source)
+		parser := createParser()
+
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		scope := symbols.Get("ass")
+		assert.NotNil(t, scope.Enums["State"])
+		enum := scope.Enums["State"]
+		enumerators := enum.GetEnumerators()
+
+		assert.Len(t, enumerators, 3, "Missing enumerators")
+
+		expectedAssocValues := []struct {
+			type_ string
+			name  string
+		}{
+			{
+				type_: "String",
+				name:  "state_desc",
+			},
+			{
+				type_: "bool",
+				name:  "active",
+			},
+		}
+
+		t.Run("GetAssociatedValues", func(t *testing.T) {
+			assocs := enum.GetAssociatedValues()
+			assert.Equal(t, len(expectedAssocValues), len(assocs))
+			for i, assoc := range assocs {
+				assocIndex := fmt.Sprintf("Associated value #%d", i)
+				expected := expectedAssocValues[i]
+				assert.Equal(t, expected.name, assoc.GetName(), assocIndex+" didn't match")
+				assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
+			}
+		})
+
+		for enum_i, enumerator := range enumerators {
+			t.Run(fmt.Sprintf("Enumerator #%d", enum_i), func(t *testing.T) {
+				assert.Equal(t, len(expectedAssocValues), len(enumerator.AssociatedValues))
+				for i, assoc := range enumerator.AssociatedValues {
+					assocIndex := fmt.Sprintf("Associated value #%d", i)
+					expected := expectedAssocValues[i]
+					assert.Equal(t, expected.name, assoc.GetName(), assocIndex+" didn't match")
+					assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
+				}
+			})
+		}
 	})
 
 	t.Run("finds enum method", func(t *testing.T) {
@@ -212,11 +314,15 @@ func TestParse_fault(t *testing.T) {
 		e := fault.GetConstant("IO_ERROR")
 		assert.Equal(t, "IO_ERROR", e.GetName())
 		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetDocumentRange())
+		assert.Equal(t, "IOResult", e.GetFaultName())
 		assert.Same(t, fault.Children()[0], e)
 
 		e = fault.GetConstant("PARSE_ERROR")
 		assert.Equal(t, "PARSE_ERROR", e.GetName())
 		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetDocumentRange())
+		assert.Equal(t, "IOResult", e.GetFaultName())
 		assert.Same(t, fault.Children()[1], e)
 	})
 }

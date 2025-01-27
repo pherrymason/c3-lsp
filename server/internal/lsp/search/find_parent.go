@@ -4,8 +4,49 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 )
+
+// If `true`, this indexable is a type, and so one can access its parent type's (itself)
+// associated members, as well as methods.
+// If `false`, this indexable is a variable or similar, so its parent type is distinct
+// from the indexable itself, therefore only methods can be accessed.
+func canReadMembersOf(s symbols.Indexable) bool {
+	switch s.(type) {
+	case *symbols.Struct, *symbols.Enum, *symbols.Fault:
+		return true
+	case *symbols.Def:
+		// If Def resolves to a type, it can receive its members.
+		return s.(*symbols.Def).ResolvesToType()
+	default:
+		return false
+	}
+}
+
+// Search for a method for 'parentTypeName' given a symbol to search.
+//
+// Returns updated search parameters to progress the search, as well as
+// the search result.
+func (s *Search) findMethod(
+	parentTypeName string,
+	searchingSymbol sourcecode.Word,
+	docId option.Option[string],
+	searchParams search_params.SearchParams,
+	projState *project_state.ProjectState,
+	debugger FindDebugger,
+) (search_params.SearchParams, SearchResult) {
+	// Search in methods
+	methodSymbol := sourcecode.NewWord(parentTypeName+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
+	iterSearch := search_params.NewSearchParamsBuilder().
+		WithSymbolWord(methodSymbol).
+		WithDocId(docId.Get()).
+		WithContextModuleName(searchParams.ModuleInCursor()).
+		WithScopeMode(search_params.InModuleRoot).
+		Build()
+
+	return iterSearch, s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
+}
 
 func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, projState *project_state.ProjectState, debugger FindDebugger) SearchResult {
 	accessPath := searchParams.GetFullAccessPath()
@@ -29,12 +70,19 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 	elm := result.Get()
 	protection := 0
+	membersReadable := true
 
 	for {
 		if protection > 500 {
 			return searchResult
 		}
 		protection++
+
+		// Check for readable members before converting the element from a variable
+		// to its parent type, so we can know whether we were originally searching
+		// a variable, from which we cannot read members (enum values and fault
+		// constants).
+		membersReadable = canReadMembersOf(elm)
 
 		for {
 			if !isInspectable(elm) {
@@ -58,65 +106,168 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			enumerator := elm.(*symbols.Enumerator)
 			assocValues := enumerator.AssociatedValues
 			searchingSymbol := state.GetNextSymbol()
+			foundAssoc := false
 			for i := 0; i < len(assocValues); i++ {
 				if assocValues[i].GetName() == searchingSymbol.Text() {
 					elm = &assocValues[i]
 					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
+					foundAssoc = true
 					break
+				}
+			}
+
+			if !foundAssoc && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
+				// Search in methods
+				// First get the enum
+				enumSymbols := projState.SearchByFQN(enumerator.GetEnumFQN())
+				if len(enumSymbols) > 0 {
+					// Search the enum's methods
+					newIterSearch, result := s.findMethod(
+						enumSymbols[0].GetName(),
+						searchingSymbol,
+						docId,
+						searchParams,
+						projState,
+						debugger,
+					)
+					if result.IsNone() {
+						return NewSearchResultEmpty(trackedModules)
+					}
+					iterSearch = newIterSearch
+					elm = result.Get()
+					symbolsHierarchy = append(symbolsHierarchy, elm)
+					state.Advance()
+				}
+			}
+
+		case *symbols.FaultConstant:
+			constant := elm.(*symbols.FaultConstant)
+
+			if constant.GetModuleString() != "" && constant.GetFaultName() != "" {
+				// Search in methods
+				// First get the fault
+				faultSymbols := projState.SearchByFQN(constant.GetFaultFQN())
+				if len(faultSymbols) > 0 {
+					// Search the fault's methods
+					searchingSymbol := state.GetNextSymbol()
+					newIterSearch, result := s.findMethod(
+						faultSymbols[0].GetName(),
+						searchingSymbol,
+						docId,
+						searchParams,
+						projState,
+						debugger,
+					)
+					if result.IsNone() {
+						return NewSearchResultEmpty(trackedModules)
+					}
+					iterSearch = newIterSearch
+					elm = result.Get()
+					symbolsHierarchy = append(symbolsHierarchy, elm)
+					state.Advance()
 				}
 			}
 
 		case *symbols.Enum:
 			_enum := elm.(*symbols.Enum)
-			enumerators := _enum.GetEnumerators()
+			foundMemberOrAssoc := false
 			searchingSymbol := state.GetNextSymbol()
-			foundMember := false
-			for i := 0; i < len(enumerators); i++ {
-				if enumerators[i].GetName() == searchingSymbol.Text() {
-					elm = enumerators[i]
-					symbolsHierarchy = append(symbolsHierarchy, elm)
-					state.Advance()
-					foundMember = true
-					break
+
+			// 'CoolEnum.VARIANT.VARIANT' is invalid (member not readable on member)
+			// But 'CoolEnum.VARIANT' is ok,
+			// as well as 'AliasForEnum.VARIANT'
+			if membersReadable {
+				enumerators := _enum.GetEnumerators()
+				for i := 0; i < len(enumerators); i++ {
+					if enumerators[i].GetName() == searchingSymbol.Text() {
+						elm = enumerators[i]
+						symbolsHierarchy = append(symbolsHierarchy, elm)
+						state.Advance()
+						foundMemberOrAssoc = true
+						break
+					}
+				}
+			} else {
+				// Members not readable => this is an instance, so we can read associated values.
+				assocs := _enum.GetAssociatedValues()
+				for i := 0; i < len(assocs); i++ {
+					if assocs[i].GetName() == searchingSymbol.Text() {
+						elm = &assocs[i]
+						symbolsHierarchy = append(symbolsHierarchy, elm)
+						state.Advance()
+						foundMemberOrAssoc = true
+						break
+					}
 				}
 			}
-			if !foundMember {
+
+			if !foundMemberOrAssoc {
 				// Search in methods
-				methodSymbol := sourcecode.NewWord(_enum.GetName()+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
-				iterSearch = search_params.NewSearchParamsBuilder().
-					WithSymbolWord(methodSymbol).
-					WithDocId(docId.Get()).
-					WithContextModuleName(searchParams.ModuleInCursor()).
-					WithScopeMode(search_params.InModuleRoot).
-					Build()
-				result := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
+				newIterSearch, result := s.findMethod(
+					_enum.GetName(),
+					searchingSymbol,
+					docId,
+					searchParams,
+					projState,
+					debugger,
+				)
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
-
+				iterSearch = newIterSearch
 				elm = result.Get()
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
 			}
 
 		case *symbols.Fault:
-			_enum := elm.(*symbols.Fault)
-			constants := _enum.GetConstants()
+			fault := elm.(*symbols.Fault)
 			searchingSymbol := state.GetNextSymbol()
-			for i := 0; i < len(constants); i++ {
-				if constants[i].GetName() == searchingSymbol.Text() {
-					elm = constants[i]
-					symbolsHierarchy = append(symbolsHierarchy, elm)
-					state.Advance()
-					break
+			foundMember := false
+
+			if membersReadable {
+				constants := fault.GetConstants()
+				for i := 0; i < len(constants); i++ {
+					if constants[i].GetName() == searchingSymbol.Text() {
+						elm = constants[i]
+						symbolsHierarchy = append(symbolsHierarchy, elm)
+						state.Advance()
+						foundMember = true
+						break
+					}
 				}
 			}
+
+			if !foundMember {
+				// Search in methods
+				newIterSearch, result := s.findMethod(
+					fault.GetName(),
+					searchingSymbol,
+					docId,
+					searchParams,
+					projState,
+					debugger,
+				)
+				if result.IsNone() {
+					return NewSearchResultEmpty(trackedModules)
+				}
+				iterSearch = newIterSearch
+				elm = result.Get()
+				symbolsHierarchy = append(symbolsHierarchy, elm)
+				state.Advance()
+			}
+
 		case *symbols.Struct:
 			strukt, _ := elm.(*symbols.Struct)
 			members := strukt.GetMembers()
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
+
+			// Members are always readable when the parent type is struct
+			// TODO: Maybe we should actually check for NOT membersReadable,
+			// if anonymous substructs are found to not be usable anywhere
+			// (Can't write methods for them, for example)
 			for i := 0; i < len(members); i++ {
 				if members[i].GetName() == searchingSymbol.Text() {
 					elm = members[i]
@@ -129,18 +280,18 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 			if !foundMember {
 				// Search in methods
-				methodSymbol := sourcecode.NewWord(strukt.GetName()+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
-				iterSearch = search_params.NewSearchParamsBuilder().
-					WithSymbolWord(methodSymbol).
-					WithDocId(docId.Get()).
-					WithContextModuleName(searchParams.ModuleInCursor()).
-					WithScopeMode(search_params.InModuleRoot).
-					Build()
-				result := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
+				newIterSearch, result := s.findMethod(
+					strukt.GetName(),
+					searchingSymbol,
+					docId,
+					searchParams,
+					projState,
+					debugger,
+				)
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
-
+				iterSearch = newIterSearch
 				elm = result.Get()
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
@@ -151,6 +302,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			break
 		}
 	}
+	searchResult.SetMembersReadable(membersReadable)
 	searchResult.Set(elm)
 
 	return searchResult

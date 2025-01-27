@@ -906,6 +906,210 @@ func TestBuildCompletionList_enums(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Should suggest enum associated values", func(t *testing.T) {
+		source := `
+		enum Color : (int assoc, float abc) {
+			RED = { 1, 2.0 },
+			BLUE = { 2, 4.0 }
+		}
+		fn void main() {
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find associated values on enum type",
+				"Color.a",
+				[]protocol.CompletionItem{}},
+			{
+				"Find associated values on explicit constant",
+				"Color.RED.a",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("abc", protocol.CompletionItemKindVariable, "float"),
+					CreateCompletionItem("assoc", protocol.CompletionItemKindVariable, "int"),
+				}},
+
+			{
+				"Find matching associated values on explicit constant",
+				"Color.RED.asso",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("assoc", protocol.CompletionItemKindVariable, "int"),
+				}},
+
+			{
+				"Find associated values on enum instance variable",
+				`Color clr = Color.RED;
+clr.a`,
+				[]protocol.CompletionItem{
+					CreateCompletionItem("abc", protocol.CompletionItemKindVariable, "float"),
+					CreateCompletionItem("assoc", protocol.CompletionItemKindVariable, "int"),
+				}},
+
+			{
+				"Find matching associated values on enum instance variable",
+				`Color clr = Color.RED;
+clr.asso`,
+				[]protocol.CompletionItem{
+					CreateCompletionItem("assoc", protocol.CompletionItemKindVariable, "int"),
+				}},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete enum associated values: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState(logger)
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				lines := strings.Split(tt.input, "\n")
+				lastLine := lines[len(lines)-1]
+				position := buildPosition(7+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				filtered := filterOutKeywordSuggestions(completionList)
+
+				assert.Equal(t, len(tt.expected), len(filtered))
+				assert.Equal(t, tt.expected, filtered)
+			})
+		}
+	})
+
+	t.Run("Should suggest Enum methods", func(t *testing.T) {
+		source := `
+		enum Color { RED, GREEN, BLUE, COBALT }
+		fn Color Color.transparentize(self) {}
+		fn void main() {
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find enum methods by type name prefix",
+				"Color.",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(4, 6, 4, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+					CreateCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value"),
+					CreateCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value"),
+				}},
+			{
+				"Find matching enum method by type name prefix",
+				"Color.transpa",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(4, 6, 4, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find enum methods with explicit enum value prefix",
+				"Color.GREEN.",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find matching enum methods with explicit enum value prefix",
+				"Color.GREEN.transp",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find enum methods by instance variable prefix",
+				`Color green = Color.GREEN;
+green.`,
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(5, 6, 5, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find matching enum method by instance variable prefix",
+				`Color green = Color.GREEN;
+green.transp`,
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol_utils.NewLSPRange(5, 6, 5, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete enum methods: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState(logger)
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				lines := strings.Split(tt.input, "\n")
+				lastLine := lines[len(lines)-1]
+				position := buildPosition(5+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
 }
 
 func TestBuildCompletionList_faults(t *testing.T) {
@@ -991,6 +1195,258 @@ func TestBuildCompletionList_faults(t *testing.T) {
 				state := NewTestState()
 				state.registerDoc("test.c3", source+tt.input+`}`)
 				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should not suggest Fault constant type after explicit constant", func(t *testing.T) {
+		source := `
+		fault WindowError { COH, COUGH, COUGHCOUGH}
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		fn void main() {
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find constants prefixed with fault constant",
+				"WindowFileError.NOT_FOUND.",
+				nil},
+			{
+				"Do not find matching constants prefixed with fault constant",
+				"WindowFileError.NOT_FOUND.NO_PE",
+				nil},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState()
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should not suggest Fault constant type after instance", func(t *testing.T) {
+		source := `
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		fn void main() {
+			WindowFileError inst = NOT_FOUND;
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find constants prefixed with fault instance",
+				"inst.",
+				nil},
+			{
+				"Do not find matching constants prefixed with fault instance",
+				"inst.NO_PE",
+				nil},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState()
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should not suggest Fault constant type after instance in struct member", func(t *testing.T) {
+		source := `
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		struct MyStruct { WindowFileError f; }
+		fn void main() {
+			MyStruct st = { WindowFileError.NOT_FOUND };
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find constants prefixed with fault instance in struct member",
+				"st.f.",
+				nil},
+			{
+				"Do not find matching constants prefixed with fault instance in struct member",
+				"st.f.NO_PE",
+				nil},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState()
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				position := buildPosition(6, uint(len(tt.input))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, tt.expected, completionList)
+			})
+		}
+	})
+
+	t.Run("Should suggest Fault methods", func(t *testing.T) {
+		source := `
+		fault WindowError { UNEXPECTED_ERROR, NORMAL_ERROR }
+		fn void WindowError.display(self) {}
+		fn void main() {
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find fault methods by type name prefix",
+				"WindowError.",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("NORMAL_ERROR", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					CreateCompletionItem("UNEXPECTED_ERROR", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				}},
+			{
+				"Find matching fault method by type name prefix",
+				"WindowError.disp",
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+			{
+				"Find fault methods with explicit constant prefix",
+				"WindowError.UNEXPECTED_ERROR.",
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(4, 29, 4, 30),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+			{
+				"Find matching fault methods with explicit constant prefix",
+				"WindowError.UNEXPECTED_ERROR.disp",
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(4, 29, 4, 30),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+			{
+				"Find fault methods by instance variable prefix",
+				`WindowError e = WindowError.UNEXPECTED_ERROR;
+e.`,
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(5, 2, 5, 3),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+			{
+				"Find matching fault methods by instance variable prefix",
+				`WindowError e = WindowError.UNEXPECTED_ERROR;
+e.disp`,
+				[]protocol.CompletionItem{
+					{
+						Label: "WindowError.display",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "display",
+							Range:   protocol_utils.NewLSPRange(5, 2, 5, 3),
+						},
+						Detail: cast.ToPtr("fn void(WindowError self)"),
+					},
+				},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete enumerables: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState()
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				lines := strings.Split(tt.input, "\n")
+				lastLine := lines[len(lines)-1]
+				position := buildPosition(5+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
 
 				search := NewSearchWithoutLog()
 				completionList := search.BuildCompletionList(

@@ -1,10 +1,14 @@
 package search
 
 import (
+	"strings"
+
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	p "github.com/pherrymason/c3-lsp/pkg/parser"
+	"github.com/pherrymason/c3-lsp/pkg/symbols"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/commonlog"
 )
 
@@ -73,6 +77,30 @@ func (s *TestState) registerDoc(docId string, source string) {
 	s.docs[docId] = document.NewDocument(docId, source)
 	doc := s.docs[docId]
 	s.state.RefreshDocumentIdentifiers(&doc, &s.parser)
+}
+
+func buildPosition(line uint, character uint) symbols.Position {
+	return symbols.Position{Line: line - 1, Character: character}
+}
+
+// Parses a test body with a '|||' cursor, returning the body without
+// the cursor and the position of that cursor.
+//
+// Useful for tests where we check what the language server responds if the
+// user cursor is at a certain position.
+func parseBodyWithCursor(body string) (string, symbols.Position) {
+	cursorLine, cursorCol := utils.FindLineColOfSubstring(body, "|||")
+	if cursorLine == 0 {
+		panic("Please add the cursor position to the test body with '|||'")
+	}
+	if strings.Count(body, "|||") > 1 {
+		panic("There are multiple '|||' cursors in the test body, please add only one")
+	}
+
+	cursorlessBody := strings.ReplaceAll(body, "|||", "")
+	position := buildPosition(cursorLine, cursorCol)
+
+	return cursorlessBody, position
 }
 
 func createParser() p.Parser {
