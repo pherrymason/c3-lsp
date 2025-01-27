@@ -48,6 +48,10 @@ func (t Type) GetFullQualifiedName() string {
 	return t.module + "::" + t.name
 }
 
+func (t *Type) GetModule() string {
+	return t.module
+}
+
 func (t *Type) SetModule(module string) {
 	t.module = module
 }

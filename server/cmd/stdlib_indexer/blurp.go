@@ -232,13 +232,15 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 	return funDef
 }
 
-// TODO: This appears to indicate that the module at which the type is being used
-// is where it was declared, which is clearly false, so this may lead to wrong LSP
-// results.
 func Generate_type(type_ *s.Type, mod string) *jen.Statement {
+	typeModule := type_.GetModule()
+	if type_.IsGenericArgument() {
+		// Temporary fix for generic types' modules being misdetected
+		typeModule = mod
+	}
 	return jen.Qual(PackageName+"symbols", "NewTypeFromString").
 		Call(
 			jen.Lit(type_.String()),
-			jen.Lit(mod),
+			jen.Lit(typeModule),
 		)
 }
