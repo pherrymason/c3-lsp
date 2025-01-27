@@ -19,7 +19,7 @@ fault_declaration: $ => seq(
 fault_body: $ => seq(
 
 	'{',
-	commaSepTrailing1($.const_ident),
+	commaSepTrailing($.const_ident),
 	'}'
 
 ),
@@ -28,7 +28,16 @@ func (p *Parser) nodeToFault(node *sitter.Node, currentModule *idx.Module, docId
 	// TODO parse attributes
 
 	baseType := "" // TODO Parse type!
+	module := currentModule.GetModuleString()
 	var constants []*idx.FaultConstant
+
+	nameNode := node.ChildByFieldName("name")
+	name := ""
+	idRange := idx.NewRange(0, 0, 0, 0)
+	if nameNode != nil {
+		name = nameNode.Content(sourceCode)
+		idRange = idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint())
+	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -41,6 +50,10 @@ func (p *Parser) nodeToFault(node *sitter.Node, currentModule *idx.Module, docId
 					constants = append(constants,
 						idx.NewFaultConstant(
 							constantNode.Content(sourceCode),
+							name,
+							module,
+							*docId,
+							idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
 							idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
 						),
 					)
@@ -49,16 +62,15 @@ func (p *Parser) nodeToFault(node *sitter.Node, currentModule *idx.Module, docId
 		}
 	}
 
-	nameNode := node.ChildByFieldName("name")
-	enum := idx.NewFault(
-		nameNode.Content(sourceCode),
+	fault := idx.NewFault(
+		name,
 		baseType,
 		constants,
-		currentModule.GetModuleString(),
+		module,
 		*docId,
-		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
+		idRange,
 		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
 	)
 
-	return enum
+	return fault
 }

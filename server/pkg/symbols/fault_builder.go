@@ -63,13 +63,31 @@ func NewFaultConstantBuilder(name string, docId string) *FaultConstantBuilder {
 	}
 }
 
+// TODO: move this into 'module' parameter and bump stdlib shim
+func (eb *FaultConstantBuilder) WithModule(module string) *FaultConstantBuilder {
+	eb.faultConstant.BaseIndexable.moduleString = module
+	eb.faultConstant.BaseIndexable.module = NewModulePathFromString(module)
+
+	return eb
+}
+
 func (eb *FaultConstantBuilder) WithoutSourceCode() *FaultConstantBuilder {
 	eb.faultConstant.BaseIndexable.hasSourceCode = false
 	return eb
 }
 
+func (eb *FaultConstantBuilder) WithFaultName(faultName string) *FaultConstantBuilder {
+	eb.faultConstant.faultName = faultName
+	return eb
+}
+
 func (eb *FaultConstantBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultConstantBuilder {
 	eb.faultConstant.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	return eb
+}
+
+func (eb *FaultConstantBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultConstantBuilder {
+	eb.faultConstant.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 

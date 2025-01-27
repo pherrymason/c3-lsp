@@ -74,16 +74,19 @@ func TestParses_TypedEnums(t *testing.T) {
 		e := enum.GetEnumerator("RED")
 		assert.Equal(t, "RED", e.GetName())
 		assert.Equal(t, idx.NewRange(2, 19, 2, 22), e.GetIdRange())
+		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[0], e)
 
 		e = enum.GetEnumerator("BLUE")
 		assert.Equal(t, "BLUE", e.GetName())
 		assert.Equal(t, idx.NewRange(2, 24, 2, 28), e.GetIdRange())
+		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[1], e)
 
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
 		assert.Equal(t, idx.NewRange(2, 30, 2, 35), e.GetIdRange())
+		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[2], e)
 	})
 
@@ -311,11 +314,15 @@ func TestParse_fault(t *testing.T) {
 		e := fault.GetConstant("IO_ERROR")
 		assert.Equal(t, "IO_ERROR", e.GetName())
 		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetDocumentRange())
+		assert.Equal(t, "IOResult", e.GetFaultName())
 		assert.Same(t, fault.Children()[0], e)
 
 		e = fault.GetConstant("PARSE_ERROR")
 		assert.Equal(t, "PARSE_ERROR", e.GetName())
 		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetDocumentRange())
+		assert.Equal(t, "IOResult", e.GetFaultName())
 		assert.Same(t, fault.Children()[1], e)
 	})
 }

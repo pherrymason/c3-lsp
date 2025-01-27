@@ -37,11 +37,14 @@ func (e Fault) GetType() string {
 
 func (e *Fault) RegisterConstant(name string, value string, posRange Range) {
 	constant := &FaultConstant{
+		faultName: e.GetName(),
 		BaseIndexable: BaseIndexable{
 			name:         name,
 			moduleString: e.moduleString,
+			module:       e.module,
 			documentURI:  e.documentURI,
 			idRange:      posRange,
+			docRange:     posRange,
 		},
 	}
 	e.constants = append(e.constants, constant)
@@ -88,7 +91,12 @@ func (e Fault) GetCompletionDetail() string {
 }
 
 type FaultConstant struct {
+	faultName string
 	BaseIndexable
+}
+
+func (e *FaultConstant) GetFaultName() string {
+	return e.faultName
 }
 
 func (e FaultConstant) GetHoverInfo() string {
@@ -99,12 +107,16 @@ func (e FaultConstant) GetCompletionDetail() string {
 	return "Fault Constant"
 }
 
-func NewFaultConstant(name string, idRange Range) *FaultConstant {
+func NewFaultConstant(name string, faultName string, module string, docId string, idRange Range, docRange Range) *FaultConstant {
 	return &FaultConstant{
-		BaseIndexable: BaseIndexable{
-			name:    name,
-			idRange: idRange,
-			Kind:    protocol.CompletionItemKindEnumMember,
-		},
+		faultName: faultName,
+		BaseIndexable: NewBaseIndexable(
+			name,
+			module,
+			docId,
+			idRange,
+			docRange,
+			protocol.CompletionItemKindEnumMember,
+		),
 	}
 }
