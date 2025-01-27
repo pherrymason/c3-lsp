@@ -626,7 +626,7 @@ func TestLanguage_findClosestSymbolDeclaration_distinct(t *testing.T) {
 			`,
 		)
 
-		assert.True(t, symbolOption.IsNone(), "Element found despite inline")
+		assert.True(t, symbolOption.IsNone(), "Element found despite non-inline")
 	})
 
 	t.Run("Should find inline distinct base type method definition", func(t *testing.T) {

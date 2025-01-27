@@ -98,6 +98,11 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		// in the type resolution loop below.
 		fromDistinct = NotFromDistinct
 
+		// This is used when type resolution is enough to fully resolve the parent type
+		// for the current access path segment. Then, we skip to the next iteration,
+		// resetting temporary variables accordingly.
+		skip := false
+
 		// Resolve the element before inspecting it further.
 		subprotection := 0
 		for {
@@ -109,41 +114,47 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			distinct, isDistinct := elm.(*symbols.Distinct)
 
 			if isDistinct {
-				// Check if we could be about to access a distinct's
-				// own method. If so, don't resolve it to its inner type
-				// and break out of type resolution.
-				searchingSymbol := state.GetNextSymbol()
-				newIterSearch, methodResult := s.findMethod(
-					distinct.GetName(),
-					searchingSymbol,
-					docId,
-					searchParams,
-					projState,
-					debugger,
-				)
+				// Only check distinct methods if we don't come from another,
+				// non-inline distinct, which would forbid method access.
+				if fromDistinct != NonInlineDistinct {
+					// Check if we could be about to access a distinct's
+					// own method. If so, don't resolve it to its inner type
+					// and break out of type resolution.
+					searchingSymbol := state.GetNextSymbol()
+					newIterSearch, methodResult := s.findMethod(
+						distinct.GetName(),
+						searchingSymbol,
+						docId,
+						searchParams,
+						projState,
+						debugger,
+					)
 
-				if methodResult.IsSome() {
-					iterSearch = newIterSearch
-					elm = methodResult.Get()
-					symbolsHierarchy = append(symbolsHierarchy, elm)
-					state.Advance()
+					if methodResult.IsSome() {
+						iterSearch = newIterSearch
+						elm = methodResult.Get()
+						symbolsHierarchy = append(symbolsHierarchy, elm)
+						state.Advance()
 
-					// Skip type resolution entirely, found a method.
-					break
-				} else {
-					// Let's try to access something under its base type by resolving.
-					// The base methods are only available if the distinct is inline,
-					// so we record whether or not we transformed from an inline distinct
-					// in a variable. Still, non-inline distincts can access associated values
-					// of enums and struct members, so we must keep searching.
-
-					// Indicate to the new element that it was transformed from
-					// a distinct of a certain kind.
-					if distinct.IsInline() {
-						fromDistinct = InlineDistinct
-					} else {
-						fromDistinct = NonInlineDistinct
+						// Skip type resolution entirely, found a method.
+						// Skip the iteration in order to reset iteration variables.
+						skip = true
+						break
 					}
+				}
+
+				// Let's try to access something under its base type by resolving.
+				// The base methods are only available if the distinct is inline,
+				// so we record whether or not we transformed from an inline distinct
+				// in a variable. Still, non-inline distincts can access associated values
+				// of enums and struct members, so we must keep searching.
+
+				// Indicate to the new element that it was transformed from
+				// a distinct of a certain kind.
+				if distinct.IsInline() {
+					fromDistinct = InlineDistinct
+				} else {
+					fromDistinct = NonInlineDistinct
 				}
 			}
 
@@ -160,6 +171,10 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 		if state.IsEnd() {
 			break
+		}
+
+		if skip {
+			continue
 		}
 
 		// Here we can look inside elm
@@ -179,8 +194,13 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
-			// Don't search methods for non-inline distinct transformations.
-			if !foundAssoc && fromDistinct != NonInlineDistinct && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
+			if !foundAssoc {
+				if fromDistinct == NonInlineDistinct || enumerator.GetModuleString() == "" || enumerator.GetEnumName() == "" {
+					// Methods inacessible from non-inline distincts that converted into this type
+					// Also impossible to determine if we know nothing about the parent enum type
+					return NewSearchResultEmpty(trackedModules)
+				}
+
 				// Search in methods
 				// First get the enum
 				enumSymbols := projState.SearchByFQN(enumerator.GetEnumFQN())
@@ -230,6 +250,9 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
 				}
+			} else {
+				// Methods inaccessible.
+				return NewSearchResultEmpty(trackedModules)
 			}
 
 		case *symbols.Enum:
@@ -266,7 +289,12 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
-			if !foundMemberOrAssoc && fromDistinct != NonInlineDistinct {
+			if !foundMemberOrAssoc {
+				if fromDistinct == NonInlineDistinct {
+					// Can't search further (methods inaccessible).
+					return NewSearchResultEmpty(trackedModules)
+				}
+
 				// Search in methods
 				newIterSearch, result := s.findMethod(
 					_enum.GetName(),
@@ -303,7 +331,12 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
-			if !foundMember && fromDistinct != NonInlineDistinct {
+			if !foundMember {
+				if fromDistinct == NonInlineDistinct {
+					// Can't search further (methods inaccessible).
+					return NewSearchResultEmpty(trackedModules)
+				}
+
 				// Search in methods
 				newIterSearch, result := s.findMethod(
 					fault.GetName(),
@@ -342,7 +375,12 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
-			if !foundMember && fromDistinct != NonInlineDistinct {
+			if !foundMember {
+				if fromDistinct == NonInlineDistinct {
+					// Can't search further (methods inaccessible).
+					return NewSearchResultEmpty(trackedModules)
+				}
+
 				// Search in methods
 				newIterSearch, result := s.findMethod(
 					strukt.GetName(),

@@ -643,7 +643,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 			`,
 		)
 
-		assert.True(t, symbolOption.IsNone(), "Element found despite inline")
+		assert.True(t, symbolOption.IsNone(), "Element found despite non-inline")
 	})
 
 	t.Run("Should find inline distinct base type method definition", func(t *testing.T) {
@@ -653,6 +653,40 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 			fn bool Abc.isLarge(){ return false; }
 
 			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Abc.isLarge", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should not find inline distinct's base non-inline distinct's base type method definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = Abc;
+			distinct KiloKilo = inline Kilo;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(KiloKilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should find inline distinct's base inline distinct's base type method definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			distinct KiloKilo = inline Kilo;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(KiloKilo val) {
 				val.is|||Large();
 			}
 			`,
@@ -779,6 +813,74 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, ok, fmt.Sprintf("The symbol is not a variable, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "data", variable.GetName())
 		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should not find non-inline distinct enum constant", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum Abc : (int data) {
+				AAA = 5,
+				BBB = 6,
+			}
+			distinct Kilo = Abc;
+
+			fn void func() {
+				Kilo.A|||AA;
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find inline distinct enum constant", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum Abc : (int data) {
+				AAA = 5,
+				BBB = 6,
+			}
+			distinct Kilo = inline Abc;
+
+			fn void func() {
+				Kilo.A|||AA;
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find non-inline distinct fault constant", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`fault Abc {
+				AAA,
+				BBB,
+			}
+			distinct Kilo = Abc;
+
+			fn void func() {
+				Kilo.A|||AA;
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find inline distinct fault constant", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`fault Abc {
+				AAA,
+				BBB,
+			}
+			distinct Kilo = inline Abc;
+
+			fn void func() {
+				Kilo.A|||AA;
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 }
 
