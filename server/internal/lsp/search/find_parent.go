@@ -103,6 +103,9 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		// resetting temporary variables accordingly.
 		skip := false
 
+		// Methods may become inaccessible due to distinct type casting
+		methodsReadable := true
+
 		// Resolve the element before inspecting it further.
 		subprotection := 0
 		for {
@@ -119,7 +122,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			// point in a chain of distinct -> distinct -> ... -> distinct, then we
 			// cannot access methods at all even if further distincts are inline, so
 			// we keep the status as 'NonInlineDistinct' and don't search for methods.
-			if isDistinct && fromDistinct != NonInlineDistinct {
+			if isDistinct && methodsReadable {
 				// Don't check if there are no upcoming symbols, as there is
 				// certainly no method access attempt in that case.
 				if !state.IsEnd() {
@@ -159,8 +162,18 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				// a distinct of a certain kind.
 				if distinct.IsInline() {
 					fromDistinct = InlineDistinct
+
+					// Methods on inline distincts are readable but only on instances,
+					// not on the distinct top-level type, which it will be cast to.
+					// For example, if there is a method 'Struct.receive(self)' and a
+					// distinct 'distinct Abc = inline Struct;', then 'Abc.receive(...)' is not
+					// valid, although if we have an instance 'Abc x = ...', then 'x.receive()'
+					// is valid, as well as 'Struct.receive(x)', since the distinct is inline
+					// and therefore freely casts into its base type.
+					methodsReadable = !membersReadable
 				} else {
 					fromDistinct = NonInlineDistinct
+					methodsReadable = false
 				}
 			}
 
@@ -201,7 +214,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			}
 
 			if !foundAssoc {
-				if fromDistinct == NonInlineDistinct || enumerator.GetModuleString() == "" || enumerator.GetEnumName() == "" {
+				if !methodsReadable || enumerator.GetModuleString() == "" || enumerator.GetEnumName() == "" {
 					// Methods inacessible from non-inline distincts that converted into this type
 					// Also impossible to determine if we know nothing about the parent enum type
 					return NewSearchResultEmpty(trackedModules)
@@ -233,7 +246,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		case *symbols.FaultConstant:
 			constant := elm.(*symbols.FaultConstant)
 
-			if fromDistinct != NonInlineDistinct && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
+			if methodsReadable && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
 				// Search in methods
 				// First get the fault
 				faultSymbols := projState.SearchByFQN(constant.GetFaultFQN())
@@ -296,8 +309,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			}
 
 			if !foundMemberOrAssoc {
-				if fromDistinct == NonInlineDistinct {
-					// Can't search further (methods inaccessible).
+				if !methodsReadable {
 					return NewSearchResultEmpty(trackedModules)
 				}
 
@@ -338,8 +350,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			}
 
 			if !foundMember {
-				if fromDistinct == NonInlineDistinct {
-					// Can't search further (methods inaccessible).
+				if !methodsReadable {
 					return NewSearchResultEmpty(trackedModules)
 				}
 
@@ -382,7 +393,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			}
 
 			if !foundMember {
-				if fromDistinct == NonInlineDistinct {
+				if !methodsReadable {
 					// Can't search further (methods inaccessible).
 					return NewSearchResultEmpty(trackedModules)
 				}
