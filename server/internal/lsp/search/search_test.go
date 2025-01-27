@@ -79,6 +79,10 @@ func (s *TestState) registerDoc(docId string, source string) {
 	s.state.RefreshDocumentIdentifiers(&doc, &s.parser)
 }
 
+func buildPosition(line uint, character uint) symbols.Position {
+	return symbols.Position{Line: line - 1, Character: character}
+}
+
 // Parses a test body with a '|||' cursor, returning the body without
 // the cursor and the position of that cursor.
 //
