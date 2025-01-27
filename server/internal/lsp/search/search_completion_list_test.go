@@ -1836,6 +1836,306 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 			b.|||
 		`)
 	})
+
+	preamble := `
+	struct Struct { int field; }
+	enum Enum : int (int data) {
+		AAA = 5,
+		BBB = 6,
+	}
+	fault Fault {
+		FIRST_FAULT,
+		SECOND_FAULT
+	}
+	def StructAlias = Struct;
+
+	<* Fight it *>
+	fn void Struct.fight(self) {}
+	fn void Enum.doer(self) {}
+	fn void Fault.something(self) {}
+`
+	defDistinctKind := protocol.CompletionItemKindTypeParameter
+	fieldKind := protocol.CompletionItemKindField
+	varKind := protocol.CompletionItemKindVariable
+	methodKind := protocol.CompletionItemKindMethod
+
+	cases := []struct {
+		name       string
+		input      string
+		expression string
+		expected   []protocol.CompletionItem
+	}{
+		{
+			name: "Finds distinct names",
+			input: `
+			<* abc *>
+			distinct Abc = Struct;
+			distinct Abcd = Enum;
+			`,
+			expression: "Ab",
+			expected: []protocol.CompletionItem{
+				{Label: "Abc", Kind: &defDistinctKind, Detail: cast.ToPtr("Type"), Documentation: asMarkdown("abc")},
+				{Label: "Abcd", Kind: &defDistinctKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+		{
+			name: "Finds matching distinct names",
+			input: `
+			<* abc *>
+			distinct Abc = Struct;
+			distinct Abcd = Enum;
+			`,
+			expression: "Abcd",
+			expected: []protocol.CompletionItem{
+				{Label: "Abcd", Kind: &defDistinctKind, Detail: cast.ToPtr("Type"), Documentation: nil},
+			}},
+		{
+			name: "Finds struct member but no methods on instance of non-inline distinct of struct",
+			input: `
+			distinct Abc = Struct;
+			Abc x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds struct member and methods on instance of inline distinct of struct",
+			input: `
+			distinct Abc = inline Struct;
+			Abc x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Struct.fight",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Struct self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "fight",
+						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+					},
+					Documentation: asMarkdown("Fight it")},
+			}},
+		{
+			name: "Finds matching struct members on instance of inline distinct of struct",
+			input: `
+			distinct Abc = inline Struct;
+			Abc x = { 5 };
+			`,
+			expression: "x.fie",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds matching methods on instance of inline distinct of struct",
+			input: `
+			distinct Abc = inline Struct;
+			Abc x = { 5 };
+			`,
+			expression: "x.fig",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Struct.fight",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Struct self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "fight",
+						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+					},
+					Documentation: asMarkdown("Fight it")},
+			}},
+		{
+			name: "Finds struct members and methods on chain of inline distincts of struct",
+			input: `
+			distinct Abc = inline Struct;
+			distinct Def = inline Abc;
+			distinct Ghi = inline Def;
+			distinct Fjk = inline Ghi;
+			Fjk x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Struct.fight",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Struct self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "fight",
+						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
+					},
+					Documentation: asMarkdown("Fight it")},
+			}},
+		{
+			name: "Does not find methods on chain of distincts of struct where one is non-inline",
+			input: `
+			distinct Abc = inline Struct;
+			distinct Def = inline Abc;
+			distinct Ghi = Def;
+			distinct Fjk = inline Ghi;
+			Fjk x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds struct member and methods on instance of inline distinct of struct",
+			input: `
+			distinct Abc = inline Struct;
+			Abc x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Struct.fight",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Struct self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "fight",
+						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+					},
+					Documentation: asMarkdown("Fight it")},
+			}},
+		{
+			name: "Finds enum associated values and methods on instance of inline distinct of enum",
+			input: `
+			distinct Aenum = inline Enum;
+			Aenum x = Enum.AAA;
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Enum.doer",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Enum self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "doer",
+						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+					},
+					Documentation: nil},
+			}},
+		{
+			name: "Finds enum associated values but not methods on instance of non-inline distinct of enum",
+			input: `
+			distinct Aenum = Enum;
+			Aenum x = Enum.AAA;
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds associated values and methods on chain of inline distincts of enum",
+			input: `
+			distinct Abc = inline Enum;
+			distinct Def = inline Abc;
+			distinct Ghi = inline Def;
+			distinct Fjk = inline Ghi;
+			Fjk x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Enum.doer",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Enum self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "doer",
+						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
+					},
+					Documentation: nil},
+			}},
+		{
+			name: "Does not find methods on chain of distincts of enum where one is non-inline",
+			input: `
+			distinct Abc = inline Enum;
+			distinct Def = inline Abc;
+			distinct Ghi = Def;
+			distinct Fjk = inline Ghi;
+			Fjk x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds fault methods on instance of inline distinct of fault",
+			input: `
+			distinct Afault = inline Fault;
+			Afault x = Fault.FIRST_FAULT;
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Fault.something",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Fault self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "something",
+						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+					},
+					Documentation: nil},
+			}},
+		{
+			name: "Finds nothing on instance of non-inline distinct of fault",
+			input: `
+			distinct Afault = Fault;
+			Afault x = Fault.FIRST_FAULT;
+			`,
+			expression: "x.",
+			expected:   []protocol.CompletionItem{}},
+		{
+			name: "Finds struct member but no methods on instance of non-inline distinct of struct def alias",
+			input: `
+			distinct Abc = StructAlias;
+			Abc x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds struct member and methods on instance of inline distinct of struct def alias",
+			input: `
+			distinct Abc = inline StructAlias;
+			Abc x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Struct.fight",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Struct self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "fight",
+						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+					},
+					Documentation: asMarkdown("Fight it")},
+			}},
+	}
+
+	for n, tt := range cases {
+		t.Run(fmt.Sprintf("Case #%d - "+tt.name, n), func(t *testing.T) {
+			expr := ""
+			if tt.expression != "" {
+				// Add cursor at the end of expression if applicable
+				expr = `
+fn void func() {
+` + tt.expression + "|||\n}"
+			}
+
+			completions := filterOutKeywordSuggestions(CompleteAtCursor(preamble + tt.input + expr))
+
+			assert.Len(t, completions, len(tt.expected), "Different amount of completions")
+			assert.Equal(t, tt.expected, completions, "Completions don't match")
+		})
+	}
 }
 
 func TestBuildCompletionList_interfaces(t *testing.T) {
