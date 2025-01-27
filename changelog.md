@@ -9,6 +9,7 @@
 - Adds type information as well as other information to completions. Credit to @PgBiel
 - Fix parsing of non-type alias def (Credit to @PgBiel)
 - Improve macro handling. [More info](https://github.com/pherrymason/c3-lsp/pull/103). Credit to @PgBiel
+- Fix completion of enum and fault methods. [More info](https://github.com/pherrymason/c3-lsp/pull/111). Credit to @PgBiel 
 
 ## 0.3.3
 - Support named and anonymous sub structs.
