@@ -2547,6 +2547,48 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Documentation: nil},
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
+		{
+			name: "Finds all distinct and non-distinct methods with clashing names across chain",
+			input: `
+			distinct Aabc = inline Fault;
+			distinct Adef = inline Aabc;
+			fn int Aabc.something(self) { return 5; }
+			fn float Adef.something(self, int x) { return 5.0; }
+			Adef x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Aabc.something",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn int(Aabc self)"),
+					TextEdit: protocol.TextEdit{
+						// TODO: Somehow replace with "Aabc.something(x)"
+						// Seems harder than anticipated due to restrictions on applying TextEdit
+						// to the whole input
+						NewText: "something",
+						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Adef.something",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn float(Adef self, int x)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "something",
+						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Fault.something",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Fault self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "something",
+						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
+					},
+					Documentation: nil},
+			}},
 	}
 
 	for n, tt := range cases {
