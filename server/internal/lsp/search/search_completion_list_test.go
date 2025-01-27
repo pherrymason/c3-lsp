@@ -2118,6 +2118,454 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					},
 					Documentation: asMarkdown("Fight it")},
 			}},
+		{
+			name: "Finds distinct methods as well as struct members on non-inline distinct of struct",
+			input: `
+			distinct Abc = Struct;
+			fn void Abc.distmethod(self) {}
+			Abc x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Abc.distmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Abc self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "distmethod",
+						Range:   protocol_utils.NewLSPRange(22, 2, 22, 3),
+					},
+					Documentation: nil},
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds distinct methods as well as struct members and methods on inline distinct of struct",
+			input: `
+			distinct Abc = inline Struct;
+			fn void Abc.distmethod(self) {}
+			Abc x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Abc.distmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Abc self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "distmethod",
+						Range:   protocol_utils.NewLSPRange(22, 2, 22, 3),
+					},
+					Documentation: nil},
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Struct.fight",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Struct self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "fight",
+						Range:   protocol_utils.NewLSPRange(22, 2, 22, 3),
+					},
+					Documentation: asMarkdown("Fight it")},
+			}},
+		{
+			name: "Finds all distinct methods across chain of inline distincts of struct, plus the struct's members and methods",
+			input: `
+			distinct Aabc = inline Struct;
+			distinct Adef = inline Aabc;
+			distinct Aghi = inline Adef;
+			distinct Ajkl = inline Aghi;
+			fn void Aabc.abcmethod(self) {}
+			fn void Adef.defmethod(self) {}
+			fn void Aghi.ghimethod(self) {}
+			fn void Ajkl.jklmethod(self) {}
+			Ajkl x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Aabc.abcmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aabc self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "abcmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Adef.defmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Adef self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "defmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Aghi.ghimethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aghi self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "ghimethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Ajkl.jklmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Ajkl self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "jklmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Struct.fight",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Struct self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "fight",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: asMarkdown("Fight it")},
+			}},
+		{
+			name: "Finds distinct methods across chain of distincts of struct up to non-inline, plus the struct's members only",
+			input: `
+			distinct Aabc = inline Struct;
+			distinct Adef = inline Aabc;
+			distinct Aghi = Adef;
+			distinct Ajkl = inline Aghi;
+			fn void Aabc.abcmethod(self) {}
+			fn void Adef.defmethod(self) {}
+			fn void Aghi.ghimethod(self) {}
+			fn void Ajkl.jklmethod(self) {}
+			Ajkl x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Aghi.ghimethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aghi self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "ghimethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Ajkl.jklmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Ajkl self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "jklmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds all distinct methods across chain of inline distincts of enum, plus the enum's associated values and methods",
+			input: `
+			distinct Aabc = inline Enum;
+			distinct Adef = inline Aabc;
+			distinct Aghi = inline Adef;
+			distinct Ajkl = inline Aghi;
+			fn void Aabc.abcmethod(self) {}
+			fn void Adef.defmethod(self) {}
+			fn void Aghi.ghimethod(self) {}
+			fn void Ajkl.jklmethod(self) {}
+			Ajkl x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Aabc.abcmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aabc self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "abcmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Adef.defmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Adef self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "defmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Aghi.ghimethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aghi self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "ghimethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Ajkl.jklmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Ajkl self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "jklmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
+				{
+					Label:  "Enum.doer",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Enum self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "doer",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+			}},
+		{
+			name: "Finds distinct methods across chain of distincts of enum up to non-inline, plus the enum's associated values only",
+			input: `
+			distinct Aabc = inline Enum;
+			distinct Adef = inline Aabc;
+			distinct Aghi = Adef;
+			distinct Ajkl = inline Aghi;
+			fn void Aabc.abcmethod(self) {}
+			fn void Adef.defmethod(self) {}
+			fn void Aghi.ghimethod(self) {}
+			fn void Ajkl.jklmethod(self) {}
+			Ajkl x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Aghi.ghimethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aghi self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "ghimethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Ajkl.jklmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Ajkl self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "jklmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds all distinct methods across chain of inline distincts of fault, plus the fault's methods",
+			input: `
+			distinct Aabc = inline Fault;
+			distinct Adef = inline Aabc;
+			distinct Aghi = inline Adef;
+			distinct Ajkl = inline Aghi;
+			fn void Aabc.abcmethod(self) {}
+			fn void Adef.defmethod(self) {}
+			fn void Aghi.ghimethod(self) {}
+			fn void Ajkl.jklmethod(self) {}
+			Ajkl x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Aabc.abcmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aabc self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "abcmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Adef.defmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Adef self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "defmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Aghi.ghimethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aghi self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "ghimethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Ajkl.jklmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Ajkl self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "jklmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Fault.something",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Fault self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "something",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+			}},
+		{
+			name: "Finds distinct methods across chain of distincts of enum up to non-inline, but none of the fault's methods",
+			input: `
+			distinct Aabc = inline Fault;
+			distinct Adef = inline Aabc;
+			distinct Aghi = Adef;
+			distinct Ajkl = inline Aghi;
+			fn void Aabc.abcmethod(self) {}
+			fn void Adef.defmethod(self) {}
+			fn void Aghi.ghimethod(self) {}
+			fn void Ajkl.jklmethod(self) {}
+			Ajkl x = { 5 };
+			`,
+			expression: "x.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "Aghi.ghimethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Aghi self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "ghimethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+				{
+					Label:  "Ajkl.jklmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(Ajkl self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "jklmethod",
+						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+					},
+					Documentation: nil},
+			}},
+		{
+			name: "Finds struct members but not methods on top-level type of non-inline distinct of struct",
+			input: `
+			distinct Abc = Struct;
+			`,
+			expression: "Abc.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds struct members but not methods on top-level type of inline distinct of struct",
+			input: `
+			distinct Abc = inline Struct;
+			`,
+			expression: "Abc.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Does not find enum constants or methods on top-level type of non-inline distinct of enum",
+			input: `
+			distinct Abc = Enum;
+			`,
+			expression: "Abc.",
+			expected:   []protocol.CompletionItem{}},
+		{
+			name: "Does not find enum constants or methods on top-level type of inline distinct of enum",
+			input: `
+			distinct Abc = inline Enum;
+			`,
+			expression: "Abc.",
+			expected:   []protocol.CompletionItem{}},
+		{
+			name: "Does not find fault constants or methods on top-level type of non-inline distinct of fault",
+			input: `
+			distinct Abc = Fault;
+			`,
+			expression: "Abc.",
+			expected:   []protocol.CompletionItem{}},
+		{
+			name: "Does not find fault constants or methods on top-level type of inline distinct of fault",
+			input: `
+			distinct Abc = inline Fault;
+			`,
+			expression: "Abc.",
+			expected:   []protocol.CompletionItem{}},
+		{
+			name: "Finds struct member but no methods on top-level type of non-inline distinct of inline distinct of struct",
+			input: `
+			distinct Abc = inline Struct;
+			distinct AbcAbc = Abc;
+			fn void Abc.distmethod(self) {}
+			`,
+			expression: "AbcAbc.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds struct member but only its own methods on top-level type of inline distinct of inline distinct of struct",
+			input: `
+			distinct Abc = inline Struct;
+			distinct AbcAbc = inline Abc;
+			fn void Abc.distmethod(self) {}
+			fn void AbcAbc.distdistmethod(self) {}
+			`,
+			expression: "AbcAbc.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "AbcAbc.distdistmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(AbcAbc self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "distdistmethod",
+						Range:   protocol_utils.NewLSPRange(23, 7, 23, 8),
+					},
+					Documentation: nil},
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds struct member but no methods on top-level type of non-inline distinct of inline distinct of struct def alias",
+			input: `
+			distinct Abc = inline StructAlias;
+			distinct AbcAbc = Abc;
+			fn void Abc.distmethod(self) {}
+			`,
+			expression: "AbcAbc.",
+			expected: []protocol.CompletionItem{
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
+		{
+			name: "Finds struct member but only its own methods on top-level type of inline distinct of inline distinct of struct def alias",
+			input: `
+			distinct Abc = inline StructAlias;
+			distinct AbcAbc = inline Abc;
+			fn void Abc.distmethod(self) {}
+			fn void AbcAbc.distdistmethod(self) {}
+			`,
+			expression: "AbcAbc.",
+			expected: []protocol.CompletionItem{
+				{
+					Label:  "AbcAbc.distdistmethod",
+					Kind:   &methodKind,
+					Detail: cast.ToPtr("fn void(AbcAbc self)"),
+					TextEdit: protocol.TextEdit{
+						NewText: "distdistmethod",
+						Range:   protocol_utils.NewLSPRange(23, 7, 23, 8),
+					},
+					Documentation: nil},
+				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
+			}},
 	}
 
 	for n, tt := range cases {

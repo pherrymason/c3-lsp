@@ -272,10 +272,25 @@ func (s *Search) BuildCompletionList(
 
 		//	searchParams.scopeMode = AnyPosition
 
-		membersReadable, fromDistinct, prevIndexableOption := s.findParentType(searchParams, state, FindDebugger{depth: 0, enabled: true})
+		membersReadable, fromDistinct, initialItems, prevIndexableOption := s.findParentTypeWithCompletions(
+			filterMembers,
+			symbolInPosition,
+			searchParams,
+			state,
+			FindDebugger{depth: 0, enabled: true},
+		)
+
+		items = append(items, initialItems...)
+
 		if prevIndexableOption.IsNone() {
 			return items
 		}
+
+		// Can only read methods if the current type being inspected wasn't the base type of a distinct,
+		// or if it was, then we're currently inspecting an inline distinct INSTANCE and not the type itself, since
+		// methods are scoped to their concrete type names.
+		methodsReadable := fromDistinct == NotFromDistinct || (fromDistinct == InlineDistinct && !membersReadable)
+
 		prevIndexable := prevIndexableOption.Get()
 		//fmt.Print(prevIndexable.GetName())
 
@@ -306,7 +321,7 @@ func (s *Search) BuildCompletionList(
 
 			// If this struct was the base type of a non-inline distinct variable,
 			// do not suggest its methods, as they cannot be accessed
-			if fromDistinct != NonInlineDistinct {
+			if methodsReadable {
 				items = append(items, s.BuildMethodCompletions(state, strukt.GetFQN(), filterMembers, symbolInPosition)...)
 			}
 
@@ -329,7 +344,7 @@ func (s *Search) BuildCompletionList(
 			}
 
 			// Add parent enum's methods, but only if this doesn't come from a non-inline distinct.
-			if fromDistinct != NonInlineDistinct && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
+			if methodsReadable && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
 				items = append(items, s.BuildMethodCompletions(state, enumerator.GetEnumFQN(), filterMembers, symbolInPosition)...)
 			}
 
@@ -337,7 +352,7 @@ func (s *Search) BuildCompletionList(
 			constant := prevIndexable.(*symbols.FaultConstant)
 
 			// Add parent fault's methods
-			if fromDistinct != NonInlineDistinct && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
+			if methodsReadable && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
 				items = append(items, s.BuildMethodCompletions(state, constant.GetFaultFQN(), filterMembers, symbolInPosition)...)
 			}
 
@@ -380,7 +395,7 @@ func (s *Search) BuildCompletionList(
 				}
 			}
 
-			if fromDistinct != NonInlineDistinct {
+			if methodsReadable {
 				items = append(items, s.BuildMethodCompletions(state, enum.GetFQN(), filterMembers, symbolInPosition)...)
 			}
 
@@ -406,15 +421,8 @@ func (s *Search) BuildCompletionList(
 				}
 			}
 
-			if fromDistinct != NonInlineDistinct {
+			if methodsReadable {
 				items = append(items, s.BuildMethodCompletions(state, fault.GetFQN(), filterMembers, symbolInPosition)...)
-			}
-
-		case *symbols.Distinct:
-			// Complete distinct-exclusive methods, but only if the distinct
-			// wasn't the base type of another non-inline distinct being accessed
-			if fromDistinct != NonInlineDistinct {
-				items = append(items, s.BuildMethodCompletions(state, prevIndexable.GetFQN(), filterMembers, symbolInPosition)...)
 			}
 		}
 	} else {
@@ -470,38 +478,92 @@ func (s *Search) BuildCompletionList(
 	return items
 }
 
-// Returns whether members can be read from the found symbol, as well as the found symbol itself.
-func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectState, debugger FindDebugger) (bool, int, option.Option[symbols.Indexable]) {
+// Returns whether members can be read from the found symbol, the 'fromDistinct' status, the list of
+// completions found while resolving distincts in a distinct chain (if any), as well as the final symbol
+// found for further completions.
+func (s *Search) findParentTypeWithCompletions(
+	filterMembers bool,
+	symbolInPosition sourcecode.Word,
+	searchParams sp.SearchParams,
+	state *l.ProjectState,
+	debugger FindDebugger,
+) (bool, int, []protocol.CompletionItem, option.Option[symbols.Indexable]) {
 	prevIndexableResult := s.findInParentSymbols(searchParams, state, debugger)
 	membersReadable := prevIndexableResult.membersReadable
 	fromDistinct := prevIndexableResult.fromDistinct
+	items := []protocol.CompletionItem{}
 	if prevIndexableResult.IsNone() {
-		return membersReadable, fromDistinct, prevIndexableResult.result
+		return membersReadable, fromDistinct, items, prevIndexableResult.result
 	}
 	symbolsHierarchy := []symbols.Indexable{}
-
 	prevIndexable := prevIndexableResult.Get()
 
-	for {
-		if !isInspectable(prevIndexable) {
-			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, symbolsHierarchy, debugger)
+	// Can only read methods if the current type being inspected wasn't the base type of a distinct,
+	// or if it was, then we're currently inspecting an inline distinct INSTANCE and not the type itself, since
+	// methods are scoped to their concrete type names.
+	methodsReadable := fromDistinct == NotFromDistinct || (fromDistinct == InlineDistinct && !membersReadable)
 
+	// Use a loop to iteratively resolve and add completions of distincts in a distinct
+	// chain, that is, a distinct of distinct of ... of (base type).
+	// Completions all the way down are valid.
+	// This same loop will resolve any distincts pointing to def aliases and such through `s.resolve`.
+	// Then, the indexable is converted into its base type, which needs no further resolution.
+	protect := 0
+	for {
+		if protect > 1000 {
+			return true, NotFromDistinct, items, option.None[symbols.Indexable]()
+		}
+		protect++
+
+		distinct, isDistinct := prevIndexable.(*symbols.Distinct)
+
+		// If this distinct was the base type of a non-inline distinct, keep the
+		// status of non-inline distinct, since we can no longer access methods
+		if isDistinct && fromDistinct != NonInlineDistinct {
+			// Complete distinct-exclusive methods, but only if this is the original
+			// base type, an instance of it, or an instance of an inline distinct
+			// pointing to it.
+			if methodsReadable {
+				items = append(items, s.BuildMethodCompletions(state, distinct.GetFQN(), filterMembers, symbolInPosition)...)
+			}
+
+			if distinct.IsInline() {
+				fromDistinct = InlineDistinct
+
+				// Can only read methods on INSTANCES of inline distincts.
+				methodsReadable = methodsReadable && !membersReadable
+			} else {
+				fromDistinct = NonInlineDistinct
+				methodsReadable = false
+			}
+		}
+
+		if isDistinct || !isInspectable(prevIndexable) {
+			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, symbolsHierarchy, debugger)
 			if prevIndexable == nil {
 				// No point in trying to complete methods / members when the resolved type is not
 				// inspectable and doesn't resolve to anything that is inspectable
-				return true, NotFromDistinct, option.None[symbols.Indexable]()
+				return true, NotFromDistinct, items, option.None[symbols.Indexable]()
 			}
+
+			// Important for generic type resolution above
+			symbolsHierarchy = append(symbolsHierarchy, prevIndexable)
 		} else {
+			// Hit a concrete, inspectable type to analyze, let's proceed.
 			break
 		}
 	}
 
+	var resolvedIndexable option.Option[symbols.Indexable]
+
+	// Might need to do an additional resolution step even if it's inspectable
 	switch prevIndexable.(type) {
 	case *symbols.StructMember:
 		var token sourcecode.Word
 		structMember, _ := prevIndexable.(*symbols.StructMember)
 		token = sourcecode.NewWord(structMember.GetType().GetName(), prevIndexable.GetIdRange())
 
+		// Resolve a struct member into its field type for completion
 		levelSearchParams := sp.NewSearchParamsBuilder().
 			//WithSymbol(token.Text()).
 			WithSymbolWord(
@@ -510,10 +572,10 @@ func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectSt
 			WithDocId(prevIndexable.GetDocumentURI()).
 			Build()
 
-		prevIndexableResult = s.findClosestSymbolDeclaration(levelSearchParams, state, debugger.goIn())
+		resolvedIndexable = s.findClosestSymbolDeclaration(levelSearchParams, state, debugger.goIn()).result
 	default:
-		return membersReadable, fromDistinct, option.Some(prevIndexable)
+		resolvedIndexable = option.Some(prevIndexable)
 	}
 
-	return membersReadable, fromDistinct, prevIndexableResult.result
+	return membersReadable, fromDistinct, items, resolvedIndexable
 }

@@ -116,6 +116,12 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 			distinct, isDistinct := elm.(*symbols.Distinct)
 
+			if isDistinct && state.IsEnd() {
+				// Don't convert distinct into its base type when there won't be any
+				// further access to evaluate.
+				break
+			}
+
 			// Possibly search for distinct methods, and if they aren't found, set whether
 			// we are transforming from an inline or a non-inline distinct.
 			// However, if we have already transformed from a non-inline distinct at some
@@ -123,33 +129,29 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			// cannot access methods at all even if further distincts are inline, so
 			// we keep the status as 'NonInlineDistinct' and don't search for methods.
 			if isDistinct && methodsReadable {
-				// Don't check if there are no upcoming symbols, as there is
-				// certainly no method access attempt in that case.
-				if !state.IsEnd() {
-					// Check if we could be about to access a distinct's
-					// own method. If so, don't resolve it to its inner type
-					// and break out of type resolution.
-					searchingSymbol := state.GetNextSymbol()
-					newIterSearch, methodResult := s.findMethod(
-						distinct.GetName(),
-						searchingSymbol,
-						docId,
-						searchParams,
-						projState,
-						debugger,
-					)
+				// Check if we could be about to access a distinct's
+				// own method. If so, don't resolve it to its inner type
+				// and break out of type resolution.
+				searchingSymbol := state.GetNextSymbol()
+				newIterSearch, methodResult := s.findMethod(
+					distinct.GetName(),
+					searchingSymbol,
+					docId,
+					searchParams,
+					projState,
+					debugger,
+				)
 
-					if methodResult.IsSome() {
-						iterSearch = newIterSearch
-						elm = methodResult.Get()
-						symbolsHierarchy = append(symbolsHierarchy, elm)
-						state.Advance()
+				if methodResult.IsSome() {
+					iterSearch = newIterSearch
+					elm = methodResult.Get()
+					symbolsHierarchy = append(symbolsHierarchy, elm)
+					state.Advance()
 
-						// Skip type resolution entirely, found a method.
-						// Skip the iteration in order to reset iteration variables.
-						skip = true
-						break
-					}
+					// Skip type resolution entirely, found a method.
+					// Skip the iteration in order to reset iteration variables.
+					skip = true
+					break
 				}
 
 				// Let's try to access something under its base type by resolving.
