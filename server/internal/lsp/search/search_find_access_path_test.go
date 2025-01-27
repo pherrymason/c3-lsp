@@ -10,14 +10,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
+func SearchUnderCursor_AccessPath(body string, optionalState ...TestState) SearchResult {
 	state := NewTestState()
 	search := NewSearchWithoutLog()
 
+	if len(optionalState) > 0 {
+		state = optionalState[0]
+	}
+
+	cursorlessBody, position := parseBodyWithCursor(body)
+	state.registerDoc(
+		"app.c3",
+		cursorlessBody,
+	)
+
+	doc := state.GetDoc("app.c3")
+	searchParams := search_params.BuildSearchBySymbolUnderCursor(
+		&doc,
+		*state.state.GetUnitModulesByDoc(doc.URI),
+		position,
+	)
+
+	return search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+}
+
+func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	t.Run("Should find method from std collection", func(t *testing.T) {
 		state := NewTestStateWithStdLibVersion("0.5.5")
-		state.registerDoc(
-			"def.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`module core::actions;
 			import std::collections::map;
 
@@ -26,18 +46,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 				ActionListMap actionLists;
 			}
 			fn void ActionListManager.addActionList(&self, ActionList actionList) {
-				self.actionLists.set(actionList.getName(), actionList);
+				self.actionLists.s|||et(actionList.getName(), actionList);
 			}`,
+			state,
 		)
-		position := buildPosition(9, 22) // Cursor at `self.actionLists.s|et(actionList.getName(), actionList);`
-		doc := state.GetDoc("def.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		fun := symbolOption.Get().(*idx.Function)
@@ -45,16 +57,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	})
 
 	t.Run("Should find fault constant definition with path definition", func(t *testing.T) {
-		state.registerDoc(
-			"faults.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError error = WindowError.SOMETHING_HAPPENED;`,
+			WindowError error = WindowError.S|||OMETHING_HAPPENED;`,
 		)
-		position := buildPosition(2, 36) // Cursor at `WindowError error = WindowError.S|OMETHING_HAPPENED;`
-		doc := state.GetDoc("faults.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.FaultConstant)
@@ -63,21 +69,15 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	})
 
 	t.Run("Should find local struct member variable definition", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
 				bool on;
 			  }
 			Emu emulator;
-			emulator.on = true;`,
+			emulator.o|||n = true;`,
 		)
-		position := buildPosition(7, 13) // Cursor at `emulator.o|n = true`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -88,24 +88,17 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	})
 
 	t.Run("Should find local struct member variable definition when struct is a pointer", func(t *testing.T) {
-		state.clearDocs()
-		state.registerDoc(
-			"structs.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
 				bool on;
 			  }
 			fn void Emu.run(Emu* emu) {
-				emu.on = true;
+				emu.o|||n = true;
 				emu.tick();
 			}`,
 		)
-		position := buildPosition(7, 9) // Cursor at emulator.o|n = true
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -118,20 +111,14 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	// This test maybe works better in language_find_closes_declaration_test.go
 	t.Run("Should find same struct member declaration, when cursor is already in member declaration", func(t *testing.T) {
 		t.Skip() // Do not understand this test.
-		state.registerDoc(
-			"structs.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`Cpu cpu; // Trap for finding struct member when cursor is on declaration member.
 			struct Emu {
-				Cpu cpu;
+				Cpu c|||pu;
 				Audio audio;
 				bool on;
 			  }`,
 		)
-		position := buildPosition(12, 8) // Cursor at `Cpu c|pu;`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -142,8 +129,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	})
 
 	t.Run("Should find same struct member declaration, when struct is behind a def and cursor is already in member declaration", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`
 			struct Camera3D {
 				int target;
@@ -156,14 +142,9 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 			}
 
 			Widget view = {};
-			view.camera.target = 3;
+			view.camera.t|||arget = 3;
 			`,
 		)
-		position := buildPosition(13, 16) // Cursor at `view.camera.t|arget = 3;`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Symbol not found")
 		symbol := symbolOption.Get()
@@ -174,8 +155,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	})
 
 	t.Run("Should find struct method", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
@@ -184,22 +164,17 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 			fn void Emu.init(Emu* emu) {}
 			fn void main() {
 				Emu emulator;
-				emulator.init();
+				emulator.i|||nit();
 			}`,
 		)
-		// Cursor at `emulator.i|nit();`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(9, 14))
 
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
 	t.Run("Should find struct method on alternative callable", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		resolvedSymbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
@@ -208,42 +183,32 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 			fn void Emu.init(Emu* emu) {}
 			fn void main() {
 				Emu emulator;
-				Emu.init(&emulator);
+				Emu.i|||nit(&emulator);
 			}`,
 		)
-		// Cursor at `Emu.i|nit(&emulator);`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(9, 9))
 
-		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
 	t.Run("Should find struct method when cursor is already in method declaration", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		resolvedSymbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
 				bool on;
 			  }
-			fn void Emu.init(Emu* emu) {}`,
+			fn void Emu.i|||nit(Emu* emu) {}`,
 		)
-		// Cursor at `Emu.i|nit();`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(6, 16))
 
-		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
 	t.Run("Should find struct member when cursor is on chained returned from function", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		resolvedSymbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
@@ -254,22 +219,17 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 				return emulator;
 			}
 			fn void main() {
-				newEmu().on = false;
+				newEmu().o|||n = false;
 			}`,
 		)
-		// Cursor at `newEmu().o|n = false;`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(11, 14))
 
-		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		variable := resolvedSymbolOption.Get().(*idx.StructMember)
 		assert.Equal(t, "on", variable.GetName())
 		assert.Equal(t, "bool", variable.GetType().GetName())
 	})
 
 	t.Run("Should find struct method when cursor is on chained returned from function", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		resolvedSymbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
@@ -281,40 +241,30 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 			}
 			fn void Emu.init(){}
 			fn void main() {
-				newEmu().init();
+				newEmu().i|||nit();
 			}`,
 		)
-		// Cursor at `newEmu().i|nit();`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(12, 14))
 
-		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := resolvedSymbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Emu.init", fun.GetName())
 		assert.Equal(t, "Emu.init", fun.GetFullName())
 	})
 
 	t.Run("Should find local struct method when there are N nested structs", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		resolvedSymbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
 				bool on;
 			}
 			fn void Emu.init(Emu* emu) {
-				emu.audio.init();
+				emu.audio.i|||nit();
 			}
 			struct Audio {
 				int frequency;
 			}
 			fn void Audio.init() {}`,
 		)
-		position := buildPosition(7, 15) // Cursor at `emu.audio.i|nit();``
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		resolvedSymbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, resolvedSymbolOption.IsNone(), "Struct method not found")
 
@@ -325,52 +275,41 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	})
 
 	t.Run("Should find struct method on alternative callable when there are N nested structs", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
 				bool on;
 			}
 			fn void Emu.init(Emu* emu) {
-				Audio.init(&emu.audio);
+				Audio.i|||nit(&emu.audio);
 			}
 			struct Audio {
 				int frequency;
 			}
 			fn void Audio.init() {}`,
 		)
-		// Cursor at `Audio.i|nit(&emu.audio);`
-		doc := state.GetDoc("structs.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(7, 11))
 
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "Audio.init", fun.GetName())
 		assert.Equal(t, "Audio.init", fun.GetFullName())
 	})
 
 	t.Run("Should not find local struct method definition", func(t *testing.T) {
-		state.registerDoc(
-			"structs.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Emu {
 				Cpu cpu;
 				Audio audio;
 				bool on;
 			}
 			fn void Emu.init(Emu* emu) {
-				emu.audio.unknown();
+				emu.audio.u|||nknown();
 			}
 			struct Audio {
 				int frequency;
 			}
 			fn void Audio.init() {}`,
 		)
-		doc := state.GetDoc("structs.c3")
-		position := buildPosition(7, 15) // Cursor is at emu.audio.u|nknown
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.True(t, symbolOption.IsNone(), "Struct method should not be found")
 	})
@@ -396,24 +335,11 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 }
 
 func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.T) {
-	state := NewTestState()
-	search := NewSearchWithoutLog()
-
 	t.Run("Should find enumerator with path definition", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
-			WindowStatus stat = WindowStatus.OPEN;`,
+			WindowStatus stat = WindowStatus.O|||PEN;`,
 		)
-		position := buildPosition(2, 37) // Cursor at `WindowStatus stat = WindowStatus.O|PEN;`
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.Enumerator)
@@ -422,103 +348,62 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 	})
 
 	t.Run("Should not find enumerator after explicit enumerator path", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
-			WindowStatus stat = WindowStatus.OPEN.BACKGROUND;`,
+			WindowStatus stat = WindowStatus.OPEN.B|||ACKGROUND;`,
 		)
-		position := buildPosition(2, 42) // Cursor at `WindowStatus stat = WindowStatus.OPEN.B|ACKGROUND;`
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.True(t, symbolOption.IsNone(), "Element was found")
 	})
 
 	t.Run("Should not find enumerator after instance variable", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 			WindowStatus stat = WindowStatus.OPEN;
-			WindoWStatus bad = stat.BACKGROUND;`,
+			WindoWStatus bad = stat.B|||ACKGROUND;`,
 		)
-		position := buildPosition(3, 28) // Cursor at `WindoWStatus bad = stat.B|ACKGROUND;`
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.True(t, symbolOption.IsNone(), "Element was found")
 	})
 
 	t.Run("Should find enum method", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 			fn bool WindowStatus.isOpen() {}
 			fn void main() {
 				WindowStatus val = WindowStatus.OPEN;
-				val.isOpen();
+				val.is|||Open();
 			}`,
 		)
-		// Cursor at `val.is|Open();`
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(5, 10))
 
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "WindowStatus.isOpen", fun.GetName())
 		assert.Equal(t, "WindowStatus.isOpen", fun.GetFullName())
 	})
 
 	t.Run("Should find enum method on explicit enumerator", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 			fn bool WindowStatus.isOpen() {}
 			fn void main() {
-				WindowStatus.OPEN.isOpen();
+				WindowStatus.OPEN.i|||sOpen();
 			}`,
 		)
-		position := buildPosition(4, 23) // Cursor at `WindoWStatus.OPEN.i|sOpen();`
 
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "WindowStatus.isOpen", fun.GetName())
 		assert.Equal(t, "WindowStatus.isOpen", fun.GetFullName())
 	})
 
 	t.Run("Should find associated value on explicit enumerator", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus : int (int assoc) {
 				OPEN = 5,
 				BACKGROUND = 6,
 				MINIMIZED = 7
 			}
-			int stat = WindowStatus.OPEN.assoc;`,
+			int stat = WindowStatus.OPEN.a|||ssoc;`,
 		)
-		position := buildPosition(6, 33) // Cursor at `int stat = WindowStatus.OPEN.a|ssoc;`
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		variable, ok := symbolOption.Get().(*idx.Variable)
@@ -528,24 +413,14 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 	})
 
 	t.Run("Should find associated value on explicit enumerator without custom backing type", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus : (int assoc) {
 				OPEN = 5,
 				BACKGROUND = 6,
 				MINIMIZED = 7
 			}
-			int stat = WindowStatus.OPEN.assoc;`,
+			int stat = WindowStatus.OPEN.a|||ssoc;`,
 		)
-		position := buildPosition(6, 33) // Cursor at `int stat = WindowStatus.OPEN.a|ssoc;`
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		variable, ok := symbolOption.Get().(*idx.Variable)
@@ -555,25 +430,15 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 	})
 
 	t.Run("Should find associated value on enum instance variable", func(t *testing.T) {
-		state.registerDoc(
-			"enums.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus : (int assoc) {
 				OPEN = 5,
 				BACKGROUND = 6,
 				MINIMIZED = 7
 			}
 			WindowStatus stat = WindowStatus.OPEN;
-			int val = stat.assoc;`,
+			int val = stat.a|||ssoc;`,
 		)
-		position := buildPosition(7, 19) // Cursor at `int val = stat.a|ssoc;`
-		doc := state.GetDoc("enums.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		variable, ok := symbolOption.Get().(*idx.Variable)
@@ -584,24 +449,11 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 }
 
 func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing.T) {
-	state := NewTestState()
-	search := NewSearchWithoutLog()
-
 	t.Run("Should find fault constant with path definition", func(t *testing.T) {
-		state.registerDoc(
-			"app.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError err = WindowError.UNEXPECTED_ERROR;`,
+			WindowError err = WindowError.U|||NEXPECTED_ERROR;`,
 		)
-		position := buildPosition(2, 34) // Cursor at `WindowError err = WindowError.U|NEXPECTED_ERROR;`
-		doc := state.GetDoc("app.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		_, ok := symbolOption.Get().(*idx.FaultConstant)
@@ -610,124 +462,73 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing
 	})
 
 	t.Run("Should not find fault constant after explicit instance", func(t *testing.T) {
-		state.registerDoc(
-			"app.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError err = WindowError.UNEXPECTED_ERROR.SOMETHING_HAPPENED;`,
+			WindowError err = WindowError.UNEXPECTED_ERROR.S|||OMETHING_HAPPENED;`,
 		)
-		position := buildPosition(2, 51) // Cursor at `WindowError err = WindowError.UNEXPECTED_ERROR.S|OMETHING_HAPPENED;`
-		doc := state.GetDoc("app.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance")
 	})
 
 	t.Run("Should not find fault constant after instance variable", func(t *testing.T) {
-		state.registerDoc(
-			"app.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 			WindowError err = WindowError.UNEXPECTED_ERROR;
-			WindowError bad = err.SOMETHING_HAPPENED;`,
+			WindowError bad = err.S|||OMETHING_HAPPENED;`,
 		)
-		position := buildPosition(3, 26) // Cursor at `WindowError bad = err.S|OMETHING_HAPPENED;`
-		doc := state.GetDoc("app.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance variable")
 	})
 
 	t.Run("Should not find fault constant after instance variable in struct member", func(t *testing.T) {
-		state.registerDoc(
-			"app.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 			struct MyStruct { WindowError f; }
 			MyStruct st = { WindowError.UNEXPECTED_ERROR };
-			WindowError bad = st.f.SOMETHING_HAPPENED;`,
+			WindowError bad = st.f.S|||OMETHING_HAPPENED;`,
 		)
-		position := buildPosition(4, 27) // Cursor at `WindowError bad = st.f.S|OMETHING_HAPPENED;`
-		doc := state.GetDoc("app.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
-		)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 
 		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance variable")
 	})
 
 	t.Run("Should find fault method on instance variable", func(t *testing.T) {
-		state.registerDoc(
-			"app.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 			fn bool WindowError.isBad() {}
 			fn void main() {
 				WindowError val = WindowError.UNEXPECTED_ERROR;
-				val.isBad();
+				val.is|||Bad();
 			}`,
 		)
-		// Cursor at `val.is|Bad();`
-		doc := state.GetDoc("app.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), buildPosition(5, 10))
 
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "WindowError.isBad", fun.GetName())
 		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
 	})
 
 	t.Run("Should find fault method after instance variable in struct member", func(t *testing.T) {
-		state.registerDoc(
-			"app.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 			fn bool WindowError.isBad() {}
 			struct MyStruct { WindowError f; }
 			MyStruct st = { WindowError.UNEXPECTED_ERROR };
-			WindowError bad = st.f.isBad();`,
-		)
-		position := buildPosition(5, 27) // Cursor at `WindowError bad = st.f.i|sBad();`
-		doc := state.GetDoc("app.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(
-			&doc,
-			*state.state.GetUnitModulesByDoc(doc.URI),
-			position,
+			WindowError bad = st.f.i|||sBad();`,
 		)
 
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "WindowError.isBad", fun.GetName())
 		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
 	})
 
 	t.Run("Should find fault method on explicit constant", func(t *testing.T) {
-		state.registerDoc(
-			"app.c3",
+		symbolOption := SearchUnderCursor_AccessPath(
 			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 			fn bool WindowError.isBad() {}
 			fn void main() {
-				WindowError.UNEXPECTED_ERROR.isBad();
+				WindowError.UNEXPECTED_ERROR.is|||Bad();
 			}`,
 		)
-		// Cursor at `WindowError.UNEXPECTED_ERROR.is|Bad();`
-		position := buildPosition(4, 36)
 
-		doc := state.GetDoc("app.c3")
-		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
-
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "WindowError.isBad", fun.GetName())
 		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
