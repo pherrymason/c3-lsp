@@ -41,7 +41,7 @@ func (d *Distinct) SetInline(inline bool) {
 }
 
 func (d Distinct) GetHoverInfo() string {
-	baseType := d.baseType.name
+	baseType := d.baseType.String()
 	if len(d.baseType.genericArguments) > 0 {
 		genericNames := []string{}
 		for _, generic := range d.baseType.genericArguments {
