@@ -187,7 +187,7 @@ func (s *Search) BuildMethodCompletions(
 				Range:   replacementRange,
 			},
 			Documentation: GetCompletableDocComment(fn),
-			Detail: GetCompletionDetail(fn),
+			Detail:        GetCompletionDetail(fn),
 		})
 	}
 
@@ -304,6 +304,23 @@ func (s *Search) BuildCompletionList(
 
 			items = append(items, s.BuildMethodCompletions(state, strukt.GetFQN(), filterMembers, symbolInPosition)...)
 
+		case *symbols.Enumerator:
+			enumerator := prevIndexable.(*symbols.Enumerator)
+
+			for _, assoc := range enumerator.AssociatedValues {
+				if strings.HasPrefix(assoc.GetName(), symbolInPosition.Text()) {
+					items = append(items, protocol.CompletionItem{
+						Label: assoc.GetName(),
+						Kind:  &assoc.Kind,
+
+						// No documentation for enumerators at this time
+						Documentation: nil,
+
+						Detail: GetCompletionDetail(&assoc),
+					})
+				}
+			}
+
 		case *symbols.Enum:
 			enum := prevIndexable.(*symbols.Enum)
 
@@ -321,6 +338,21 @@ func (s *Search) BuildCompletionList(
 							Documentation: nil,
 
 							Detail: GetCompletionDetail(enumerator),
+						})
+					}
+				}
+			} else {
+				// This is an enum instance, so we can access associated values.
+				for _, assoc := range enum.GetAssociatedValues() {
+					if strings.HasPrefix(assoc.GetName(), symbolInPosition.Text()) {
+						items = append(items, protocol.CompletionItem{
+							Label: assoc.GetName(),
+							Kind:  &assoc.Kind,
+
+							// No documentation for enumerators at this time
+							Documentation: nil,
+
+							Detail: GetCompletionDetail(&assoc),
 						})
 					}
 				}

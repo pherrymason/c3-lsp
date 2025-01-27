@@ -907,6 +907,80 @@ func TestBuildCompletionList_enums(t *testing.T) {
 		}
 	})
 
+	t.Run("Should suggest enum associated values", func(t *testing.T) {
+		source := `
+		enum Color : (int assoc, float abc) {
+			RED = { 1, 2.0 },
+			BLUE = { 2, 4.0 }
+		}
+		fn void main() {
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find associated values on enum type",
+				"Color.a",
+				[]protocol.CompletionItem{}},
+			{
+				"Find associated values on explicit constant",
+				"Color.RED.a",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("abc", protocol.CompletionItemKindVariable, "float"),
+					CreateCompletionItem("assoc", protocol.CompletionItemKindVariable, "int"),
+				}},
+
+			{
+				"Find matching associated values on explicit constant",
+				"Color.RED.asso",
+				[]protocol.CompletionItem{
+					CreateCompletionItem("assoc", protocol.CompletionItemKindVariable, "int"),
+				}},
+
+			{
+				"Find associated values on enum instance variable",
+				`Color clr = Color.RED;
+clr.a`,
+				[]protocol.CompletionItem{
+					CreateCompletionItem("abc", protocol.CompletionItemKindVariable, "float"),
+					CreateCompletionItem("assoc", protocol.CompletionItemKindVariable, "int"),
+				}},
+
+			{
+				"Find matching associated values on enum instance variable",
+				`Color clr = Color.RED;
+clr.asso`,
+				[]protocol.CompletionItem{
+					CreateCompletionItem("assoc", protocol.CompletionItemKindVariable, "int"),
+				}},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete enum associated values: #%s", tt.name), func(t *testing.T) {
+				state := NewTestState(logger)
+				state.registerDoc("test.c3", source+tt.input+`}`)
+				lines := strings.Split(tt.input, "\n")
+				lastLine := lines[len(lines)-1]
+				position := buildPosition(7+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
+
+				search := NewSearchWithoutLog()
+				completionList := search.BuildCompletionList(
+					context.CursorContext{
+						Position: position,
+						DocURI:   "test.c3",
+					},
+					&state.state)
+
+				filtered := filterOutKeywordSuggestions(completionList)
+
+				assert.Equal(t, len(tt.expected), len(filtered))
+				assert.Equal(t, tt.expected, filtered)
+			})
+		}
+	})
+
 	t.Run("Should suggest Enum methods", func(t *testing.T) {
 		source := `
 		enum Color { RED, GREEN, BLUE, COBALT }
