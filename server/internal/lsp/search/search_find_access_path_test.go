@@ -697,6 +697,44 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
+	t.Run("Should not find base distinct method definition with non-inline distinct earlier in the chain", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			distinct KiloKilo = Kilo;  // <--- not inline should break the chain
+			distinct KiloKiloKilo = inline KiloKilo;
+			distinct KiloKiloKiloKilo = inline KiloKiloKilo;
+			fn bool Kilo.isLarge(){ return false; }
+
+			fn void func(KiloKiloKiloKilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should find base distinct method definition alongside inline distinct chain", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			distinct KiloKilo = inline Kilo;
+			distinct KiloKiloKilo = inline KiloKilo;
+			distinct KiloKiloKiloKilo = inline KiloKiloKilo;
+			fn bool Kilo.isLarge(){ return false; }
+
+			fn void func(KiloKiloKiloKilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Kilo.isLarge", symbolOption.Get().GetName())
+	})
+
 	t.Run("Should find inline distinct's base inline distinct's base type method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
@@ -894,6 +932,127 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 
 			fn void func() {
 				Kilo.A|||AA;
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find non-inline distinct struct method on top-level type", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = Abc;
+			fn Abc Abc.doer() {}
+
+			fn void func() {
+				Kilo.d|||oer().doer();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find inline distinct struct method on top-level type", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn Abc Abc.doer() {}
+
+			fn void func() {
+				Kilo.d|||oer().doer();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find non-inline distinct enum method on top-level type", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum Abc : (int data) {
+				AAA = 5,
+				BBB = 6,
+			}
+			distinct Kilo = Abc;
+			fn Abc Abc.doer() {}
+
+			fn void func() {
+				Kilo.d|||oer().doer();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find inline distinct enum method on top-level type", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum Abc : (int data) {
+				AAA = 5,
+				BBB = 6,
+			}
+			distinct Kilo = inline Abc;
+			fn Abc Abc.doer() {}
+
+			fn void func() {
+				Kilo.d|||oer().doer();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find non-inline distinct fault method on top-level type", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`fault Abc {
+				AAA,
+				BBB,
+			}
+			distinct Kilo = Abc;
+			fn Abc Abc.doer() {}
+
+			fn void func() {
+				Kilo.d|||oer().doer();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find inline distinct fault method on top-level type", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`fault Abc {
+				AAA,
+				BBB,
+			}
+			distinct Kilo = inline Abc;
+			fn Abc Abc.doer() {}
+
+			fn void func() {
+				Kilo.d|||oer().doer();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
+	t.Run("Should not find inline distinct's base distinct's method on top-level type", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`fault Abc {
+				AAA,
+				BBB,
+			}
+			distinct Kilo = Abc;
+			distinct KiloKilo = inline Kilo;
+			fn Kilo Kilo.doer() {}
+
+			fn void func() {
+				KiloKilo.d|||oer().doer();
 			}
 			`,
 		)
