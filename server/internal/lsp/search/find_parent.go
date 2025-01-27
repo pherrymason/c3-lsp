@@ -14,7 +14,11 @@ import (
 // from the indexable itself, therefore only methods can be accessed.
 func canReadMembersOf(s symbols.Indexable) bool {
 	switch s.(type) {
-	case *symbols.Struct, *symbols.Enum, *symbols.Fault:
+
+	// Theoretically, a 'distinct' cannot have members, and in fact any type obtained
+	// from a distinct cannot have its members accessed, but, for consistency, we
+	// specify 'true' here to indicate that we're handling a type, not some instance.
+	case *symbols.Struct, *symbols.Enum, *symbols.Fault, *symbols.Distinct:
 		return true
 	case *symbols.Def:
 		// If Def resolves to a type, it can receive its members.
@@ -72,6 +76,12 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 	protection := 0
 	membersReadable := true
 
+	// Indicates whether the current iteration is inspecting an element which was
+	// transformed from a distinct into its base type. When this happens, enum
+	// and fault constants cannot be accessed; in addition, if the distinct is
+	// not inline, methods also cannot be accessed.
+	fromDistinct := NotFromDistinct
+
 	for {
 		if protection > 500 {
 			return searchResult
@@ -84,8 +94,60 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		// constants).
 		membersReadable = canReadMembersOf(elm)
 
+		// An element came from walking into a distinct only if a distinct was found
+		// in the type resolution loop below.
+		fromDistinct = NotFromDistinct
+
+		// Resolve the element before inspecting it further.
+		subprotection := 0
 		for {
-			if !isInspectable(elm) {
+			if subprotection > 1000 {
+				return searchResult
+			}
+			subprotection++
+
+			distinct, isDistinct := elm.(*symbols.Distinct)
+
+			if isDistinct {
+				// Check if we could be about to access a distinct's
+				// own method. If so, don't resolve it to its inner type
+				// and break out of type resolution.
+				searchingSymbol := state.GetNextSymbol()
+				newIterSearch, methodResult := s.findMethod(
+					distinct.GetName(),
+					searchingSymbol,
+					docId,
+					searchParams,
+					projState,
+					debugger,
+				)
+
+				if methodResult.IsSome() {
+					iterSearch = newIterSearch
+					elm = methodResult.Get()
+					symbolsHierarchy = append(symbolsHierarchy, elm)
+					state.Advance()
+
+					// Skip type resolution entirely, found a method.
+					break
+				} else {
+					// Let's try to access something under its base type by resolving.
+					// The base methods are only available if the distinct is inline,
+					// so we record whether or not we transformed from an inline distinct
+					// in a variable. Still, non-inline distincts can access associated values
+					// of enums and struct members, so we must keep searching.
+
+					// Indicate to the new element that it was transformed from
+					// a distinct of a certain kind.
+					if distinct.IsInline() {
+						fromDistinct = InlineDistinct
+					} else {
+						fromDistinct = NonInlineDistinct
+					}
+				}
+			}
+
+			if isDistinct || !isInspectable(elm) {
 				elm = s.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), projState, symbolsHierarchy, debugger)
 				if elm == nil {
 					return NewSearchResultEmptyWithTraversedModules(result.traversedModules)
@@ -117,7 +179,8 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
-			if !foundAssoc && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
+			// Don't search methods for non-inline distinct transformations.
+			if !foundAssoc && fromDistinct != NonInlineDistinct && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
 				// Search in methods
 				// First get the enum
 				enumSymbols := projState.SearchByFQN(enumerator.GetEnumFQN())
@@ -144,7 +207,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		case *symbols.FaultConstant:
 			constant := elm.(*symbols.FaultConstant)
 
-			if constant.GetModuleString() != "" && constant.GetFaultName() != "" {
+			if fromDistinct != NonInlineDistinct && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
 				// Search in methods
 				// First get the fault
 				faultSymbols := projState.SearchByFQN(constant.GetFaultFQN())
@@ -175,9 +238,9 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			searchingSymbol := state.GetNextSymbol()
 
 			// 'CoolEnum.VARIANT.VARIANT' is invalid (member not readable on member)
-			// But 'CoolEnum.VARIANT' is ok,
-			// as well as 'AliasForEnum.VARIANT'
-			if membersReadable {
+			// But 'CoolEnum.VARIANT' is ok, as well as 'AliasForEnum.VARIANT'.
+			// However, cannot access 'DistinctEnum.VARIANT'.
+			if membersReadable && fromDistinct == NotFromDistinct {
 				enumerators := _enum.GetEnumerators()
 				for i := 0; i < len(enumerators); i++ {
 					if enumerators[i].GetName() == searchingSymbol.Text() {
@@ -188,8 +251,9 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 						break
 					}
 				}
-			} else {
+			} else if !membersReadable {
 				// Members not readable => this is an instance, so we can read associated values.
+				// This is always accessible, even when coming from distincts, so that is not checked.
 				assocs := _enum.GetAssociatedValues()
 				for i := 0; i < len(assocs); i++ {
 					if assocs[i].GetName() == searchingSymbol.Text() {
@@ -202,7 +266,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
-			if !foundMemberOrAssoc {
+			if !foundMemberOrAssoc && fromDistinct != NonInlineDistinct {
 				// Search in methods
 				newIterSearch, result := s.findMethod(
 					_enum.GetName(),
@@ -226,7 +290,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
 
-			if membersReadable {
+			if membersReadable && fromDistinct == NotFromDistinct {
 				constants := fault.GetConstants()
 				for i := 0; i < len(constants); i++ {
 					if constants[i].GetName() == searchingSymbol.Text() {
@@ -239,7 +303,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
-			if !foundMember {
+			if !foundMember && fromDistinct != NonInlineDistinct {
 				// Search in methods
 				newIterSearch, result := s.findMethod(
 					fault.GetName(),
@@ -278,7 +342,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 			}
 
-			if !foundMember {
+			if !foundMember && fromDistinct != NonInlineDistinct {
 				// Search in methods
 				newIterSearch, result := s.findMethod(
 					strukt.GetName(),
@@ -296,41 +360,6 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
 			}
-
-		case *symbols.Distinct:
-			distinct := elm.(*symbols.Distinct)
-
-			// Search in the distinct's own methods first
-			searchingSymbol := state.GetNextSymbol()
-			newIterSearch, methodResult := s.findMethod(
-				distinct.GetName(),
-				searchingSymbol,
-				docId,
-				searchParams,
-				projState,
-				debugger,
-			)
-
-			if methodResult.IsSome() {
-				iterSearch = newIterSearch
-				elm = methodResult.Get()
-				symbolsHierarchy = append(symbolsHierarchy, elm)
-				state.Advance()
-			} else if distinct.IsInline() {
-				// Distinct is inline, so let's try to access something under its base type,
-				// as its methods are available.
-				// Translate to its base type's symbol and continue searching.
-				// Don't advance the state as we will still be looking at the same symbol.
-				elm = s.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), projState, symbolsHierarchy, debugger)
-				if elm == nil {
-					return NewSearchResultEmptyWithTraversedModules(result.traversedModules)
-				}
-				symbolsHierarchy = append(symbolsHierarchy, elm)
-			} else {
-				// Nothing found, and it isn't inline, meaning only the distinct's own
-				// methods are available, not those of the type it represents.
-				return NewSearchResultEmpty(trackedModules)
-			}
 		}
 
 		if state.IsEnd() {
@@ -338,6 +367,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		}
 	}
 	searchResult.SetMembersReadable(membersReadable)
+	searchResult.SetFromDistinct(fromDistinct)
 	searchResult.Set(elm)
 
 	return searchResult
@@ -402,14 +432,12 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 	case *symbols.Distinct:
 		// Translate to the real symbol
 		distinct := elm.(*symbols.Distinct)
-		if distinct.IsInline() {
-			query := distinct.GetBaseType().GetFullQualifiedName()
+		query := distinct.GetBaseType().GetFullQualifiedName()
 
-			symbols := projState.SearchByFQN(query)
-			if len(symbols) > 0 {
-				return symbols[0]
-				// Do not advance state, we need to look inside
-			}
+		symbols := projState.SearchByFQN(query)
+		if len(symbols) > 0 {
+			return symbols[0]
+			// Do not advance state, we need to look inside
 		}
 	}
 

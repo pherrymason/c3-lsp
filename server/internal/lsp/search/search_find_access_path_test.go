@@ -700,6 +700,86 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "Kilo.isLarge", symbolOption.Get().GetName())
 	})
+
+	t.Run("Should find non-inline distinct struct member", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int data; }
+			distinct Kilo = Abc;
+
+			fn int func(Kilo val) {
+				return val.da|||ta;
+			}
+			`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Symbol not found")
+		symbol := symbolOption.Get()
+
+		variable := symbol.(*idx.StructMember)
+		assert.Equal(t, "data", symbol.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should find inline distinct struct member", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int data; }
+			distinct Kilo = inline Abc;
+
+			fn int func(Kilo val) {
+				return val.da|||ta;
+			}
+			`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Symbol not found")
+		symbol := symbolOption.Get()
+
+		variable := symbol.(*idx.StructMember)
+		assert.Equal(t, "data", symbol.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should find non-inline distinct enum associated value", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum Abc : (int data) {
+				AAA = 5,
+				BBB = 6,
+			}
+			distinct Kilo = Abc;
+
+			fn int func(Kilo val) {
+				return val.da|||ta;
+			}
+			`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		variable, ok := symbolOption.Get().(*idx.Variable)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a variable, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "data", variable.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
+
+	t.Run("Should find inline distinct enum associated value", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`enum Abc : (int data) {
+				AAA = 5,
+				BBB = 6,
+			}
+			distinct Kilo = inline Abc;
+
+			fn int func(Kilo val) {
+				return val.da|||ta;
+			}
+			`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		variable, ok := symbolOption.Get().(*idx.Variable)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a variable, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "data", variable.GetName())
+		assert.Equal(t, "int", variable.GetType().GetName())
+	})
 }
 
 func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *testing.T) {
