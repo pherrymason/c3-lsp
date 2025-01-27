@@ -156,10 +156,9 @@ func Generate_fault(fault *s.Fault, module *s.Module) jen.Code {
 				jen.Qual(PackageName+"symbols", "NewFaultConstantBuilder").
 					Call(
 						jen.Lit(enumerator.GetName()),
-						// jen.Lit(module.GetName()),
+						jen.Lit(module.GetName()),
 						jen.Lit(enumerator.GetDocumentURI()),
 					).
-					Dot("WithModule").Call(jen.Lit(module.GetName())). // TODO: Use parameter above and bump
 					Dot("WithFaultName").Call(jen.Lit(fault.GetName())).
 					Dot("Build").Call(),
 			)

@@ -51,24 +51,18 @@ type FaultConstantBuilder struct {
 	faultConstant FaultConstant
 }
 
-func NewFaultConstantBuilder(name string, docId string) *FaultConstantBuilder {
+func NewFaultConstantBuilder(name string, module string, docId string) *FaultConstantBuilder {
 	return &FaultConstantBuilder{
 		faultConstant: FaultConstant{
 			BaseIndexable: BaseIndexable{
-				name:        name,
-				documentURI: docId,
-				Kind:        protocol.CompletionItemKindEnumMember,
+				name:         name,
+				moduleString: module,
+				module:       NewModulePathFromString(module),
+				documentURI:  docId,
+				Kind:         protocol.CompletionItemKindEnumMember,
 			},
 		},
 	}
-}
-
-// TODO: move this into 'module' parameter and bump stdlib shim
-func (eb *FaultConstantBuilder) WithModule(module string) *FaultConstantBuilder {
-	eb.faultConstant.BaseIndexable.moduleString = module
-	eb.faultConstant.BaseIndexable.module = NewModulePathFromString(module)
-
-	return eb
 }
 
 func (eb *FaultConstantBuilder) WithoutSourceCode() *FaultConstantBuilder {
