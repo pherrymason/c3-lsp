@@ -679,6 +679,24 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
+	t.Run("Should not find base type method definition with non-inline distinct in the chain", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_AccessPath(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			distinct KiloKilo = Kilo;  // <--- not inline should break the chain
+			distinct KiloKiloKilo = inline KiloKilo;
+			distinct KiloKiloKiloKilo = inline KiloKiloKilo;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(KiloKiloKiloKilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
+	})
+
 	t.Run("Should find inline distinct's base inline distinct's base type method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }

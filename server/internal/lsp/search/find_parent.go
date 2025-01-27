@@ -113,12 +113,16 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 			distinct, isDistinct := elm.(*symbols.Distinct)
 
-			if isDistinct {
-				// Only check distinct methods if we don't come from another,
-				// non-inline distinct, which would forbid method access.
-				// In addition, don't check if there are no upcoming symbols, so there is
-				// no method access.
-				if !state.IsEnd() && fromDistinct != NonInlineDistinct {
+			// Possibly search for distinct methods, and if they aren't found, set whether
+			// we are transforming from an inline or a non-inline distinct.
+			// However, if we have already transformed from a non-inline distinct at some
+			// point in a chain of distinct -> distinct -> ... -> distinct, then we
+			// cannot access methods at all even if further distincts are inline, so
+			// we keep the status as 'NonInlineDistinct' and don't search for methods.
+			if isDistinct && fromDistinct != NonInlineDistinct {
+				// Don't check if there are no upcoming symbols, as there is
+				// certainly no method access attempt in that case.
+				if !state.IsEnd() {
 					// Check if we could be about to access a distinct's
 					// own method. If so, don't resolve it to its inner type
 					// and break out of type resolution.
