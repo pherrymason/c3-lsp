@@ -171,6 +171,13 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 					Dot("AddDef").Call(defDef)
 			}
 
+			for _, distinct := range sortedValues(mod.Distincts) {
+				somethingAdded = true
+				distinctDef := Generate_distinct(distinct, mod)
+				modDefinition.
+					Dot("AddDistinct").Call(distinctDef)
+			}
+
 			for _, enum := range sortedValues(mod.Enums) {
 				somethingAdded = true
 				enumDef := Generate_enum(enum, mod)

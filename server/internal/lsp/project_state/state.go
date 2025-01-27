@@ -159,6 +159,9 @@ func (s *ProjectState) indexParsedSymbols(parsedModules symbols_table.UnitModule
 		for _, def := range module.Defs {
 			s.indexByFQN.RegisterSymbol(def)
 		}
+		for _, distinct := range module.Distincts {
+			s.indexByFQN.RegisterSymbol(distinct)
+		}
 	}
 }
 

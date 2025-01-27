@@ -576,6 +576,118 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 	})
 }
 
+func TestLanguage_findClosestSymbolDeclaration_distinct(t *testing.T) {
+	t.Run("Find local distinct definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`distinct Kilo = int;
+			K|||ilo value = 3;`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		assert.Equal(t, "Kilo", symbolOption.Get().GetName())
+	})
+
+	t.Run("Find local distinct inline definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`distinct Kilo = inline int;
+			K|||ilo value = 3;`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		assert.Equal(t, "Kilo", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find distinct method definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`distinct Kilo = int;
+			fn bool Kilo.isLarge(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Kilo.isLarge", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should not find non-inline distinct base type method definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`struct Abc { int a; }
+			distinct Kilo = Abc;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		assert.True(t, symbolOption.IsNone(), "Element found despite non-inline")
+	})
+
+	t.Run("Should find inline distinct base type method definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Abc.isLarge", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find inline distinct's own method definition", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Abc.isLarge(){ return false; }
+			fn bool Kilo.isEvenLarger(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||EvenLarger();
+			}
+			`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Kilo.isEvenLarger", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should prioritize clashing inline distinct method name", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`struct Unrelated { int b; }
+			struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Unrelated.isLarge() { return false; }
+			fn bool Abc.isLarge(){ return false; }
+			fn bool Kilo.isLarge(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Kilo.isLarge", symbolOption.Get().GetName())
+	})
+}
+
 func TestLanguage_findClosestSymbolDeclaration_functions(t *testing.T) {
 	t.Run("Find local function definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(

@@ -15,6 +15,7 @@ type Module struct {
 	Structs           map[string]*Struct
 	Bitstructs        map[string]*Bitstruct
 	Defs              map[string]*Def
+	Distincts         map[string]*Distinct
 	ChildrenFunctions []*Function
 	Interfaces        map[string]*Interface
 	Imports           []string // modules imported in this scope
@@ -31,6 +32,7 @@ func NewModule(name string, docId string, idRange Range, docRange Range) *Module
 		Structs:           make(map[string]*Struct),
 		Bitstructs:        make(map[string]*Bitstruct),
 		Defs:              make(map[string]*Def),
+		Distincts:         make(map[string]*Distinct),
 		ChildrenFunctions: []*Function{},
 		Interfaces:        make(map[string]*Interface),
 		Imports:           []string{},
@@ -105,6 +107,13 @@ func (m *Module) AddBitstruct(b *Bitstruct) *Module {
 func (m *Module) AddDef(def *Def) *Module {
 	m.Defs[def.GetName()] = def
 	m.Insert(def)
+
+	return m
+}
+
+func (m *Module) AddDistinct(distinct *Distinct) *Module {
+	m.Distincts[distinct.GetName()] = distinct
+	m.Insert(distinct)
 
 	return m
 }

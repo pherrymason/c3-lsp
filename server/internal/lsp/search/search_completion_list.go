@@ -272,10 +272,25 @@ func (s *Search) BuildCompletionList(
 
 		//	searchParams.scopeMode = AnyPosition
 
-		membersReadable, prevIndexableOption := s.findParentType(searchParams, state, FindDebugger{depth: 0, enabled: true})
+		membersReadable, fromDistinct, initialItems, prevIndexableOption := s.findParentTypeWithCompletions(
+			filterMembers,
+			symbolInPosition,
+			searchParams,
+			state,
+			FindDebugger{depth: 0, enabled: true},
+		)
+
+		items = append(items, initialItems...)
+
 		if prevIndexableOption.IsNone() {
 			return items
 		}
+
+		// Can only read methods if the current type being inspected wasn't the base type of a distinct,
+		// or if it was, then we're currently inspecting an inline distinct INSTANCE and not the type itself, since
+		// methods are scoped to their concrete type names.
+		methodsReadable := fromDistinct == NotFromDistinct || (fromDistinct == InlineDistinct && !membersReadable)
+
 		prevIndexable := prevIndexableOption.Get()
 		//fmt.Print(prevIndexable.GetName())
 
@@ -285,7 +300,9 @@ func (s *Search) BuildCompletionList(
 			strukt := prevIndexable.(*symbols.Struct)
 
 			// We don't check for 'membersReadable' here since even variables of structs
-			// can access its members.
+			// can access its members. In addition, distincts of structs can always
+			// access struct members regardless of being inline, so we don't need to
+			// check for distinct procedence here either.
 			// TODO: Actually, maybe we should check for NOT membersReadable if it is
 			// impossible to access Struct.member as a type.
 			for _, member := range strukt.GetMembers() {
@@ -302,11 +319,16 @@ func (s *Search) BuildCompletionList(
 				}
 			}
 
-			items = append(items, s.BuildMethodCompletions(state, strukt.GetFQN(), filterMembers, symbolInPosition)...)
+			// If this struct was the base type of a non-inline distinct variable,
+			// do not suggest its methods, as they cannot be accessed
+			if methodsReadable {
+				items = append(items, s.BuildMethodCompletions(state, strukt.GetFQN(), filterMembers, symbolInPosition)...)
+			}
 
 		case *symbols.Enumerator:
 			enumerator := prevIndexable.(*symbols.Enumerator)
 
+			// Associated values are always available regardless of distinct status.
 			for _, assoc := range enumerator.AssociatedValues {
 				if !filterMembers || strings.HasPrefix(assoc.GetName(), symbolInPosition.Text()) {
 					items = append(items, protocol.CompletionItem{
@@ -321,8 +343,8 @@ func (s *Search) BuildCompletionList(
 				}
 			}
 
-			// Add parent enum's methods
-			if enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
+			// Add parent enum's methods, but only if this doesn't come from a non-inline distinct.
+			if methodsReadable && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
 				items = append(items, s.BuildMethodCompletions(state, enumerator.GetEnumFQN(), filterMembers, symbolInPosition)...)
 			}
 
@@ -330,7 +352,7 @@ func (s *Search) BuildCompletionList(
 			constant := prevIndexable.(*symbols.FaultConstant)
 
 			// Add parent fault's methods
-			if constant.GetModuleString() != "" && constant.GetFaultName() != "" {
+			if methodsReadable && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
 				items = append(items, s.BuildMethodCompletions(state, constant.GetFaultFQN(), filterMembers, symbolInPosition)...)
 			}
 
@@ -340,7 +362,8 @@ func (s *Search) BuildCompletionList(
 			// Accessing MyEnum.VALUE is ok, but not MyEnum.VALUE.VALUE,
 			// so don't search for enumerators within enumerators
 			// (membersReadable = false).
-			if membersReadable {
+			// However, 'DistinctEnum.VALUE' is always invalid.
+			if membersReadable && fromDistinct == NotFromDistinct {
 				for _, enumerator := range enum.GetEnumerators() {
 					if !filterMembers || strings.HasPrefix(enumerator.GetName(), symbolInPosition.Text()) {
 						items = append(items, protocol.CompletionItem{
@@ -354,8 +377,9 @@ func (s *Search) BuildCompletionList(
 						})
 					}
 				}
-			} else {
+			} else if !membersReadable {
 				// This is an enum instance, so we can access associated values.
+				// Always valid for distincts, so we don't check this here.
 				for _, assoc := range enum.GetAssociatedValues() {
 					if !filterMembers || strings.HasPrefix(assoc.GetName(), symbolInPosition.Text()) {
 						items = append(items, protocol.CompletionItem{
@@ -371,7 +395,9 @@ func (s *Search) BuildCompletionList(
 				}
 			}
 
-			items = append(items, s.BuildMethodCompletions(state, enum.GetFQN(), filterMembers, symbolInPosition)...)
+			if methodsReadable {
+				items = append(items, s.BuildMethodCompletions(state, enum.GetFQN(), filterMembers, symbolInPosition)...)
+			}
 
 		case *symbols.Fault:
 			fault := prevIndexable.(*symbols.Fault)
@@ -379,7 +405,7 @@ func (s *Search) BuildCompletionList(
 			// Accessing MyFault.VALUE is ok, but not MyFault.VALUE.VALUE,
 			// so don't search for constants within constants
 			// (membersReadable = false).
-			if membersReadable {
+			if membersReadable && fromDistinct == NotFromDistinct {
 				for _, constant := range fault.GetConstants() {
 					if !filterMembers || strings.HasPrefix(constant.GetName(), symbolInPosition.Text()) {
 						items = append(items, protocol.CompletionItem{
@@ -395,7 +421,9 @@ func (s *Search) BuildCompletionList(
 				}
 			}
 
-			items = append(items, s.BuildMethodCompletions(state, fault.GetFQN(), filterMembers, symbolInPosition)...)
+			if methodsReadable {
+				items = append(items, s.BuildMethodCompletions(state, fault.GetFQN(), filterMembers, symbolInPosition)...)
+			}
 		}
 	} else {
 		// Find all symbols in module
@@ -450,35 +478,92 @@ func (s *Search) BuildCompletionList(
 	return items
 }
 
-// Returns whether members can be read from the found symbol, as well as the found symbol itself.
-func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectState, debugger FindDebugger) (bool, option.Option[symbols.Indexable]) {
+// Returns whether members can be read from the found symbol, the 'fromDistinct' status, the list of
+// completions found while resolving distincts in a distinct chain (if any), as well as the final symbol
+// found for further completions.
+func (s *Search) findParentTypeWithCompletions(
+	filterMembers bool,
+	symbolInPosition sourcecode.Word,
+	searchParams sp.SearchParams,
+	state *l.ProjectState,
+	debugger FindDebugger,
+) (bool, int, []protocol.CompletionItem, option.Option[symbols.Indexable]) {
 	prevIndexableResult := s.findInParentSymbols(searchParams, state, debugger)
 	membersReadable := prevIndexableResult.membersReadable
+	fromDistinct := prevIndexableResult.fromDistinct
+	items := []protocol.CompletionItem{}
 	if prevIndexableResult.IsNone() {
-		return membersReadable, prevIndexableResult.result
+		return membersReadable, fromDistinct, items, prevIndexableResult.result
 	}
 	symbolsHierarchy := []symbols.Indexable{}
-
 	prevIndexable := prevIndexableResult.Get()
 
-	for {
-		if !isInspectable(prevIndexable) {
-			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, symbolsHierarchy, debugger)
+	// Can only read methods if the current type being inspected wasn't the base type of a distinct,
+	// or if it was, then we're currently inspecting an inline distinct INSTANCE and not the type itself, since
+	// methods are scoped to their concrete type names.
+	methodsReadable := fromDistinct == NotFromDistinct || (fromDistinct == InlineDistinct && !membersReadable)
 
-			if prevIndexable == nil {
-				return true, option.None[symbols.Indexable]()
+	// Use a loop to iteratively resolve and add completions of distincts in a distinct
+	// chain, that is, a distinct of distinct of ... of (base type).
+	// Completions all the way down are valid.
+	// This same loop will resolve any distincts pointing to def aliases and such through `s.resolve`.
+	// Then, the indexable is converted into its base type, which needs no further resolution.
+	protect := 0
+	for {
+		if protect > 1000 {
+			return true, NotFromDistinct, items, option.None[symbols.Indexable]()
+		}
+		protect++
+
+		distinct, isDistinct := prevIndexable.(*symbols.Distinct)
+
+		// If this distinct was the base type of a non-inline distinct, keep the
+		// status of non-inline distinct, since we can no longer access methods
+		if isDistinct && fromDistinct != NonInlineDistinct {
+			// Complete distinct-exclusive methods, but only if this is the original
+			// base type, an instance of it, or an instance of an inline distinct
+			// pointing to it.
+			if methodsReadable {
+				items = append(items, s.BuildMethodCompletions(state, distinct.GetFQN(), filterMembers, symbolInPosition)...)
 			}
+
+			if distinct.IsInline() {
+				fromDistinct = InlineDistinct
+
+				// Can only read methods on INSTANCES of inline distincts.
+				methodsReadable = methodsReadable && !membersReadable
+			} else {
+				fromDistinct = NonInlineDistinct
+				methodsReadable = false
+			}
+		}
+
+		if isDistinct || !isInspectable(prevIndexable) {
+			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, symbolsHierarchy, debugger)
+			if prevIndexable == nil {
+				// No point in trying to complete methods / members when the resolved type is not
+				// inspectable and doesn't resolve to anything that is inspectable
+				return true, NotFromDistinct, items, option.None[symbols.Indexable]()
+			}
+
+			// Important for generic type resolution above
+			symbolsHierarchy = append(symbolsHierarchy, prevIndexable)
 		} else {
+			// Hit a concrete, inspectable type to analyze, let's proceed.
 			break
 		}
 	}
 
+	var resolvedIndexable option.Option[symbols.Indexable]
+
+	// Might need to do an additional resolution step even if it's inspectable
 	switch prevIndexable.(type) {
 	case *symbols.StructMember:
 		var token sourcecode.Word
 		structMember, _ := prevIndexable.(*symbols.StructMember)
 		token = sourcecode.NewWord(structMember.GetType().GetName(), prevIndexable.GetIdRange())
 
+		// Resolve a struct member into its field type for completion
 		levelSearchParams := sp.NewSearchParamsBuilder().
 			//WithSymbol(token.Text()).
 			WithSymbolWord(
@@ -487,10 +572,10 @@ func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectSt
 			WithDocId(prevIndexable.GetDocumentURI()).
 			Build()
 
-		prevIndexableResult = s.findClosestSymbolDeclaration(levelSearchParams, state, debugger.goIn())
+		resolvedIndexable = s.findClosestSymbolDeclaration(levelSearchParams, state, debugger.goIn()).result
 	default:
-		return membersReadable, option.Some(prevIndexable)
+		resolvedIndexable = option.Some(prevIndexable)
 	}
 
-	return membersReadable, prevIndexableResult.result
+	return membersReadable, fromDistinct, items, resolvedIndexable
 }

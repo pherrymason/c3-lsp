@@ -53,7 +53,9 @@ func (d Def) GetHoverInfo() string {
 		return fmt.Sprintf("def %s = %s", d.name, d.resolvesTo)
 	}
 
-	resolvesTo := d.resolvesToType.Get().name
+	resolvesTo := d.resolvesToType.Get().String()
+
+	// TODO: Maybe this should be moved to 'String()' or some other type method
 	if len(d.resolvesToType.Get().genericArguments) > 0 {
 		genericNames := []string{}
 		for _, generic := range d.resolvesToType.Get().genericArguments {
