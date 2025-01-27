@@ -32,7 +32,7 @@ func (d *Distinct) GetBaseType() *Type {
 	return d.baseType
 }
 
-func (d *Distinct) GetInline() bool {
+func (d *Distinct) IsInline() bool {
 	return d.inline
 }
 

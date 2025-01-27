@@ -460,10 +460,9 @@ func (s *Search) findParentType(searchParams sp.SearchParams, state *l.ProjectSt
 	symbolsHierarchy := []symbols.Indexable{}
 
 	prevIndexable := prevIndexableResult.Get()
-	_, isDistinct := prevIndexable.(*symbols.Distinct) // temporary
 
 	for {
-		if !isInspectable(prevIndexable) || isDistinct {
+		if !isInspectable(prevIndexable) {
 			prevIndexable = s.resolve(prevIndexable, searchParams.DocId().Get(), searchParams.ModuleInCursor(), state, symbolsHierarchy, debugger)
 
 			if prevIndexable == nil {

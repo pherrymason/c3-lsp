@@ -302,23 +302,25 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 
 			// Search in the distinct's own methods first
 			searchingSymbol := state.GetNextSymbol()
-			methodSymbol := sourcecode.NewWord(distinct.GetName()+"."+searchingSymbol.Text(), searchingSymbol.TextRange())
-			iterSearch = search_params.NewSearchParamsBuilder().
-				WithSymbolWord(methodSymbol).
-				WithDocId(docId.Get()).
-				WithContextModuleName(searchParams.ModuleInCursor()).
-				WithScopeMode(search_params.InModuleRoot).
-				Build()
-			methodResult := s.findClosestSymbolDeclaration(iterSearch, projState, debugger.goIn())
+			newIterSearch, methodResult := s.findMethod(
+				distinct.GetName(),
+				searchingSymbol,
+				docId,
+				searchParams,
+				projState,
+				debugger,
+			)
 
 			if methodResult.IsSome() {
+				iterSearch = newIterSearch
 				elm = methodResult.Get()
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
-			} else if distinct.GetInline() {
+			} else if distinct.IsInline() {
 				// Distinct is inline, so let's try to access something under its base type,
 				// as its methods are available.
 				// Translate to its base type's symbol and continue searching.
+				// Don't advance the state as we will still be looking at the same symbol.
 				elm = s.resolve(elm, docId.Get(), searchParams.ModuleInCursor(), projState, symbolsHierarchy, debugger)
 				if elm == nil {
 					return NewSearchResultEmptyWithTraversedModules(result.traversedModules)
@@ -400,7 +402,7 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 	case *symbols.Distinct:
 		// Translate to the real symbol
 		distinct := elm.(*symbols.Distinct)
-		if distinct.GetInline() {
+		if distinct.IsInline() {
 			query := distinct.GetBaseType().GetFullQualifiedName()
 
 			symbols := projState.SearchByFQN(query)

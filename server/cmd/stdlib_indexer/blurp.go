@@ -102,7 +102,7 @@ func Generate_distinct(distinct *s.Distinct, module *s.Module) jen.Code {
 		).
 		Dot("WithInline").
 		Call(
-			jen.Lit(distinct.GetInline()),
+			jen.Lit(distinct.IsInline()),
 		).
 		Dot("WithBaseType").
 		Call(
