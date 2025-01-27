@@ -308,7 +308,7 @@ func (s *Search) BuildCompletionList(
 			enumerator := prevIndexable.(*symbols.Enumerator)
 
 			for _, assoc := range enumerator.AssociatedValues {
-				if strings.HasPrefix(assoc.GetName(), symbolInPosition.Text()) {
+				if !filterMembers || strings.HasPrefix(assoc.GetName(), symbolInPosition.Text()) {
 					items = append(items, protocol.CompletionItem{
 						Label: assoc.GetName(),
 						Kind:  &assoc.Kind,
@@ -357,7 +357,7 @@ func (s *Search) BuildCompletionList(
 			} else {
 				// This is an enum instance, so we can access associated values.
 				for _, assoc := range enum.GetAssociatedValues() {
-					if strings.HasPrefix(assoc.GetName(), symbolInPosition.Text()) {
+					if !filterMembers || strings.HasPrefix(assoc.GetName(), symbolInPosition.Text()) {
 						items = append(items, protocol.CompletionItem{
 							Label: assoc.GetName(),
 							Kind:  &assoc.Kind,
