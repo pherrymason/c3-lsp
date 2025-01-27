@@ -34,6 +34,24 @@ func asMarkdown(text string) protocol.MarkupContent {
 	}
 }
 
+func CompleteAtCursor(body string) []protocol.CompletionItem {
+	cursorlessBody, position := parseBodyWithCursor(body)
+
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+	state.registerDoc(
+		"app.c3",
+		cursorlessBody,
+	)
+
+	return search.BuildCompletionList(
+		context.CursorContext{
+			Position: position,
+			DocURI:   "app.c3",
+		},
+		&state.state)
+}
+
 func Test_isCompletingAChain(t *testing.T) {
 	cases := []struct {
 		name                     string
@@ -1804,6 +1822,19 @@ func TestBuildCompletionList_definitions(t *testing.T) {
 				assert.Equal(t, tt.expected, completionList)
 			})
 		}
+	})
+}
+
+func TestBuildCompletionList_distinct(t *testing.T) {
+	t.Run("Should not crash at dot", func(t *testing.T) {
+		CompleteAtCursor(`
+			distinct Wibble1 = int;
+			distinct Wibble2 = inline Wibble;
+
+			Wibble1 a = 5;
+			Wibble2 b = a;
+			b.|||
+		`)
 	})
 }
 

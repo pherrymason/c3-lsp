@@ -116,7 +116,9 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			if isDistinct {
 				// Only check distinct methods if we don't come from another,
 				// non-inline distinct, which would forbid method access.
-				if fromDistinct != NonInlineDistinct {
+				// In addition, don't check if there are no upcoming symbols, so there is
+				// no method access.
+				if !state.IsEnd() && fromDistinct != NonInlineDistinct {
 					// Check if we could be about to access a distinct's
 					// own method. If so, don't resolve it to its inner type
 					// and break out of type resolution.
