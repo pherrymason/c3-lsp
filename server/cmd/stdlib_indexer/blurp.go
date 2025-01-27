@@ -106,7 +106,7 @@ func Generate_distinct(distinct *s.Distinct, module *s.Module) jen.Code {
 		).
 		Dot("WithBaseType").
 		Call(
-			jen.Lit(distinct.GetBaseType().GetName()),
+			Generate_type(distinct.GetBaseType(), module.GetName()),
 		).
 		Dot("WithoutSourceCode").Call().
 		Dot("Build").Call()
@@ -198,11 +198,7 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 			Qual(PackageName+"symbols", "NewFunctionBuilder").
 			Call(
 				jen.Lit(fun.GetMethodName()),
-				jen.Qual(PackageName+"symbols", "NewTypeFromString").
-					Call(
-						jen.Lit(fun.GetReturnType().String()),
-						jen.Lit(mod.GetName()),
-					),
+				Generate_type(fun.GetReturnType(), mod.GetName()),
 				jen.Lit(mod.GetName()),
 				jen.Lit(mod.GetDocumentURI()),
 			).
@@ -213,11 +209,7 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 			Qual(PackageName+"symbols", "NewFunctionBuilder").
 			Call(
 				jen.Lit(fun.GetFullName()),
-				jen.Qual(PackageName+"symbols", "NewTypeFromString").
-					Call(
-						jen.Lit(fun.GetReturnType().String()),
-						jen.Lit(mod.GetName()),
-					),
+				Generate_type(fun.GetReturnType(), mod.GetName()),
 				jen.Lit(mod.GetName()),
 				jen.Lit(mod.GetDocumentURI()),
 			)
@@ -238,4 +230,15 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 		Dot("Build").Call()
 
 	return funDef
+}
+
+// TODO: This appears to indicate that the module at which the type is being used
+// is where it was declared, which is clearly false, so this may lead to wrong LSP
+// results.
+func Generate_type(type_ *s.Type, mod string) *jen.Statement {
+	return jen.Qual(PackageName+"symbols", "NewTypeFromString").
+		Call(
+			jen.Lit(type_.String()),
+			jen.Lit(mod),
+		)
 }
