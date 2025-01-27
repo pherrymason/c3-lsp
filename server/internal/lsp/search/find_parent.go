@@ -128,30 +128,35 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			// point in a chain of distinct -> distinct -> ... -> distinct, then we
 			// cannot access methods at all even if further distincts are inline, so
 			// we keep the status as 'NonInlineDistinct' and don't search for methods.
-			if isDistinct && methodsReadable {
-				// Check if we could be about to access a distinct's
-				// own method. If so, don't resolve it to its inner type
-				// and break out of type resolution.
-				searchingSymbol := state.GetNextSymbol()
-				newIterSearch, methodResult := s.findMethod(
-					distinct.GetName(),
-					searchingSymbol,
-					docId,
-					searchParams,
-					projState,
-					debugger,
-				)
+			if isDistinct && fromDistinct != NonInlineDistinct {
+				// Don't try to access methods if this distinct came from another distinct's
+				// top-level type instead of an instance. Indeed, if `distinct1 -> distinct2`
+				// and `distinct2.method()` exists, we cannot write `distinct1.method()`.
+				if methodsReadable {
+					// Check if we could be about to access a distinct's
+					// own method. If so, don't resolve it to its inner type
+					// and break out of type resolution.
+					searchingSymbol := state.GetNextSymbol()
+					newIterSearch, methodResult := s.findMethod(
+						distinct.GetName(),
+						searchingSymbol,
+						docId,
+						searchParams,
+						projState,
+						debugger,
+					)
 
-				if methodResult.IsSome() {
-					iterSearch = newIterSearch
-					elm = methodResult.Get()
-					symbolsHierarchy = append(symbolsHierarchy, elm)
-					state.Advance()
+					if methodResult.IsSome() {
+						iterSearch = newIterSearch
+						elm = methodResult.Get()
+						symbolsHierarchy = append(symbolsHierarchy, elm)
+						state.Advance()
 
-					// Skip type resolution entirely, found a method.
-					// Skip the iteration in order to reset iteration variables.
-					skip = true
-					break
+						// Skip type resolution entirely, found a method.
+						// Skip the iteration in order to reset iteration variables.
+						skip = true
+						break
+					}
 				}
 
 				// Let's try to access something under its base type by resolving.
@@ -172,7 +177,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 					// valid, although if we have an instance 'Abc x = ...', then 'x.receive()'
 					// is valid, as well as 'Struct.receive(x)', since the distinct is inline
 					// and therefore freely casts into its base type.
-					methodsReadable = !membersReadable
+					methodsReadable = methodsReadable && !membersReadable
 				} else {
 					fromDistinct = NonInlineDistinct
 					methodsReadable = false
