@@ -160,6 +160,10 @@ func NewTypeBuilder(repr string, module string) *TypeBuilder {
 	}
 }
 
+func NewBaseTypeBuilder(repr string, module string) *TypeBuilder {
+	return NewTypeBuilder(repr, module).IsBaseTypeLanguage()
+}
+
 func (b *TypeBuilder) IsBaseTypeLanguage() *TypeBuilder {
 	b.type_.baseTypeLanguage = true
 	return b

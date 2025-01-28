@@ -246,24 +246,24 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 }
 
 func Generate_type(type_ *s.Type, mod string) *jen.Statement {
+	builderName := "NewTypeBuilder"
 	typeModule := type_.GetModule()
 	if type_.IsGenericArgument() {
 		// Temporary fix for generic types' modules being misdetected
 		typeModule = mod
 	}
 
+	if type_.IsBaseTypeLanguage() {
+		// Use this shorthand just to reduce generated code by a bit
+		builderName = "NewBaseTypeBuilder"
+	}
+
 	typeDef := jen.
-		Qual(PackageName+"symbols", "NewTypeBuilder").
+		Qual(PackageName+"symbols", builderName).
 		Call(
 			jen.Lit(type_.String()),
 			jen.Lit(typeModule),
 		)
-
-	if type_.IsBaseTypeLanguage() {
-		typeDef = typeDef.
-			Dot("IsBaseTypeLanguage").
-			Call()
-	}
 
 	if type_.IsOptional() {
 		typeDef = typeDef.
