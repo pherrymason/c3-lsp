@@ -130,8 +130,8 @@ type (
 
 	LambdaDeclarationExpr struct {
 		NodeAttributes
-		Parameters []FunctionParameter
-		ReturnType option.Option[TypeInfo]
+		Parameters []*FunctionParameter
+		ReturnType option.Option[*TypeInfo]
 		Body       Statement
 	}
 
@@ -158,7 +158,7 @@ type (
 
 	CastExpression struct {
 		NodeAttributes
-		Type     TypeInfo
+		Type     *TypeInfo
 		Argument Expression
 	}
 
@@ -185,7 +185,7 @@ type (
 	// TODO I thing this is a Statement
 	InlineTypeWithInitialization struct {
 		NodeAttributes
-		Type            TypeInfo
+		Type            *TypeInfo
 		InitializerList *InitializerList
 	}
 
@@ -240,7 +240,7 @@ type (
 		Static        bool
 		Reference     bool
 		TLocal        bool
-		Generics      []TypeInfo
+		Generics      []*TypeInfo
 	}
 
 	BaseType struct {
@@ -251,7 +251,7 @@ type (
 	Field struct {
 		NodeAttributes
 		Name  *Ident
-		Type  TypeInfo
+		Type  *TypeInfo
 		Value Expression // Value if applicable.
 	}
 
@@ -272,9 +272,9 @@ type (
 
 	EnumType struct {
 		NodeAttributes
-		BaseType     option.Option[TypeInfo] // Enums can be typed.
-		StaticValues []Expression            // Enums in C3 can have static values: https://c3-lang.org/language-overview/types/#enum-associated-values
-		Values       []*EnumValue            // Every unique value of the enum
+		BaseType     option.Option[*TypeInfo] // Enums can be typed.
+		StaticValues []Expression             // Enums in C3 can have static values: https://c3-lang.org/language-overview/types/#enum-associated-values
+		Values       []*EnumValue             // Every unique value of the enum
 	}
 
 	EnumValue struct {
@@ -287,21 +287,21 @@ type (
 		NodeAttributes
 		Type        StructTypeID // Variant of struct: struct | union | bitstruct
 		Implements  []*Ident
-		BackingType option.Option[TypeInfo] // Used for BitStructs
+		BackingType option.Option[*TypeInfo] // Used for BitStructs
 		Fields      []*StructField
 	}
 
 	FuncType struct {
 		NodeAttributes
-		ReturnType TypeInfo
-		Params     []FunctionParameter
+		ReturnType *TypeInfo
+		Params     []*FunctionParameter
 	}
 
 	FunctionSignature struct {
 		NodeAttributes
-		Name       Ident
-		Parameters []FunctionParameter
-		ReturnType TypeInfo
+		Name       *Ident
+		Parameters []*FunctionParameter
+		ReturnType *TypeInfo
 	}
 
 	InterfaceType struct {

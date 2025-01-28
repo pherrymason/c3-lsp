@@ -55,15 +55,10 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		walkList(v, n.Imports, "Imports")
 		walkList(v, n.Declarations, "Declarations")
 
-	case ast.Import:
+	case *ast.Import:
 		// Do nothing
 
 	// Expressions
-	case ast.Ident:
-		if n.ModulePath != nil {
-			Walk(v, n.ModulePath, "ModulePath")
-		}
-
 	case *ast.Ident:
 		if n.ModulePath != nil {
 			Walk(v, n.ModulePath, "ModulePath")
@@ -138,7 +133,7 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		}
 		walkList(v, n.Members, "Members")
 
-	case ast.FaultMember:
+	case *ast.FaultMember:
 		Walk(v, n.Name, "Name")
 
 	case *ast.FunctionDecl:
@@ -175,7 +170,7 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 			Walk(v, n.TrailingBlock.Get(), "TrailingBlock")
 		}
 
-	case ast.FunctionSignature:
+	case *ast.FunctionSignature:
 		Walk(v, n.Name, "URI")
 		walkList(v, n.Parameters, "Parameters")
 		Walk(v, n.ReturnType, "ReturnType")
@@ -254,11 +249,11 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		Walk(v, n.Argument, "Argument")
 		Walk(v, n.Index, "Index")
 
-	case ast.SwitchCase:
+	case *ast.SwitchCase:
 		Walk(v, n.Value, "Value")
 		walkList(v, n.Statements, "Statements")
 
-	case ast.SwitchCaseRange:
+	case *ast.SwitchCaseRange:
 		Walk(v, n.Start, "Start")
 		Walk(v, n.End, "End")
 
@@ -277,7 +272,7 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		walkList(v, n.TypeParams, "TypeParams")
 		Walk(v, n.TypeDescription, "TypeDescription")
 
-	case ast.TypeInfo:
+	case *ast.TypeInfo:
 		if n.Identifier != nil {
 			Walk(v, n.Identifier, "Identifier")
 		}

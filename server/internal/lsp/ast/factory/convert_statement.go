@@ -127,7 +127,7 @@ func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte
 				WithId(c.getNextID()).
 				WithName(n.ChildByFieldName("name").Content(source)).
 				WithSitterPos(n.ChildByFieldName("name")).
-				BuildPtr()
+				Build()
 			valueSpec.Names = append(valueSpec.Names, ident)
 
 			right := n.ChildByFieldName("right")
@@ -177,7 +177,7 @@ func (c *ASTConverter) convert_break_stmt(node *sitter.Node, source []byte) ast.
 
 func (c *ASTConverter) convert_switch_stmt(node *sitter.Node, source []byte) ast.Statement {
 	label := option.None[string]()
-	var cases []ast.SwitchCase
+	var cases []*ast.SwitchCase
 	var defaultStatement []ast.Statement
 
 	body := node.ChildByFieldName("body")
@@ -216,7 +216,7 @@ func (c *ASTConverter) convert_switch_stmt(node *sitter.Node, source []byte) ast
 				ns = ns.NextSibling()
 			}
 
-			cases = append(cases, ast.SwitchCase{
+			cases = append(cases, &ast.SwitchCase{
 				NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), n),
 				Value:          caseValue,
 				Statements:     statements,
@@ -300,7 +300,7 @@ func (c *ASTConverter) convert_if_stmt(node *sitter.Node, source []byte) ast.Sta
 					elseStmt = nil
 				}
 			}
-			stmt.Else = ast.ElseStatement{
+			stmt.Else = &ast.ElseStatement{
 				NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), n),
 				Statement:      elseStmt,
 			}
@@ -364,7 +364,7 @@ func (c *ASTConverter) convert_local_declaration_after_type(node *sitter.Node, s
 	if right != nil {
 		init = c.convert_expression(right, source).(ast.Expression)
 	}
-	
+
 	varDecl := &ast.GenDecl{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.VAR,
@@ -375,7 +375,7 @@ func (c *ASTConverter) convert_local_declaration_after_type(node *sitter.Node, s
 					WithId(c.getNextID()).
 					WithName(node.ChildByFieldName("name").Content(source)).
 					WithSitterPos(node.ChildByFieldName("name")).
-					BuildPtr(),
+					Build(),
 			},
 			Value: init,
 			// TODO Isn't this missing the Type field???
@@ -470,7 +470,7 @@ func (c *ASTConverter) convert_foreach_stmt(node *sitter.Node, source []byte) as
 	stmt := &ast.ForeachStatement{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
-	foreachVar := ast.ForeachValue{}
+	foreachVar := &ast.ForeachValue{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -504,8 +504,8 @@ func (c *ASTConverter) convert_foreach_stmt(node *sitter.Node, source []byte) as
 	return stmt
 }
 
-func (c *ASTConverter) convert_foreach_var(node *sitter.Node, source []byte) ast.ForeachValue {
-	value := ast.ForeachValue{
+func (c *ASTConverter) convert_foreach_var(node *sitter.Node, source []byte) *ast.ForeachValue {
+	value := &ast.ForeachValue{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 

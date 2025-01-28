@@ -32,7 +32,7 @@ type (
 		Label     option.Option[string]
 		Condition []*DeclOrExpr
 		Statement Statement
-		Else      ElseStatement
+		Else      *ElseStatement
 	}
 
 	ElseStatement struct {
@@ -59,7 +59,7 @@ type (
 		NodeAttributes
 		Label     option.Option[string]
 		Condition []*DeclOrExpr
-		Cases     []SwitchCase
+		Cases     []*SwitchCase
 		Default   []Statement
 	}
 
@@ -92,15 +92,15 @@ type (
 
 	ForeachStatement struct {
 		NodeAttributes
-		Value      ForeachValue
-		Index      ForeachValue
+		Value      *ForeachValue
+		Index      *ForeachValue
 		Collection Expression
 		Body       Statement
 	}
 
 	ForeachValue struct {
 		NodeAttributes
-		Type       TypeInfo
+		Type       *TypeInfo
 		Identifier *Ident
 	}
 

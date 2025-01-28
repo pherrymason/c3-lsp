@@ -179,18 +179,18 @@ type StructMemberDecl struct {
 
 type FaultMember struct {
 	NodeAttributes
-	Name Ident
+	Name *Ident
 }
 
 type MacroSignature struct {
-	Name       Ident
-	Parameters []FunctionParameter
+	Name       *Ident
+	Parameters []*FunctionParameter
 }
 
 type FunctionParameter struct {
 	NodeAttributes
-	Name Ident
-	Type TypeInfo
+	Name *Ident
+	Type *TypeInfo
 }
 
 // Block

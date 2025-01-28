@@ -80,7 +80,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		}
 
 	case *ast.DefDecl:
-		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
+		v.currentScope.RegisterSymbol(n.Ident.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
 
 	case *ast.FunctionDecl:
 		_, symbol := v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FUNCTION)
@@ -99,7 +99,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 			}
 		}
 
-	case ast.FunctionSignature:
+	case *ast.FunctionSignature:
 		for _, param := range n.Parameters {
 			_, sym := v.currentScope.RegisterSymbol(param.Name.Name,
 				param.GetRange(),

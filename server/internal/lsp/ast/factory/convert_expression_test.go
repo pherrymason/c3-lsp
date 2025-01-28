@@ -457,8 +457,8 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 16).Build(),
 				Identifier: &ast.SelectorExpr{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 13).Build(),
-					X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
-					Sel:            ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).BuildPtr(),
+					X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).Build(),
+					Sel:            ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).Build(),
 				},
 				Arguments: []ast.Expression{
 					&ast.BasicLit{
@@ -477,10 +477,10 @@ func TestConvertToAST_function_statements_call_chain(t *testing.T) {
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 14, 3, 18).Build(),
 					X: &ast.SelectorExpr{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 13).Build(),
-						X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
-						Sel:            ast.NewIdentifierBuilder().WithName("prop").WithStartEnd(3, 9, 3, 13).BuildPtr(),
+						X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).Build(),
+						Sel:            ast.NewIdentifierBuilder().WithName("prop").WithStartEnd(3, 9, 3, 13).Build(),
 					},
-					Sel: ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 14, 3, 18).BuildPtr(),
+					Sel: ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 14, 3, 18).Build(),
 				},
 				Arguments: []ast.Expression{
 					&ast.BasicLit{
@@ -527,8 +527,8 @@ func TestConvertToAST_field_expr(t *testing.T) {
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 15).Build(),
 					Identifier: &ast.SelectorExpr{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 13).Build(),
-						X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).BuildPtr(),
-						Sel:            ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).BuildPtr(),
+						X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).Build(),
+						Sel:            ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).Build(),
 					},
 					Arguments:     []ast.Expression{},
 					TrailingBlock: option.None[*ast.CompoundStmt](),
@@ -536,7 +536,7 @@ func TestConvertToAST_field_expr(t *testing.T) {
 				Sel: ast.NewIdentifierBuilder().
 					WithStartEnd(3, 16, 3, 22).
 					WithName("length").
-					BuildPtr(),
+					Build(),
 			},
 		},
 	}
@@ -609,7 +609,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 			input:            "$(a[5])",
 			ArgumentTypeName: "IndexAccessExpr",
 			Argument: &ast.IndexAccessExpr{
-				Array: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).BuildPtr(),
+				Array: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
 				Index: "[5]",
 			},
 		},
@@ -617,7 +617,7 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 			input:            "$(a[5..6])",
 			ArgumentTypeName: "RangeAccessExpr",
 			Argument: &ast.RangeAccessExpr{
-				Array:      ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).BuildPtr(),
+				Array:      ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
 				RangeStart: 5,
 				RangeEnd:   6,
 			},
@@ -666,12 +666,12 @@ func TestConvertToAST_compile_time_call(t *testing.T) {
 						e := tt.Argument.(*ast.BasicLit)
 						assert.Equal(t, e.Value, arg.(*ast.BasicLit).Value)
 
-					case ast.TypeInfo:
+					case *ast.TypeInfo:
 						if tt.ArgumentTypeName != "TypeInfo" {
 							t.Errorf("Expected argument must be TypeInfo. It was %s", tt.ArgumentTypeName)
 						}
-						e := tt.Argument.(ast.TypeInfo)
-						assert.Equal(t, e.Identifier.Name, arg.(ast.TypeInfo).Identifier.Name)
+						e := tt.Argument.(*ast.TypeInfo)
+						assert.Equal(t, e.Identifier.Name, arg.(*ast.TypeInfo).Identifier.Name)
 
 					case *ast.IndexAccessExpr:
 						if tt.ArgumentTypeName != "IndexAccessExpr" {
@@ -724,9 +724,9 @@ func TestConvertToAST_compile_time_argument_call(t *testing.T) {
 
 				assert.Equal(t, &ast.FunctionCall{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 12, 1, 16+length).Build(),
-					Identifier:     ast.NewIdentifierBuilder().WithName(method).WithStartEnd(1, 12, 1, 12+length).BuildPtr(),
+					Identifier:     ast.NewIdentifierBuilder().WithName(method).WithStartEnd(1, 12, 1, 12+length).Build(),
 					Arguments: []ast.Expression{
-						ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 12+length+1, 1, 14+length+1).BuildPtr(),
+						ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 12+length+1, 1, 14+length+1).Build(),
 					},
 				}, initializer)
 			})
@@ -743,9 +743,9 @@ func TestConvertToAST_compile_time_analyse(t *testing.T) {
 			input: "$eval(id)",
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 12, 1, 21).Build(),
-				Identifier:     ast.NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).BuildPtr(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).Build(),
 				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 18, 1, 20).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 18, 1, 20).Build(),
 				},
 			},
 		},
@@ -802,13 +802,13 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 			input: "int i = fn int (int a, int b){};",
 			expected: &ast.LambdaDeclarationExpr{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 8, 1, 29).Build(),
-				ReturnType: option.Some[ast.TypeInfo](ast.NewTypeInfoBuilder().
+				ReturnType: option.Some[*ast.TypeInfo](ast.NewTypeInfoBuilder().
 					WithName("int").
 					IsBuiltin().
 					WithNameStartEnd(1, 11, 1, 14).
 					WithStartEnd(1, 11, 1, 14).
 					Build()),
-				Parameters: []ast.FunctionParameter{
+				Parameters: []*ast.FunctionParameter{
 					{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 16, 1, 21).Build(),
 						Name:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 20, 1, 21).Build(),
@@ -841,7 +841,7 @@ func TestConvertToAST_lambda_declaration(t *testing.T) {
 			expected: &ast.LambdaDeclarationExpr{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 8, 1, 13).Build(),
 				//Parameters:     []FunctionParameter{},
-				ReturnType: option.None[ast.TypeInfo](),
+				ReturnType: option.None[*ast.TypeInfo](),
 				Body: &ast.CompoundStmt{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 13, 1, 15).Build(),
 					Statements:     []ast.Statement{},
@@ -881,7 +881,7 @@ func TestConvertToAST_assignment_expr(t *testing.T) {
 			input: "i = 10;",
 			expected: &ast.AssignmentExpression{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 19+6).Build(),
-				Left:           ast.NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).BuildPtr(),
+				Left:           ast.NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).Build(),
 				Right: &ast.BasicLit{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 23, 1, 25).Build(),
 					Kind:           ast.INT,
@@ -940,15 +940,15 @@ func TestConvertToAST_ternary_expr(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 19+12).Build(),
 				Condition: &ast.BinaryExpression{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 19, 1, 25).Build(),
-					Left:           ast.NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).BuildPtr(),
+					Left:           ast.NewIdentifierBuilder().WithName("i").WithStartEnd(1, 19, 1, 20).Build(),
 					Operator:       ">",
 					Right: &ast.BasicLit{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 23, 1, 25).Build(),
 						Kind:           ast.INT,
 						Value:          "10"},
 				},
-				Consequence: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 19+9, 1, 19+10).BuildPtr(),
-				Alternative: ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 19+11, 1, 19+12).BuildPtr(),
+				Consequence: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 19+9, 1, 19+10).Build(),
+				Alternative: ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 19+11, 1, 19+12).Build(),
 			},
 		},
 	}
@@ -1018,8 +1018,8 @@ func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
 			int i = condition ?: 10;`,
 			expected: &ast.TernaryExpression{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 26).Build(),
-				Condition:      ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
-				Consequence:    ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
+				Condition:      ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
+				Consequence:    ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
 				Alternative: &ast.BasicLit{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 24, 1, 26).Build(),
 					Kind:           ast.INT,
@@ -1032,8 +1032,8 @@ func TestConvertToAST_elvis_or_else_expr(t *testing.T) {
 			int i = condition ?? 10;`,
 			expected: &ast.TernaryExpression{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 26).Build(),
-				Condition:      ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
-				Consequence:    ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).BuildPtr(),
+				Condition:      ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
+				Consequence:    ast.NewIdentifierBuilder().WithName("condition").WithStartEnd(1, 11, 1, 20).Build(),
 				Alternative: &ast.BasicLit{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 24, 1, 26).Build(),
 					Kind:           ast.INT,
@@ -1074,8 +1074,8 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 				Operator:       "?",
 				Argument: &ast.BinaryExpression{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 16).Build(),
-					Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).BuildPtr(),
-					Right:          ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).BuildPtr(),
+					Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).Build(),
+					Right:          ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).Build(),
 					Operator:       "+",
 				},
 			},
@@ -1088,8 +1088,8 @@ func TestConvertToAST_optional_expr(t *testing.T) {
 				Operator:       "?!",
 				Argument: &ast.BinaryExpression{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 16).Build(),
-					Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).BuildPtr(),
-					Right:          ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).BuildPtr(),
+					Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 11, 1, 12).Build(),
+					Right:          ast.NewIdentifierBuilder().WithName("b").WithStartEnd(1, 15, 1, 16).Build(),
 					Operator:       "+",
 				},
 			},
@@ -1132,7 +1132,7 @@ func TestConvertToAST_unary_expr(t *testing.T) {
 		&ast.UnaryExpression{
 			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 2, 2, 5).Build(),
 			Operator:       "++",
-			Argument:       ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 4, 2, 5).BuildPtr(),
+			Argument:       ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 4, 2, 5).Build(),
 		},
 		stmt.(*ast.ExpressionStmt).Expr,
 	)
@@ -1157,7 +1157,7 @@ func TestConvertToAST_cast_expr(t *testing.T) {
 				WithStartEnd(2, 3, 2, 6).
 				IsBuiltin().
 				Build(),
-			Argument: ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 7, 2, 8).BuildPtr(),
+			Argument: ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 7, 2, 8).Build(),
 		},
 		stmt.(*ast.ExpressionStmt).Expr, //CastExpression),
 	)
@@ -1178,7 +1178,7 @@ func TestConvertToAST_rethrow_expr(t *testing.T) {
 				Operator:       "!",
 				Argument: &ast.FunctionCall{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 26).Build(),
-					Identifier:     ast.NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).BuildPtr(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).Build(),
 					Arguments:      []ast.Expression{},
 				},
 			},
@@ -1191,7 +1191,7 @@ func TestConvertToAST_rethrow_expr(t *testing.T) {
 				Operator:       "!!",
 				Argument: &ast.FunctionCall{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 11, 1, 26).Build(),
-					Identifier:     ast.NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).BuildPtr(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("foo_may_error").WithStartEnd(1, 11, 1, 24).Build(),
 					Arguments:      []ast.Expression{},
 				},
 			},
@@ -1230,7 +1230,7 @@ func TestConvertToAST_call_expr(t *testing.T) {
 			}`,
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 12).Build(),
-				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).Build(),
 				Arguments:      []ast.Expression{},
 			},
 		},
@@ -1242,10 +1242,10 @@ func TestConvertToAST_call_expr(t *testing.T) {
 			}`,
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 16).Build(),
-				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).Build(),
 				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).BuildPtr(),
-					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).Build(),
+					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).Build(),
 				},
 			},
 		},
@@ -1258,10 +1258,10 @@ func TestConvertToAST_call_expr(t *testing.T) {
 			}`,
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 28).Build(),
-				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).BuildPtr(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("simple").WithStartEnd(2, 4, 2, 10).Build(),
 				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).BuildPtr(),
-					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 11, 2, 12).Build(),
+					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 14, 2, 15).Build(),
 				},
 			},
 		},
@@ -1277,10 +1277,10 @@ func TestConvertToAST_call_expr(t *testing.T) {
 			}`,
 			expected: &ast.FunctionCall{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 5, 5).Build(),
-				Identifier:     ast.NewIdentifierBuilder().WithName("$simple").WithStartEnd(2, 4, 2, 11).BuildPtr(),
+				Identifier:     ast.NewIdentifierBuilder().WithName("$simple").WithStartEnd(2, 4, 2, 11).Build(),
 				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 12, 2, 13).BuildPtr(),
-					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 15, 2, 16).BuildPtr(),
+					ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 12, 2, 13).Build(),
+					ast.NewIdentifierBuilder().WithName("b").WithStartEnd(2, 15, 2, 16).Build(),
 				},
 				TrailingBlock: option.Some(
 					&ast.CompoundStmt{
@@ -1289,7 +1289,7 @@ func TestConvertToAST_call_expr(t *testing.T) {
 							&ast.ExpressionStmt{
 								Expr: &ast.AssignmentExpression{
 									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 8, 4, 13).Build(),
-									Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(4, 8, 4, 9).BuildPtr(),
+									Left:           ast.NewIdentifierBuilder().WithName("a").WithStartEnd(4, 8, 4, 9).Build(),
 									Right: &ast.BasicLit{
 										NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 12, 4, 13).Build(),
 										Kind:           ast.INT,
@@ -1338,7 +1338,7 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 				Identifier: ast.NewIdentifierBuilder().
 					WithStartEnd(2, 4, 2, 8).
 					WithName("test").
-					BuildPtr(),
+					Build(),
 				GenericArguments: option.Some([]ast.Expression{
 					ast.NewTypeInfoBuilder().WithName("int").IsBuiltin().WithNameStartEnd(2, 10, 2, 13).WithStartEnd(2, 10, 2, 13).Build(),
 					ast.NewTypeInfoBuilder().WithName("double").IsBuiltin().WithNameStartEnd(2, 15, 2, 21).WithStartEnd(2, 15, 2, 21).Build(),
@@ -1351,7 +1351,7 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 					&ast.UnaryExpression{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 29, 2, 31).Build(),
 						Operator:       "&",
-						Argument:       ast.NewIdentifierBuilder().WithName("g").WithStartEnd(2, 30, 2, 31).BuildPtr(),
+						Argument:       ast.NewIdentifierBuilder().WithName("g").WithStartEnd(2, 30, 2, 31).Build(),
 					},
 				},
 			},
@@ -1368,7 +1368,7 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 					ModulePath: ast.NewIdentifierBuilder().
 						WithName("foo_test").
 						WithStartEnd(2, 4, 2, 14).
-						BuildPtr(),
+						Build(),
 					Name: "test",
 				},
 				GenericArguments: option.Some([]ast.Expression{
@@ -1383,7 +1383,7 @@ func TestConvertToAST_trailing_generic_expr(t *testing.T) {
 					&ast.UnaryExpression{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 39, 2, 41).Build(),
 						Operator:       "&",
-						Argument:       ast.NewIdentifierBuilder().WithName("g").WithStartEnd(2, 40, 2, 41).BuildPtr(),
+						Argument:       ast.NewIdentifierBuilder().WithName("g").WithStartEnd(2, 40, 2, 41).Build(),
 					},
 				},
 			},
@@ -1442,7 +1442,7 @@ func TestConvertToAST_update_expr(t *testing.T) {
 				Argument: ast.NewIdentifierBuilder().
 					WithName("a").
 					WithStartEnd(2, 4, 2, 5).
-					BuildPtr(),
+					Build(),
 			},
 		},
 	}
@@ -1481,7 +1481,7 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 			}`,
 			expected: &ast.SubscriptExpression{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 8).Build(),
-				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
+				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).Build(),
 				Index: &ast.BasicLit{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 6, 2, 7).Build(),
 					Kind:           ast.INT,
@@ -1495,7 +1495,7 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 				}`,
 			expected: &ast.SubscriptExpression{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 5, 2, 12).Build(),
-				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 5, 2, 6).BuildPtr(),
+				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 5, 2, 6).Build(),
 				Index: &ast.RangeIndexExpr{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 7, 2, 11).Build(),
 					Start:          option.Some(uint(0)),
@@ -1510,8 +1510,8 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 			}`,
 			expected: &ast.SubscriptExpression{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 9).Build(),
-				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
-				Index:          ast.NewIdentifierBuilder().WithName("id").WithStartEnd(2, 6, 2, 8).BuildPtr(),
+				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).Build(),
+				Index:          ast.NewIdentifierBuilder().WithName("id").WithStartEnd(2, 6, 2, 8).Build(),
 			},
 		},
 		{
@@ -1521,10 +1521,10 @@ func TestConvertToAST_subscript_expr(t *testing.T) {
 			}`,
 			expected: &ast.SubscriptExpression{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 4, 2, 13).Build(),
-				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).BuildPtr(),
+				Argument:       ast.NewIdentifierBuilder().WithName("a").WithStartEnd(2, 4, 2, 5).Build(),
 				Index: &ast.FunctionCall{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 6, 2, 12).Build(),
-					Identifier:     ast.NewIdentifierBuilder().WithName("call").WithStartEnd(2, 6, 2, 10).BuildPtr(),
+					Identifier:     ast.NewIdentifierBuilder().WithName("call").WithStartEnd(2, 6, 2, 10).Build(),
 					Arguments:      []ast.Expression{},
 				},
 			},

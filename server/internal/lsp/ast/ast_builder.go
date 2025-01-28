@@ -111,14 +111,7 @@ func (i *IdentifierBuilder) WithRange(pathRange lsp.Range) *IdentifierBuilder {
 	i.attrBuilder.WithRange(pathRange)
 	return i
 }
-func (i *IdentifierBuilder) Build() Ident {
-	ident := i.ident
-	ident.NodeAttributes = i.attrBuilder.Build()
-
-	return *ident
-}
-
-func (i *IdentifierBuilder) BuildPtr() *Ident {
+func (i *IdentifierBuilder) Build() *Ident {
 	ident := i.ident
 	ident.NodeAttributes = i.attrBuilder.Build()
 
@@ -202,7 +195,7 @@ func (b *TypeInfoBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint
 	return b
 }
 
-func (b *TypeInfoBuilder) Build() TypeInfo {
+func (b *TypeInfoBuilder) Build() *TypeInfo {
 	return b.typeInfo
 }
 

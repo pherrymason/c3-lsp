@@ -24,7 +24,7 @@ type (
 	ValueSpec struct {
 		NodeAttributes
 		Names []*Ident
-		Type  TypeInfo   // value type, or nil
+		Type  *TypeInfo  // value type, or nil
 		Value Expression // initial values, or nil
 	}
 
@@ -60,15 +60,15 @@ type (
 
 	FaultDecl struct {
 		NodeAttributes
-		Name        Ident
-		BackingType option.Option[TypeInfo]
-		Members     []FaultMember
+		Name        *Ident
+		BackingType option.Option[*TypeInfo]
+		Members     []*FaultMember
 	}
 
 	MacroDecl struct {
 		NodeAttributes
-		Signature MacroSignature
-		Body      Block
+		Signature *MacroSignature
+		Body      *Block
 	}
 
 	// DefDecl can be used for
@@ -76,9 +76,9 @@ type (
 	// defining a pointer type: def Callback = fn void(int value);
 	DefDecl struct {
 		NodeAttributes
-		Name           Ident
+		Ident          *Ident
 		Expr           Expression
-		ResolvesToType option.Option[TypeInfo] // Deprecated
+		ResolvesToType option.Option[*TypeInfo] // Deprecated
 	}
 
 	// StructDecl
@@ -86,23 +86,22 @@ type (
 	StructDecl struct {
 		NodeAttributes
 		Name        string
-		BackingType option.Option[TypeInfo]
-		Members     []StructMemberDecl
+		BackingType option.Option[*TypeInfo]
 		StructType  StructTypeID
 		Implements  []*Ident
 	}
 
 	FunctionDecl struct {
 		NodeAttributes
-		ParentTypeId option.Option[Ident]
-		Signature    FunctionSignature
+		ParentTypeId option.Option[*Ident]
+		Signature    *FunctionSignature
 		Body         Node
 	}
 
 	InterfaceDecl struct {
 		NodeAttributes
-		Name    Ident
-		Methods []FunctionSignature
+		Name    *Ident
+		Methods []*FunctionSignature
 	}
 )
 

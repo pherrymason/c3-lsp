@@ -62,11 +62,6 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 		if n.ModulePath != nil {
 			explicitIdentModule = option.Some(n.ModulePath.Name)
 		}
-	case ast.Ident:
-		identName = n.Name
-		if n.ModulePath != nil {
-			explicitIdentModule = option.Some(n.ModulePath.Name)
-		}
 	}
 
 	// Analyze parent nodes to better understand context
@@ -89,7 +84,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 		case *ast.Module:
 			scopeCtxt.moduleName = NewModuleName(stepNode.Name)
 
-		case *ast.Ident, ast.Ident:
+		case *ast.Ident:
 
 		case *ast.SelectorExpr:
 			selectorsChained++
@@ -105,7 +100,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 				if param.Name.Name == "self" {
 					if stepNode.ParentTypeId.IsSome() {
 						ident := stepNode.ParentTypeId.Get()
-						scopeCtxt.selfType = &ident
+						scopeCtxt.selfType = ident
 					}
 				}
 			}
@@ -185,7 +180,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			return nil
 		}
 
-	case ast.TypeInfo:
+	case *ast.TypeInfo:
 		from := fromPosition{position: base.Identifier.StartPosition(), fileName: fileName, module: context.moduleName}
 		explicitModule := option.None[string]()
 		if base.Identifier.ModulePath != nil {
@@ -326,7 +321,7 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 	for _, member := range structType.Fields {
 		if member.Names[0].Name == searchIdent {
 			switch t := member.Type.(type) {
-			case ast.TypeInfo:
+			case *ast.TypeInfo:
 				if t.BuiltIn || !solveType {
 					typeName := ""
 					if t.Identifier != nil {
@@ -384,7 +379,7 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 			// Else, we need to check for the type to continue resolving each step of the chain
 
 		} else if member.Inlined {
-			inlinedCandidates = append(inlinedCandidates, member.Type.(ast.TypeInfo).Identifier)
+			inlinedCandidates = append(inlinedCandidates, member.Type.(*ast.TypeInfo).Identifier)
 		}
 	}
 

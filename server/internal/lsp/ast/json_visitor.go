@@ -97,7 +97,7 @@ func (v *JSONVisitor) VisitLambdaDeclaration(node *LambdaDeclarationExpr) {
 
 func (v *JSONVisitor) VisitFunctionDecl(node *FunctionDecl) {
 	typeV := JSONVisitor{}
-	Visit(&node.Signature.ReturnType, &typeV)
+	Visit(node.Signature.ReturnType, &typeV)
 	var returnType interface{}
 	if typeV.Result != nil {
 		returnType = typeV.Result
@@ -105,7 +105,7 @@ func (v *JSONVisitor) VisitFunctionDecl(node *FunctionDecl) {
 
 	parameters := []interface{}{}
 	for _, p := range node.Signature.Parameters {
-		parameters = append(parameters, VisitFunctionParameter(&p))
+		parameters = append(parameters, VisitFunctionParameter(p))
 	}
 
 	bodyV := JSONVisitor{}
@@ -128,7 +128,7 @@ func VisitFunctionParameter(node *FunctionParameter) JSONObject {
 	return map[string]interface{}{
 		PNodeType:       "FunctionParameter",
 		"name":          node.Name.Name,
-		"parameterType": VisitType(&node.Type),
+		"parameterType": VisitType(node.Type),
 	}
 }
 

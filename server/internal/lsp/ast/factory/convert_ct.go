@@ -43,7 +43,7 @@ func (c *ASTConverter) convert_compile_time_call(node *sitter.Node, source []byt
 		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			BuildPtr(),
+			Build(),
 		Arguments: []ast.Expression{c.convert_flat_path(flatPath, source)},
 	}
 
@@ -73,7 +73,7 @@ func (c *ASTConverter) convert_compile_time_arg(node *sitter.Node, source []byte
 		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			BuildPtr(),
+			Build(),
 		Arguments: []ast.Expression{expr.(ast.Expression)},
 	}
 
@@ -119,7 +119,7 @@ func (c *ASTConverter) convert_compile_time_analyse(node *sitter.Node, source []
 		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			BuildPtr(),
+			Build(),
 		Arguments: []ast.Expression{
 			c.convert_expression(decl_or_expr_node, source).(ast.Expression),
 		},
@@ -156,7 +156,7 @@ func (c *ASTConverter) convert_compile_time_call_unk(node *sitter.Node, source [
 		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			BuildPtr(),
+			Build(),
 		Arguments: cast_expressions_to_args(args),
 	}
 }
@@ -168,7 +168,7 @@ func (c *ASTConverter) convert_feature(node *sitter.Node, source []byte) ast.Exp
 		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
-			BuildPtr(),
+			Build(),
 		Arguments: []ast.Expression{c.convert_base_expression(next, source)},
 	}
 }
