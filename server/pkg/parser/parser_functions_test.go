@@ -98,16 +98,16 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
 
-		arg0 := fn.Get().Variables["$arg0"]
-		assert.Equal(t, "$arg0", arg0.GetName())
+		arg0 := fn.Get().Variables["$arg#0"]
+		assert.Equal(t, "$arg#0", arg0.GetName())
 		assert.Equal(t, "int", arg0.GetType().String())
 
-		arg1 := fn.Get().Variables["$arg1"]
-		assert.Equal(t, "$arg1", arg1.GetName())
+		arg1 := fn.Get().Variables["$arg#1"]
+		assert.Equal(t, "$arg#1", arg1.GetName())
 		assert.Equal(t, "int", arg1.GetType().String())
 
-		arg2 := fn.Get().Variables["$arg2"]
-		assert.Equal(t, "$arg2", arg2.GetName())
+		arg2 := fn.Get().Variables["$arg#2"]
+		assert.Equal(t, "$arg#2", arg2.GetName())
 		assert.Equal(t, "char*", arg2.GetType().String())
 	})
 
@@ -131,8 +131,8 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		assert.Equal(t, "height", arg1.GetName())
 		assert.Equal(t, "int", arg1.GetType().String())
 
-		arg2 := fn.Get().Variables["$arg2"]
-		assert.Equal(t, "$arg2", arg2.GetName())
+		arg2 := fn.Get().Variables["$arg#2"]
+		assert.Equal(t, "$arg#2", arg2.GetName())
 		assert.Equal(t, "char*", arg2.GetType().String())
 	})
 }
@@ -684,8 +684,8 @@ func TestExtractSymbols_FunctionsWithVariableArguments(t *testing.T) {
 		assert.Equal(t, idx.NewRange(0, 7, 0, 31), fn.Get().GetDocumentRange())
 		assert.Nil(t, fn.Get().GetDocComment())
 
-		variable := fn.Get().Variables["$arg0"]
-		assert.Equal(t, "$arg0", variable.GetName())
+		variable := fn.Get().Variables["$arg#0"]
+		assert.Equal(t, "$arg#0", variable.GetName())
 		assert.Equal(t, "any*[]", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 0, 0, 0), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 26, 0, 29), variable.GetDocumentRange())

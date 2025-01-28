@@ -185,8 +185,9 @@ func (f *Function) DisplaySignature(includeName bool) string {
 			}
 
 			argName := variable.name
-			if variable.idRange == (Range{}) {
-				// Originally, it had an empty name
+			if variable.idRange == (Range{}) && strings.HasPrefix(argName, "$arg#") {
+				// Originally, it had an empty name,
+				// and '$arg#' is not syntactically valid so this check is unambiguous
 				argName = ""
 			}
 

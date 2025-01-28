@@ -196,7 +196,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 
 	// if identifier is empty (unnamed argument), then use generic $arg{parameterIndex} name
 	if len(identifier) == 0 {
-		identifier = fmt.Sprintf("$arg%d", parameterIndex)
+		identifier = fmt.Sprintf("$arg#%d", parameterIndex)
 	}
 
 	variable := idx.NewVariable(
