@@ -507,6 +507,106 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 	})
 }
 
+func TestExtractSymbols_FunctionsWithVariableArguments(t *testing.T) {
+	t.Run("Finds arguments with single-typed vararg", func(t *testing.T) {
+		source := `fn bool va_singletyped(int... args) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_singletyped")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn bool va_singletyped(int... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_singletyped", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 8, 0, 22), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "int[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 30, 0, 34), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 23, 0, 34), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds arguments with any-ref-typed vararg", func(t *testing.T) {
+		source := `fn bool va_variants_explicit(any*... args) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_variants_explicit")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn bool va_variants_explicit(any*... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_variants_explicit", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 8, 0, 28), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "any*[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 37, 0, 41), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 41), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds arguments with implicit any-ref-typed vararg", func(t *testing.T) {
+		source := `fn bool va_variants_implicit(args...) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_variants_implicit")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn bool va_variants_implicit(any*... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_variants_implicit", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 8, 0, 28), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "any*[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 33), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 36), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds arguments with C-style vararg", func(t *testing.T) {
+		source := `extern fn void va_untyped(...);`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_untyped")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn void va_untyped(...)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_untyped", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 15, 0, 25), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 7, 0, 31), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["$arg0"]
+		assert.Equal(t, "$arg0", variable.GetName())
+		assert.Equal(t, "any*[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 0, 0, 0), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 26, 0, 29), variable.GetDocumentRange())
+	})
+}
+
 func TestExtractSymbols_flags_types_as_pending_to_be_resolved(t *testing.T) {
 	t.Run("resolves basic type declaration should not flag type as pending to be resolved", func(t *testing.T) {
 		source := `int value = 1;`

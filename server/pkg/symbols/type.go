@@ -76,6 +76,12 @@ func (t *Type) SetModule(module string) {
 	t.module = module
 }
 
+func (t Type) UnsizedCollectionOf() Type {
+	t.isCollection = true
+	t.collectionSize = option.None[int]()
+	return t
+}
+
 func (t *Type) IsPointer() bool {
 	return t.pointer > 0
 }

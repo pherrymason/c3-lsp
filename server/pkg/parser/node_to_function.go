@@ -138,6 +138,8 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 	var identifier = ""
 	var idRange idx.Range
 	var argType idx.Type
+	foundType := false
+	varArg := false
 	ref := ""
 
 	for i := uint32(0); i < argNode.ChildCount(); i++ {
@@ -146,6 +148,18 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 		switch n.Type() {
 		case "type":
 			argType = p.typeNodeToType(n, currentModule, sourceCode)
+			foundType = true
+		case "...":
+			varArg = true
+			if foundType {
+				// int.. args. -> int[] args
+				argType = argType.UnsizedCollectionOf()
+			} else {
+				// args... -> any*... args -> any*[] args
+				argType = idx.
+					NewTypeFromString("any*", currentModule.GetModuleString()).
+					UnsizedCollectionOf()
+			}
 		case "&":
 			ref = "*"
 		case "ident":
@@ -182,6 +196,8 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 		idx.NewRangeFromTreeSitterPositions(argNode.StartPoint(),
 			argNode.EndPoint()),
 	)
+
+	variable.Arg.VarArg = varArg
 
 	return &variable
 }

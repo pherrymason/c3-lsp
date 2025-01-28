@@ -6,8 +6,14 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+type ArgInfo struct {
+	// Whether this variable came from a vararg, that is, ...args
+	VarArg bool
+}
+
 type Variable struct {
 	Type Type
+	Arg  ArgInfo
 	BaseIndexable
 }
 
@@ -37,6 +43,14 @@ func NewConstant(name string, variableType Type, module string, docId string, id
 			protocol.CompletionItemKindConstant,
 		),
 	}
+}
+
+func (v *Variable) GetArgInfo(arg ArgInfo) *ArgInfo {
+	return &v.Arg
+}
+
+func (v *Variable) SetArgInfo(arg ArgInfo) {
+	v.Arg = arg
 }
 
 func (v *Variable) GetType() *Type {
