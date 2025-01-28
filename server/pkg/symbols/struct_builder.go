@@ -17,10 +17,10 @@ func (sb *StructBuilder) WithoutSourceCode() *StructBuilder {
 	return sb
 }
 
-func (b *StructBuilder) WithStructMember(name string, baseType string, module string, docId string) *StructBuilder {
+func (b *StructBuilder) WithStructMember(name string, baseType Type, module string, docId string) *StructBuilder {
 	member := NewStructMember(
 		name,
-		NewTypeFromString(baseType, module),
+		baseType,
 		option.None[[2]uint](),
 		module,
 		docId,
@@ -30,10 +30,10 @@ func (b *StructBuilder) WithStructMember(name string, baseType string, module st
 	return b
 }
 
-func (b *StructBuilder) WithSubStructMember(name string, baseType string, module string, docId string) *StructBuilder {
+func (b *StructBuilder) WithSubStructMember(name string, baseType Type, module string, docId string) *StructBuilder {
 	member := NewStructMember(
 		name,
-		NewTypeFromString(baseType, module),
+		baseType,
 		option.None[[2]uint](),
 		module,
 		docId,
