@@ -138,7 +138,7 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 }
 
 func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
-	source := `fn void test(int number, char ch, int* pointer) {
+	source := `fn void test(int number = 10, char ch, int* pointer) {
 		return 1;
 	}`
 	docId := "docId"
@@ -150,7 +150,7 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
-		assert.Equal(t, "fn void test(int number, char ch, int* pointer)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "fn void test(int number = 10, char ch, int* pointer)", fn.Get().GetHoverInfo(), "Function signature")
 		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(0, 8, 0, 12), fn.Get().GetIdRange())
@@ -270,20 +270,105 @@ Hello world.
 		variable := fn.Get().Variables["number"]
 		assert.Equal(t, "number", variable.GetName())
 		assert.Equal(t, "int", variable.GetType().String())
+		assert.Equal(t, "10", variable.Arg.Default.Get())
 		assert.Equal(t, idx.NewRange(0, 17, 0, 23), variable.GetIdRange())
-		assert.Equal(t, idx.NewRange(0, 13, 0, 23), variable.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(0, 13, 0, 28), variable.GetDocumentRange())
 
 		variable = fn.Get().Variables["ch"]
 		assert.Equal(t, "ch", variable.GetName())
 		assert.Equal(t, "char", variable.GetType().String())
-		assert.Equal(t, idx.NewRange(0, 30, 0, 32), variable.GetIdRange())
-		assert.Equal(t, idx.NewRange(0, 25, 0, 32), variable.GetDocumentRange())
+		assert.True(t, variable.Arg.Default.IsNone())
+		assert.Equal(t, idx.NewRange(0, 35, 0, 37), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 30, 0, 37), variable.GetDocumentRange())
 
 		variable = fn.Get().Variables["pointer"]
 		assert.Equal(t, "pointer", variable.GetName())
 		assert.Equal(t, "int*", variable.GetType().String())
-		assert.Equal(t, idx.NewRange(0, 39, 0, 46), variable.GetIdRange())
-		assert.Equal(t, idx.NewRange(0, 34, 0, 46), variable.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(0, 44, 0, 51), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 39, 0, 51), variable.GetDocumentRange())
+	})
+}
+
+func TestExtractSymbols_MacrosWithArguments(t *testing.T) {
+	source := `macro @test(char name = 'a', $ch, #expr) {
+		return 1;
+	}`
+	docId := "docId"
+	doc := document.NewDocument(docId, source)
+	parser := createParser()
+
+	t.Run("Finds macro", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("@test")
+		assert.True(t, fn.IsSome(), "Macro was not found")
+		assert.Equal(t, "macro @test(char name = 'a', $ch, #expr)", fn.Get().GetHoverInfo(), "Macro signature")
+		assert.Equal(t, "@test", fn.Get().GetName(), "Macro name")
+		assert.Equal(t, "", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 6, 0, 11), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 2), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+	})
+
+	t.Run("Finds macro with simple doc comment", func(t *testing.T) {
+		source := `<*
+			abc
+
+			def
+
+			ghi
+			jkl
+		*>
+		macro int @test(char name = 'a', $ch, #expr) {
+			return 1;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		expectedDoc := `abc
+
+def
+
+ghi
+jkl`
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("@test")
+		assert.True(t, fn.IsSome(), "Macro was not found")
+		assert.Equal(t, "@test", fn.Get().GetName(), "Macro name")
+		assert.Equal(t, "int", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(8, 12, 8, 17), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(8, 2, 10, 3), fn.Get().GetDocumentRange())
+		assert.Equal(t, expectedDoc, fn.Get().GetDocComment().GetBody())
+		assert.Equal(t, expectedDoc, fn.Get().GetDocComment().DisplayBodyWithContracts())
+	})
+
+	t.Run("Finds macro arguments", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("@test")
+		assert.True(t, fn.IsSome(), "Macro was not found")
+
+		variable := fn.Get().Variables["name"]
+		assert.Equal(t, "name", variable.GetName())
+		assert.Equal(t, "char", variable.GetType().String())
+		assert.Equal(t, "'a'", variable.Arg.Default.Get())
+		assert.Equal(t, idx.NewRange(0, 17, 0, 21), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 12, 0, 27), variable.GetDocumentRange())
+
+		variable = fn.Get().Variables["$ch"]
+		assert.Equal(t, "$ch", variable.GetName())
+		assert.Equal(t, "", variable.GetType().String())
+		assert.True(t, variable.Arg.Default.IsNone())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 32), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 32), variable.GetDocumentRange())
+
+		variable = fn.Get().Variables["#expr"]
+		assert.Equal(t, "#expr", variable.GetName())
+		assert.Equal(t, "", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 34, 0, 39), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 34, 0, 39), variable.GetDocumentRange())
 	})
 }
 
@@ -328,7 +413,6 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 	})
 
 	t.Run("Finds method arguments, where member reference is a pointer", func(t *testing.T) {
-		t.Skip("Incomplete until detecting & in self argument")
 		source := `fn Object* UserStruct.method(&self, int* pointer) {
 			return 1;
 		}`
@@ -342,13 +426,13 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 
 		variable := fn.Get().Variables["self"]
 		assert.Equal(t, "self", variable.GetName())
-		assert.Equal(t, "UserStruct*", variable.GetType())
+		assert.Equal(t, "UserStruct*", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 30, 0, 34), variable.GetIdRange())
-		assert.Equal(t, idx.NewRange(0, 30, 0, 34), variable.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 34), variable.GetDocumentRange())
 
 		variable = fn.Get().Variables["pointer"]
 		assert.Equal(t, "pointer", variable.GetName())
-		assert.Equal(t, "int*", variable.GetType())
+		assert.Equal(t, "int*", variable.GetType().String())
 		assert.Equal(t, idx.NewRange(0, 41, 0, 48), variable.GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 36, 0, 48), variable.GetDocumentRange())
 
@@ -438,7 +522,6 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 	})
 
 	t.Run("Finds method macro arguments, where member reference is a pointer", func(t *testing.T) {
-		t.Skip("Incomplete until detecting & in self argument")
 		source := `macro Object* UserStruct.@method(&self, int* pointer; @body) {
 			return 1;
 		}`
@@ -452,22 +535,237 @@ func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {
 
 		variable := fn.Get().Variables["self"]
 		assert.Equal(t, "self", variable.GetName())
-		assert.Equal(t, "UserStruct", variable.GetType().String())
-		assert.Equal(t, idx.NewRange(0, 33, 0, 37), variable.GetIdRange())
-		assert.Equal(t, idx.NewRange(0, 33, 0, 37), variable.GetDocumentRange())
+		assert.Equal(t, "UserStruct*", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 34, 0, 38), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 33, 0, 38), variable.GetDocumentRange())
 
 		variable = fn.Get().Variables["pointer"]
 		assert.Equal(t, "pointer", variable.GetName())
 		assert.Equal(t, "int*", variable.GetType().String())
-		assert.Equal(t, idx.NewRange(0, 44, 0, 51), variable.GetIdRange())
-		assert.Equal(t, idx.NewRange(0, 39, 0, 51), variable.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(0, 45, 0, 52), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 40, 0, 52), variable.GetDocumentRange())
 
 		variable = fn.Get().Variables["@body"]
 		assert.Equal(t, "@body", variable.GetName())
 		assert.Equal(t, "fn void()", variable.GetType().String())
-		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetIdRange())
-		assert.Equal(t, idx.NewRange(0, 53, 0, 58), variable.GetDocumentRange())
+		assert.Equal(t, idx.NewRange(0, 54, 0, 59), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 54, 0, 59), variable.GetDocumentRange())
 
+	})
+
+	t.Run("Finds method macro-specific arguments", func(t *testing.T) {
+		source := `macro Object* UserStruct.@method(&self, $comp, #expr; @body) {
+			return 1;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.@method")
+		assert.True(t, fn.IsSome(), "Method was not found")
+
+		variable := fn.Get().Variables["self"]
+		assert.Equal(t, "self", variable.GetName())
+		assert.Equal(t, "UserStruct*", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 34, 0, 38), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 33, 0, 38), variable.GetDocumentRange())
+
+		variable = fn.Get().Variables["$comp"]
+		assert.Equal(t, "$comp", variable.GetName())
+		assert.Equal(t, "", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 40, 0, 45), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 40, 0, 45), variable.GetDocumentRange())
+
+		variable = fn.Get().Variables["#expr"]
+		assert.Equal(t, "#expr", variable.GetName())
+		assert.Equal(t, "", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 47, 0, 52), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 47, 0, 52), variable.GetDocumentRange())
+
+		variable = fn.Get().Variables["@body"]
+		assert.Equal(t, "@body", variable.GetName())
+		assert.Equal(t, "fn void()", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 54, 0, 59), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 54, 0, 59), variable.GetDocumentRange())
+
+	})
+}
+
+func TestExtractSymbols_FunctionsWithVariableArguments(t *testing.T) {
+	t.Run("Finds arguments with single-typed vararg", func(t *testing.T) {
+		source := `fn bool va_singletyped(int... args) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_singletyped")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn bool va_singletyped(int... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_singletyped", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 8, 0, 22), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "int[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 30, 0, 34), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 23, 0, 34), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds arguments with any-ref-typed vararg", func(t *testing.T) {
+		source := `fn bool va_variants_explicit(any*... args) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_variants_explicit")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn bool va_variants_explicit(any*... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_variants_explicit", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 8, 0, 28), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "any*[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 37, 0, 41), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 41), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds arguments with implicit any-ref-typed vararg", func(t *testing.T) {
+		source := `fn bool va_variants_implicit(args...) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_variants_implicit")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn bool va_variants_implicit(any*... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_variants_implicit", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 8, 0, 28), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "any*[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 33), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 29, 0, 36), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds arguments with C-style vararg", func(t *testing.T) {
+		source := `extern fn void va_untyped(...);`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_untyped")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "fn void va_untyped(...)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_untyped", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 15, 0, 25), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 7, 0, 31), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["$arg0"]
+		assert.Equal(t, "$arg0", variable.GetName())
+		assert.Equal(t, "any*[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 0, 0, 0), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 26, 0, 29), variable.GetDocumentRange())
+	})
+}
+
+func TestExtractSymbols_MacrosWithVariableArguments(t *testing.T) {
+	t.Run("Finds arguments with single-typed vararg", func(t *testing.T) {
+		source := `macro bool va_singletyped(int... args) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_singletyped")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "macro bool va_singletyped(int... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_singletyped", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 11, 0, 25), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "int[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 33, 0, 37), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 26, 0, 37), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds arguments with any-ref-typed vararg", func(t *testing.T) {
+		source := `macro bool va_variants_explicit(any*... args) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_variants_explicit")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "macro bool va_variants_explicit(any*... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_variants_explicit", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 11, 0, 31), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "any*[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 40, 0, 44), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 32, 0, 44), variable.GetDocumentRange())
+	})
+
+	t.Run("Finds arguments with implicit any-ref-typed vararg", func(t *testing.T) {
+		source := `macro bool va_variants_implicit(args...) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("va_variants_implicit")
+		assert.True(t, fn.IsSome(), "Function was not found")
+		assert.Equal(t, "macro bool va_variants_implicit(any*... args)", fn.Get().GetHoverInfo(), "Function signature")
+		assert.Equal(t, "va_variants_implicit", fn.Get().GetName(), "Function name")
+		assert.Equal(t, "bool", fn.Get().GetReturnType().GetName(), "Return type")
+		assert.Equal(t, idx.NewRange(0, 11, 0, 31), fn.Get().GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 0, 2, 3), fn.Get().GetDocumentRange())
+		assert.Nil(t, fn.Get().GetDocComment())
+
+		variable := fn.Get().Variables["args"]
+		assert.Equal(t, "args", variable.GetName())
+		assert.Equal(t, "any*[]", variable.GetType().String())
+		assert.Equal(t, idx.NewRange(0, 32, 0, 36), variable.GetIdRange())
+		assert.Equal(t, idx.NewRange(0, 32, 0, 39), variable.GetDocumentRange())
 	})
 }
 

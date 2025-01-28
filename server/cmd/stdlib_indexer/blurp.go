@@ -11,15 +11,34 @@ const InternalPackageName = "github.com/pherrymason/c3-lsp/internal/lsp/"
 const PackageName = "github.com/pherrymason/c3-lsp/pkg/"
 
 func Generate_variable(variable *s.Variable, module *s.Module) jen.Code {
-	return jen.
+	varDef := jen.
 		Qual(PackageName+"symbols", "NewVariableBuilder").
 		Call(
 			jen.Lit(variable.GetName()),
 			Generate_type(variable.GetType(), module.GetName()),
 			jen.Lit(module.GetName()),
 			jen.Lit(module.GetDocumentURI()),
-		).
-		Dot("Build").Call()
+		)
+
+	if variable.Arg.VarArg {
+		varDef.
+			Dot("IsVarArg").
+			Call()
+	}
+
+	if variable.Arg.Default.IsSome() {
+		varDef.
+			Dot("WithArgDefault").
+			Call(
+				jen.Lit(variable.Arg.Default.Get()),
+			)
+	}
+
+	varDef.
+		Dot("Build").
+		Call()
+
+	return varDef
 }
 
 func Generate_struct(strukt *s.Struct, module *s.Module) jen.Code {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pherrymason/c3-lsp/pkg/cast"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -111,28 +112,40 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 
 // nodeToArgument Very similar to nodeToVariable, but arguments have optional identifiers (for example when using `self` for struct methods)
 /*
-	_parameter: $ => choice(
-      seq($.type, $.ident, optional($.attributes)),			// 3
-      seq($.type, '...', $.ident, optional($.attributes)),	// 3/4
-      seq($.type, '...', $.ct_ident),						// 3
-      seq($.type, $.ct_ident),								// 2
-      seq($.type, '...', optional($.attributes)),			// 2/3
-      seq($.type, $.hash_ident, optional($.attributes)),	// 2/3
-      seq($.type, '&', $.ident, optional($.attributes)),	// 3/4
-      seq($.type, optional($.attributes)),					// 1/2
-      seq('&', $.ident, optional($.attributes)),			// 2/3
-      seq($.hash_ident, optional($.attributes)),			// 1/2
-      '...',												// 1
-      seq($.ident, optional($.attributes)),					// 1/2
-      seq($.ident, '...', optional($.attributes)),			// 2/3
-      $.ct_ident,											// 1
-      seq($.ct_ident, '...'),								// 2
+	_assign_right_expr: $ => seq('=', field('right', $._expr)),
+	parameter_default: $ => $._assign_right_expr,
+	parameter: $ => seq($._parameter, optional($.parameter_default))
+    _parameter: $ => choice(
+        // Typed parameters
+        seq(
+	        field('type', $.type),  // 1
+	        optional(choice(
+	            '...',  															   // 2
+	            seq(optional('...'), field('name', $.ident), optional($.attributes)),  // 2/3/4
+	            // Macro parameters
+	            seq(field('name', $.ct_ident), optional($.attributes)),				   // 2/3
+	            seq(field('name', $.hash_ident), optional($.attributes)),			   // 2/3
+	            seq('&', field('name', $.ident), optional($.attributes)), 			   // 3/4
+	        ))
+        ),
+
+        // Untyped parameters
+        '...',																			// 1
+        seq(field('name', $.ident), optional('...'), optional($.attributes)),           // 2/3/4
+        // Macro parameters
+        seq(field('name', $.ct_ident), optional($.attributes)),                         // 1/2
+        seq(field('name', $.hash_ident), optional($.attributes)),                       // 1/2
+        seq('&', field('name', $.ident), optional($.attributes)),                       // 2/3
     ),
 */
 func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, currentModule *idx.Module, docId *string, sourceCode []byte, parameterIndex int) *idx.Variable {
 	var identifier = ""
 	var idRange idx.Range
 	var argType idx.Type
+	foundType := false
+	varArg := false
+	ref := ""
+	paramDefault := option.None[string]()
 
 	for i := uint32(0); i < argNode.ChildCount(); i++ {
 		n := argNode.Child(int(i))
@@ -140,12 +153,43 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 		switch n.Type() {
 		case "type":
 			argType = p.typeNodeToType(n, currentModule, sourceCode)
+			foundType = true
+		case "...":
+			varArg = true
+			if foundType {
+				// int.. args. -> int[] args
+				argType = argType.UnsizedCollectionOf()
+			} else {
+				// args... -> any*... args -> any*[] args
+				argType = idx.
+					NewTypeFromString("any*", currentModule.GetModuleString()).
+					UnsizedCollectionOf()
+			}
+		case "&":
+			ref = "*"
 		case "ident":
 			identifier = n.Content(sourceCode)
 			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
-			// When detecting a self, the type is the Struct type
+			// When detecting a self, the type is the Struct type, plus '*' for '&self'
 			if identifier == "self" && methodIdentifier != "" {
-				argType = idx.NewTypeFromString(methodIdentifier, currentModule.GetModuleString())
+				argType = idx.NewTypeFromString(methodIdentifier+ref, currentModule.GetModuleString())
+			}
+
+		// $arg (macro)
+		case "ct_ident":
+			identifier = n.Content(sourceCode)
+			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
+
+		// #arg (macro)
+		case "hash_ident":
+			identifier = n.Content(sourceCode)
+			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
+
+		// = default
+		case "parameter_default":
+			assigned := n.ChildByFieldName("right")
+			if assigned != nil {
+				paramDefault = option.Some(assigned.Content(sourceCode))
 			}
 		}
 	}
@@ -164,6 +208,9 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 		idx.NewRangeFromTreeSitterPositions(argNode.StartPoint(),
 			argNode.EndPoint()),
 	)
+
+	variable.Arg.VarArg = varArg
+	variable.Arg.Default = paramDefault
 
 	return &variable
 }

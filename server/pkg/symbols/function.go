@@ -184,12 +184,48 @@ func (f *Function) DisplaySignature(includeName bool) string {
 				comma = ", "
 			}
 
-			argType := variable.Type.String()
-			if argType != "" {
-				argType = argType + " "
+			argName := variable.name
+			if variable.idRange == (Range{}) {
+				// Originally, it had an empty name
+				argName = ""
 			}
 
-			args += fmt.Sprintf("%s%s%s", comma, argType, variable.name)
+			argDefault := ""
+			if variable.Arg.Default.IsSome() {
+				argDefault = " = " + variable.Arg.Default.Get()
+			}
+
+			varArg := ""
+			if variable.Arg.VarArg {
+				// ...args
+				varArg = "..."
+			}
+
+			argType := variable.Type.String()
+			if argType != "" && argName != "" {
+				if varArg == "" {
+					// int args (no var args)
+					argType += " "
+				} else {
+					// int[]... args (space required)
+					varArg += " "
+				}
+			}
+
+			if varArg != "" && argType != "" {
+				// fix: int[]... args
+				// -> int... args
+				argType = strings.TrimSuffix(argType, "[]")
+			}
+
+			if varArg != "" && argName == "" && argType == "any*" {
+				// Special case for C-style var args (fn name(...))
+				//
+				// fn name(any*...) -> fn name(...)
+				argType = ""
+			}
+
+			args += fmt.Sprintf("%s%s%s%s%s", comma, argType, varArg, argName, argDefault)
 		}
 	}
 
