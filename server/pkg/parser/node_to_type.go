@@ -20,7 +20,7 @@ func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module
 	parsedType := symbols.Type{}
 
 	tailChild := node.Child(int(node.ChildCount()) - 1)
-	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "!"
+	isOptional = !tailChild.IsNamed() && tailChild.Content(sourceCode) == "!"
 
 	//fmt.Println(node.Type(), node.Content(sourceCode), node.ChildCount())
 	isCollection := false

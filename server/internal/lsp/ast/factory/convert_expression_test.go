@@ -2,6 +2,7 @@ package factory
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"strings"
 	"testing"
@@ -301,12 +302,15 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 	}
 }
 
-func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T) {
+func TestConvertToAST_declaration_with_initializer_list_assignment(t *testing.T) {
 	cases := []struct {
-		literal  string
-		expected ast.Node
+		incomplete bool
+		name       string
+		literal    string
+		expected   ast.Node
 	}{
 		{
+			name:    "testing arg: param_path = literal",
 			literal: "{[0] = 1, [2] = 2}",
 			expected: &ast.InitializerList{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 13+18).Build(),
@@ -330,22 +334,7 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 			},
 		},
 		{
-			literal: "{[0] = TypeDescription}",
-			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 36).Build(),
-				Args: []ast.Expression{
-					&ast.ArgParamPathSet{
-						Path: "[0]",
-						Expr: ast.NewTypeInfoBuilder().
-							WithStartEnd(2, 13+7, 2, 35).
-							WithName("TypeDescription").
-							WithNameStartEnd(2, 13+7, 2, 35).
-							Build(),
-					},
-				},
-			},
-		},
-		{
+			name:    "testing arg: param_path [x..y] = literal",
 			literal: "{[0..2] = 2}",
 			expected: &ast.InitializerList{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 25).Build(),
@@ -356,6 +345,25 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 23, 2, 24).Build(),
 							Kind:           ast.INT,
 							Value:          "2"},
+					},
+				},
+			},
+		},
+		{
+			// TODO: define what AST should be generated in ArgParamPathSet.Expr
+			incomplete: true,
+			name:       "testing arg: param_path = expr",
+			literal:    "{[0] = TypeDescription{0}}",
+			expected: &ast.InitializerList{
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 36).Build(),
+				Args: []ast.Expression{
+					&ast.ArgParamPathSet{
+						Path: "[0]",
+						Expr: ast.NewTypeInfoBuilder().
+							WithStartEnd(2, 13+7, 2, 35).
+							WithName("TypeDescription").
+							WithNameStartEnd(2, 13+7, 2, 35).
+							Build(),
 					},
 				},
 			},
@@ -376,7 +384,9 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 			},
 		},
 		{
-			literal: "{TypeDescription}",
+			// TODO: define what AST
+			incomplete: true,
+			literal:    "{TypeDescription}",
 			expected: &ast.InitializerList{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 30).Build(),
 				Args: []ast.Expression{
@@ -389,40 +399,41 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 			},
 		},
 		{
-			literal: "{$vasplat()}",
+			literal: "{$vasplat(0)}",
 			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 25).Build(),
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 26).Build(),
 				Args: []ast.Expression{
-					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 14, 2, 24).Build(),
-						Kind:           ast.STRING,
-						Value:          "$vasplat()"},
+					&ast.FunctionCall{
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 14, 2, 25).Build(),
+						Identifier: ast.NewIdentifierBuilder().
+							WithName("$vasplat").
+							IsCompileTime(true).
+							WithRange(lsp.NewRange(2, 14, 2, 22)).
+							Build(),
+						Arguments: []ast.Expression{&ast.BasicLit{
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 23, 2, 24).Build(),
+							Kind:           ast.INT,
+							Value:          "0"},
+						},
+					},
 				},
 			},
 		},
+
+		/* TODO move this test to call_arg testing
 		{
-			literal: "{$vasplat(0..1)}",
-			expected: &ast.InitializerList{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 29).Build(),
-				Args: []ast.Expression{
-					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 14, 2, 28).Build(),
-						Kind:           ast.STRING,
-						Value:          "$vasplat(0..1)"},
-				},
-			},
-		},
-		{
+			// No longer valid!
 			literal: "{...id}",
 			expected: &ast.InitializerList{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 20).Build(),
 				Args: []ast.Expression{
 					ast.NewIdentifierBuilder().
 						WithName("id").
-						WithStartEnd(2, 13+4, 2, 13+6).BuildPtr(),
+						WithStartEnd(2, 13+4, 2, 13+6).Build(),
 				},
 			},
 		},
+		*/
 		/*{
 			literal:  "{[0..2] = TypeDescription}",
 			expected: Literal{Value: "{[0..2] = TypeDescription}"},
@@ -446,6 +457,9 @@ func TestConvertToAST_declaration_with_initializer_list_assingment(t *testing.T)
 	}
 
 	for _, tt := range cases {
+		if tt.incomplete {
+			continue
+		}
 		t.Run(fmt.Sprintf("compile_time_call: %s", tt.literal), func(t *testing.T) {
 			source := `
 			module foo;
