@@ -111,28 +111,34 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 
 // nodeToArgument Very similar to nodeToVariable, but arguments have optional identifiers (for example when using `self` for struct methods)
 /*
-	_parameter: $ => choice(
-      seq($.type, $.ident, optional($.attributes)),			// 3
-      seq($.type, '...', $.ident, optional($.attributes)),	// 3/4
-      seq($.type, '...', $.ct_ident),						// 3
-      seq($.type, $.ct_ident),								// 2
-      seq($.type, '...', optional($.attributes)),			// 2/3
-      seq($.type, $.hash_ident, optional($.attributes)),	// 2/3
-      seq($.type, '&', $.ident, optional($.attributes)),	// 3/4
-      seq($.type, optional($.attributes)),					// 1/2
-      seq('&', $.ident, optional($.attributes)),			// 2/3
-      seq($.hash_ident, optional($.attributes)),			// 1/2
-      '...',												// 1
-      seq($.ident, optional($.attributes)),					// 1/2
-      seq($.ident, '...', optional($.attributes)),			// 2/3
-      $.ct_ident,											// 1
-      seq($.ct_ident, '...'),								// 2
+    _parameter: $ => choice(
+        // Typed parameters
+        seq(
+	        field('type', $.type),  // 1
+	        optional(choice(
+	            '...',  															   // 2
+	            seq(optional('...'), field('name', $.ident), optional($.attributes)),  // 2/3/4
+	            // Macro parameters
+	            seq(field('name', $.ct_ident), optional($.attributes)),				   // 2/3
+	            seq(field('name', $.hash_ident), optional($.attributes)),			   // 2/3
+	            seq('&', field('name', $.ident), optional($.attributes)), 			   // 3/4
+	        ))
+        ),
+
+        // Untyped parameters
+        '...',																			// 1
+        seq(field('name', $.ident), optional('...'), optional($.attributes)),           // 2/3/4
+        // Macro parameters
+        seq(field('name', $.ct_ident), optional($.attributes)),                         // 1/2
+        seq(field('name', $.hash_ident), optional($.attributes)),                       // 1/2
+        seq('&', field('name', $.ident), optional($.attributes)),                       // 2/3
     ),
 */
 func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, currentModule *idx.Module, docId *string, sourceCode []byte, parameterIndex int) *idx.Variable {
 	var identifier = ""
 	var idRange idx.Range
 	var argType idx.Type
+	ref := ""
 
 	for i := uint32(0); i < argNode.ChildCount(); i++ {
 		n := argNode.Child(int(i))
@@ -140,13 +146,25 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 		switch n.Type() {
 		case "type":
 			argType = p.typeNodeToType(n, currentModule, sourceCode)
+		case "&":
+			ref = "*"
 		case "ident":
 			identifier = n.Content(sourceCode)
 			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
-			// When detecting a self, the type is the Struct type
+			// When detecting a self, the type is the Struct type, plus '*' for '&self'
 			if identifier == "self" && methodIdentifier != "" {
-				argType = idx.NewTypeFromString(methodIdentifier, currentModule.GetModuleString())
+				argType = idx.NewTypeFromString(methodIdentifier+ref, currentModule.GetModuleString())
 			}
+
+		// $arg (macro)
+		case "ct_ident":
+			identifier = n.Content(sourceCode)
+			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
+
+		// #arg (macro)
+		case "hash_ident":
+			identifier = n.Content(sourceCode)
+			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
 		}
 	}
 
