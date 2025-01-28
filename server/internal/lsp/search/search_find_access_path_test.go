@@ -36,7 +36,7 @@ func SearchUnderCursor_AccessPath(body string, optionalState ...TestState) Searc
 
 func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	t.Run("Should find method from std collection", func(t *testing.T) {
-		state := NewTestStateWithStdLibVersion("0.5.5")
+		state := NewTestStateWithStdLibVersion("0.6.6")
 		symbolOption := SearchUnderCursor_AccessPath(
 			`module core::actions;
 			import std::collections::map;
