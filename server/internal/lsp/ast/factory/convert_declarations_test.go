@@ -764,7 +764,8 @@ func TestConvertToAST_function_declaration(t *testing.T) {
 	t.Run("parses function declaration", func(t *testing.T) {
 		source := `module foo;
 	<*
-		abc
+		Hello world.
+		Hello world.
 		@pure
 		@param [in] pointer
 		@require number > 0, number < 1000 : "invalid number"
@@ -777,10 +778,12 @@ func TestConvertToAST_function_declaration(t *testing.T) {
 		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
 		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
-		assert.Equal(t, lsp.Position{Line: 8, Column: 1}, fnDecl.NodeAttributes.Range.Start)
-		assert.Equal(t, lsp.Position{Line: 10, Column: 2}, fnDecl.NodeAttributes.Range.End)
-		assert.Equal(t, "abc", fnDecl.NodeAttributes.DocComment.Get().GetBody())
-		assert.Equal(t, `abc
+		assert.Equal(t, lsp.Position{Line: 9, Column: 1}, fnDecl.NodeAttributes.Range.Start)
+		assert.Equal(t, lsp.Position{Line: 11, Column: 2}, fnDecl.NodeAttributes.Range.End)
+		assert.Equal(t, `Hello world.
+Hello world.`, fnDecl.NodeAttributes.DocComment.Get().GetBody())
+		assert.Equal(t, `Hello world.
+Hello world.
 
 **@pure**
 
@@ -791,12 +794,39 @@ func TestConvertToAST_function_declaration(t *testing.T) {
 **@ensure** return == 1`, fnDecl.NodeAttributes.DocComment.Get().DisplayBodyWithContracts())
 
 		assert.Equal(t, "test", fnDecl.Signature.Name.Name, "Function name")
-		assert.Equal(t, lsp.Position{Line: 8, Column: 9}, fnDecl.Signature.Name.NodeAttributes.Range.Start)
-		assert.Equal(t, lsp.Position{Line: 8, Column: 13}, fnDecl.Signature.Name.NodeAttributes.Range.End)
+		assert.Equal(t, lsp.Position{Line: 9, Column: 9}, fnDecl.Signature.Name.NodeAttributes.Range.Start)
+		assert.Equal(t, lsp.Position{Line: 9, Column: 13}, fnDecl.Signature.Name.NodeAttributes.Range.End)
 
 		assert.Equal(t, "void", fnDecl.Signature.ReturnType.Identifier.Name, "Return type")
-		assert.Equal(t, lsp.Position{Line: 8, Column: 4}, fnDecl.Signature.ReturnType.NodeAttributes.Range.Start)
-		assert.Equal(t, lsp.Position{Line: 8, Column: 8}, fnDecl.Signature.ReturnType.NodeAttributes.Range.End)
+		assert.Equal(t, lsp.Position{Line: 9, Column: 4}, fnDecl.Signature.ReturnType.NodeAttributes.Range.Start)
+		assert.Equal(t, lsp.Position{Line: 9, Column: 8}, fnDecl.Signature.ReturnType.NodeAttributes.Range.End)
+	})
+
+	t.Run("parses function with simple doc comment", func(t *testing.T) {
+		source := `<*
+		abc
+
+		def
+
+		ghi
+		jkl
+		*>
+		fn void test(int number, char ch, int* pointer) {
+			return 1;
+		}`
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+
+		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
+
+		expectedDoc := `abc
+
+def
+
+ghi
+jkl`
+		assert.Equal(t, expectedDoc, fnDecl.NodeAttributes.DocComment.Get().GetBody())
+		assert.Equal(t, expectedDoc, fnDecl.NodeAttributes.DocComment.Get().DisplayBodyWithContracts())
 	})
 
 	t.Run("parses extern function declaration", func(t *testing.T) {

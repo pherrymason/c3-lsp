@@ -7,6 +7,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
+	"github.com/pherrymason/c3-lsp/pkg/dedent"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
@@ -2005,7 +2006,7 @@ func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte)
 	body := ""
 	bodyNode := node.Child(1)
 	if bodyNode.Type() == "doc_comment_text" {
-		body = bodyNode.Content(sourceCode)
+		body = dedent.Dedent(bodyNode.Content(sourceCode))
 	}
 
 	docComment := ast.NewDocComment(body)
@@ -2017,6 +2018,9 @@ func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte)
 				name := contractNode.ChildByFieldName("name").Content(sourceCode)
 				body := ""
 				if contractNode.ChildCount() >= 2 {
+					// Right now, contracts can only have a single line, so we don't dedent.
+					// They can also be arbitrary expressions, so it's best to not modify them
+					// at the moment.
 					body = contractNode.Child(1).Content(sourceCode)
 				}
 
