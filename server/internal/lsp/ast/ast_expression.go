@@ -21,8 +21,9 @@ type (
 	// It can be built
 	Ident struct {
 		NodeAttributes
-		ModulePath *Ident
-		Name       string // Identifier name
+		ModulePath  *Ident
+		Name        string // Identifier name
+		CompileTime bool
 	}
 
 	Path struct {

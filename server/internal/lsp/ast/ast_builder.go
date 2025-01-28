@@ -86,6 +86,11 @@ func (i *IdentifierBuilder) WithName(name string) *IdentifierBuilder {
 	return i
 }
 
+func (i *IdentifierBuilder) IsCompileTime(ct bool) *IdentifierBuilder {
+	i.ident.CompileTime = ct
+	return i
+}
+
 func (i *IdentifierBuilder) WithSitterPos(node *sitter.Node) *IdentifierBuilder {
 	i.attrBuilder.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
 	i.attrBuilder.WithRange(lsp.NewRangeFromSitterNode(node))
@@ -124,12 +129,12 @@ func (i *IdentifierBuilder) BuildPtr() *Ident {
 // TypeInfoBuilder
 // --
 type TypeInfoBuilder struct {
-	typeInfo TypeInfo
+	typeInfo *TypeInfo
 }
 
 func NewTypeInfoBuilder() *TypeInfoBuilder {
 	return &TypeInfoBuilder{
-		typeInfo: TypeInfo{
+		typeInfo: &TypeInfo{
 			NodeAttributes: NodeAttributes{},
 			Identifier: &Ident{
 				ModulePath: nil,
