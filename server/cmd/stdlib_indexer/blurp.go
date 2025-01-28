@@ -248,10 +248,6 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 func Generate_type(type_ *s.Type, mod string) *jen.Statement {
 	builderName := "NewTypeBuilder"
 	typeModule := type_.GetModule()
-	if type_.IsGenericArgument() {
-		// Temporary fix for generic types' modules being misdetected
-		typeModule = mod
-	}
 
 	if type_.IsBaseTypeLanguage() {
 		// Use this shorthand just to reduce generated code by a bit
@@ -260,6 +256,9 @@ func Generate_type(type_ *s.Type, mod string) *jen.Statement {
 
 	if type_.IsGenericArgument() {
 		builderName = "NewGenericTypeBuilder"
+
+		// Temporary fix for generic types' modules being misdetected
+		typeModule = mod
 	}
 
 	typeDef := jen.
