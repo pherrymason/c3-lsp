@@ -9,7 +9,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/server"
 )
 
-const version = "0.3.4"
+const version = "0.4.0"
 const prerelease = true
 const appName = "C3-LSP"
 

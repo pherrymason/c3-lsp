@@ -1,15 +1,19 @@
 # C3LSP Release Notes
 
-## 0.3.4
-- Fix crash while writing an inline struct member. (#97)
-- Support `<*` and `*>` comments. (#91)
-- Show documentation on hover and completion. Credit to @PgBiel
-- Optimizations to reduce CPU usage by 6-7x. Credit to @PgBiel [More info](https://github.com/pherrymason/c3-lsp/pull/99)
+## 0.4.0
+
+- Support <* and *> comments (https://github.com/pherrymason/c3-lsp/pull/99) Credit to @PgBiel
+- Show documentation on hover and completion (https://github.com/pherrymason/c3-lsp/pull/101). Credit to @PgBiel
+- Support `distinct` types (https://github.com/pherrymason/c3-lsp/pull/107). Credit to @PgBiel
 - Improve syntax highlighting in function information on hovering. Credit to @PgBiel
 - Adds type information as well as other information to completions. Credit to @PgBiel
+- Improve macro handling (https://github.com/pherrymason/c3-lsp/pull/103). Credit to @PgBiel
+
+- Fixes some crashes while writing an inline struct member (https://github.com/pherrymason/c3-lsp/issues/97) and other language constructions.
+- Optimizations to reduce CPU usage by 6-7x. Credit to @PgBiel https://github.com/pherrymason/c3-lsp/pull/99
 - Fix parsing of non-type alias def (Credit to @PgBiel)
-- Improve macro handling. [More info](https://github.com/pherrymason/c3-lsp/pull/103). Credit to @PgBiel
-- Fix completion of enum and fault methods. [More info](https://github.com/pherrymason/c3-lsp/pull/111). Credit to @PgBiel 
+- Fix completion of enum and fault methods. https://github.com/pherrymason/c3-lsp/pull/111. Credit to @PgBiel
+
 
 ## 0.3.3
 - Support named and anonymous sub structs.
