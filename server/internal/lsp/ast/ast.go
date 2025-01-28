@@ -56,6 +56,8 @@ type Node interface {
 	EndPosition() lsp.Position
 	GetRange() lsp.Range
 	GetId() NodeId
+	SetDocComment(docComment *DocComment)
+	GetDocComment() option.Option[*DocComment]
 }
 
 type Expression interface {
@@ -87,12 +89,21 @@ type NodeAttributes struct {
 	Range      lsp.Range
 	Attributes []string
 	Id         NodeId
+	DocComment option.Option[*DocComment]
 }
 
 func (n NodeAttributes) StartPosition() lsp.Position { return n.Range.Start }
 func (n NodeAttributes) EndPosition() lsp.Position   { return n.Range.End }
 func (n NodeAttributes) GetRange() lsp.Range         { return n.Range }
 func (n NodeAttributes) GetId() NodeId               { return n.Id }
+func (n *NodeAttributes) SetDocComment(docComment *DocComment) {
+	if docComment != nil {
+		n.DocComment = option.Some(docComment)
+	} else {
+		n.DocComment = option.None[*DocComment]()
+	}
+}
+func (n *NodeAttributes) GetDocComment() option.Option[*DocComment] { return n.DocComment }
 
 func ChangeNodePosition(n *NodeAttributes, start sitter.Point, end sitter.Point) {
 	n.Range.Start = lsp.Position{Line: uint(start.Row), Column: uint(start.Column)}
@@ -145,36 +156,11 @@ type Import struct {
 
 func (*Import) stmtNode() {}
 
-// Deprecated: using GenDecl for enums
-type EnumProperty struct {
-	NodeAttributes
-	Type TypeInfo
-	Name Ident
-}
-
-// EnumMember
-// Deprecated: using GenDecl for enums
-type EnumMember struct {
-	NodeAttributes
-	Name  Ident
-	Value CompositeLiteral
-}
-
 // Deprecated not used
 type PropertyValue struct {
 	NodeAttributes
 	Name  string
 	Value Expression
-}
-
-// StructMemberDecl
-// Deprecated
-type StructMemberDecl struct {
-	NodeAttributes
-	Names     []Ident
-	Type      TypeInfo
-	BitRange  option.Option[[2]uint]
-	IsInlined bool
 }
 
 type FaultMember struct {

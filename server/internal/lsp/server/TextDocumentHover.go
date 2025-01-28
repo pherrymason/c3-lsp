@@ -30,6 +30,10 @@ func (srv *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hov
 		return nil, nil
 	}
 
+	// -----------------------
+	// Old implementation
+	// -----------------------
+	
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
 	docId := utils.NormalizePath(params.TextDocument.URI)
 	foundSymbolOption := srv.search.FindSymbolDeclarationInWorkspace(docId, pos, srv.state)

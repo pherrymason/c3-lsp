@@ -53,9 +53,11 @@ func TestConvertToAST_module(t *testing.T) {
 	})
 
 	t.Run("multiple named modules", func(t *testing.T) {
-		source := `
+		source := `<* foo is first module *>
 	module foo;
 	int variable = 0;
+
+	<* app is second module *>
 	module app;
 	fn void main() {
 	};`
@@ -64,10 +66,12 @@ func TestConvertToAST_module(t *testing.T) {
 		tree := cv.ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
 
 		assert.Equal(t, "foo", tree.Modules[0].Name)
-		assert.Equal(t, lsp.NewRange(1, 1, 2, 18), tree.Modules[0].Range, "Range of module foo is wrong")
+		assert.Equal(t, lsp.NewRange(1, 1, 4, 27), tree.Modules[0].Range, "Range of module foo is wrong")
+		assert.Equal(t, "foo is first module", tree.Modules[0].DocComment.Get().GetBody())
 
 		assert.Equal(t, "app", tree.Modules[1].Name)
-		assert.Equal(t, lsp.NewRange(3, 1, 5, 3), tree.Modules[1].Range, "Range of module app is wrong")
+		assert.Equal(t, lsp.NewRange(5, 1, 7, 3), tree.Modules[1].Range, "Range of module app is wrong")
+		assert.Equal(t, "app is second module", tree.Modules[1].DocComment.Get().GetBody())
 	})
 
 }
@@ -108,89 +112,117 @@ func TestConvertToAST_module_with_imports(t *testing.T) {
 // -----------------------------------------------------
 // Convert global variable declaration
 
-func TestConvertToAST_global_variable_unitialized(t *testing.T) {
-	source := `module foo;
+func TestConvertToAST_global_variable(t *testing.T) {
+	t.Run("parses global variable unitialized", func(t *testing.T) {
+		source := `module foo;
+	<* abc *>
 	int hello;`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
-	spec := decl.Spec.(*ast.ValueSpec)
+		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		spec := decl.Spec.(*ast.ValueSpec)
 
-	assert.Equal(t, "hello", spec.Names[0].Name)
-	assert.Equal(t, lsp.NewRange(1, 5, 1, 10), spec.Names[0].Range)
-	assert.Equal(t, "int", spec.Type.Identifier.Name)
-	assert.Equal(t, lsp.NewRange(1, 1, 1, 4), spec.Type.Identifier.Range)
-}
+		assert.Equal(t, "hello", spec.Names[0].Name)
+		assert.Equal(t, lsp.NewRange(2, 5, 2, 10), spec.Names[0].Range)
+		assert.Equal(t, "int", spec.Type.Identifier.Name)
+		assert.Equal(t, lsp.NewRange(2, 1, 2, 4), spec.Type.Identifier.Range)
+		assert.Equal(t, "abc", decl.DocComment.Get().GetBody())
+	})
 
-func TestConvertToAST_global_variable_with_scalar_initialization(t *testing.T) {
-	source := `module foo;
+	t.Run("parses global variable with scalar initialization", func(t *testing.T) {
+		source := `module foo;
 	int hello = 3;`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 
-	spec := decl.Spec.(*ast.ValueSpec)
-	assert.Equal(t, "hello", spec.Names[0].Name)
-	assert.Equal(t, &ast.BasicLit{
-		NodeAttributes: ast.NewNodeAttributesBuilder().WithRange(lsp.NewRange(1, 13, 1, 14)).Build(),
-		Kind:           ast.INT,
-		Value:          "3",
-	}, spec.Value)
-}
+		spec := decl.Spec.(*ast.ValueSpec)
+		assert.Equal(t, "hello", spec.Names[0].Name)
+		assert.Equal(t, &ast.BasicLit{
+			NodeAttributes: ast.NewNodeAttributesBuilder().WithRange(lsp.NewRange(1, 13, 1, 14)).Build(),
+			Kind:           ast.INT,
+			Value:          "3",
+		}, spec.Value)
+	})
 
-func TestConvertToAST_declare_multiple_variables_in_single_statement(t *testing.T) {
-	source := `module foo;
+	t.Run("parses global multiple variables in single statement", func(t *testing.T) {
+		source := `module foo;
 	int dog, cat, elephant;`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
-	assert.Len(t, decl.Spec.(*ast.ValueSpec).Names, 3)
+		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		assert.Len(t, decl.Spec.(*ast.ValueSpec).Names, 3)
 
-	assert.Equal(t, "dog", decl.Spec.(*ast.ValueSpec).Names[0].Name)
-	assert.Equal(t, lsp.NewRange(1, 5, 1, 8), decl.Spec.(*ast.ValueSpec).Names[0].Range)
-	assert.Equal(t, "cat", decl.Spec.(*ast.ValueSpec).Names[1].Name)
-	assert.Equal(t, lsp.NewRange(1, 10, 1, 13), decl.Spec.(*ast.ValueSpec).Names[1].Range)
-	assert.Equal(t, "elephant", decl.Spec.(*ast.ValueSpec).Names[2].Name)
-	assert.Equal(t, lsp.NewRange(1, 15, 1, 23), decl.Spec.(*ast.ValueSpec).Names[2].Range)
-	assert.Equal(t, "int", decl.Spec.(*ast.ValueSpec).Type.Identifier.Name)
+		assert.Equal(t, "dog", decl.Spec.(*ast.ValueSpec).Names[0].Name)
+		assert.Equal(t, lsp.NewRange(1, 5, 1, 8), decl.Spec.(*ast.ValueSpec).Names[0].Range)
+		assert.Equal(t, "cat", decl.Spec.(*ast.ValueSpec).Names[1].Name)
+		assert.Equal(t, lsp.NewRange(1, 10, 1, 13), decl.Spec.(*ast.ValueSpec).Names[1].Range)
+		assert.Equal(t, "elephant", decl.Spec.(*ast.ValueSpec).Names[2].Name)
+		assert.Equal(t, lsp.NewRange(1, 15, 1, 23), decl.Spec.(*ast.ValueSpec).Names[2].Range)
+		assert.Equal(t, "int", decl.Spec.(*ast.ValueSpec).Type.Identifier.Name)
+	})
+
+	t.Run("parses constant declaration", func(t *testing.T) {
+		source := `module foo;
+	<* abc *>
+	const int HELLO = 3;`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+
+		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		assert.Equal(t, ast.Token(ast.CONST), decl.Token)
+		assert.Equal(t, "abc", decl.DocComment.Get().GetBody())
+
+		spec := decl.Spec.(*ast.ValueSpec)
+		assert.Equal(t, "HELLO", spec.Names[0].Name)
+		assert.Equal(t, &ast.BasicLit{
+			NodeAttributes: ast.NewNodeAttributesBuilder().WithRange(lsp.NewRange(2, 19, 2, 20)).Build(),
+			Kind:           ast.INT,
+			Value:          "3",
+		}, spec.Value)
+	})
 }
 
 // -----------------------------------------------------
 
 func TestConvertToAST_enum_decl(t *testing.T) {
-	source := `module foo;
+	t.Run("parses enum decl", func(t *testing.T) {
+		source := `module foo;
+	<* colors enum *>
 	enum Colors { RED, BLUE, GREEN }
 	enum TypedColors:int { RED, BLUE, GREEN } // Typed enums`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-	enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
-	assert.Equal(t, ast.Token(ast.ENUM), enumDecl.Token)
-	assert.Equal(t, "Colors", enumDecl.Spec.(*ast.TypeSpec).Name.Name)
-	assert.Equal(t, lsp.NewRange(1, 1, 1, 33), enumDecl.Range)
+		enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		assert.Equal(t, ast.Token(ast.ENUM), enumDecl.Token)
+		assert.Equal(t, "Colors", enumDecl.Spec.(*ast.TypeSpec).Name.Name)
+		assert.Equal(t, lsp.NewRange(2, 1, 2, 33), enumDecl.Range)
+		assert.Equal(t, "colors enum", enumDecl.DocComment.Get().GetBody())
 
-	enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
-	assert.Equal(t, option.None[ast.TypeInfo](), enumType.BaseType)
+		enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
+		assert.Equal(t, option.None[*ast.TypeInfo](), enumType.BaseType)
 
-	assert.Equal(t, []ast.Expression{}, enumType.StaticValues, "No fields should be present")
-	assert.Len(t, enumType.Values, 3)
-	assert.Equal(t, "RED", enumType.Values[0].Name.Name)
-	assert.Equal(t, lsp.NewRange(1, 15, 1, 18), enumType.Values[0].Name.Range)
-	assert.Equal(t, "BLUE", enumType.Values[1].Name.Name)
-	assert.Equal(t, lsp.NewRange(1, 20, 1, 24), enumType.Values[1].Name.Range)
-	assert.Equal(t, "GREEN", enumType.Values[2].Name.Name)
-	assert.Equal(t, lsp.NewRange(1, 26, 1, 31), enumType.Values[2].Name.Range)
+		assert.Equal(t, []ast.Expression{}, enumType.StaticValues, "No fields should be present")
+		assert.Len(t, enumType.Values, 3)
+		assert.Equal(t, "RED", enumType.Values[0].Name.Name)
+		assert.Equal(t, lsp.NewRange(2, 15, 2, 18), enumType.Values[0].Name.Range)
+		assert.Equal(t, "BLUE", enumType.Values[1].Name.Name)
+		assert.Equal(t, lsp.NewRange(2, 20, 2, 24), enumType.Values[1].Name.Range)
+		assert.Equal(t, "GREEN", enumType.Values[2].Name.Name)
+		assert.Equal(t, lsp.NewRange(2, 26, 2, 31), enumType.Values[2].Name.Range)
 
-	enumDecl = tree.Modules[0].Declarations[1].(*ast.GenDecl)
-	assert.Equal(t, "int", enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType).BaseType.Get().Identifier.Name)
-	return
+		enumDecl = tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		assert.Equal(t, "int", enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType).BaseType.Get().Identifier.Name)
+	})
 }
 
 func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
@@ -210,7 +242,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 	assert.Equal(t,
 		ast.NewIdentifierBuilder().
 			WithName("desc").
-			WithStartEnd(1, 26, 1, 30).BuildPtr(),
+			WithStartEnd(1, 26, 1, 30).Build(),
 		enumType.StaticValues[0].(*ast.Field).Name,
 	)
 	assert.Equal(t, "String", enumType.StaticValues[0].(*ast.Field).Type.Identifier.String())
@@ -218,14 +250,14 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 
 	assert.Equal(t, ast.NewIdentifierBuilder().
 		WithName("active").
-		WithStartEnd(1, 37, 1, 43).BuildPtr(),
+		WithStartEnd(1, 37, 1, 43).Build(),
 		enumType.StaticValues[1].(*ast.Field).Name,
 	)
 	assert.Equal(t, "bool", enumType.StaticValues[1].(*ast.Field).Type.Identifier.String())
 
 	assert.Equal(t, ast.NewIdentifierBuilder().
 		WithName("ke").
-		WithStartEnd(1, 50, 1, 52).BuildPtr(),
+		WithStartEnd(1, 50, 1, 52).Build(),
 		enumType.StaticValues[2].(*ast.Field).Name,
 	)
 	assert.Equal(t, "char", enumType.StaticValues[2].(*ast.Field).Type.Identifier.String())
@@ -234,6 +266,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 func TestConvertToAST_struct_decl(t *testing.T) {
 	t.Run("Test basic struct declaration", func(t *testing.T) {
 		source := `module foo;
+	<* abc *>
 	struct MyStruct {
 		int data;
 		char key;
@@ -247,19 +280,20 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 		spec := decl.Spec.(*ast.TypeSpec)
 		structType := spec.TypeDescription.(*ast.StructType)
 
-		structRange := lsp.NewRange(1, 1, 5, 2)
+		structRange := lsp.NewRange(2, 1, 6, 2)
 		assert.Equal(t, structRange, decl.Range)
 		assert.Equal(t, structRange, spec.Range)
 		assert.Equal(t, structRange, structType.Range)
 		assert.Equal(t, "MyStruct", spec.Name.Name)
-		assert.Equal(t, lsp.NewRange(1, 8, 1, 16), spec.Name.Range)
+		assert.Equal(t, lsp.NewRange(2, 8, 2, 16), spec.Name.Range)
+		assert.Equal(t, "abc", decl.DocComment.Get().GetBody())
 
 		assert.Equal(t,
 			&ast.StructField{
-				NodeAttributes: aWithPos(2, 2, 2, 11),
+				NodeAttributes: aWithPos(3, 2, 3, 11),
 				Names: []*ast.Ident{
 					{
-						NodeAttributes: aWithPos(2, 6, 2, 10),
+						NodeAttributes: aWithPos(3, 6, 3, 10),
 						Name:           "data",
 					},
 				},
@@ -271,36 +305,36 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 			}, structType.Fields[0])
 		assert.Equal(t,
 			&ast.StructField{
-				NodeAttributes: aWithPos(3, 2, 3, 11),
+				NodeAttributes: aWithPos(4, 2, 4, 11),
 				Names: []*ast.Ident{
 					{
-						NodeAttributes: aWithPos(3, 7, 3, 10),
+						NodeAttributes: aWithPos(4, 7, 4, 10),
 						Name:           "key",
 					},
 				},
-				Type: ast.TypeInfo{
-					NodeAttributes: aWithPos(3, 2, 3, 6),
-					Identifier:     ast.NewIdentifierBuilder().WithName("char").WithStartEnd(3, 2, 3, 6).BuildPtr(),
+				Type: &ast.TypeInfo{
+					NodeAttributes: aWithPos(4, 2, 4, 6),
+					Identifier:     ast.NewIdentifierBuilder().WithName("char").WithStartEnd(4, 2, 4, 6).Build(),
 					BuiltIn:        true,
 				},
 			}, structType.Fields[1])
 		assert.Equal(t,
 			&ast.StructField{
-				NodeAttributes: aWithPos(4, 2, 4, 24),
+				NodeAttributes: aWithPos(5, 2, 5, 24),
 				Names: []*ast.Ident{
 					{
-						NodeAttributes: aWithPos(4, 17, 4, 23),
+						NodeAttributes: aWithPos(5, 17, 5, 23),
 						Name:           "camera",
 					},
 				},
-				Type: ast.TypeInfo{
-					NodeAttributes: aWithPos(4, 2, 4, 16),
+				Type: &ast.TypeInfo{
+					NodeAttributes: aWithPos(5, 2, 5, 16),
 					Identifier: &ast.Ident{
-						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 2, 4, 16).Build(),
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(5, 2, 5, 16).Build(),
 						ModulePath: ast.NewIdentifierBuilder().
 							WithName("raylib").
-							WithStartEnd(4, 2, 4, 10).
-							BuildPtr(),
+							WithStartEnd(5, 2, 5, 10).
+							Build(),
 						Name: "Camera",
 					},
 					BuiltIn: false,
@@ -353,9 +387,9 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(3, 5, 3, 11), subField.Range)
 		assert.Equal(t, "a", subField.Names[0].Name)
 		assert.Equal(t, lsp.NewRange(3, 9, 3, 10), subField.Names[0].Range)
-		assert.Equal(t, "int", subField.Type.(ast.TypeInfo).Identifier.Name)
-		assert.Equal(t, true, subField.Type.(ast.TypeInfo).BuiltIn)
-		assert.Equal(t, lsp.NewRange(3, 5, 3, 8), subField.Type.(ast.TypeInfo).Range)
+		assert.Equal(t, "int", subField.Type.(*ast.TypeInfo).Identifier.Name)
+		assert.Equal(t, true, subField.Type.(*ast.TypeInfo).BuiltIn)
+		assert.Equal(t, lsp.NewRange(3, 5, 3, 8), subField.Type.(*ast.TypeInfo).Range)
 	})
 
 	t.Run("struct with anonymous bit-structs", func(t *testing.T) {
@@ -869,7 +903,7 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 		assert.Equal(t, "Object", methodDecl.Signature.ReturnType.Identifier.Name, "Return type")
 		assert.Equal(t, uint(1), methodDecl.Signature.ReturnType.Pointer, "Return type is pointer")
 		assert.Equal(t, lsp.Position{1, 4}, methodDecl.Signature.ReturnType.NodeAttributes.Range.Start)
-		assert.Equal(t, lsp.Position{1, 10}, methodDecl.Signature.ReturnType.NodeAttributes.Range.End)
+		assert.Equal(t, lsp.Position{1, 11}, methodDecl.Signature.ReturnType.NodeAttributes.Range.End)
 
 		assert.Equal(t, 2, len(methodDecl.Signature.Parameters))
 		assert.Equal(t,
@@ -891,7 +925,7 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 					WithName("int").WithNameStartEnd(1, 36, 1, 39).
 					IsBuiltin().
 					IsPointer().
-					WithStartEnd(1, 36, 1, 39).
+					WithStartEnd(1, 36, 1, 40).
 					Build(),
 				NodeAttributes: ast.NewNodeAttributesBuilder().
 					WithRangePositions(1, 36, 1, 48).Build(),
@@ -941,6 +975,7 @@ func TestConvertToAST_method_declaration_mutable(t *testing.T) {
 
 func TestConvertToAST_interface_decl(t *testing.T) {
 	source := `module foo;
+	<* abc *>
 	interface MyInterface {
 		fn void method1();
 		fn int method2(char arg);
@@ -950,11 +985,14 @@ func TestConvertToAST_interface_decl(t *testing.T) {
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 	interfaceDecl := tree.Modules[0].Declarations[0].(*ast.InterfaceDecl)
 
+	assert.Equal(t, lsp.NewRange(2, 1, 5, 2), interfaceDecl.GetRange())
+	assert.Equal(t, "abc", interfaceDecl.DocComment.Get().GetBody())
 	assert.Equal(t, 2, len(interfaceDecl.Methods))
 }
 
 func TestConvertToAST_macro_decl(t *testing.T) {
 	source := `module foo;
+	<* abc *>
 	macro m(x) {
     	return x + 2;
 	}`
@@ -963,12 +1001,15 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 	macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
 
-	assert.Equal(t, lsp.Position{1, 1}, macroDecl.Range.Start)
-	assert.Equal(t, lsp.Position{3, 2}, macroDecl.Range.End)
+	startRow := uint(2)
+	endRow := uint(4)
+	assert.Equal(t, lsp.Position{startRow, 1}, macroDecl.Range.Start)
+	assert.Equal(t, lsp.Position{endRow, 2}, macroDecl.Range.End)
+	assert.Equal(t, "abc", macroDecl.DocComment.Get().GetBody())
 
 	assert.Equal(t, "m", macroDecl.Signature.Name.Name)
-	assert.Equal(t, lsp.Position{1, 7}, macroDecl.Signature.Name.Range.Start)
-	assert.Equal(t, lsp.Position{1, 8}, macroDecl.Signature.Name.Range.End)
+	assert.Equal(t, lsp.Position{startRow, 7}, macroDecl.Signature.Name.Range.Start)
+	assert.Equal(t, lsp.Position{startRow, 8}, macroDecl.Signature.Name.Range.End)
 
 	assert.Equal(t, 1, len(macroDecl.Signature.Parameters))
 	assert.Equal(

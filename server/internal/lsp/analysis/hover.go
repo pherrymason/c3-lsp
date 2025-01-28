@@ -17,7 +17,7 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 
 	symbol := symbolResult.Get()
 	var description string
-	var sizeInfo string
+	var sizeInfo string // TODO reimplement this
 	var extraLine string
 	switch symbol.Kind {
 	case ast.VAR, ast.CONST:
@@ -28,7 +28,7 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 
 	case ast.FIELD:
 		switch symbol.Type.NodeDecl.(type) {
-		case ast.TypeInfo:
+		case *ast.TypeInfo:
 			description = fmt.Sprintf("%s %s", symbol.Type.Name, symbol.Name)
 		}
 
@@ -45,6 +45,11 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 			f.Signature.Name.Name,
 			strings.Join(args, ", "),
 		)
+	}
+
+	docComment := symbol.NodeDecl.GetDocComment()
+	if docComment.IsSome() {
+		extraLine += "\n\n" + docComment.Get().DisplayBodyWithContracts()
 	}
 
 	isModule := false

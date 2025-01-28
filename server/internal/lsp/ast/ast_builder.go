@@ -2,6 +2,7 @@ package ast
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -46,9 +47,9 @@ func (d *NodeAttrsBuilder) WithSitterStartEnd(start sitter.Point, end sitter.Poi
 	return d
 }
 
-func (i *NodeAttrsBuilder) WithSitterPos(node *sitter.Node) *NodeAttrsBuilder {
-	i.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
-	return i
+func (d *NodeAttrsBuilder) WithSitterPos(node *sitter.Node) *NodeAttrsBuilder {
+	d.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
+	return d
 }
 
 func (d *NodeAttrsBuilder) WithRangePositions(startRow uint, startCol uint, endRow uint, endCol uint) *NodeAttrsBuilder {
@@ -59,6 +60,14 @@ func (d *NodeAttrsBuilder) WithRangePositions(startRow uint, startCol uint, endR
 
 func (d *NodeAttrsBuilder) WithRange(aRange lsp.Range) *NodeAttrsBuilder {
 	d.bn.Range = aRange
+	return d
+}
+
+func (d *NodeAttrsBuilder) WithDocComment(docComment string) *NodeAttrsBuilder {
+	d.bn.DocComment = option.Some(&DocComment{
+		body:      docComment,
+		contracts: []*DocCommentContract{},
+	})
 	return d
 }
 
@@ -203,13 +212,15 @@ func (b *TypeInfoBuilder) Build() *TypeInfo {
 // DefDeclBuilder
 // --
 type DefDeclBuilder struct {
-	d DefDecl
-	a NodeAttrsBuilder
+	def DefDecl
+	a   NodeAttrsBuilder
 }
 
 func NewDefDeclBuilder(nodeId NodeId) *DefDeclBuilder {
 	return &DefDeclBuilder{
-		d: DefDecl{},
+		def: DefDecl{
+			Ident: NewIdentifierBuilder().Build(),
+		},
 		a: *NewNodeAttributesBuilder(),
 	}
 }
@@ -220,23 +231,23 @@ func (b *DefDeclBuilder) WithSitterPos(node *sitter.Node) *DefDeclBuilder {
 }
 
 func (b *DefDeclBuilder) WithName(name string) *DefDeclBuilder {
-	b.d.Name.Name = name
+	b.def.Ident.Name = name
 	return b
 }
 func (b *DefDeclBuilder) WithIdentifierSitterPos(node *sitter.Node) *DefDeclBuilder {
-	b.d.Name.Range.Start = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
-	b.d.Name.Range.End = lsp.Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
+	b.def.Ident.Range.Start = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+	b.def.Ident.Range.End = lsp.Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
 
 	return b
 }
 
 func (b *DefDeclBuilder) WithExpression(expression Expression) *DefDeclBuilder {
-	b.d.Expr = expression
+	b.def.Expr = expression
 	return b
 }
 
 func (b *DefDeclBuilder) Build() DefDecl {
-	def := b.d
+	def := b.def
 	def.NodeAttributes = b.a.Build()
 
 	return def

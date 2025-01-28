@@ -71,11 +71,13 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 	anonymousModule := false
 	var lastMod *ast.Module
 	var lastNode *sitter.Node
+	var lastDocComment *ast.DocComment
+
 	var node *sitter.Node
 	for i := 0; i < int(cstNode.ChildCount()); i++ {
 		node = cstNode.Child(i)
 		parsedModulesCount := len(prg.Modules)
-		if parsedModulesCount == 0 && node.Type() != "module" {
+		if parsedModulesCount == 0 && node.Type() != "module" && node.Type() != "doc_comment" {
 			anonymousModule = true
 			prg.AddModule(
 				ast.NewModule(0, symbols.NormalizeModuleName(fileName), lsp.NewRangeFromSitterNode(node), prg),
@@ -85,7 +87,6 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 
 		if parsedModulesCount > 0 {
 			lastMod = prg.Modules[len(prg.Modules)-1]
-
 			if anonymousModule && node.Type() != "module" {
 				// Update end position
 				lastMod.NodeAttributes.Range.End = lsp.Position{Line: uint(node.EndPoint().Row), Column: uint(node.EndPoint().Column)}
@@ -93,6 +94,8 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 		}
 
 		switch node.Type() {
+		case "doc_comment":
+			lastDocComment = c.convert_doc_comment(node, source)
 		case "module":
 			if anonymousModule {
 				anonymousModule = false
@@ -100,6 +103,10 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			}
 
 			module := convert_module(node, source)
+			if lastDocComment != nil {
+				module.SetDocComment(lastDocComment)
+			}
+
 			prg.AddModule(module)
 			if lastMod != nil && lastNode != nil {
 				// Update range end of module
@@ -115,42 +122,87 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			lastMod.Imports = append(lastMod.Imports, anImport)
 
 		case "global_declaration":
-			variable := c.convert_global_declaration(node, source)
-			lastMod.Declarations = append(lastMod.Declarations, &variable)
+			declaration := c.convert_global_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, &declaration)
 
 		case "enum_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_enum_declaration(node, source))
+			declaration := c.convert_enum_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
 		case "struct_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_struct_declaration(node, source))
+			declaration := c.convert_struct_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
 		case "bitstruct_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_bitstruct_declaration(node, source))
+			declaration := c.convert_bitstruct_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
 		case "fault_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_fault_declaration(node, source))
+			declaration := c.convert_fault_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
 		case "const_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_const_declaration(node, source))
+			declaration := c.convert_const_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
 		case "define_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_def_declaration(node, source))
+			declaration := c.convert_def_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
 		case "func_definition", "func_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_function_declaration(node, source))
+			declaration := c.convert_function_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
 		case "interface_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_interface_declaration(node, source))
+			declaration := c.convert_interface_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
 		case "macro_declaration":
-			lastMod.Declarations = append(lastMod.Declarations, c.convert_macro_declaration(node, source))
+			declaration := c.convert_macro_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
 		}
 
 		lastNode = node
 	}
 
 	if node != nil {
-		lastMod.NodeAttributes.Range.End = lsp.Position{Line: uint(node.EndPoint().Row), Column: uint(node.EndPoint().Column)}
+		lastMod.NodeAttributes.Range.End =
+			lsp.Position{Line: uint(node.EndPoint().Row), Column: uint(node.EndPoint().Column)}
+
+		if node.Type() != "doc_comment" {
+			// Ensure the next node won't receive the same doc comment
+			lastDocComment = nil
+		}
 	}
 
 	return prg
@@ -1922,6 +1974,60 @@ func (c *ASTConverter) convert_paren_expr(node *sitter.Node, source []byte) ast.
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		X:              c.convert_expression(next, source),
 	}
+}
+
+/*
+// From grammar.js in tree-sitter-c3 v0.2.3:
+
+// Doc comments and contracts
+// -------------------------
+// NOTE parsed by scanner.c (scan_doc_comment_contract_text)
+doc_comment_contract: $ => seq(
+
+	field('name', $.at_ident),
+	optional($.doc_comment_contract_text)
+
+),
+doc_comment: $ => seq(
+
+	'<*',
+	optional($.doc_comment_text), // NOTE parsed by scanner.c (scan_doc_comment_text)
+	repeat($.doc_comment_contract),
+	'*>',
+
+),
+
+// (...)
+
+at_ident: _ => token(seq('@', IDENT)),
+*/
+func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte) *ast.DocComment {
+	body := ""
+	bodyNode := node.Child(1)
+	if bodyNode.Type() == "doc_comment_text" {
+		body = bodyNode.Content(sourceCode)
+	}
+
+	docComment := ast.NewDocComment(body)
+
+	if node.ChildCount() >= 4 {
+		for i := 2; i <= int(node.ChildCount())-2; i++ {
+			contractNode := node.Child(i)
+			if contractNode.Type() == "doc_comment_contract" {
+				name := contractNode.ChildByFieldName("name").Content(sourceCode)
+				body := ""
+				if contractNode.ChildCount() >= 2 {
+					body = contractNode.Child(1).Content(sourceCode)
+				}
+
+				contract := ast.NewDocCommentContract(name, body)
+
+				docComment.AddContracts([]*ast.DocCommentContract{contract})
+			}
+		}
+	}
+
+	return docComment
 }
 
 func debugNode(node *sitter.Node, source []byte, tag string) {
