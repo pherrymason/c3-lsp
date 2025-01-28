@@ -190,6 +190,11 @@ func (f *Function) DisplaySignature(includeName bool) string {
 				argName = ""
 			}
 
+			argDefault := ""
+			if variable.Arg.Default.IsSome() {
+				argDefault = " = " + variable.Arg.Default.Get()
+			}
+
 			varArg := ""
 			if variable.Arg.VarArg {
 				// ...args
@@ -220,7 +225,7 @@ func (f *Function) DisplaySignature(includeName bool) string {
 				argType = ""
 			}
 
-			args += fmt.Sprintf("%s%s%s%s", comma, argType, varArg, argName)
+			args += fmt.Sprintf("%s%s%s%s%s", comma, argType, varArg, argName, argDefault)
 		}
 	}
 

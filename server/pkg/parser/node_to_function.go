@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/pherrymason/c3-lsp/pkg/cast"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -111,6 +112,9 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 
 // nodeToArgument Very similar to nodeToVariable, but arguments have optional identifiers (for example when using `self` for struct methods)
 /*
+	_assign_right_expr: $ => seq('=', field('right', $._expr)),
+	parameter_default: $ => $._assign_right_expr,
+	parameter: $ => seq($._parameter, optional($.parameter_default))
     _parameter: $ => choice(
         // Typed parameters
         seq(
@@ -141,6 +145,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 	foundType := false
 	varArg := false
 	ref := ""
+	paramDefault := option.None[string]()
 
 	for i := uint32(0); i < argNode.ChildCount(); i++ {
 		n := argNode.Child(int(i))
@@ -179,6 +184,13 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 		case "hash_ident":
 			identifier = n.Content(sourceCode)
 			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
+
+		// = default
+		case "parameter_default":
+			assigned := n.ChildByFieldName("right")
+			if assigned != nil {
+				paramDefault = option.Some(assigned.Content(sourceCode))
+			}
 		}
 	}
 
@@ -198,6 +210,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 	)
 
 	variable.Arg.VarArg = varArg
+	variable.Arg.Default = paramDefault
 
 	return &variable
 }

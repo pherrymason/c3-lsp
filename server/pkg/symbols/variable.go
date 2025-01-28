@@ -3,12 +3,16 @@ package symbols
 import (
 	"fmt"
 
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 type ArgInfo struct {
 	// Whether this variable came from a vararg, that is, ...args
 	VarArg bool
+
+	// The default value for the argument that originated this variable, if any
+	Default option.Option[string]
 }
 
 type Variable struct {
