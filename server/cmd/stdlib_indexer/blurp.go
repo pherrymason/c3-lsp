@@ -251,9 +251,61 @@ func Generate_type(type_ *s.Type, mod string) *jen.Statement {
 		// Temporary fix for generic types' modules being misdetected
 		typeModule = mod
 	}
-	return jen.Qual(PackageName+"symbols", "NewTypeFromString").
+
+	typeDef := jen.
+		Qual(PackageName+"symbols", "NewTypeBuilder").
 		Call(
 			jen.Lit(type_.String()),
 			jen.Lit(typeModule),
 		)
+
+	if type_.IsBaseTypeLanguage() {
+		typeDef = typeDef.
+			Dot("IsBaseTypeLanguage").
+			Call()
+	}
+
+	if type_.IsOptional() {
+		typeDef = typeDef.
+			Dot("IsOptional").
+			Call()
+	}
+
+	if type_.IsGenericArgument() {
+		typeDef = typeDef.
+			Dot("IsGenericArgument").
+			Call()
+	}
+
+	if type_.IsCollection() {
+		colSize := type_.GetCollectionSize()
+		if colSize.IsSome() {
+			typeDef = typeDef.
+				Dot("IsCollectionWithSize").
+				Call(jen.Lit(colSize.Get()))
+		} else {
+			typeDef = typeDef.
+				Dot("IsUnsizedCollection").
+				Call()
+		}
+	}
+
+	if type_.HasGenericArguments() {
+		generatedGenericArgs := []jen.Code{}
+		genericArgs := type_.GetGenericArguments()
+
+		for i := range genericArgs {
+			generatedGenericArgs = append(generatedGenericArgs, Generate_type(&genericArgs[i], mod))
+		}
+
+		typeDef = typeDef.
+			Dot("WithGenericArguments").
+			Call(generatedGenericArgs...)
+	}
+
+	typeDef.
+		Dot("Build").
+		Call()
+
+	return typeDef
 }
