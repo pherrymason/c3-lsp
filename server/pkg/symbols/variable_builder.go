@@ -1,6 +1,9 @@
 package symbols
 
-import protocol "github.com/tliron/glsp/protocol_3_16"
+import (
+	"github.com/pherrymason/c3-lsp/pkg/option"
+	protocol "github.com/tliron/glsp/protocol_3_16"
+)
 
 type VariableBuilder struct {
 	variable Variable
@@ -34,6 +37,16 @@ func (vb *VariableBuilder) WithIdentifierRange(lineStart uint, CharStart uint, l
 
 func (vb *VariableBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *VariableBuilder {
 	vb.variable.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	return vb
+}
+
+func (vb *VariableBuilder) IsVarArg() *VariableBuilder {
+	vb.variable.Arg.VarArg = true
+	return vb
+}
+
+func (vb *VariableBuilder) WithArgDefault(value string) *VariableBuilder {
+	vb.variable.Arg.Default = option.Some(value)
 	return vb
 }
 
