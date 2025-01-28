@@ -1539,8 +1539,8 @@ func (c *ASTConverter) convert_call_expr(node *sitter.Node, source []byte) ast.E
 	args := []ast.Expression{}
 	for i := 0; i < int(invocationNode.ChildCount()); i++ {
 		n := invocationNode.Child(i)
-		if n.Type() == "arg" {
-			args = append(args, c.convert_arg(n, source))
+		if n.Type() == "call_arg" {
+			args = append(args, c.convert_call_arg(n, source))
 		}
 	}
 
@@ -1686,6 +1686,41 @@ func (c *ASTConverter) convert_initializer_list(node *sitter.Node, source []byte
 	return initList
 }
 
+func (c *ASTConverter) convert_call_arg(node *sitter.Node, source []byte) ast.Expression {
+	child := node.Child(0)
+
+	if child.Type() == "type" {
+		return c.convert_type(child, source)
+	}
+
+	// Try expression
+	expr := c.convert_expression(child, source)
+	if expr != nil {
+		return expr
+	}
+
+	if child.Type() == "$vasplat" {
+		// TODO
+		return nil
+	}
+
+	// Named arguments
+	if node.ChildByFieldName("name") != nil {
+
+	}
+
+	return nil
+}
+
+/*
+TODO Update with following definition:
+
+		arg: $ => choice(
+	      seq($.param_path),
+	      seq($.param_path, '=', $._expr),
+	      $._expr,
+	    ),
+*/
 func (c *ASTConverter) convert_arg(node *sitter.Node, source []byte) ast.Expression {
 	childCount := int(node.ChildCount())
 
