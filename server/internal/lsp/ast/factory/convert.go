@@ -306,8 +306,8 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 				if args != nil && args.ChildCount() > 0 {
 					lastChild := args.Child(int(args.ChildCount()) - 1)
 					if is_literal(lastChild) {
-						compositeLiteral.Values = append(compositeLiteral.Values,
-							convert_literal(lastChild, sourceCode),
+						compositeLiteral.Elements = append(compositeLiteral.Elements,
+							c.convert_literal(lastChild, sourceCode),
 						)
 					} else if lastChild.Type() == "initializer_list" {
 						for a := 0; a < int(lastChild.ChildCount()); a++ {
@@ -319,8 +319,8 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 									// enum parameter
 									break
 								}
-								compositeLiteral.Values = append(compositeLiteral.Values,
-									convert_literal(arg.Child(0), sourceCode),
+								compositeLiteral.Elements = append(compositeLiteral.Elements,
+									c.convert_literal(arg.Child(0), sourceCode),
 								)
 							}
 						}
@@ -473,10 +473,6 @@ func (c *ASTConverter) convert_struct_members(bodyNode *sitter.Node, sourceCode 
 }
 
 func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
-	structDecl := ast.StructDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-		StructType:     ast.StructTypeBitStruct,
-	}
 	structType := &ast.StructType{
 		Type:   ast.StructTypeBitStruct,
 		Fields: []*ast.StructField{},
@@ -555,18 +551,25 @@ func (c *ASTConverter) convert_bitstruct_members(node *sitter.Node, source []byt
 			}
 
 			bitRanges := [2]uint{}
-
-			if bdefnode.ChildCount() >= 4 {
-				lowBit, _ := strconv.ParseInt(bdefnode.Child(3).Content(sourceCode), 10, 32)
+			rangeDefined := false
+			if bDefNode.ChildCount() >= 4 {
+				lowBit, _ := strconv.ParseInt(bDefNode.Child(3).Content(source), 10, 32)
 				bitRanges[0] = uint(lowBit)
+				rangeDefined = true
 			}
 
 			if bDefNode.ChildCount() >= 6 {
 				highBit, _ := strconv.ParseInt(bDefNode.Child(5).Content(source), 10, 32)
 				bitRanges[1] = uint(highBit)
+				rangeDefined = true
 			}
-			// TODO: Must store range positions so cursor can be located over this.
-			member.BitRange = option.Some(bitRanges)
+
+			if rangeDefined {
+				// TODO: Must store range positions so cursor can be located over this.
+				member.BitRange = option.Some(bitRanges)
+			} else {
+				member.BitRange = option.None[[2]uint]()
+			}
 
 			/*member := idx.NewStructMember(
 				identity,
@@ -788,7 +791,7 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 	return macro
 }
 
-func isLiteral(node *sitter.Node) bool {
+func is_literal(node *sitter.Node) bool {
 	literals := []string{
 		"string_literal", "char_literal", "raw_string_literal",
 		"integer_literal", "real_literal",
@@ -878,11 +881,18 @@ func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeI
 		Pointer:        uint(0),
 	}
 
+	correctRootRange := true
+	if node.Type() == "type" {
+		correctRootRange = false
+	}
+
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		switch n.Type() {
 		case "base_type":
-			typeInfo.NodeAttributes.Range = lsp.NewRangeFromSitterNode(n)
+			if correctRootRange {
+				typeInfo.NodeAttributes.Range = lsp.NewRangeFromSitterNode(n)
+			}
 
 			for b := 0; b < int(n.ChildCount()); b++ {
 				bn := n.Child(b)
@@ -892,7 +902,7 @@ func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeI
 				case "base_type_name":
 					typeInfo.Identifier = ast.NewIdentifierBuilder().
 						WithId(c.getNextID()).
-						WithName(bn.Content(sourceCode)).
+						WithName(bn.Content(source)).
 						WithSitterPos(n).
 						WithSitterRange(n).
 						Build()
@@ -901,7 +911,7 @@ func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeI
 				case "type_ident":
 					typeInfo.Identifier = ast.NewIdentifierBuilder().
 						WithId(c.getNextID()).
-						WithName(bn.Content(sourceCode)).
+						WithName(bn.Content(source)).
 						WithSitterPos(n).
 						WithSitterRange(n).
 						Build()
@@ -910,19 +920,19 @@ func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeI
 					for g := 0; g < int(bn.ChildCount()); g++ {
 						gn := bn.Child(g)
 						if gn.Type() == "type" {
-							gType := c.convert_type(gn, sourceCode)
+							gType := c.convert_type(gn, source)
 							typeInfo.Generics = append(typeInfo.Generics, gType)
 						}
 					}
 
 				case "module_type_ident":
-					identifier := c.convert_module_type_ident(bn, sourceCode)
+					identifier := c.convert_module_type_ident(bn, source)
 					typeInfo.Identifier = identifier
 				}
 			}
 
 		case "type_suffix":
-			suffix := n.Content(sourceCode)
+			suffix := n.Content(source)
 			if suffix == "*" {
 				// TODO Only covers pointer to final value
 				typeInfo.Pointer = 1
@@ -1679,7 +1689,7 @@ func (c *ASTConverter) convert_initializer_list(node *sitter.Node, source []byte
 func (c *ASTConverter) convert_arg(node *sitter.Node, source []byte) ast.Expression {
 	childCount := int(node.ChildCount())
 
-	if isLiteral(node.Child(0)) {
+	if is_literal(node.Child(0)) {
 		return c.convert_literal(node.Child(0), source)
 	}
 
@@ -1691,9 +1701,9 @@ func (c *ASTConverter) convert_arg(node *sitter.Node, source []byte) ast.Express
 
 		argType := 0
 		for p := 0; p < int(param_path_element.ChildCount()); p++ {
-			pnode := param_path_element.Child(p)
-			if pnode.IsNamed() {
-				if pnode.Type() == "ident" {
+			pNode := param_path_element.Child(p)
+			if pNode.IsNamed() {
+				if pNode.Type() == "ident" {
 					argType = 1
 				} else {
 					argType = 0
