@@ -258,6 +258,10 @@ func Generate_type(type_ *s.Type, mod string) *jen.Statement {
 		builderName = "NewBaseTypeBuilder"
 	}
 
+	if type_.IsGenericArgument() {
+		builderName = "NewGenericTypeBuilder"
+	}
+
 	typeDef := jen.
 		Qual(PackageName+"symbols", builderName).
 		Call(
@@ -268,12 +272,6 @@ func Generate_type(type_ *s.Type, mod string) *jen.Statement {
 	if type_.IsOptional() {
 		typeDef = typeDef.
 			Dot("IsOptional").
-			Call()
-	}
-
-	if type_.IsGenericArgument() {
-		typeDef = typeDef.
-			Dot("IsGenericArgument").
 			Call()
 	}
 
