@@ -17,14 +17,14 @@ func TestSymbolsTable_should_expand_substructs(t *testing.T) {
 	// Add Struct to be inlined
 	module.AddStruct(
 		symbols.NewStructBuilder("ToInline", mod, docId).
-			WithStructMember("a", "int", mod, docId).
-			WithStructMember("b", "char", mod, docId).
+			WithStructMember("a", symbols.NewTypeFromString("int", mod), mod, docId).
+			WithStructMember("b", symbols.NewTypeFromString("char", mod), mod, docId).
 			Build(),
 	)
 	module.AddStruct(
 		symbols.NewStructBuilder("ToProcess", mod, docId).
-			WithStructMember("c", "int", mod, docId).
-			WithSubStructMember("x", "ToInline", mod, docId).
+			WithStructMember("c", symbols.NewTypeFromString("int", mod), mod, docId).
+			WithSubStructMember("x", symbols.NewTypeFromString("ToInline", mod), mod, docId).
 			Build(),
 	)
 	um.modules.Set("xx", module)
@@ -55,7 +55,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		um := NewParsedModules(&docId)
 		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddVariable(
-			symbols.NewVariableBuilder("value", "Ref", mod, docId).Build(),
+			symbols.NewVariableBuilder("value", symbols.NewTypeFromString("Ref", mod), mod, docId).Build(),
 		)
 		module.AddDef(
 			symbols.NewDefBuilder("Ref", mod, docId).Build(),
@@ -77,7 +77,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		um := NewParsedModules(&docId)
 		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddVariable(
-			symbols.NewVariableBuilder("value", "Ref", mod, docId).Build(),
+			symbols.NewVariableBuilder("value", symbols.NewTypeFromString("Ref", mod), mod, docId).Build(),
 		)
 		module.AddImports([]string{"yy"})
 
@@ -108,8 +108,8 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		module := symbols.NewModuleBuilder(mod, docId).Build()
 		module.AddStruct(
 			symbols.NewStructBuilder("CustomStruct", mod, docId).
-				WithStructMember("a", "Ref", mod, docId).
-				WithStructMember("b", "char", mod, docId).
+				WithStructMember("a", symbols.NewTypeFromString("Ref", mod), mod, docId).
+				WithStructMember("b", symbols.NewTypeFromString("char", mod), mod, docId).
 				Build(),
 		)
 		module.AddImports([]string{"yy"})
@@ -143,7 +143,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		module.AddFunction(
 			symbols.NewFunctionBuilder("foo", symbols.NewTypeFromString("Ref", mod), mod, docId).
 				WithArgument(
-					symbols.NewVariableBuilder("zoo", "Ref", mod, docId).Build(),
+					symbols.NewVariableBuilder("zoo", symbols.NewTypeFromString("Ref", mod), mod, docId).Build(),
 				).
 				Build(),
 		)

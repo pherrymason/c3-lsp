@@ -28,6 +28,22 @@ func (t Type) IsBaseTypeLanguage() bool {
 	return t.baseTypeLanguage
 }
 
+func (t *Type) IsOptional() bool {
+	return t.optional
+}
+
+func (t *Type) IsCollection() bool {
+	return t.isCollection
+}
+
+func (t *Type) GetCollectionSize() option.Option[int] {
+	return t.collectionSize
+}
+
+func (t *Type) GetPointerCount() int {
+	return t.pointer
+}
+
 func (t Type) IsGenericArgument() bool {
 	return t.isGenericArgument
 }
@@ -40,12 +56,20 @@ func (t Type) GetGenericArgument(index uint) Type {
 	return t.genericArguments[index]
 }
 
+func (t Type) GetGenericArguments() []Type {
+	return t.genericArguments
+}
+
 func (t Type) GetFullQualifiedName() string {
 	if t.baseTypeLanguage {
 		return t.name
 	}
 
 	return t.module + "::" + t.name
+}
+
+func (t *Type) GetModule() string {
+	return t.module
 }
 
 func (t *Type) SetModule(module string) {
@@ -124,4 +148,58 @@ func NewTypeWithGeneric(baseTypeLanguage bool, isOptional bool, baseType string,
 		genericArguments: genericArguments,
 		module:           modulePath,
 	}
+}
+
+type TypeBuilder struct {
+	type_ Type
+}
+
+func NewTypeBuilder(repr string, module string) *TypeBuilder {
+	return &TypeBuilder{
+		type_: NewTypeFromString(repr, module),
+	}
+}
+
+func NewBaseTypeBuilder(repr string, module string) *TypeBuilder {
+	return NewTypeBuilder(repr, module).IsBaseTypeLanguage()
+}
+
+func NewGenericTypeBuilder(repr string, module string) *TypeBuilder {
+	return NewTypeBuilder(repr, module).IsGenericArgument()
+}
+
+func (b *TypeBuilder) IsBaseTypeLanguage() *TypeBuilder {
+	b.type_.baseTypeLanguage = true
+	return b
+}
+
+func (tb *TypeBuilder) IsOptional() *TypeBuilder {
+	tb.type_.optional = true
+	return tb
+}
+
+func (b *TypeBuilder) IsUnsizedCollection() *TypeBuilder {
+	b.type_.isCollection = true
+	b.type_.collectionSize = option.None[int]()
+	return b
+}
+
+func (b *TypeBuilder) IsCollectionWithSize(size int) *TypeBuilder {
+	b.type_.isCollection = true
+	b.type_.collectionSize = option.Some(size)
+	return b
+}
+
+func (b *TypeBuilder) IsGenericArgument() *TypeBuilder {
+	b.type_.isGenericArgument = true
+	return b
+}
+
+func (b *TypeBuilder) WithGenericArguments(types ...Type) *TypeBuilder {
+	b.type_.genericArguments = append(b.type_.genericArguments, types...)
+	return b
+}
+
+func (b *TypeBuilder) Build() Type {
+	return b.type_
 }

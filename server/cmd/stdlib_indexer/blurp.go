@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/dave/jennifer/jen"
+	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	s "github.com/pherrymason/c3-lsp/pkg/symbols"
 )
@@ -14,7 +15,7 @@ func Generate_variable(variable *s.Variable, module *s.Module) jen.Code {
 		Qual(PackageName+"symbols", "NewVariableBuilder").
 		Call(
 			jen.Lit(variable.GetName()),
-			jen.Lit(variable.GetType().GetName()),
+			Generate_type(variable.GetType(), module.GetName()),
 			jen.Lit(module.GetName()),
 			jen.Lit(module.GetDocumentURI()),
 		).
@@ -34,7 +35,7 @@ func Generate_struct(strukt *s.Struct, module *s.Module) jen.Code {
 		def.Dot("WithStructMember").
 			Call(
 				jen.Lit(member.GetName()),
-				jen.Lit(member.GetType().GetName()),
+				Generate_type(member.GetType(), module.GetName()),
 				jen.Lit(module.GetName()),
 				jen.Lit(module.GetDocumentURI()),
 			)
@@ -52,7 +53,7 @@ func Generate_bitstruct(bitstruct *s.Bitstruct, module *s.Module) jen.Code {
 		Qual(PackageName+"symbols", "NewBitstructBuilder").
 		Call(
 			jen.Lit(bitstruct.GetName()),
-			jen.Lit(bitstruct.Type().GetName()),
+			Generate_type(cast.ToPtr(bitstruct.Type()), module.GetName()),
 			jen.Lit(module.GetName()),
 			jen.Lit(module.GetDocumentURI()),
 		)
@@ -61,7 +62,7 @@ func Generate_bitstruct(bitstruct *s.Bitstruct, module *s.Module) jen.Code {
 		def.Dot("WithStructMember").
 			Call(
 				jen.Lit(member.GetName()),
-				jen.Lit(member.GetType().GetName()),
+				Generate_type(member.GetType(), module.GetName()),
 				jen.Lit(module.GetName()),
 				jen.Lit(module.GetDocumentURI()),
 			)
@@ -81,11 +82,23 @@ func Generate_definition(def *s.Def, module *s.Module) jen.Code {
 			jen.Lit(def.GetName()),
 			jen.Lit(module.GetName()),
 			jen.Lit(module.GetDocumentURI()),
-		).
-		Dot("WithResolvesTo").
-		Call(
-			jen.Lit(def.GetResolvesTo()),
-		).
+		)
+
+	if def.ResolvesToType() {
+		defDef.
+			Dot("WithResolvesToType").
+			Call(
+				Generate_type(def.ResolvedType(), module.GetName()),
+			)
+	} else {
+		defDef.
+			Dot("WithResolvesTo").
+			Call(
+				jen.Lit(def.GetResolvesTo()),
+			)
+	}
+
+	defDef.
 		Dot("WithoutSourceCode").Call().
 		Dot("Build").Call()
 
@@ -132,7 +145,7 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 				jen.Add(jen.Op("*")).Qual(PackageName+"symbols", "NewVariableBuilder").
 					Call(
 						jen.Lit(asv.GetName()),
-						jen.Lit(asv.GetType().GetName()),
+						Generate_type(asv.GetType(), asv.GetModuleString()),
 						jen.Lit(asv.GetModuleString()),
 						jen.Lit(module.GetDocumentURI()),
 					).
@@ -232,13 +245,64 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 	return funDef
 }
 
-// TODO: This appears to indicate that the module at which the type is being used
-// is where it was declared, which is clearly false, so this may lead to wrong LSP
-// results.
 func Generate_type(type_ *s.Type, mod string) *jen.Statement {
-	return jen.Qual(PackageName+"symbols", "NewTypeFromString").
+	builderName := "NewTypeBuilder"
+	typeModule := type_.GetModule()
+
+	if type_.IsBaseTypeLanguage() {
+		// Use this shorthand just to reduce generated code by a bit
+		builderName = "NewBaseTypeBuilder"
+	}
+
+	if type_.IsGenericArgument() {
+		builderName = "NewGenericTypeBuilder"
+
+		// Temporary fix for generic types' modules being misdetected
+		typeModule = mod
+	}
+
+	typeDef := jen.
+		Qual(PackageName+"symbols", builderName).
 		Call(
 			jen.Lit(type_.String()),
-			jen.Lit(mod),
+			jen.Lit(typeModule),
 		)
+
+	if type_.IsOptional() {
+		typeDef = typeDef.
+			Dot("IsOptional").
+			Call()
+	}
+
+	if type_.IsCollection() {
+		colSize := type_.GetCollectionSize()
+		if colSize.IsSome() {
+			typeDef = typeDef.
+				Dot("IsCollectionWithSize").
+				Call(jen.Lit(colSize.Get()))
+		} else {
+			typeDef = typeDef.
+				Dot("IsUnsizedCollection").
+				Call()
+		}
+	}
+
+	if type_.HasGenericArguments() {
+		generatedGenericArgs := []jen.Code{}
+		genericArgs := type_.GetGenericArguments()
+
+		for i := range genericArgs {
+			generatedGenericArgs = append(generatedGenericArgs, Generate_type(&genericArgs[i], mod))
+		}
+
+		typeDef = typeDef.
+			Dot("WithGenericArguments").
+			Call(generatedGenericArgs...)
+	}
+
+	typeDef.
+		Dot("Build").
+		Call()
+
+	return typeDef
 }
