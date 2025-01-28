@@ -170,17 +170,17 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 		// - const_ident
 		{
 			literal:  "A_CONSTANT",
-			expected: ast.NewIdentifierBuilder().WithName("A_CONSTANT").WithStartEnd(2, 13, 2, 23).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("A_CONSTANT").WithStartEnd(2, 13, 2, 23).Build(),
 		},
 		// - ident
 		{
 			literal:  "ident",
-			expected: ast.NewIdentifierBuilder().WithName("ident").WithStartEnd(2, 13, 2, 18).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("ident").WithStartEnd(2, 13, 2, 18).Build(),
 		},
 		// - at_ident
 		{
 			literal:  "@ident",
-			expected: ast.NewIdentifierBuilder().WithName("@ident").WithStartEnd(2, 13, 2, 19).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("@ident").WithStartEnd(2, 13, 2, 19).Build(),
 		},
 		// module_ident_expr:
 		{
@@ -190,24 +190,24 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 				ModulePath: ast.NewIdentifierBuilder().
 					WithName("path").
 					WithStartEnd(2, 13, 2, 19).
-					BuildPtr(),
+					Build(),
 				Name: "ident",
 			},
 		},
 		{
 			literal:  "$_abc",
-			expected: ast.NewIdentifierBuilder().WithName("$_abc").WithStartEnd(2, 13, 2, 18).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("$_abc").IsCompileTime(true).WithStartEnd(2, 13, 2, 18).Build(),
 		},
 		{
 			literal:  "#_abc",
-			expected: ast.NewIdentifierBuilder().WithName("#_abc").WithStartEnd(2, 13, 2, 18).BuildPtr(),
+			expected: ast.NewIdentifierBuilder().WithName("#_abc").WithStartEnd(2, 13, 2, 18).Build(),
 		},
 		{
 			literal: "&anotherVariable",
 			expected: &ast.UnaryExpression{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 29).Build(),
 				Operator:       "&",
-				Argument:       ast.NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).BuildPtr(),
+				Argument:       ast.NewIdentifierBuilder().WithName("anotherVariable").WithStartEnd(2, 14, 2, 29).Build(),
 			},
 		},
 		{
@@ -219,7 +219,7 @@ func TestConvertToAST_declaration_with_assignment(t *testing.T) {
 					WithNameStartEnd(2, 13, 2, 17).
 					WithStartEnd(2, 13, 2, 17).
 					Build(),
-				Sel: ast.NewIdentifierBuilder().WithName("MEMBER").WithStartEnd(2, 18, 2, 24).BuildPtr(),
+				Sel: ast.NewIdentifierBuilder().WithName("MEMBER").WithStartEnd(2, 18, 2, 24).Build(),
 			},
 		},
 		{
