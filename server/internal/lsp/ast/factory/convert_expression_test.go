@@ -10,6 +10,59 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestConvertToAST_convert_type(t *testing.T) {
+	cases := []struct {
+		skip     bool
+		Type     string
+		expected ast.Node
+	}{
+		{
+			Type: "int",
+			expected: ast.NewTypeInfoBuilder().
+				WithStartEnd(0, 0, 0, 3).
+				WithName("int").
+				WithNameStartEnd(0, 0, 0, 3).
+				IsBuiltin().
+				Build(),
+		},
+		{
+			Type: "Custom",
+			expected: ast.NewTypeInfoBuilder().
+				WithStartEnd(0, 0, 0, 6).
+				WithName("Custom").
+				WithNameStartEnd(0, 0, 0, 6).
+				Build(),
+		},
+		{
+			Type: "int!",
+			expected: ast.NewTypeInfoBuilder().
+				WithStartEnd(0, 0, 0, 4).
+				WithName("int").
+				WithNameStartEnd(0, 0, 0, 3).
+				IsBuiltin().
+				IsOptional().
+				Build(),
+		},
+	}
+
+	for _, tt := range cases {
+		if tt.skip {
+			continue
+		}
+		t.Run(fmt.Sprintf("convert_type: %s", tt.Type), func(t *testing.T) {
+			source := `` + tt.Type + ` aVar = something;`
+
+			cv := newTestAstConverter()
+			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+
+			decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+
+			spec := decl.Spec.(*ast.ValueSpec)
+			assert.Equal(t, tt.expected, spec.Type)
+		})
+	}
+}
+
 /*
  * @dataProvider test all kind of literals here!
  */
