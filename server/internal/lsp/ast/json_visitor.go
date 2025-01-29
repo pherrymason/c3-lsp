@@ -132,7 +132,7 @@ func VisitFunctionParameter(node *FunctionParameter) JSONObject {
 	}
 }
 
-func (v *JSONVisitor) VisitFunctionCall(node *FunctionCall) {
+func (v *JSONVisitor) VisitFunctionCall(node *CallExpr) {
 	vIdent := JSONVisitor{}
 	Visit(node.Identifier, &vIdent)
 

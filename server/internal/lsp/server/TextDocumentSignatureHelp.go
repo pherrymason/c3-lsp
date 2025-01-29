@@ -1,6 +1,9 @@
 package server
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis"
+	"github.com/pherrymason/c3-lsp/pkg/featureflags"
 	"strings"
 
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
@@ -13,6 +16,22 @@ import (
 
 // textDocument/signatureHelp: {"context":{"isRetrigger":false,"triggerCharacter":"(","triggerKind":2},"position":{"character":20,"line":8},"textDocument":{"uri":"file:///Volumes/Development/raul/projects/game-dev/raul-game-documents/murder-c3/src/main.c3"}}
 func (srv *Server) TextDocumentSignatureHelp(context *glsp.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
+	if featureflags.IsActive(featureflags.UseGeneratedAST) {
+		doc, _ := srv.documents.GetDocument(params.TextDocument.URI)
+		signatureHelp := analysis.BuildSignatureHelp(
+			doc,
+			lsp.NewPositionFromProtocol(params.Position),
+			srv.documents,
+			srv.symbolTable,
+		)
+
+		return signatureHelp, nil
+	}
+
+	// -----------------------
+	// Old implementation
+	// -----------------------
+
 	// Rewind position after previous "("
 	docId := utils.NormalizePath(params.TextDocument.URI)
 	doc := srv.state.GetDocument(docId)

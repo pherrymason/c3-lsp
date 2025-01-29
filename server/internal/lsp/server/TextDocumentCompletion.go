@@ -17,7 +17,7 @@ func (srv *Server) TextDocumentCompletion(context *glsp.Context, params *protoco
 		doc, _ := srv.documents.GetDocument(params.TextDocument.URI)
 		completionList := analysis.BuildCompletionList(
 			doc,
-			lsp.NewLSPPosition(params.Position),
+			lsp.NewPositionFromProtocol(params.Position),
 			srv.documents,
 			srv.symbolTable,
 		)

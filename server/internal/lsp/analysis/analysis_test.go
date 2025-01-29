@@ -5,9 +5,31 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
+
+// Parses a test body with a '|||' cursor, returning the body without
+// the cursor and the position of that cursor.
+//
+// Useful for tests where we check what the language server responds if the
+// user cursor is at a certain position.
+func parseBodyWithCursor(body string) (string, lsp.Position) {
+	cursorLine, cursorCol := utils.FindLineColOfSubstring(body, "|||")
+	if cursorLine == 0 {
+		panic("Please add the cursor position to the test body with '|||'")
+	}
+	if strings.Count(body, "|||") > 1 {
+		panic("There are multiple '|||' cursors in the test body, please add only one")
+	}
+
+	cursorlessBody := strings.ReplaceAll(body, "|||", "")
+	position := lsp.NewPosition(cursorLine, cursorCol)
+
+	return cursorlessBody, position
+}
 
 func getTree(source string, fileName string) *ast.File {
 	astConverter := factory.NewASTConverter()

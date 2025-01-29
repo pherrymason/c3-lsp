@@ -36,7 +36,7 @@ func (c *ASTConverter) convert_compile_time_call(node *sitter.Node, source []byt
 	flatPath := node.NextNamedSibling()
 	endNode = flatPath.NextSibling()
 
-	funcCall := &ast.FunctionCall{
+	callExpr := &ast.CallExpr{
 		NodeAttributes: ast.NewNodeAttributesBuilder().
 			WithSitterStartEnd(node.StartPoint(), endNode.EndPoint()).
 			Build(),
@@ -45,9 +45,12 @@ func (c *ASTConverter) convert_compile_time_call(node *sitter.Node, source []byt
 			WithSitterPos(node).
 			Build(),
 		Arguments: []ast.Expression{c.convert_flat_path(flatPath, source)},
+		Lparen:    uint(Lparen),
+		Arguments: arguments,
+		Rparen:    uint(Rparen),
 	}
 
-	return funcCall
+	return callExpr
 }
 
 func (c *ASTConverter) convert_compile_time_arg(node *sitter.Node, source []byte) ast.Expression {

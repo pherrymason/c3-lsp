@@ -89,7 +89,7 @@ func buildPosition(line uint, character uint) symbols.Position {
 // Useful for tests where we check what the language server responds if the
 // user cursor is at a certain position.
 func parseBodyWithCursor(body string) (string, symbols.Position) {
-	cursorLine, cursorCol := utils.FindLineColOfSubstring(body, "|||")
+	cursorLine, cursorCol := utils.FindLineColOfSubstringNOZ(body, "|||")
 	if cursorLine == 0 {
 		panic("Please add the cursor position to the test body with '|||'")
 	}

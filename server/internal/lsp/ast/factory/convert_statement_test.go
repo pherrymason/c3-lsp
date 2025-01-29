@@ -422,10 +422,12 @@ func TestConvertToAST_nextcase(t *testing.T) {
 			expected: &ast.Nextcase{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 19).Build(),
 				Label:          option.None[string](),
-				Value: &ast.FunctionCall{
+				Value: &ast.CallExpr{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 12, 2, 18).Build(),
 					Identifier:     ast.NewIdentifierBuilder().WithName("rand").WithStartEnd(2, 12, 2, 16).Build(),
+					Lparen:         uint(16),
 					Arguments:      []ast.Expression{},
+					Rparen:         uint(17),
 				},
 			},
 		},
@@ -807,10 +809,12 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 				},
 				Condition: &ast.DeclOrExpr{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 17, 3, 22).Build(),
-					Expr: &ast.FunctionCall{
+					Expr: &ast.CallExpr{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 17, 3, 22).Build(),
 						Identifier:     ast.NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 17, 3, 20).Build(),
+						Lparen:         uint(20),
 						Arguments:      []ast.Expression{},
+						Rparen:         uint(21),
 					},
 				},
 				Update: []*ast.DeclOrExpr{
@@ -1206,10 +1210,12 @@ func TestConvertToAST_defer_stmt(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 3, 3, 15).Build(),
 				Statement: &ast.ExpressionStmt{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 14).Build(),
-					Expr: &ast.FunctionCall{
+					Expr: &ast.CallExpr{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 14).Build(),
 						Identifier:     ast.NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 9, 3, 12).Build(),
+						Lparen:         uint(12),
 						Arguments:      []ast.Expression{},
+						Rparen:         uint(13),
 					},
 				},
 			},
@@ -1222,10 +1228,12 @@ func TestConvertToAST_defer_stmt(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 3, 3, 19).Build(),
 				Statement: &ast.ExpressionStmt{
 					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 13, 3, 18).Build(),
-					Expr: &ast.FunctionCall{
+					Expr: &ast.CallExpr{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 13, 3, 18).Build(),
 						Identifier:     ast.NewIdentifierBuilder().WithName("foo").WithStartEnd(3, 13, 3, 16).Build(),
+						Lparen:         uint(16),
 						Arguments:      []ast.Expression{},
+						Rparen:         uint(17),
 					},
 				},
 			},

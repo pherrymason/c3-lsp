@@ -31,7 +31,7 @@ type ASTVisitor interface {
 	VisitSelectorExpr(node *SelectorExpr)
 	VisitBinaryExpression(node *BinaryExpression)
 	VisitBasicLiteral(node *BasicLit)
-	VisitFunctionCall(node *FunctionCall)
+	VisitFunctionCall(node *CallExpr)
 
 	// ----------------------------
 	// Statements
@@ -87,8 +87,8 @@ func Visit(node Node, v ASTVisitor) {
 	case *CompoundStmt:
 		v.VisitCompoundStatement(node.(*CompoundStmt))
 
-	case *FunctionCall:
-		v.VisitFunctionCall(node.(*FunctionCall))
+	case *CallExpr:
+		v.VisitFunctionCall(node.(*CallExpr))
 
 	default:
 		log.Print("type not found")

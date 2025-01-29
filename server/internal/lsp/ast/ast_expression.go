@@ -119,13 +119,16 @@ type (
 		List []Statement
 	}
 
-	// A FunctionCall node represents an expression followed by an argument list.
-	FunctionCall struct {
+	// A CallExpr node represents an expression followed by an argument list.
+	CallExpr struct {
 		NodeAttributes
 		Identifier       Expression
 		GenericArguments option.Option[[]Expression]
+		Lparen           uint // position of "("
 		Arguments        []Expression
+		Rparen           uint
 		TrailingBlock    option.Option[*CompoundStmt]
+		CompileTime      bool
 	}
 
 	LambdaDeclarationExpr struct {
@@ -334,7 +337,7 @@ func (l *RangeAccessExpr) exprNode()       {}
 func (l *RangeIndexExpr) exprNode()        {}
 func (l *SubscriptExpression) exprNode()   {}
 func (l *FieldAccessExpr) exprNode()       {}
-func (l *FunctionCall) exprNode()          {}
+func (l *CallExpr) exprNode()              {}
 func (v *LambdaDeclarationExpr) exprNode() {}
 func (l *UnaryExpression) exprNode()       {}
 func (l *BinaryExpression) exprNode()      {}

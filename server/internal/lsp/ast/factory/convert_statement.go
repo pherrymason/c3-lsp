@@ -14,7 +14,7 @@ func (c *ASTConverter) convert_statement(node *sitter.Node, source []byte) ast.S
 		return &ast.EmptyNode{}
 	}
 
-	dd := c.anyOf("statement", []NodeRule{
+	rules := []NodeRule{
 		NodeOfType("compound_stmt"),
 		NodeOfType("expr_stmt"),
 		NodeOfType("declaration_stmt"),
@@ -38,7 +38,10 @@ func (c *ASTConverter) convert_statement(node *sitter.Node, source []byte) ast.S
 		NodeOfType("ct_switch_stmt"),
 		NodeOfType("ct_foreach_stmt"),
 		NodeOfType("ct_for_stmt"),
-	}, node, source, false)
+	}
+	c.debug = false
+	dd, _ := c.anyOf("statement", rules, node, source, c.debug)
+	c.debug = false
 
 	if dd == nil {
 		log.Fatalf("Could not convert_statement. Node TypeDescription: %s. Content: %s\n----- %s\n", node.Type(), node.Content(source), node)
@@ -253,11 +256,11 @@ func (c *ASTConverter) convert_nextcase_stmt(node *sitter.Node, source []byte) a
 	var value ast.Expression
 	targetNode := node.ChildByFieldName("target")
 	if targetNode != nil {
-		found := c.anyOf("nextcase_stmt", []NodeRule{
+		found, _ := c.anyOf("nextcase_stmt", []NodeRule{
 			NodeTryConversionFunc("_expr"),
 			NodeOfType("type"),
 			NodeOfType("default"),
-		}, targetNode, source, false)
+		}, targetNode, source, c.debug)
 
 		if found != nil {
 			value = found.(ast.Expression)
@@ -435,7 +438,7 @@ func (c *ASTConverter) convert_decl_or_expression(node *sitter.Node, source []by
 		}, "split_declaration_stmt"),
 		NodeAnonymous("_expr"),
 	}
-	found := c.anyOf("decl_or_expression", rules, node, source, false)
+	found, _ := c.anyOf("decl_or_expression", rules, node, source, c.debug)
 
 	wrapperNode := node
 	if node.Type() == "type" {

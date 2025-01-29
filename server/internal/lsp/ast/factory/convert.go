@@ -46,6 +46,7 @@ func GetCST(sourceCode string) *sitter.Node {
 type ASTConverter struct {
 	rules       map[string]conversionInfo
 	idGenerator IDGenerator
+	debug       bool
 }
 
 func NewASTConverter() *ASTConverter {
@@ -1381,7 +1382,7 @@ func (c *ASTConverter) convert_base_expression(node *sitter.Node, source []byte)
 			NodeOfType("compound_stmt"),
 		}, "..lambda_declaration_with_body.."),
 	}
-	found := c.anyOf("_base_expr", rules, node, source, false)
+	found, _ := c.anyOf("_base_expr", rules, node, source, c.debug)
 
 	return found.(ast.Expression)
 }
@@ -1444,7 +1445,7 @@ func (c *ASTConverter) convert_ternary_expr(node *sitter.Node, source []byte) as
 		NodeOfType("initializer_list"),
 		NodeOfType("_base_expr"),
 	}
-	condition := c.anyOf("ternary_expr", expected, node.ChildByFieldName("condition"), source, false)
+	condition, _ := c.anyOf("ternary_expr", expected, node.ChildByFieldName("condition"), source, c.debug)
 
 	return &ast.TernaryExpression{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
@@ -1590,10 +1591,16 @@ func (c *ASTConverter) convert_call_expr(node *sitter.Node, source []byte) ast.E
 
 	invocationNode := node.ChildByFieldName("arguments")
 	args := []ast.Expression{}
+	Lparen := uint32(0)
+	Rparen := uint32(0)
 	for i := 0; i < int(invocationNode.ChildCount()); i++ {
 		n := invocationNode.Child(i)
-		if n.Type() == "call_arg" {
+		if n.Type() == "(" {
+			Lparen = n.StartPoint().Column
+		} else if n.Type() == "call_arg" {
 			args = append(args, c.convert_call_arg(n, source))
+		} else if n.Type() == ")" {
+			Rparen = n.StartPoint().Column
 		}
 	}
 
@@ -1617,11 +1624,13 @@ func (c *ASTConverter) convert_call_expr(node *sitter.Node, source []byte) ast.E
 		genericArguments = option.Some(ga)
 	}
 
-	fnCall := &ast.FunctionCall{
+	fnCall := &ast.CallExpr{
 		NodeAttributes:   ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Identifier:       identifier,
 		GenericArguments: genericArguments,
+		Lparen:           uint(Lparen),
 		Arguments:        args,
+		Rparen:           uint(Rparen),
 		TrailingBlock:    compoundStmt,
 	}
 	return fnCall
@@ -2036,9 +2045,9 @@ func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte)
 
 func debugNode(node *sitter.Node, source []byte, tag string) {
 	if node == nil {
-		log.Printf("Node is nil\n")
+		log.Printf("[tag: %s] Node is nil\n", tag)
 		return
 	}
 
-	log.Printf("%s: %s: %s\n----> %s\n", tag, node.Type(), node.Content(source), node)
+	log.Printf("[tag: %s]: type: %s: content: %s ----> node: %s\n", tag, node.Type(), node.Content(source), node)
 }

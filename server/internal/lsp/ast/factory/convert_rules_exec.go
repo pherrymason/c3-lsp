@@ -17,11 +17,14 @@ type conversionInfo struct {
 func (c conversionInfo) convert(node *sitter.Node, source []byte, debug bool) ast.Node {
 	n := node
 	if c.goChild {
+		if debug {
+			log.Printf("[rule dictates go child]")
+		}
 		n = node.Child(0)
 	}
 
 	if debug {
-		//debugNode()
+		debugNode(n, source, "before convert")
 	}
 
 	return c.method(n, source)
@@ -108,31 +111,30 @@ func (c *ASTConverter) generateConversionInfo() {
 		"field_expr":  {method: cv_expr_fn(c.convert_field_expr)},
 
 		// Builtins ----------------
+		"$alignof":    {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$and":        {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$append":     {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$assignable": {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$concat":     {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$defined":    {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$embed":      {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$eval":       {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$evaltype":   {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$extnameof":  {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$feature":    {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$is_const":   {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$nameof":     {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$offsetof":   {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$or":         {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$qnameof":    {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$sizeof":     {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+		"$stringify":  {method: cv_expr_fn(c.convert_compile_time_call_expr)},
+
 		"$vacount": {method: cv_expr_fn(c.convert_as_literal)},
-		"$feature": {method: cv_expr_fn(c.convert_feature)},
-
-		"$alignof":   {method: cv_expr_fn(c.convert_compile_time_call)},
-		"$extnameof": {method: cv_expr_fn(c.convert_compile_time_call)},
-		"$nameof":    {method: cv_expr_fn(c.convert_compile_time_call)},
-		"$offsetof":  {method: cv_expr_fn(c.convert_compile_time_call)},
-		"$qnameof":   {method: cv_expr_fn(c.convert_compile_time_call)},
-
 		"$vaconst": {method: cv_expr_fn(c.convert_compile_time_arg)},
 		"$vaarg":   {method: cv_expr_fn(c.convert_compile_time_arg)},
 		"$varef":   {method: cv_expr_fn(c.convert_compile_time_arg)},
 		"$vaexpr":  {method: cv_expr_fn(c.convert_compile_time_arg)},
-
-		"$eval":      {method: cv_expr_fn(c.convert_compile_time_analyse)},
-		"$is_const":  {method: cv_expr_fn(c.convert_compile_time_analyse)},
-		"$sizeof":    {method: cv_expr_fn(c.convert_compile_time_analyse)},
-		"$stringify": {method: cv_expr_fn(c.convert_compile_time_analyse)},
-
-		"$and":     {method: cv_expr_fn(c.convert_compile_time_call_unk)},
-		"$append":  {method: cv_expr_fn(c.convert_compile_time_call_unk)},
-		"$concat":  {method: cv_expr_fn(c.convert_compile_time_call_unk)},
-		"$defined": {method: cv_expr_fn(c.convert_compile_time_call_unk)},
-		"$embed":   {method: cv_expr_fn(c.convert_compile_time_call_unk)},
-		"$or":      {method: cv_expr_fn(c.convert_compile_time_call_unk)},
 
 		"_expr":      {method: cv_expr_fn(c.convert_expression)},
 		"_base_expr": {method: cv_expr_fn(c.convert_base_expression)},
@@ -171,10 +173,11 @@ func (c *ASTConverter) choice(types []string, node *sitter.Node, source []byte, 
 		rules = append(rules, NodeOfType(typ))
 	}
 
-	return c.anyOf("x", rules, node, source, debug)
+	result, _ := c.anyOf("x", rules, node, source, debug)
+	return result
 }
 
-func (c *ASTConverter) anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) ast.Node {
+func (c *ASTConverter) anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) (ast.Node, *NodeRule) {
 	//fmt.Printf("anyOf: ")
 	if debug {
 		debugNode(node, source, "AnyOf["+name+"]")
@@ -186,7 +189,7 @@ func (c *ASTConverter) anyOf(name string, rules []NodeRule, node *sitter.Node, s
 	for _, rule := range rules {
 		if rule.Validate(node, source, c) {
 			if debug {
-				log.Printf("Converted selected %s\n", rule.Type())
+				log.Printf("[node converted selected: \"%s\"]\n", rule.Type())
 			}
 			conversion, err := c.nodeTypeConverterMap(rule.Type())
 			if err != nil {
@@ -195,12 +198,12 @@ func (c *ASTConverter) anyOf(name string, rules []NodeRule, node *sitter.Node, s
 
 			expr := conversion.convert(node, source, debug)
 			if expr != nil {
-				return expr
+				return expr, &rule
 			}
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 func commaSep(convert nodeConverter, node *sitter.Node, source []byte) []ast.Node {

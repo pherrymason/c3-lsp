@@ -18,7 +18,7 @@ func (srv *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hov
 		doc, _ := srv.documents.GetDocument(params.TextDocument.URI)
 		hoverInfo := analysis.GetHoverInfo(
 			doc,
-			lsp.NewLSPPosition(params.Position),
+			lsp.NewPositionFromProtocol(params.Position),
 			srv.documents,
 			srv.symbolTable,
 		)
@@ -33,7 +33,7 @@ func (srv *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hov
 	// -----------------------
 	// Old implementation
 	// -----------------------
-	
+
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
 	docId := utils.NormalizePath(params.TextDocument.URI)
 	foundSymbolOption := srv.search.FindSymbolDeclarationInWorkspace(docId, pos, srv.state)

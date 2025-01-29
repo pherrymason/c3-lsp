@@ -163,7 +163,7 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		}
 		Walk(v, n.Body, "Body")
 
-	case *ast.FunctionCall:
+	case *ast.CallExpr:
 		Walk(v, n.Identifier, "Identifier")
 		walkList(v, n.Arguments, "Arguments")
 		if n.TrailingBlock.IsSome() {

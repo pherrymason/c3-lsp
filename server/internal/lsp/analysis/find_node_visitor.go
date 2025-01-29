@@ -18,7 +18,6 @@ type FindNodeVisitor struct {
 	stopSearch bool
 }
 
-// Visit implementa el método del visitor.
 func (v *FindNodeVisitor) Enter(node ast.Node, propertyName string) walk.Visitor {
 	if node == nil {
 		return nil
@@ -26,11 +25,11 @@ func (v *FindNodeVisitor) Enter(node ast.Node, propertyName string) walk.Visitor
 
 	// Verify if the position is inside the range of the node
 	if node.GetRange().HasPosition(v.pos) {
-		// Guardar el nodo actual si es más específico
+		// Store current node if it is more specific
 		v.found = node
 		v.Path = append(v.Path, PathStep{node: node, propertyName: propertyName})
 
-		// Continuar recorriendo los nodos hijos
+		// Continue traversing child nodes
 		switch node.(type) {
 		case *ast.Ident, *ast.BasicLit:
 			v.stopSearch = true

@@ -24,7 +24,13 @@ func (p Position) IsBefore(other Position) bool {
 	return p.Line < other.Line || (p.Line == other.Line && p.Column <= other.Column)
 }
 
-func NewLSPPosition(pos protocol.Position) Position {
+func NewPosition(line uint, char uint) Position {
+	return Position{
+		Line:   line,
+		Column: char,
+	}
+}
+func NewPositionFromProtocol(pos protocol.Position) Position {
 	return Position{
 		Line:   uint(pos.Line),
 		Column: uint(pos.Character),

@@ -200,7 +200,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			return nil
 		}
 
-	case *ast.FunctionCall:
+	case *ast.CallExpr:
 		ident := base.Identifier
 		switch i := ident.(type) {
 		case *ast.SelectorExpr:
