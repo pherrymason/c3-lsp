@@ -40,6 +40,14 @@ func (vb *VariableBuilder) WithDocumentRange(lineStart uint, CharStart uint, lin
 	return vb
 }
 
+func (vb *VariableBuilder) WithDocs(docs string) *VariableBuilder {
+	// Only modules, functions and macros can have contracts, so a string is enough
+	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
+	docComment := NewDocComment(docs)
+	vb.variable.BaseIndexable.docComment = &docComment
+	return vb
+}
+
 func (vb *VariableBuilder) IsVarArg() *VariableBuilder {
 	vb.variable.Arg.VarArg = true
 	return vb

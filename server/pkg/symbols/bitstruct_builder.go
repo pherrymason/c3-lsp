@@ -33,6 +33,14 @@ func (b *BitstructBuilder) WithDocumentRange(lineStart uint, CharStart uint, lin
 	return b
 }
 
+func (b *BitstructBuilder) WithDocs(docs string) *BitstructBuilder {
+	// Only modules, functions and macros can have contracts, so a string is enough
+	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
+	docComment := NewDocComment(docs)
+	b.bitstruct.BaseIndexable.docComment = &docComment
+	return b
+}
+
 func (b *BitstructBuilder) ImplementsInterface(interfaceName string) *BitstructBuilder {
 	b.bitstruct.implements = append(b.bitstruct.implements, interfaceName)
 

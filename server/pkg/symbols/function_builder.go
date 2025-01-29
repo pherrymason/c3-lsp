@@ -55,6 +55,11 @@ func (fb *FunctionBuilder) WithDocumentRange(lineStart uint, CharStart uint, lin
 	return fb
 }
 
+func (fb *FunctionBuilder) WithDocs(docComment DocComment) *FunctionBuilder {
+	fb.function.BaseIndexable.docComment = &docComment
+	return fb
+}
+
 func (fb *FunctionBuilder) WithoutSourceCode() *FunctionBuilder {
 	fb.function.BaseIndexable.hasSourceCode = false
 	return fb
