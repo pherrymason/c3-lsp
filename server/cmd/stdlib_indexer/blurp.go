@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/dave/jennifer/jen"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
@@ -280,10 +282,12 @@ func Generate_type(type_ *s.Type, mod string) *jen.Statement {
 		typeModule = mod
 	}
 
+	ptrs := strings.Repeat("*", type_.GetPointerCount())
+
 	typeDef := jen.
 		Qual(PackageName+"symbols", builderName).
 		Call(
-			jen.Lit(type_.String()),
+			jen.Lit(type_.GetName()+ptrs),
 			jen.Lit(typeModule),
 		)
 
