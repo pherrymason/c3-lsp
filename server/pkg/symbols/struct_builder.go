@@ -17,6 +17,14 @@ func (sb *StructBuilder) WithoutSourceCode() *StructBuilder {
 	return sb
 }
 
+func (sb *StructBuilder) WithDocs(docs string) *StructBuilder {
+	// Only modules, functions and macros can have contracts, so a string is enough
+	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
+	docComment := NewDocComment(docs)
+	sb.strukt.BaseIndexable.docComment = &docComment
+	return sb
+}
+
 func (b *StructBuilder) WithStructMember(name string, baseType Type, module string, docId string) *StructBuilder {
 	member := NewStructMember(
 		name,

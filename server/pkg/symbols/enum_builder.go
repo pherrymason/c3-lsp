@@ -37,6 +37,14 @@ func (eb *EnumBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd
 	return eb
 }
 
+func (eb *EnumBuilder) WithDocs(docs string) *EnumBuilder {
+	// Only modules, functions and macros can have contracts, so a string is enough
+	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
+	docComment := NewDocComment(docs)
+	eb.enum.BaseIndexable.docComment = &docComment
+	return eb
+}
+
 func (eb *EnumBuilder) WithEnumerator(enumerator *Enumerator) *EnumBuilder {
 	eb.enum.enumerators = append(eb.enum.enumerators, enumerator)
 

@@ -81,16 +81,23 @@ func generateCode(symbolsTable *symbols_table.SymbolsTable, c3Version string) {
 			if !ok {
 				uniqueModuleNames[mod.GetName()] = true
 
-				dict[jen.Lit(mod.GetName())] =
+				modDef :=
 					jen.
 						Qual(PackageName+"symbols", "NewModuleBuilder").
 						Call(
 							jen.Lit(mod.GetName()),
 							jen.Lit(mod.GetDocumentURI()),
-						).
-						Dot("WithoutSourceCode").Call().
-						Dot("Build").Call()
+						)
 
+				if mod.GetDocComment() != nil {
+					modDef.Dot("WithDocs").Call(Generate_doc_comment(mod.GetDocComment()))
+				}
+
+				modDef.
+					Dot("WithoutSourceCode").Call().
+					Dot("Build").Call()
+
+				dict[jen.Lit(mod.GetName())] = modDef
 			}
 		}
 	}

@@ -55,6 +55,14 @@ func (d *DistinctBuilder) WithDocumentRange(lineStart uint, CharStart uint, line
 	return d
 }
 
+func (d *DistinctBuilder) WithDocs(docs string) *DistinctBuilder {
+	// Only modules, functions and macros can have contracts, so a string is enough
+	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
+	docComment := NewDocComment(docs)
+	d.distinct.BaseIndexable.docComment = &docComment
+	return d
+}
+
 func (d *DistinctBuilder) Build() *Distinct {
 	return &d.distinct
 }

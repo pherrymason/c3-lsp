@@ -36,6 +36,12 @@ func Generate_variable(variable *s.Variable, module *s.Module) jen.Code {
 			)
 	}
 
+	if variable.GetDocComment() != nil {
+		varDef.
+			Dot("WithDocs").
+			Call(jen.Lit(variable.GetDocComment().GetBody()))
+	}
+
 	varDef.
 		Dot("Build").
 		Call()
@@ -60,6 +66,12 @@ func Generate_struct(strukt *s.Struct, module *s.Module) jen.Code {
 				jen.Lit(module.GetName()),
 				jen.Lit(module.GetDocumentURI()),
 			)
+	}
+
+	if strukt.GetDocComment() != nil {
+		def.
+			Dot("WithDocs").
+			Call(jen.Lit(strukt.GetDocComment().GetBody()))
 	}
 
 	def.
@@ -87,6 +99,12 @@ func Generate_bitstruct(bitstruct *s.Bitstruct, module *s.Module) jen.Code {
 				jen.Lit(module.GetName()),
 				jen.Lit(module.GetDocumentURI()),
 			)
+	}
+
+	if bitstruct.GetDocComment() != nil {
+		def.
+			Dot("WithDocs").
+			Call(jen.Lit(bitstruct.GetDocComment().GetBody()))
 	}
 
 	def.
@@ -119,6 +137,12 @@ func Generate_definition(def *s.Def, module *s.Module) jen.Code {
 			)
 	}
 
+	if def.GetDocComment() != nil {
+		defDef.
+			Dot("WithDocs").
+			Call(jen.Lit(def.GetDocComment().GetBody()))
+	}
+
 	defDef.
 		Dot("WithoutSourceCode").Call().
 		Dot("Build").Call()
@@ -141,7 +165,15 @@ func Generate_distinct(distinct *s.Distinct, module *s.Module) jen.Code {
 		Dot("WithBaseType").
 		Call(
 			Generate_type(distinct.GetBaseType(), module.GetName()),
-		).
+		)
+
+	if distinct.GetDocComment() != nil {
+		distinctDef.
+			Dot("WithDocs").
+			Call(jen.Lit(distinct.GetDocComment().GetBody()))
+	}
+
+	distinctDef.
 		Dot("WithoutSourceCode").Call().
 		Dot("Build").Call()
 
@@ -190,6 +222,12 @@ func Generate_enum(enum *s.Enum, module *s.Module) jen.Code {
 			)
 	}
 
+	if enum.GetDocComment() != nil {
+		enumDef.
+			Dot("WithDocs").
+			Call(jen.Lit(enum.GetDocComment().GetBody()))
+	}
+
 	enumDef.Dot("Build").Call()
 
 	return enumDef
@@ -218,6 +256,12 @@ func Generate_fault(fault *s.Fault, module *s.Module) jen.Code {
 					Dot("WithFaultName").Call(jen.Lit(fault.GetName())).
 					Dot("Build").Call(),
 			)
+	}
+
+	if fault.GetDocComment() != nil {
+		faultDef.
+			Dot("WithDocs").
+			Call(jen.Lit(fault.GetDocComment().GetBody()))
 	}
 
 	faultDef.Dot("Build").Call()
@@ -257,6 +301,10 @@ func Generate_function(fun *s.Function, mod *s.Module) jen.Code {
 
 	if fun.FunctionType() == s.Macro {
 		funDef.Dot("IsMacro").Call()
+	}
+
+	if fun.GetDocComment() != nil {
+		funDef.Dot("WithDocs").Call(Generate_doc_comment(fun.GetDocComment()))
 	}
 
 	funDef.
@@ -328,4 +376,29 @@ func Generate_type(type_ *s.Type, mod string) *jen.Statement {
 		Call()
 
 	return typeDef
+}
+
+func Generate_doc_comment(docComment *s.DocComment) *jen.Statement {
+	docDef := jen.
+		Qual(PackageName+"symbols", "NewDocCommentBuilder").
+		Call(
+			jen.Lit(docComment.GetBody()),
+		)
+
+	if docComment.HasContracts() {
+		for _, contract := range docComment.GetContracts() {
+			docDef.
+				Dot("WithContract").
+				Call(
+					jen.Lit(contract.GetName()),
+					jen.Lit(contract.GetBody()),
+				)
+		}
+	}
+
+	docDef.
+		Dot("Build").
+		Call()
+
+	return docDef
 }

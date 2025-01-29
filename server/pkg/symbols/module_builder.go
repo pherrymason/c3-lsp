@@ -19,6 +19,11 @@ func (mb *ModuleBuilder) WithoutSourceCode() *ModuleBuilder {
 	return mb
 }
 
+func (mb *ModuleBuilder) WithDocs(docComment DocComment) *ModuleBuilder {
+	mb.module.BaseIndexable.docComment = &docComment
+	return mb
+}
+
 func (mb ModuleBuilder) Build() *Module {
 	return mb.module
 }

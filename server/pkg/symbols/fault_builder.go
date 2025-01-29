@@ -36,6 +36,14 @@ func (eb *FaultBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEn
 	return eb
 }
 
+func (eb *FaultBuilder) WithDocs(docs string) *FaultBuilder {
+	// Only modules, functions and macros can have contracts, so a string is enough
+	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
+	docComment := NewDocComment(docs)
+	eb.fault.BaseIndexable.docComment = &docComment
+	return eb
+}
+
 func (eb *FaultBuilder) WithConstant(constant *FaultConstant) *FaultBuilder {
 	eb.fault.constants = append(eb.fault.constants, constant)
 

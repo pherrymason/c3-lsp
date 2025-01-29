@@ -41,6 +41,14 @@ func (ib *InterfaceBuilder) WithDocumentRange(lineStart uint, CharStart uint, li
 	return ib
 }
 
+func (ib *InterfaceBuilder) WithDocs(docs string) *InterfaceBuilder {
+	// Only modules, functions and macros can have contracts, so a string is enough
+	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
+	docComment := NewDocComment(docs)
+	ib._interface.BaseIndexable.docComment = &docComment
+	return ib
+}
+
 func (ib *InterfaceBuilder) Build() Interface {
 	return ib._interface
 }

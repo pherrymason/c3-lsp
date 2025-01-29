@@ -54,6 +54,14 @@ func (d *DefBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd u
 	return d
 }
 
+func (d *DefBuilder) WithDocs(docs string) *DefBuilder {
+	// Only modules, functions and macros can have contracts, so a string is enough
+	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
+	docComment := NewDocComment(docs)
+	d.def.BaseIndexable.docComment = &docComment
+	return d
+}
+
 func (d *DefBuilder) Build() *Def {
 	return &d.def
 }
