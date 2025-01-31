@@ -1087,15 +1087,15 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *
 
 		state.registerDoc(
 			"list.c3",
-			`module list(<Type>);
+			`module list(<TypeDescription>);
 			struct List (Printable)
 			{
 				usz size;
 				usz capacity;
 				Allocator allocator;
-				Type *entries;
+				TypeDescription *entries;
 			}
-			fn Type List.get(usz index) {}`,
+			fn TypeDescription List.get(usz index) {}`,
 		)
 		doc := state.GetDoc("app.c3")
 		position := buildPosition(14, 23) // Cursor is at home.rooms.p|aint()

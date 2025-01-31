@@ -10,6 +10,7 @@ var (
 	leadingWhitespace = regexp.MustCompile("(?m)(^[ \t]*)(?:[^ \t\n])")
 )
 
+// Dedent
 // Original code from https://github.com/lithammer/dedent
 // Includes a modified version of https://github.com/lithammer/dedent/pull/17 to support post-first-line indent.
 //

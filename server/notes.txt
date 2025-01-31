@@ -1,4 +1,6 @@
-
+Ideas
+=====
+- Guardar positions de forma relativa, para sobrevivir mejor a cambios del documento sin tener que reconstruir todo.
 
 Cuando se pide info sobre lo que hay bajo el cursor, 
 iría muy bien saber en que nodo del AST estamos, eso daría info automaticamente del tipo de sentencia, y permitiría hacer una búsqueda mas contextual.

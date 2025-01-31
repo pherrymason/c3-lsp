@@ -24,7 +24,7 @@ const (
 
 type Indexable interface {
 	GetName() string
-	GetFQN() string // Get Full Qualified Name
+	GetFQN() string // Get Full Qualified URI
 	GetKind() protocol.CompletionItemKind
 	GetDocumentURI() string
 	GetIdRange() Range
