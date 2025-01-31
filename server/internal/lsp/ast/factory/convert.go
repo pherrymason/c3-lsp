@@ -1005,7 +1005,7 @@ func (c *ASTConverter) convert_function_declaration(node *sitter.Node, source []
 	if funcHeader.ChildByFieldName("method_type") != nil {
 		var ident *ast.Ident
 		methodTypeNode := funcHeader.ChildByFieldName("method_type")
-		debugNode(methodTypeNode.Child(0).Child(0), source, "method")
+		//debugNode(methodTypeNode.Child(0).Child(0), source, "method")
 		if methodTypeNode.Child(0).Child(0).Type() == "module_type_ident" {
 			ident = c.convert_module_type_ident(methodTypeNode.Child(0).Child(0), source)
 		} else {
@@ -1256,9 +1256,8 @@ $.initializer_list,
 $._base_expr,
 */
 func (c *ASTConverter) convert_expression(node *sitter.Node, source []byte) ast.Expression {
-	ConvertDebug = false
-	if ConvertDebug {
-		fmt.Print("trying to convert_expression:\n")
+	if c.debug {
+		log.Print("[trying to convert_expression]")
 		debugNode(node, source, "convert_expression")
 	}
 
@@ -1282,7 +1281,7 @@ func (c *ASTConverter) convert_expression(node *sitter.Node, source []byte) ast.
 		NodeOfType("initializer_list"),
 		NodeTryConversionFunc("_base_expr"),
 	}
-	converted := c.anyOf("_expr", rules, node, source, ConvertDebug)
+	converted, _ := c.anyOf("_expr", rules, node, source, c.debug)
 
 	if converted == nil {
 		return nil
@@ -1351,6 +1350,7 @@ func (c *ASTConverter) convert_base_expression(node *sitter.Node, source []byte)
 		NodeOfType("$vacount"),
 
 		NodeOfType("$alignof"),
+		NodeOfType("$assignable"),
 		NodeOfType("$extnameof"),
 		NodeOfType("$nameof"),
 		NodeOfType("$offsetof"),

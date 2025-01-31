@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
-	"strings"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -399,21 +398,21 @@ func TestConvertToAST_declaration_with_initializer_list_assignment(t *testing.T)
 			},
 		},
 		{
-			literal: "{$vasplat(0)}",
+			literal: "{$vasplat[0]}",
 			expected: &ast.InitializerList{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 26).Build(),
 				Args: []ast.Expression{
-					&ast.FunctionCall{
+					&ast.SubscriptExpression{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 14, 2, 25).Build(),
-						Identifier: ast.NewIdentifierBuilder().
+						Argument: ast.NewIdentifierBuilder().
 							WithName("$vasplat").
 							IsCompileTime(true).
 							WithRange(lsp.NewRange(2, 14, 2, 22)).
 							Build(),
-						Arguments: []ast.Expression{&ast.BasicLit{
+						Index: &ast.BasicLit{
 							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 23, 2, 24).Build(),
 							Kind:           ast.INT,
-							Value:          "0"},
+							Value:          "0",
 						},
 					},
 				},
@@ -460,7 +459,7 @@ func TestConvertToAST_declaration_with_initializer_list_assignment(t *testing.T)
 		if tt.incomplete {
 			continue
 		}
-		t.Run(fmt.Sprintf("compile_time_call: %s", tt.literal), func(t *testing.T) {
+		t.Run(fmt.Sprintf("decl with initializer list: %s", tt.literal), func(t *testing.T) {
 			source := `
 			module foo;
 			int var = ` + tt.literal + ";"
@@ -646,123 +645,48 @@ func TestConvertToAST_expression_block(t *testing.T) {
 	assert.True(t, ok, "Not BlockExpr found")
 }
 
-func TestConvertToAST_compile_time_call(t *testing.T) {
-
+func TestConvertToAST_compile_time_call_expr(t *testing.T) {
 	cases := []struct {
-		skip             bool
-		input            string
-		expected         ast.FunctionCall
-		functionCallName string
-		ArgumentTypeName string
-		Argument         ast.Expression
+		source          string
+		arguments       string
+		expectedIdent   string
+		expectedNumArgs int
 	}{
-		{
-			input:            "$(TypeDescription{1,2})", // type
-			functionCallName: "$",
-			ArgumentTypeName: "TypeInfo",
-			Argument: ast.NewTypeInfoBuilder().
-				WithName("TypeDescription").
-				WithNameStartEnd(1, 10, 1, 10+4).
-				WithStartEnd(1, 10, 1, 10+4).
-				Build(),
-		},
-		{
-			input:            "$(10)", // literal
-			ArgumentTypeName: "BasicLit",
-			Argument: &ast.BasicLit{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 13, 2, 14).Build(),
-				Kind:           ast.INT,
-				Value:          "10"},
-		},
-		{
-			input:            "$(a[5])",
-			ArgumentTypeName: "IndexAccessExpr",
-			Argument: &ast.IndexAccessExpr{
-				Array: ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
-				Index: "[5]",
-			},
-		},
-		{
-			input:            "$(a[5..6])",
-			ArgumentTypeName: "RangeAccessExpr",
-			Argument: &ast.RangeAccessExpr{
-				Array:      ast.NewIdentifierBuilder().WithName("a").WithStartEnd(1, 10, 1, 11).Build(),
-				RangeStart: 5,
-				RangeEnd:   6,
-			},
-		},
+		{source: "$alignof(q)", expectedIdent: "$alignof", expectedNumArgs: 1},
+		{source: "$and()", expectedIdent: "$and"},
+		{source: "$append()", expectedIdent: "$append"},
+		{source: "$assignable(1,int)", expectedIdent: "$assignable", expectedNumArgs: 2},
+		{source: "$concat()", expectedIdent: "$concat"},
+		{source: "$defined(q)", expectedIdent: "$defined", expectedNumArgs: 1},
+		{source: "$embed(\"file.txt\")", expectedIdent: "$embed", expectedNumArgs: 1},
+		{source: "$eval(q)", expectedIdent: "$eval", expectedNumArgs: 1},
+		//	{source: "$evaltype(q) f = 12", expectedIdent: "$evaltype"}, // This is not a call expr...
+		{source: "$extnameof(q)", expectedIdent: "$extnameof", expectedNumArgs: 1},
+		{source: "$feature(F)", expectedIdent: "$feature", expectedNumArgs: 1},
+		{source: "$is_const(c)", expectedIdent: "$is_const", expectedNumArgs: 1},
+		{source: "$nameof(c)", expectedIdent: "$nameof", expectedNumArgs: 1},
+		{source: "$offsetof(c)", expectedIdent: "$offsetof", expectedNumArgs: 1},
+		{source: "$or(o)", expectedIdent: "$or", expectedNumArgs: 1},
+		{source: "$qnameof(q)", expectedIdent: "$qnameof", expectedNumArgs: 1},
+		{source: "$sizeof(q)", expectedIdent: "$sizeof", expectedNumArgs: 1},
+		{source: "$stringify(q)", expectedIdent: "$stringify", expectedNumArgs: 1},
 	}
 
-	methods := []string{
-		"$alignof",
-		"$extnameof",
-		"$nameof",
-		"$offsetof",
-		"$qnameof",
-	}
+	for _, tt := range cases {
+		t.Run(fmt.Sprintf("case_%s", tt.source), func(t *testing.T) {
+			source := "fn void main() { " + tt.source + "; }"
 
-	for _, method := range methods {
-		//fmt.Printf("*********: %s\n", method)
-		for _, tt := range cases {
-			if tt.skip {
-				continue
-			}
+			cv := newTestAstConverter()
+			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 
-			input := strings.Replace(tt.input, "$", method, 1)
+			callExpr := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt).Statements[0].(*ast.ExpressionStmt).Expr.(*ast.CallExpr)
+			assert.NotNil(t, tree)
 
-			t.Run(
-				fmt.Sprintf(
-					"assignment initializer list: %s",
-					input,
-				), func(t *testing.T) {
-					source := `module foo;
-	int x = ` + input + `;`
-					cv := newTestAstConverter()
-					tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
-					decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
-					spec := decl.Spec.(*ast.ValueSpec)
-					initializer := spec.Value.(*ast.FunctionCall)
-
-					assert.Equal(t, method, initializer.Identifier.(*ast.Ident).Name)
-
-					arg := initializer.Arguments[0]
-					switch arg.(type) {
-					case *ast.BasicLit:
-						if tt.ArgumentTypeName != "BasicLit" {
-							t.Errorf("Expected argument must be BasicLit. It was %s", tt.ArgumentTypeName)
-							break
-						}
-						e := tt.Argument.(*ast.BasicLit)
-						assert.Equal(t, e.Value, arg.(*ast.BasicLit).Value)
-
-					case *ast.TypeInfo:
-						if tt.ArgumentTypeName != "TypeInfo" {
-							t.Errorf("Expected argument must be TypeInfo. It was %s", tt.ArgumentTypeName)
-						}
-						e := tt.Argument.(*ast.TypeInfo)
-						assert.Equal(t, e.Identifier.Name, arg.(*ast.TypeInfo).Identifier.Name)
-
-					case *ast.IndexAccessExpr:
-						if tt.ArgumentTypeName != "IndexAccessExpr" {
-							t.Errorf("Expected argument must be IndexAccessExpr. It was %s", tt.ArgumentTypeName)
-						}
-						e := tt.Argument.(*ast.IndexAccessExpr)
-						assert.Equal(t, e.Array.(*ast.Ident).Name, arg.(*ast.IndexAccessExpr).Array.(*ast.Ident).Name)
-
-					case *ast.RangeAccessExpr:
-						if tt.ArgumentTypeName != "RangeAccessExpr" {
-							t.Errorf("Expected argument must be RangeAccessExpr. It was %s", tt.ArgumentTypeName)
-						}
-						e := tt.Argument.(*ast.RangeAccessExpr)
-						assert.Equal(t, e.Array.(*ast.Ident).Name, arg.(*ast.RangeAccessExpr).Array.(*ast.Ident).Name)
-						assert.Equal(t, e.RangeStart, arg.(*ast.RangeAccessExpr).RangeStart)
-						assert.Equal(t, e.RangeEnd, arg.(*ast.RangeAccessExpr).RangeEnd)
-
-					default:
-						t.Errorf("Expected argument wrong type.")
-					}
-				})
-		}
+			assert.Equal(t, tt.expectedIdent, callExpr.Identifier.(*ast.Ident).Name)
+			assert.True(t, callExpr.CompileTime)
+			assert.Equal(t, tt.expectedNumArgs, len(callExpr.Arguments))
+			assert.Equal(t, uint(17+len(tt.expectedIdent)), callExpr.Lparen)
+		})
 	}
 }
 
@@ -783,80 +707,19 @@ func TestConvertToAST_compile_time_argument_call(t *testing.T) {
 			func(t *testing.T) {
 				length := uint(len(method))
 				source := `module foo;
-				int x = ` + method + `(id);`
+				int x = ` + method + `[id];`
 
 				cv := newTestAstConverter()
 				tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
 				decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 				spec := decl.Spec.(*ast.ValueSpec)
-				initializer := spec.Value.(*ast.FunctionCall)
+				initializer := spec.Value.(*ast.SubscriptExpression)
 
-				assert.Equal(t, &ast.FunctionCall{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 12, 1, 16+length).Build(),
-					Identifier:     ast.NewIdentifierBuilder().WithName(method).WithStartEnd(1, 12, 1, 12+length).Build(),
-					Arguments: []ast.Expression{
-						ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 12+length+1, 1, 14+length+1).Build(),
-					},
+				assert.Equal(t, &ast.SubscriptExpression{
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 12, 1, 15+length).Build(),
+					Argument:       ast.NewIdentifierBuilder().WithName(method).IsCompileTime(true).WithStartEnd(1, 12, 1, 12+length).Build(),
+					Index:          ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 12+length+1, 1, 14+length+1).Build(),
 				}, initializer)
-			})
-	}
-}
-
-func TestConvertToAST_compile_time_analyse(t *testing.T) {
-	cases := []struct {
-		skip     bool
-		input    string
-		expected *ast.FunctionCall
-	}{
-		{
-			input: "$eval(id)",
-			expected: &ast.FunctionCall{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 12, 1, 21).Build(),
-				Identifier:     ast.NewIdentifierBuilder().WithName("$eval").WithStartEnd(1, 12, 1, 17).Build(),
-				Arguments: []ast.Expression{
-					ast.NewIdentifierBuilder().WithName("id").WithStartEnd(1, 18, 1, 20).Build(),
-				},
-			},
-		},
-		/*
-			{
-				skip:  false,
-				input: "$and(id)",
-				expected: FunctionCall{
-					ASTNodeBase: NewNodeAttributesBuilder().WithRangePositions(1, 12, 1, 19).Build(),
-					Ident:  NewIdentifierBuilder().WithName("$and").WithRangePositions(1, 12, 1, 16).Build(),
-					Arguments: []Arg{
-						NewIdentifierBuilder().WithName("id").WithRangePositions(1, 17, 1, 19).Build(),
-					},
-				},
-			},*/
-	}
-	/*
-		methods := []string{
-			"$eval",
-			"$defined",
-			"$sizeof",
-			"$stringify",
-			"$is_const",
-		}*/
-
-	for _, tt := range cases {
-		if tt.skip {
-			continue
-		}
-
-		t.Run(
-			fmt.Sprintf("compile_time_analyse: %s", tt.input),
-			func(t *testing.T) {
-				source := `module foo;
-				int x = ` + tt.input + `;`
-
-				cv := newTestAstConverter()
-				tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
-
-				decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
-				spec := decl.Spec.(*ast.ValueSpec)
-				assert.Equal(t, tt.expected, spec.Value.(*ast.FunctionCall))
 			})
 	}
 }

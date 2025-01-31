@@ -1,10 +1,11 @@
 package factory
 
 import (
-	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	sitter "github.com/smacker/go-tree-sitter"
 )
+
+// Reference: https://c3-lang.org/generic-programming/reflection/#compile-time-functions
 
 func (c *ASTConverter) convert_ct_type_ident(node *sitter.Node, source []byte) ast.Expression {
 	return &ast.BasicLit{
@@ -13,38 +14,44 @@ func (c *ASTConverter) convert_ct_type_ident(node *sitter.Node, source []byte) a
 		Value:          node.Content(source)}
 }
 
-/*
-"$alignof",
-
-	"$extnameof",
-	"$nameof",
-	"$offsetof",
-	"$qnameof"
-*/
-func (c *ASTConverter) convert_compile_time_call(node *sitter.Node, source []byte) ast.Expression {
-	// seq($._ct_call, '(', $.flat_path, ')'),
-	endNode := node.NextSibling()
+// convert_compile_time_call_expr
+// Converts C3 builtin calls into an ast.CallExpr
+func (c *ASTConverter) convert_compile_time_call_expr(node *sitter.Node, source []byte) ast.Expression {
+	var endNode *sitter.Node
+	n := node
+	Lparen := 0
+	Rparen := 0
+	arguments := []ast.Expression{}
 	for {
-		n := endNode.NextSibling()
-
+		n = n.NextSibling()
 		if n == nil {
 			break
 		}
+
+		debugNode(n, source, "ct")
+		if n.Type() == "(" {
+			Lparen = int(n.StartPoint().Column)
+		} else if n.Type() == ")" {
+			Rparen = int(n.StartPoint().Column)
+		} else if n.Type() == "flat_path" {
+			expr := c.convert_flat_path(n, source)
+			arguments = append(arguments, expr)
+		} else if n.Type() != ";" && n.Type() != "," {
+			expr := c.convert_expression(n, source)
+			arguments = append(arguments, expr)
+		}
 		endNode = n
 	}
-
-	flatPath := node.NextNamedSibling()
-	endNode = flatPath.NextSibling()
 
 	callExpr := &ast.CallExpr{
 		NodeAttributes: ast.NewNodeAttributesBuilder().
 			WithSitterStartEnd(node.StartPoint(), endNode.EndPoint()).
 			Build(),
+		CompileTime: true,
 		Identifier: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			Build(),
-		Arguments: []ast.Expression{c.convert_flat_path(flatPath, source)},
 		Lparen:    uint(Lparen),
 		Arguments: arguments,
 		Rparen:    uint(Rparen),
@@ -56,122 +63,29 @@ func (c *ASTConverter) convert_compile_time_call(node *sitter.Node, source []byt
 func (c *ASTConverter) convert_compile_time_arg(node *sitter.Node, source []byte) ast.Expression {
 	endNode := node
 	var insideParenths *sitter.Node
+	excluded := map[string]bool{"[": true, "]": true, "(": true, ")": true}
 	for {
 		n := endNode.NextSibling()
 		endNode = n
-		if n.Type() != "(" && n.Type() != ")" {
+		if !excluded[n.Type()] {
 			insideParenths = n
-		}
-		if n.Type() == ")" {
 			break
 		}
 	}
 
 	expr := c.convert_expression(insideParenths, source)
 
-	funcCall := &ast.FunctionCall{
+	funcCall := &ast.SubscriptExpression{
 		NodeAttributes: ast.NewNodeAttributesBuilder().
 			WithSitterStartEnd(node.StartPoint(), endNode.EndPoint()).
 			Build(),
-		Identifier: ast.NewIdentifierBuilder().
+		Argument: ast.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
+			IsCompileTime(true).
 			Build(),
-		Arguments: []ast.Expression{expr.(ast.Expression)},
+		Index: expr,
 	}
 
 	return funcCall
-}
-
-/*
-*
-
-	seq($._ct_analyse, '(', $.comma_decl_or_expr, ')'),
-	_ct_analyse: $ => choice(
-		'$eval',
-		'$defined',
-		'$sizeof',
-		'$stringify',
-		'$is_const',
-	)
-
-	-- NOW --
-	'$eval',
-	'$is_const',
-	'$sizeof',
-	'$stringify',
-	$._ct_arg:
-		$vaconst',
-		'$vaarg',
-		'$varef',
-		'$vaexpr',
-*/
-func (c *ASTConverter) convert_compile_time_analyse(node *sitter.Node, source []byte) ast.Expression {
-	decl_or_expr_node := node.NextNamedSibling()
-	//fmt.Printf("cca: ")
-	//debugNode(node, source)
-	//fmt.Printf("\nnext: ")
-	//debugNode(decl_or_expr_node, source)
-
-	//expressions := convert_token_separated(decl_or_expr_node, ",", source, convert_decl_or_expr)
-
-	funcCall := &ast.FunctionCall{
-		NodeAttributes: ast.NewNodeAttributesBuilder().
-			WithSitterStartEnd(node.StartPoint(), decl_or_expr_node.NextSibling().EndPoint()).
-			Build(),
-		Identifier: ast.NewIdentifierBuilder().
-			WithName(node.Content(source)).
-			WithSitterPos(node).
-			Build(),
-		Arguments: []ast.Expression{
-			c.convert_expression(decl_or_expr_node, source).(ast.Expression),
-		},
-	}
-
-	return funcCall
-}
-
-func cast_expressions_to_args(expressions []ast.Expression) []ast.Expression {
-	var args []ast.Expression
-
-	for _, expr := range expressions {
-		if arg, ok := expr.(ast.Expression); ok {
-			args = append(args, arg)
-		} else {
-			// Si algún elemento no puede convertirse, retornamos un error
-			panic(fmt.Sprintf("no se pudo convertir %v a Arg", expr))
-		}
-	}
-
-	return args
-}
-
-func (c *ASTConverter) convert_compile_time_call_unk(node *sitter.Node, source []byte) ast.Expression {
-	next := node.NextNamedSibling()
-	_args := c.convert_token_separated(next, ",", source, cv_expr_fn(c.convert_expression))
-	var args []ast.Expression
-	for _, a := range _args {
-		args = append(args, a.(ast.Expression))
-	}
-
-	return &ast.FunctionCall{
-		NodeAttributes: ast.NewNodeAttributesBuilder().WithSitterStartEnd(node.StartPoint(), next.EndPoint()).Build(),
-		Identifier: ast.NewIdentifierBuilder().
-			WithName(node.Content(source)).
-			WithSitterPos(node).
-			Build(),
-		Arguments: cast_expressions_to_args(args),
-	}
-}
-
-func (c *ASTConverter) convert_feature(node *sitter.Node, source []byte) ast.Expression {
-	next := node.NextNamedSibling()
-	return &ast.FunctionCall{
-		NodeAttributes: ast.NewNodeAttributesBuilder().WithSitterStartEnd(node.StartPoint(), next.EndPoint()).Build(),
-		Identifier: ast.NewIdentifierBuilder().
-			WithName(node.Content(source)).
-			WithSitterPos(node).
-			Build(),
-		Arguments: []ast.Expression{c.convert_base_expression(next, source)},
-	}
 }
