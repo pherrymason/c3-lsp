@@ -67,8 +67,14 @@ type (
 
 	MacroDecl struct {
 		NodeAttributes
-		Signature *MacroSignature
-		Body      *Block
+		ParentTypeId option.Option[*Ident]
+		Signature    *MacroSignature
+		Body         *Block
+	}
+	MacroSignature struct {
+		Name       *Ident
+		Parameters []*FunctionParameter
+		ReturnType *TypeInfo
 	}
 
 	// DefDecl can be used for
@@ -81,21 +87,18 @@ type (
 		ResolvesToType option.Option[*TypeInfo] // Deprecated
 	}
 
-	// StructDecl
-	// Deprecated
-	StructDecl struct {
-		NodeAttributes
-		Name        string
-		BackingType option.Option[*TypeInfo]
-		StructType  StructTypeID
-		Implements  []*Ident
-	}
-
 	FunctionDecl struct {
 		NodeAttributes
 		ParentTypeId option.Option[*Ident]
 		Signature    *FunctionSignature
 		Body         Node
+	}
+
+	FunctionSignature struct {
+		NodeAttributes
+		Name       *Ident
+		Parameters []*FunctionParameter
+		ReturnType *TypeInfo
 	}
 
 	InterfaceDecl struct {
@@ -105,11 +108,10 @@ type (
 	}
 )
 
-func (v *GenDecl) declNode()    {}
-func (v *FaultDecl) declNode()  {}
-func (v *StructDecl) declNode() {}
-func (v *DefDecl) declNode()    {}
-func (v *MacroDecl) declNode()  {}
+func (v *GenDecl) declNode()   {}
+func (v *FaultDecl) declNode() {}
+func (v *DefDecl) declNode()   {}
+func (v *MacroDecl) declNode() {}
 
 func (v *FunctionDecl) declNode()  {}
 func (v *InterfaceDecl) declNode() {}

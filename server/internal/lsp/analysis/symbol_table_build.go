@@ -58,9 +58,6 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 	case *ast.GenDecl:
 		v.registerGenDecl(n)
 
-	case *ast.StructDecl:
-		v.currentScope.RegisterSymbol(n.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.STRUCT)
-
 	case *ast.InterfaceDecl:
 		v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.INTERFACE)
 

@@ -15,7 +15,6 @@ type ASTVisitor interface {
 	// Declarations
 
 	VisitFunctionDecl(node *FunctionDecl)
-	VisitStructDecl(node *StructDecl)
 	VisitFaultDecl(node *FaultDecl)
 	VisitDefDecl(node *DefDecl)
 	VisitMacroDecl(node *MacroDecl)

@@ -75,9 +75,6 @@ func (v *JSONVisitor) VisitDeclaration(node Declaration) {
 		v.VisitFunctionDecl(node.(*FunctionDecl))
 	}
 }
-func (v *JSONVisitor) VisitStructDecl(node *StructDecl) {
-
-}
 
 func (v *JSONVisitor) VisitFaultDecl(node *FaultDecl) {
 

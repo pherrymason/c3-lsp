@@ -808,6 +808,30 @@ func (c *ASTConverter) convert_interface_declaration(node *sitter.Node, sourceCo
 func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
 	var nameNode *sitter.Node
 
+	headerNode := node.Child(1)
+
+	signature := &ast.MacroSignature{
+		Name:       nil,
+		Parameters: []*ast.FunctionParameter{},
+	}
+
+	returnTypeNode := headerNode.ChildByFieldName("return_type")
+	if returnTypeNode != nil {
+		signature.ReturnType = c.convert_type(returnTypeNode, sourceCode)
+	}
+
+	nameNode = headerNode.ChildByFieldName("name")
+	nodeAttributes := ast.NewAttrNodeFromSitterNode(c.getNextID(), node)
+	if nameNode == nil {
+		nodeAttributes.Error = true
+	} else {
+		signature.Name = ast.NewIdentifierBuilder().
+			WithId(c.getNextID()).
+			WithName(nameNode.Content(sourceCode)).
+			WithSitterPos(nameNode).
+			Build()
+	}
+
 	var parameters []*ast.FunctionParameter
 	nodeParameters := node.Child(2)
 	if nodeParameters.ChildCount() > 2 {
@@ -823,25 +847,11 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 			)
 		}
 	}
+	signature.Parameters = parameters
 
-	nameNode = node.Child(1).ChildByFieldName("name")
-	nodeAttributes := ast.NewAttrNodeFromSitterNode(c.getNextID(), node)
-	var identNode *ast.Ident
-	if nameNode == nil {
-		nodeAttributes.Error = true
-	} else {
-		identNode = ast.NewIdentifierBuilder().
-			WithId(c.getNextID()).
-			WithName(nameNode.Content(sourceCode)).
-			WithSitterPos(nameNode).
-			Build()
-	}
 	macro := &ast.MacroDecl{
 		NodeAttributes: nodeAttributes,
-		Signature: &ast.MacroSignature{
-			Name:       identNode,
-			Parameters: parameters,
-		},
+		Signature:      signature,
 	}
 	/*
 		if node.ChildByFieldName("body") != nil {

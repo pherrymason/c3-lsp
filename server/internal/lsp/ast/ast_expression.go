@@ -300,13 +300,6 @@ type (
 		Params     []*FunctionParameter
 	}
 
-	FunctionSignature struct {
-		NodeAttributes
-		Name       *Ident
-		Parameters []*FunctionParameter
-		ReturnType *TypeInfo
-	}
-
 	InterfaceType struct {
 		NodeAttributes
 		Methods []Expression

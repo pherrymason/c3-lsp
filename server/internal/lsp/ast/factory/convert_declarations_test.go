@@ -1079,6 +1079,22 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 		)
 	})
 
+	t.Run("parse macro with return type", func(t *testing.T) {
+		source := `
+		<* docs *>
+		macro int m(int x) {
+			return x + 2;
+		}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
+
+		assert.Equal(t, "m", macroDecl.Signature.Name.Name)
+		assert.Equal(t, "int", macroDecl.Signature.ReturnType.Identifier.Name)
+		assert.Equal(t, lsp.NewRange(2, 8, 2, 11), macroDecl.Signature.ReturnType.GetRange())
+	})
+
 	t.Run("parse invalid macro signature", func(t *testing.T) {
 		source := `
 	<* docs *>

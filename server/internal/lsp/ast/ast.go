@@ -170,11 +170,6 @@ type FaultMember struct {
 	Name *Ident
 }
 
-type MacroSignature struct {
-	Name       *Ident
-	Parameters []*FunctionParameter
-}
-
 type FunctionParameter struct {
 	NodeAttributes
 	Name *Ident
