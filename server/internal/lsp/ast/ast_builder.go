@@ -1,46 +1,73 @@
 package ast
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
 // --
-// ASTBaseNodeBuilder
+// NodeAttrsBuilder
 // --
-type ASTBaseNodeBuilder struct {
-	bn ASTNodeBase
+type NodeAttrsBuilder struct {
+	bn NodeAttributes
 }
 
-func NewBaseNodeBuilder() *ASTBaseNodeBuilder {
-	return &ASTBaseNodeBuilder{
-		bn: ASTNodeBase{},
+func NewNodeAttributesBuilder() *NodeAttrsBuilder {
+	return &NodeAttrsBuilder{
+		bn: NodeAttributes{},
 	}
 }
-func (d *ASTBaseNodeBuilder) Build() ASTNodeBase {
+
+func NewAttrNodeFromSitterNode(nodeId NodeId, node *sitter.Node) NodeAttributes {
+	builder := NewNodeAttributesBuilder().
+		WithId(nodeId).
+		WithRange(lsp.NewRangeFromSitterNode(node))
+
+	return builder.Build()
+}
+func (d *NodeAttrsBuilder) Build() NodeAttributes {
 	return d.bn
 }
 
-func (d *ASTBaseNodeBuilder) WithSitterPosRange(start sitter.Point, end sitter.Point) *ASTBaseNodeBuilder {
-	d.bn.StartPos = Position{
+func (d *NodeAttrsBuilder) WithId(id NodeId) *NodeAttrsBuilder {
+	d.bn.Id = id
+	return d
+}
+
+func (d *NodeAttrsBuilder) WithSitterStartEnd(start sitter.Point, end sitter.Point) *NodeAttrsBuilder {
+	d.bn.Range.Start = lsp.Position{
 		Column: uint(start.Column),
 		Line:   uint(start.Row),
 	}
-	d.bn.EndPos = Position{
+	d.bn.Range.End = lsp.Position{
 		Column: uint(end.Column),
 		Line:   uint(end.Row),
 	}
 	return d
 }
 
-func (i *ASTBaseNodeBuilder) WithSitterPos(node *sitter.Node) *ASTBaseNodeBuilder {
-	i.WithSitterPosRange(node.StartPoint(), node.EndPoint())
-	return i
+func (d *NodeAttrsBuilder) WithSitterPos(node *sitter.Node) *NodeAttrsBuilder {
+	d.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
+	return d
 }
 
-func (d *ASTBaseNodeBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *ASTBaseNodeBuilder {
-	d.bn.StartPos = Position{startRow, startCol}
-	d.bn.EndPos = Position{endRow, endCol}
+func (d *NodeAttrsBuilder) WithRangePositions(startRow uint, startCol uint, endRow uint, endCol uint) *NodeAttrsBuilder {
+	d.bn.Range.Start = lsp.Position{startRow, startCol}
+	d.bn.Range.End = lsp.Position{endRow, endCol}
+	return d
+}
+
+func (d *NodeAttrsBuilder) WithRange(aRange lsp.Range) *NodeAttrsBuilder {
+	d.bn.Range = aRange
+	return d
+}
+
+func (d *NodeAttrsBuilder) WithDocComment(docComment string) *NodeAttrsBuilder {
+	d.bn.DocComment = option.Some(&DocComment{
+		body:      docComment,
+		contracts: []*DocCommentContract{},
+	})
 	return d
 }
 
@@ -48,39 +75,54 @@ func (d *ASTBaseNodeBuilder) WithStartEnd(startRow uint, startCol uint, endRow u
 // IdentifierBuilder
 // --
 type IdentifierBuilder struct {
-	bi Identifier
-	bn ASTBaseNodeBuilder
+	ident       *Ident
+	attrBuilder NodeAttrsBuilder
 }
 
 func NewIdentifierBuilder() *IdentifierBuilder {
 	return &IdentifierBuilder{
-		bi: Identifier{},
-		bn: *NewBaseNodeBuilder(),
+		ident:       &Ident{},
+		attrBuilder: *NewNodeAttributesBuilder(),
 	}
 }
 
-func (i *IdentifierBuilder) WithName(name string) *IdentifierBuilder {
-	i.bi.Name = name
+func (i *IdentifierBuilder) WithId(nodeId NodeId) *IdentifierBuilder {
+	i.attrBuilder.WithId(nodeId)
 	return i
 }
-func (i *IdentifierBuilder) WithPath(path string) *IdentifierBuilder {
-	i.bi.Path = path
+func (i *IdentifierBuilder) WithName(name string) *IdentifierBuilder {
+	i.ident.Name = name
+	return i
+}
+
+func (i *IdentifierBuilder) IsCompileTime(ct bool) *IdentifierBuilder {
+	i.ident.CompileTime = ct
 	return i
 }
 
 func (i *IdentifierBuilder) WithSitterPos(node *sitter.Node) *IdentifierBuilder {
-	i.bn.WithSitterPosRange(node.StartPoint(), node.EndPoint())
+	i.attrBuilder.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
+	i.attrBuilder.WithRange(lsp.NewRangeFromSitterNode(node))
+	return i
+}
+
+func (i *IdentifierBuilder) WithSitterRange(node *sitter.Node) *IdentifierBuilder {
+	i.attrBuilder.WithRange(lsp.NewRangeFromSitterNode(node))
 	return i
 }
 
 func (i *IdentifierBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *IdentifierBuilder {
-	i.bn.WithStartEnd(startRow, startCol, endRow, endCol)
+	i.WithRange(lsp.NewRange(startRow, startCol, endRow, endCol))
 	return i
 }
 
-func (i *IdentifierBuilder) Build() Identifier {
-	ident := i.bi
-	ident.ASTNodeBase = i.bn.Build()
+func (i *IdentifierBuilder) WithRange(pathRange lsp.Range) *IdentifierBuilder {
+	i.attrBuilder.WithRange(pathRange)
+	return i
+}
+func (i *IdentifierBuilder) Build() *Ident {
+	ident := i.ident
+	ident.NodeAttributes = i.attrBuilder.Build()
 
 	return ident
 }
@@ -89,27 +131,45 @@ func (i *IdentifierBuilder) Build() Identifier {
 // TypeInfoBuilder
 // --
 type TypeInfoBuilder struct {
-	t TypeInfo
+	typeInfo *TypeInfo
 }
 
 func NewTypeInfoBuilder() *TypeInfoBuilder {
 	return &TypeInfoBuilder{
-		t: TypeInfo{},
+		typeInfo: &TypeInfo{
+			NodeAttributes: NodeAttributes{},
+			Identifier: &Ident{
+				ModulePath: nil,
+			},
+		},
 	}
 }
 
+func (b *TypeInfoBuilder) IsOptional() *TypeInfoBuilder {
+	b.typeInfo.Optional = true
+	return b
+}
+
+func (b *TypeInfoBuilder) IsReference() *TypeInfoBuilder {
+	b.typeInfo.Reference = true
+	return b
+}
 func (b *TypeInfoBuilder) IsBuiltin() *TypeInfoBuilder {
-	b.t.BuiltIn = true
+	b.typeInfo.BuiltIn = true
+	return b
+}
+func (b *TypeInfoBuilder) IsStatic() *TypeInfoBuilder {
+	b.typeInfo.Static = true
 	return b
 }
 func (b *TypeInfoBuilder) IsPointer() *TypeInfoBuilder {
-	b.t.Pointer = 1
+	b.typeInfo.Pointer = 1
 	return b
 }
 
 func (b *TypeInfoBuilder) WithGeneric(name string, startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.Generics = append(
-		b.t.Generics,
+	b.typeInfo.Generics = append(
+		b.typeInfo.Generics,
 		NewTypeInfoBuilder().
 			WithName(name).
 			WithNameStartEnd(startRow, startCol, endRow, endCol).
@@ -121,77 +181,74 @@ func (b *TypeInfoBuilder) WithGeneric(name string, startRow uint, startCol uint,
 }
 
 func (b *TypeInfoBuilder) WithName(name string) *TypeInfoBuilder {
-	b.t.Identifier.Name = name
+	b.typeInfo.Identifier.Name = name
 
 	return b
 }
 
-func (b *TypeInfoBuilder) WithPath(path string) *TypeInfoBuilder {
-	b.t.Identifier.Path = path
+func (b *TypeInfoBuilder) WithPath(path *Ident) *TypeInfoBuilder {
+	b.typeInfo.Identifier.ModulePath = path
 
 	return b
 }
 
 func (b *TypeInfoBuilder) WithNameStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.Identifier.StartPos = Position{startRow, startCol}
-	b.t.Identifier.EndPos = Position{endRow, endCol}
+	b.typeInfo.Identifier.Range.Start = lsp.Position{startRow, startCol}
+	b.typeInfo.Identifier.Range.End = lsp.Position{endRow, endCol}
 	return b
 }
 
 func (b *TypeInfoBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.ASTNodeBase.StartPos = Position{startRow, startCol}
-	b.t.ASTNodeBase.EndPos = Position{endRow, endCol}
+	b.typeInfo.NodeAttributes.Range.Start = lsp.Position{startRow, startCol}
+	b.typeInfo.NodeAttributes.Range.End = lsp.Position{endRow, endCol}
 	return b
 }
 
-func (i *TypeInfoBuilder) Build() TypeInfo {
-	return i.t
+func (b *TypeInfoBuilder) Build() *TypeInfo {
+	return b.typeInfo
 }
 
 // --
 // DefDeclBuilder
 // --
 type DefDeclBuilder struct {
-	d DefDecl
-	a ASTBaseNodeBuilder
+	def DefDecl
+	a   NodeAttrsBuilder
 }
 
-func NewDefDeclBuilder() *DefDeclBuilder {
+func NewDefDeclBuilder(nodeId NodeId) *DefDeclBuilder {
 	return &DefDeclBuilder{
-		d: DefDecl{},
-		a: *NewBaseNodeBuilder(),
+		def: DefDecl{
+			Ident: NewIdentifierBuilder().Build(),
+		},
+		a: *NewNodeAttributesBuilder(),
 	}
 }
 
-func (b *DefDeclBuilder) WithResolvesToType(typeInfo TypeInfo) *DefDeclBuilder {
-	b.d.resolvesToType = option.Some(typeInfo)
-	return b
-}
-
-func (b *DefDeclBuilder) WithResolvesTo(resolvesTo string) *DefDeclBuilder {
-	b.d.resolvesTo = resolvesTo
-	return b
-}
-
 func (b *DefDeclBuilder) WithSitterPos(node *sitter.Node) *DefDeclBuilder {
-	b.a.WithSitterPosRange(node.StartPoint(), node.EndPoint())
+	b.a.WithSitterStartEnd(node.StartPoint(), node.EndPoint())
 	return b
 }
 
 func (b *DefDeclBuilder) WithName(name string) *DefDeclBuilder {
-	b.d.Name.Name = name
+	b.def.Ident.Name = name
 	return b
 }
 func (b *DefDeclBuilder) WithIdentifierSitterPos(node *sitter.Node) *DefDeclBuilder {
-	b.d.Name.StartPos = Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
-	b.d.Name.EndPos = Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
+	b.def.Ident.Range.Start = lsp.Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+	b.def.Ident.Range.End = lsp.Position{uint(node.EndPoint().Row), uint(node.EndPoint().Column)}
 
+	return b
+}
+
+func (b *DefDeclBuilder) WithExpression(expression Expression) *DefDeclBuilder {
+	b.def.Expr = expression
 	return b
 }
 
 func (b *DefDeclBuilder) Build() DefDecl {
-	def := b.d
-	def.ASTNodeBase = b.a.Build()
+	def := b.def
+	def.NodeAttributes = b.a.Build()
 
 	return def
 }

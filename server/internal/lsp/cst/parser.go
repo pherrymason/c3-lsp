@@ -1,6 +1,7 @@
 package cst
 
-//#include "tree_sitter/parser.h"
+// #cgo CFLAGS: -std=c11 -fPIC
+// #include "tree_sitter/parser.h"
 //TSLanguage *tree_sitter_c3();
 import "C"
 import (
@@ -25,7 +26,8 @@ func GetParsedTreeFromString(source string) *sitter.Tree {
 	sourceCode := []byte(source)
 	parser := NewSitterParser()
 	n := parser.Parse(nil, sourceCode)
-
+	parser.Close()
+	
 	return n
 }
 

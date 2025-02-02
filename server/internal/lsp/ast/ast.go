@@ -1,231 +1,198 @@
 package ast
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	sitter "github.com/smacker/go-tree-sitter"
+	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-type Position struct {
-	Line, Column uint
-}
+// This package is heavily inspired by the official go/ast.go package.
+// Some comment descriptions might be literal copy-pastes where they apply.
 
 const (
 	ResolveStatusPending = iota
 	ResolveStatusDone
+
+	// literals
+	NULL
+	INT   // 12345
+	FLOAT // 123.45
+	IMAG  // 123.45i
+	CHAR  // 'a'
+	STRING
+	BOOLEAN
+
+	// Types
+	VAR
+	CONST
+	STRUCT
+	AnonymousStructField
+	UNION
+	INTERFACE
+	ENUM
+	FAULT
+	DEF
+	FUNCTION
+	FIELD
 )
 
-type ASTNodeBase struct {
-	StartPos, EndPos Position
-	Attributes       []string
+type Token int
+type NodeId uint
+
+// ----------------------------------------------------------------------------
+// Interfaces
+//
+// There are 3 main classes of nodes:
+// - Expressions and types nodes
+// - Statement nodes
+// - Declaration nodes
+//
+// All nodes contain position information marking the beginning and end of the
+// corresponding source text segment.
+
+type Node interface {
+	StartPosition() lsp.Position
+	EndPosition() lsp.Position
+	GetRange() lsp.Range
+	GetId() NodeId
+	SetDocComment(docComment *DocComment)
+	GetDocComment() option.Option[*DocComment]
 }
 
-func (n ASTNodeBase) Start() Position {
-	return n.StartPos
-}
-
-func (n ASTNodeBase) End() Position {
-	return n.EndPos
-}
-
-func (n *ASTNodeBase) SetPos(start sitter.Point, end sitter.Point) {
-	n.StartPos = Position{Line: uint(start.Row), Column: uint(start.Column)}
-	n.EndPos = Position{Line: uint(end.Row), Column: uint(end.Column)}
-}
-
-type ASTNode interface {
-	Start() Position
-	End() Position
-}
-
-type File struct {
-	ASTNodeBase
-	Name    string
-	Modules []Module
-}
-
-type Module struct {
-	ASTNodeBase
-	Name              string
-	GenericParameters []string
-	Functions         []Declaration
-	Macros            []Declaration
-	Declarations      []Declaration
-	Imports           []string
+type Expression interface {
+	Node
+	exprNode()
 }
 
 type Declaration interface {
-	ASTNode
+	Node
+	declNode()
 }
 
-type VariableDecl struct {
-	ASTNodeBase
-	Names       []Identifier
-	Type        TypeInfo
-	Initializer Expression
+type Statement interface {
+	Node
+	stmtNode()
 }
 
-type ConstDecl struct {
-	ASTNodeBase
-	Names []Identifier
-	Type  TypeInfo
+type EmptyNode struct {
+	NodeAttributes
 }
 
-type EnumDecl struct {
-	ASTNodeBase
-	Name       string
-	BaseType   TypeInfo
-	Properties []EnumProperty
-	Members    []EnumMember
+func (n *EmptyNode) declNode() {}
+func (n *EmptyNode) exprNode() {}
+func (n *EmptyNode) stmtNode() {}
+
+// NodeAttributes is a struct that contains the common information all
+// AST Nodes contains, like position or other attributes
+type NodeAttributes struct {
+	Range      lsp.Range
+	Attributes []string
+	Id         NodeId
+	DocComment option.Option[*DocComment]
 }
 
-type EnumProperty struct {
-	ASTNodeBase
-	Type TypeInfo
-	Name Identifier
+func (n NodeAttributes) StartPosition() lsp.Position { return n.Range.Start }
+func (n NodeAttributes) EndPosition() lsp.Position   { return n.Range.End }
+func (n NodeAttributes) GetRange() lsp.Range         { return n.Range }
+func (n NodeAttributes) GetId() NodeId               { return n.Id }
+func (n *NodeAttributes) SetDocComment(docComment *DocComment) {
+	if docComment != nil {
+		n.DocComment = option.Some(docComment)
+	} else {
+		n.DocComment = option.None[*DocComment]()
+	}
+}
+func (n *NodeAttributes) GetDocComment() option.Option[*DocComment] { return n.DocComment }
+
+func ChangeNodePosition(n *NodeAttributes, start sitter.Point, end sitter.Point) {
+	n.Range.Start = lsp.Position{Line: uint(start.Row), Column: uint(start.Column)}
+	n.Range.End = lsp.Position{Line: uint(end.Row), Column: uint(end.Column)}
 }
 
-type EnumMember struct {
-	ASTNodeBase
-	Name  Identifier
-	Value CompositeLiteral
+type File struct {
+	NodeAttributes
+	URI     string
+	Modules []*Module
 }
 
+func NewFile(nodeId NodeId, uri protocol.URI, aRange lsp.Range, modules []*Module) *File {
+	node := &File{
+		URI: uri,
+		NodeAttributes: NewNodeAttributesBuilder().
+			WithId(nodeId).
+			WithRange(aRange).Build(),
+		Modules: modules,
+	}
+
+	return node
+}
+func (f *File) AddModule(module *Module) {
+	f.Modules = append(f.Modules, module)
+}
+
+type Module struct {
+	NodeAttributes
+	Name              string
+	GenericParameters []string
+	Declarations      []Declaration // Top level declarations
+	Imports           []*Import     // Imports in this file
+}
+
+func NewModule(nodeId NodeId, name string, aRange lsp.Range, file *File) *Module {
+	return &Module{
+		Name: name,
+		NodeAttributes: NodeAttributes{
+			Id:    nodeId,
+			Range: aRange,
+		},
+	}
+}
+
+type Import struct {
+	NodeAttributes
+	Path *Ident
+}
+
+func (*Import) stmtNode() {}
+
+// Deprecated not used
 type PropertyValue struct {
-	ASTNodeBase
+	NodeAttributes
 	Name  string
 	Value Expression
 }
 
-const (
-	StructTypeNormal = iota
-	StructTypeUnion
-	StructTypeBitStruct
-)
-
-type StructType int
-
-type StructDecl struct {
-	ASTNodeBase
-	Name        string
-	BackingType option.Option[TypeInfo]
-	Members     []StructMemberDecl
-	StructType  StructType
-	Implements  []string
-}
-
-type StructMemberDecl struct {
-	ASTNodeBase
-	Names     []Identifier
-	Type      TypeInfo
-	BitRange  option.Option[[2]uint]
-	IsInlined bool
-}
-
-type FaultDecl struct {
-	ASTNodeBase
-	Name        Identifier
-	BackingType option.Option[TypeInfo]
-	Members     []FaultMember
-}
-
 type FaultMember struct {
-	ASTNodeBase
-	Name Identifier
-}
-
-type DefDecl struct {
-	ASTNodeBase
-	Name           Identifier
-	resolvesTo     string
-	resolvesToType option.Option[TypeInfo]
-}
-
-type MacroDecl struct {
-	ASTNodeBase
-	Signature MacroSignature
-	Body      Block
+	NodeAttributes
+	Name *Ident
 }
 
 type MacroSignature struct {
-	Name       Identifier
-	Parameters []FunctionParameter
-}
-
-type FunctionDecl struct {
-	ASTNodeBase
-	ParentTypeId option.Option[Identifier]
-	Signature    FunctionSignature
-	Body         Block
-}
-
-type FunctionSignature struct {
-	ASTNodeBase
-	Name       Identifier
-	Parameters []FunctionParameter
-	ReturnType TypeInfo
+	Name       *Ident
+	Parameters []*FunctionParameter
 }
 
 type FunctionParameter struct {
-	ASTNodeBase
-	Name Identifier
-	Type TypeInfo
+	NodeAttributes
+	Name *Ident
+	Type *TypeInfo
 }
 
+// Block
+// Only used in MacroDecl.Body
 type Block struct {
-	ASTNodeBase
+	NodeAttributes
 	Declarations []Declaration
-	Statements   []ASTNode
+	Statements   []Expression
 }
 
-type FunctionCall struct {
-	ASTNodeBase
+type DeclOrExpr struct {
+	NodeAttributes
+	Decl Declaration
+	Expr Expression
+	Stmt Statement
 }
 
-type InterfaceDecl struct {
-	ASTNodeBase
-	Name    Identifier
-	Methods []FunctionSignature
-}
-
-type TypeInfo struct {
-	ASTNodeBase
-	ResolveStatus int
-	Identifier    Identifier
-	Pointer       uint
-	Optional      bool
-	BuiltIn       bool
-	Generics      []TypeInfo
-}
-
-type Identifier struct {
-	ASTNodeBase
-	Name string
-	Path string
-}
-
-type Literal struct {
-	ASTNodeBase
-	Value string
-}
-type IntegerLiteral struct {
-	ASTNodeBase
-	Value uint
-}
-
-type BoolLiteral struct {
-	ASTNodeBase
-	Value bool
-}
-
-type CompositeLiteral struct {
-	ASTNodeBase
-	Values []Expression
-}
-
-// BinaryExpr representa una expresión binaria (como suma, resta, etc.)
-type BinaryExpr struct {
-	ASTNodeBase
-	Left     ASTNode
-	Operator string
-	Right    ASTNode
-}
+func (*DeclOrExpr) exprNode() {}
+func (*DeclOrExpr) declNode() {}

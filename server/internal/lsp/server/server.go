@@ -2,12 +2,15 @@ package server
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
+	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"log"
 	"time"
 
 	"github.com/bep/debounce"
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
-	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
+	ps "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	p "github.com/pherrymason/c3-lsp/pkg/parser"
@@ -25,34 +28,26 @@ type Server struct {
 	options ServerOpts
 	version string
 
-	state  *l.ProjectState
+	workspace    *analysis.Workspace
+	documents    *document.Storage
+	astConverter *factory.ASTConverter
+	symbolTable  *analysis.SymbolTable
+
+	state  *ps.ProjectState // To remove on 0.4 release
 	parser *p.Parser
-	search search.Search
+	search search.Search // To remove on 0.4 release
 
 	diagnosticDebounced func(func())
 }
 
-// ServerOpts holds the options to create a new Server.
-/*type ServerOpts struct {
-	C3Version   option.Option[string]
-	C3CPath     option.Option[string]
-	LogFilepath option.Option[string]
-
-	DiagnosticsDelay   time.Duration
-	DiagnosticsEnabled bool
-
-	SendCrashReports bool
-	Debug            bool
-}*/
-
 func NewServer(opts ServerOpts, appName string, version string) *Server {
-	var logpath *string
+	var logPath *string
 	if opts.LogFilepath.IsSome() {
 		v := opts.LogFilepath.Get()
-		logpath = &v
+		logPath = &v
 	}
 
-	commonlog.Configure(2, logpath) // This increases logging verbosity (optional)
+	commonlog.Configure(2, logPath) // This increases logging verbosity (optional)
 
 	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", appName))
 
@@ -71,7 +66,7 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 
 	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3.Version)
 
-	state := l.NewProjectState(logger, option.Some(requestedLanguageVersion.Number), opts.Debug)
+	state := ps.NewProjectState(logger, option.Some(requestedLanguageVersion.Number), opts.Debug)
 	parser := p.NewParser(logger)
 	search := search.NewSearch(logger, opts.Debug)
 
@@ -79,6 +74,11 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		server:  glspServer,
 		options: opts,
 		version: version,
+
+		workspace: analysis.NewWorkspace(),
+		//documents:    document.NewStore(),
+		//astConverter: factory.NewASTConverter(),
+		//symbolTable:  analysis.NewSymbolTable(),
 
 		state:  &state,
 		parser: &parser,
@@ -99,7 +99,7 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		}
 
 		context.Notify(protocol.ServerWindowShowMessage, protocol.ShowMessageParams{
-			Type:    protocol.MessageTypeInfo,
+			TypeDescription:    protocol.MessageTypeInfo,
 			Message: fmt.Sprintf("SendCrash: %s", sendCrashStatus),
 		})
 		*/
@@ -145,8 +145,8 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 }
 
 // Run starts the Language Server in stdio mode.
-func (s *Server) Run() error {
-	return errors.Wrap(s.server.RunStdio(), "lsp")
+func (srv *Server) Run() error {
+	return errors.Wrap(srv.server.RunStdio(), "lsp")
 }
 
 func shutdown(context *glsp.Context) error {

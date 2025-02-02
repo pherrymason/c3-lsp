@@ -40,10 +40,10 @@ type ServerOptsJson struct {
 	}
 }
 
-func (s *Server) loadServerConfigurationForWorkspace(path string) {
+func (srv *Server) loadServerConfigurationForWorkspace(path string) {
 	file, err := os.Open(path + "/c3lsp.json")
 	if err != nil {
-		// No configuration project file found.
+		// No configuration documents file found.
 		log.Print("No configuration " + path + "/c3lsp.json found")
 		return
 	}
@@ -56,7 +56,7 @@ func (s *Server) loadServerConfigurationForWorkspace(path string) {
 	if err != nil {
 		log.Fatalf("Error reading config json: %v", err)
 	}
-	log.Printf("%s", data)
+	log.Printf("%srv", data)
 
 	var options ServerOptsJson
 	err = json.Unmarshal(data, &options)
@@ -65,31 +65,31 @@ func (s *Server) loadServerConfigurationForWorkspace(path string) {
 	}
 
 	if options.C3.StdlibPath != nil {
-		s.options.C3.StdlibPath = option.Some(*options.C3.StdlibPath)
-		log.Printf("Stdlib:%s", *options.C3.StdlibPath)
-		log.Printf("Setted Stdlib:%s", s.options.C3.StdlibPath.Get())
+		srv.options.C3.StdlibPath = option.Some(*options.C3.StdlibPath)
+		log.Printf("Stdlib:%srv", *options.C3.StdlibPath)
+		log.Printf("Setted Stdlib:%srv", srv.options.C3.StdlibPath.Get())
 	}
 
 	if options.C3.Version != nil {
-		s.options.C3.Version = option.Some(*options.C3.Version)
+		srv.options.C3.Version = option.Some(*options.C3.Version)
 	}
 
 	if options.C3.Path != nil {
-		s.options.C3.Path = option.Some(*options.C3.Path)
+		srv.options.C3.Path = option.Some(*options.C3.Path)
 		// Get version from binary
 	}
 
 	if len(options.C3.CompileArgs) > 0 {
-		s.options.C3.CompileArgs = options.C3.CompileArgs
+		srv.options.C3.CompileArgs = options.C3.CompileArgs
 	}
 
-	c3Version := c3c.GetC3Version(s.options.C3.Path)
+	c3Version := c3c.GetC3Version(srv.options.C3.Path)
 	if c3Version.IsSome() {
-		s.options.C3.Version = c3Version
+		srv.options.C3.Version = c3Version
 	}
 
-	requestedLanguageVersion := checkRequestedLanguageVersion(s.options.C3.Version)
-	s.state.SetLanguageVersion(requestedLanguageVersion)
+	requestedLanguageVersion := checkRequestedLanguageVersion(srv.options.C3.Version)
+	srv.state.SetLanguageVersion(requestedLanguageVersion)
 
 	// Change log filepath?
 	// Should be able to do that form c3lsp.json?

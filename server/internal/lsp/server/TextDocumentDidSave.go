@@ -6,7 +6,7 @@ import (
 )
 
 // Support "Hover"
-func (s *Server) TextDocumentDidSave(ctx *glsp.Context, params *protocol.DidSaveTextDocumentParams) error {
-	s.RunDiagnostics(s.state, ctx.Notify, true)
+func (srv *Server) TextDocumentDidSave(ctx *glsp.Context, params *protocol.DidSaveTextDocumentParams) error {
+	srv.RunDiagnostics(srv.state, ctx.Notify, true)
 	return nil
 }

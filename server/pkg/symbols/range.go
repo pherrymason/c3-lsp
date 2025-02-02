@@ -5,6 +5,9 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+// Range
+//
+// Deprecated: You should use lsp.Range instead
 type Range struct {
 	Start Position
 	End   Position

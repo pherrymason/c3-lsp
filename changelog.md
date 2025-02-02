@@ -1,5 +1,11 @@
 # C3LSP Release Notes
 
+## 0.5
+
+- Simplify search code: Based now on visitor pattern traversing an actual AST built from treesitter's CST.
+- Better handling following chained expressions.
+- Goto on module offers multiple locations.
+
 ## 0.4.0
 
 - Support <* and *> comments (https://github.com/pherrymason/c3-lsp/pull/99) Credit to @PgBiel
@@ -16,6 +22,7 @@
 
 
 ## 0.3.3
+
 - Support named and anonymous sub structs.
 - Fix clearing old diagnostics. (#89, #83, #71, #62)
 - Fixed crash in some scenarios where no results were found.

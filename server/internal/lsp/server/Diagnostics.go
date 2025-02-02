@@ -13,37 +13,37 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool) {
-	if !s.options.Diagnostics.Enabled {
+func (srv *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool) {
+	if !srv.options.Diagnostics.Enabled {
 		return
 	}
 
 	runDiagnostics := func() {
-		out, stdErr, err := c3c.CheckC3ErrorsCommand(s.options.C3, state.GetProjectRootURI())
+		out, stdErr, err := c3c.CheckC3ErrorsCommand(srv.options.C3, state.GetProjectRootURI())
 		log.Println("output:", out.String())
 		log.Println("output:", stdErr.String())
 		if err == nil {
-			s.clearOldDiagnostics(s.state, notify)
+			srv.clearOldDiagnostics(srv.state, notify)
 			return
 		}
 
-		log.Println("An error:", err)
+		//log.Println("An error:", err)
 		errorsInfo, diagnosticsDisabled := extractErrorDiagnostics(stdErr.String())
 
 		if diagnosticsDisabled {
-			s.options.Diagnostics.Enabled = false
-			s.clearOldDiagnostics(s.state, notify)
+			srv.options.Diagnostics.Enabled = false
+			srv.clearOldDiagnostics(srv.state, notify)
 			return
 		}
 
 		// Send empty diagnostics for those files that had previously an error, but not anymore.
 		// If this is not done, the IDE will keep displaying the errors.
-		for k := range s.state.GetDocumentDiagnostics() {
+		for k := range srv.state.GetDocumentDiagnostics() {
 			if !hasDiagnosticForFile(k, errorsInfo) {
-				s.state.RemoveDocumentDiagnostics(k)
+				srv.state.RemoveDocumentDiagnostics(k)
 				notify(protocol.ServerTextDocumentPublishDiagnostics,
 					protocol.PublishDiagnosticsParams{
-						URI:         fs.ConvertPathToURI(k, s.options.C3.StdlibPath),
+						URI:         fs.ConvertPathToURI(k, srv.options.C3.StdlibPath),
 						Diagnostics: []protocol.Diagnostic{},
 					})
 			}
@@ -57,14 +57,14 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 			notify(
 				protocol.ServerTextDocumentPublishDiagnostics,
 				protocol.PublishDiagnosticsParams{
-					URI:         fs.ConvertPathToURI(errInfo.File, s.options.C3.StdlibPath),
+					URI:         fs.ConvertPathToURI(errInfo.File, srv.options.C3.StdlibPath),
 					Diagnostics: newDiagnostics,
 				})
 		}
 	}
 
 	if delay {
-		s.diagnosticDebounced(runDiagnostics)
+		srv.diagnosticDebounced(runDiagnostics)
 	} else {
 		runDiagnostics()
 	}
@@ -121,11 +121,11 @@ func extractErrorDiagnostics(output string) ([]ErrorInfo, bool) {
 	return errorsInfo, diagnosticsDisabled
 }
 
-func (s *Server) clearOldDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc) {
+func (srv *Server) clearOldDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc) {
 	for k := range state.GetDocumentDiagnostics() {
-		go notify(protocol.ServerTextDocumentPublishDiagnostics,
+		notify(protocol.ServerTextDocumentPublishDiagnostics,
 			protocol.PublishDiagnosticsParams{
-				URI:         fs.ConvertPathToURI(k, s.options.C3.StdlibPath),
+				URI:         fs.ConvertPathToURI(k, srv.options.C3.StdlibPath),
 				Diagnostics: []protocol.Diagnostic{},
 			})
 	}

@@ -6,28 +6,28 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (h *Server) WorkspaceDidChangeWatchedFiles(context *glsp.Context, params *protocol.DidChangeWatchedFilesParams) error {
+func (srv *Server) WorkspaceDidChangeWatchedFiles(context *glsp.Context, params *protocol.DidChangeWatchedFilesParams) error {
 	return nil
 }
 
-func (h *Server) WorkspaceDidDeleteFiles(context *glsp.Context, params *protocol.DeleteFilesParams) error {
+func (srv *Server) WorkspaceDidDeleteFiles(context *glsp.Context, params *protocol.DeleteFilesParams) error {
 	for _, file := range params.Files {
 		// The file has been removed! update our indices
 		docId := utils.NormalizePath(file.URI)
-		//h.documents.Delete(file.URI)
-		h.state.DeleteDocument(docId)
+		//srv.documents.Delete(file.URI)
+		srv.state.DeleteDocument(docId)
 	}
 
 	return nil
 }
 
-func (h *Server) WorkspaceDidRenameFiles(context *glsp.Context, params *protocol.RenameFilesParams) error {
+func (srv *Server) WorkspaceDidRenameFiles(context *glsp.Context, params *protocol.RenameFilesParams) error {
 	for _, file := range params.Files {
-		//h.documents.Rename(file.OldURI, file.NewURI)
+		//srv.documents.Rename(file.OldURI, file.NewURI)
 
 		oldDocId := utils.NormalizePath(file.OldURI)
 		newDocId := utils.NormalizePath(file.NewURI)
-		h.state.RenameDocument(oldDocId, newDocId)
+		srv.state.RenameDocument(oldDocId, newDocId)
 	}
 
 	return nil
