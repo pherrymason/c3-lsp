@@ -47,14 +47,14 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 		)
 	}
 
-	docComment := symbol.NodeDecl.GetDocComment()
-	if docComment.IsSome() {
-		extraLine += "\n\n" + docComment.Get().DisplayBodyWithContracts()
-	}
-
 	isModule := false
 	if !isModule {
 		extraLine += "\n\nIn module **[" + symbol.Module.String() + "]**"
+	}
+
+	docComment := symbol.NodeDecl.GetDocComment()
+	if docComment.IsSome() {
+		extraLine += "\n\n" + docComment.Get().DisplayBodyWithContracts()
 	}
 
 	hover := protocol.Hover{
