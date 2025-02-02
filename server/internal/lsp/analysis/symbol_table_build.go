@@ -82,6 +82,19 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 	case *ast.DefDecl:
 		v.currentScope.RegisterSymbol(n.Ident.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
 
+	case *ast.MacroDecl:
+		v.currentScope.RegisterSymbol(
+			n.Signature.Name.Name,
+			n.Range,
+			n,
+			v.currentModule,
+			v.currentFilePath.URI,
+			ast.MACRO,
+		)
+		if n.Body != nil {
+			v.pushScope(n)
+		}
+
 	case *ast.FunctionDecl:
 		_, symbol := v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FUNCTION)
 		if n.Body != nil {

@@ -61,7 +61,7 @@ func (d *Storage) OpenDocumentFromPath(path string, text string, version uint) {
 		Text:     text,
 		Owned:    false,
 		Version:  version,
-		Ast:      converter.ConvertToAST(factory.GetCST(text), text, path),
+		Ast:      converter.ConvertToAST(factory.GetCST(text).RootNode(), text, path),
 	}
 
 	d.Documents[uri] = document

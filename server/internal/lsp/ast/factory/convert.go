@@ -61,12 +61,12 @@ func (c *ASTConverter) getNextID() ast.NodeId {
 	return c.idGenerator.GenerateID()
 }
 
-func (c *ASTConverter) ConvertToAST(cstNode *sitter.Tree, sourceCode string, fileName string) *ast.File {
+func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) *ast.File {
 	c.generateConversionInfo()
 	source := []byte(sourceCode)
 
 	var prg *ast.File
-	rootNode := cstNode.RootNode()
+	rootNode := cstNode
 	if rootNode.Type() == "source_file" {
 		prg = ast.NewFile(c.getNextID(), fileName, lsp.NewRangeFromSitterNode(rootNode), []*ast.Module{})
 	}

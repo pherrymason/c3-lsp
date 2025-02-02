@@ -33,7 +33,7 @@ func parseBodyWithCursor(body string) (string, lsp.Position) {
 
 func getTree(source string, fileName string) *ast.File {
 	astConverter := factory.NewASTConverter()
-	tree := astConverter.ConvertToAST(factory.GetCST(source), source, fileName)
+	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, fileName)
 
 	return tree
 }

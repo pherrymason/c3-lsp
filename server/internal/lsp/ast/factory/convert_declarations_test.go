@@ -20,7 +20,7 @@ func TestConvertToAST_module(t *testing.T) {
 		source := `module foo;
 	int dummy;`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		assert.Equal(t, "foo", tree.Modules[0].Name)
 		assert.Equal(t, lsp.NewRange(0, 0, 1, 11), tree.Modules[0].Range)
@@ -31,7 +31,7 @@ func TestConvertToAST_module(t *testing.T) {
 		number + 2;`
 
 		cv := NewASTConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "path/file/xxx.c3")
 
 		assert.Equal(t, "path_file_xxx", tree.Modules[0].Name)
 		assert.Equal(t, lsp.NewRange(0, 0, 1, 13), tree.Modules[0].Range)
@@ -43,7 +43,7 @@ func TestConvertToAST_module(t *testing.T) {
 	module foo;`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "path/file/xxx.c3")
 
 		assert.Equal(t, "path_file_xxx", tree.Modules[0].Name)
 		assert.Equal(t, lsp.NewRange(1, 1, 1, 18), tree.Modules[0].Range, "Wrong range in anonymous module")
@@ -63,7 +63,7 @@ func TestConvertToAST_module(t *testing.T) {
 	};`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "path/file/xxx.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "path/file/xxx.c3")
 
 		assert.Equal(t, "foo", tree.Modules[0].Name)
 		assert.Equal(t, lsp.NewRange(1, 1, 4, 27), tree.Modules[0].Range, "Range of module foo is wrong")
@@ -80,7 +80,7 @@ func TestConvertToAST_module_with_generics(t *testing.T) {
 	source := `module foo(<TypeDescription>);`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 	assert.Equal(t, []string{"TypeDescription"}, tree.Modules[0].GenericParameters)
 }
@@ -89,7 +89,7 @@ func TestConvertToAST_module_with_attributes(t *testing.T) {
 	source := `module foo @private;`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 	assert.Equal(t, []string{"@private"}, tree.Modules[0].Attributes)
 }
@@ -100,7 +100,7 @@ func TestConvertToAST_module_with_imports(t *testing.T) {
 	import foo2::subfoo;`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 	assert.Equal(t, "foo", tree.Modules[0].Imports[0].Path.Name)
 	assert.Equal(t, lsp.NewRange(1, 1, 1, 12), tree.Modules[0].Imports[0].Range)
@@ -119,7 +119,7 @@ func TestConvertToAST_global_variable(t *testing.T) {
 	int hello;`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		spec := decl.Spec.(*ast.ValueSpec)
@@ -136,7 +136,7 @@ func TestConvertToAST_global_variable(t *testing.T) {
 	int hello = 3;`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 
@@ -154,7 +154,7 @@ func TestConvertToAST_global_variable(t *testing.T) {
 	int dog, cat, elephant;`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		assert.Len(t, decl.Spec.(*ast.ValueSpec).Names, 3)
@@ -174,7 +174,7 @@ func TestConvertToAST_global_variable(t *testing.T) {
 	const int HELLO = 3;`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		assert.Equal(t, ast.Token(ast.CONST), decl.Token)
@@ -200,7 +200,7 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 	enum TypedColors:int { RED, BLUE, GREEN } // Typed enums`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		assert.Equal(t, ast.Token(ast.ENUM), enumDecl.Token)
@@ -233,7 +233,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 	}`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 	enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 	enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
@@ -274,7 +274,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 	}`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		decl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		spec := decl.Spec.(*ast.TypeSpec)
@@ -351,7 +351,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 	}`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		structDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		structType := structDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
@@ -371,7 +371,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 		}`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		structDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		structType := structDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
@@ -406,7 +406,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 	}`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 		structDecl := tree.Modules[0].Declarations[1].(*ast.GenDecl)
 		members := structDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType).Fields
 
@@ -533,7 +533,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 	}`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 		structDecl := tree.Modules[0].Declarations[1].(*ast.GenDecl)
 		members := structDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType).Fields
 
@@ -554,7 +554,7 @@ func TestConvertToAST_union_decl(t *testing.T) {
 	}`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 	unionDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 
 	assert.Equal(t, ast.StructTypeUnion, int(unionDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType).Type))
@@ -572,7 +572,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 	}`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 		bitStructDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		structType := bitStructDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
 
@@ -620,7 +620,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 	}`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 		bitStructDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		structType := bitStructDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType)
 
@@ -660,7 +660,7 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 	};`
 
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 		faultDecl := tree.Modules[0].Declarations[0].(*ast.FaultDecl)
 
 		assert.Equal(
@@ -712,7 +712,7 @@ func TestConvertToAST_def_declares_type(t *testing.T) {
 		<* abc *>
 		def Kilo = int;`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		defRow := uint(2)
 		assert.Equal(t,
@@ -734,7 +734,7 @@ func TestConvertToAST_def_declares_type(t *testing.T) {
 	t.Run("parses def declaring function", func(t *testing.T) {
 		source := `def Kilo = fn void (int);`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		assert.Equal(t,
 			&ast.FuncType{
@@ -775,7 +775,7 @@ func TestConvertToAST_function_declaration(t *testing.T) {
 		return 1;
 	}`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 		assert.Equal(t, lsp.Position{Line: 9, Column: 1}, fnDecl.NodeAttributes.Range.Start)
@@ -815,7 +815,7 @@ Hello world.
 			return 1;
 		}`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -840,7 +840,7 @@ jkl`
 			return 1;
 		}`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -859,7 +859,7 @@ jkl`
 		source := `module foo;
 	fn void init_window(int width, int height, char* title) @extern("InitWindow");`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -875,7 +875,7 @@ jkl`
 		return 1;
 	}`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -889,7 +889,7 @@ jkl`
 		return 1;
 	}`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -944,7 +944,7 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 		return 1;
 	}`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		methodDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -996,7 +996,7 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 		return 1;
 	}`
 		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		methodDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -1011,7 +1011,7 @@ func TestConvertToAST_method_declaration_mutable(t *testing.T) {
 		return 1;
 	}`
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 	methodDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
 	assert.Equal(t,
@@ -1038,7 +1038,7 @@ func TestConvertToAST_interface_decl(t *testing.T) {
 	}`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 	interfaceDecl := tree.Modules[0].Declarations[0].(*ast.InterfaceDecl)
 
 	assert.Equal(t, lsp.NewRange(2, 1, 5, 2), interfaceDecl.GetRange())
@@ -1054,7 +1054,7 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 	}`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 	macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
 
 	startRow := uint(2)

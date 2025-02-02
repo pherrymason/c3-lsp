@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -19,16 +20,17 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	def Int32 = int;
 	fn void foo() {} 
 	fn void Obj.method() {}
+	macro m(x) { return x + 2;}
 	`
 
 	astConverter := factory.NewASTConverter()
-	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
+	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
 
 	result := BuildSymbolTable(tree, "")
 
 	modulesGroup := result.scopeTree["file.c3"]
 	scope := modulesGroup.GetModuleScope("foo")
-	assert.Equal(t, 14, len(scope.Symbols))
+	assert.Equal(t, 15, len(scope.Symbols))
 	assert.Equal(t, "cat", scope.Symbols[0].Name)
 	assert.Equal(t, "dog", scope.Symbols[1].Name)
 	assert.Equal(t, "Colors", scope.Symbols[2].Name)
@@ -43,6 +45,8 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	assert.Equal(t, "Int32", scope.Symbols[11].Name)
 	assert.Equal(t, "foo", scope.Symbols[12].Name)
 	assert.Equal(t, "method", scope.Symbols[13].Name)
+	assert.Equal(t, "m", scope.Symbols[14].Name)
+	assert.Equal(t, ast.Token(ast.MACRO), scope.Symbols[14].Kind)
 
 	for _, symbol := range scope.Symbols {
 		assert.Equal(t, "file.c3", symbol.URI, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.URI))
@@ -76,7 +80,7 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 	}`
 
 	astConverter := factory.NewASTConverter()
-	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
+	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
 
 	result := BuildSymbolTable(tree, "")
 
@@ -100,7 +104,7 @@ func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 	`
 
 	astConverter := factory.NewASTConverter()
-	tree := astConverter.ConvertToAST(factory.GetCST(source), source, "file.c3")
+	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
 
 	result := BuildSymbolTable(tree, "")
 

@@ -35,6 +35,7 @@ const (
 	DEF
 	FUNCTION
 	FIELD
+	MACRO
 )
 
 type Token int

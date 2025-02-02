@@ -77,7 +77,7 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 			` + tt.input
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			varDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 			assert.Equal(t, tt.expected, varDecl)
@@ -166,7 +166,7 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.DeclarationStmt).Decl) //(VariableDecl))
@@ -207,7 +207,7 @@ func TestConvertToAST_continue_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.ContinueStatement))
@@ -248,7 +248,7 @@ func TestConvertToAST_break_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.BreakStatement))
@@ -321,7 +321,7 @@ func TestConvertToAST_switch_stmt(t *testing.T) {
 			}`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 	funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 	assert.Equal(t, expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.SwitchStatement))
@@ -337,7 +337,7 @@ func TestConvertToAST_switch_with_ident_in_case(t *testing.T) {
 			}`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 	funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -361,7 +361,7 @@ func TestConvertToAST_switch_with_range_in_case(t *testing.T) {
 			}`
 
 	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 	funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 
@@ -451,7 +451,7 @@ func TestConvertToAST_nextcase(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.Nextcase))
@@ -609,7 +609,7 @@ func TestConvertToAST_if_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.IfStmt))
@@ -886,7 +886,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.ForStatement))
@@ -1010,7 +1010,7 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.ForeachStatement))
@@ -1097,7 +1097,7 @@ func TestConvertToAST_while_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.WhileStatement))
@@ -1188,7 +1188,7 @@ func TestConvertToAST_do_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.DoStatement))
@@ -1251,7 +1251,7 @@ func TestConvertToAST_defer_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.DeferStatement))
@@ -1311,7 +1311,7 @@ func TestConvertToAST_assert_stmt(t *testing.T) {
 			}`
 
 			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 			funcDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.AssertStatement))

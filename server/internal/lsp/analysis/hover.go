@@ -45,6 +45,19 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 			f.Signature.Name.Name,
 			strings.Join(args, ", "),
 		)
+
+	case ast.MACRO:
+		f := symbol.NodeDecl.(*ast.MacroDecl)
+		args := []string{}
+		for _, arg := range f.Signature.Parameters {
+			args = append(args, arg.Type.Identifier.String()+" "+arg.Name.Name)
+		}
+
+		description = fmt.Sprintf(
+			"macro %s(%s)",
+			f.Signature.Name.Name,
+			strings.Join(args, ", "),
+		)
 	}
 
 	isModule := false
