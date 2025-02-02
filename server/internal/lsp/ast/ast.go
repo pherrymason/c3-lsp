@@ -91,6 +91,7 @@ type NodeAttributes struct {
 	Attributes []string
 	Id         NodeId
 	DocComment option.Option[*DocComment]
+	Error      bool // Looks like an invalid Node
 }
 
 func (n NodeAttributes) StartPosition() lsp.Position { return n.Range.Start }

@@ -1047,33 +1047,50 @@ func TestConvertToAST_interface_decl(t *testing.T) {
 }
 
 func TestConvertToAST_macro_decl(t *testing.T) {
-	source := `module foo;
+	t.Run("parser macro decl", func(t *testing.T) {
+		source := `module foo;
 	<* abc *>
 	macro m(x) {
     	return x + 2;
 	}`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
-	macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
 
-	startRow := uint(2)
-	endRow := uint(4)
-	assert.Equal(t, lsp.Position{startRow, 1}, macroDecl.Range.Start)
-	assert.Equal(t, lsp.Position{endRow, 2}, macroDecl.Range.End)
-	assert.Equal(t, "abc", macroDecl.DocComment.Get().GetBody())
+		startRow := uint(2)
+		endRow := uint(4)
+		assert.Equal(t, lsp.Position{startRow, 1}, macroDecl.Range.Start)
+		assert.Equal(t, lsp.Position{endRow, 2}, macroDecl.Range.End)
+		assert.Equal(t, "abc", macroDecl.DocComment.Get().GetBody())
 
-	assert.Equal(t, "m", macroDecl.Signature.Name.Name)
-	assert.Equal(t, lsp.Position{startRow, 7}, macroDecl.Signature.Name.Range.Start)
-	assert.Equal(t, lsp.Position{startRow, 8}, macroDecl.Signature.Name.Range.End)
+		assert.Equal(t, "m", macroDecl.Signature.Name.Name)
+		assert.Equal(t, lsp.Position{startRow, 7}, macroDecl.Signature.Name.Range.Start)
+		assert.Equal(t, lsp.Position{startRow, 8}, macroDecl.Signature.Name.Range.End)
 
-	assert.Equal(t, 1, len(macroDecl.Signature.Parameters))
-	assert.Equal(
-		t,
-		&ast.FunctionParameter{
-			NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(startRow, 9, startRow, 10).Build(),
-			Name:           ast.NewIdentifierBuilder().WithName("x").WithStartEnd(startRow, 9, startRow, 10).Build(),
-		},
-		macroDecl.Signature.Parameters[0],
-	)
+		assert.Equal(t, 1, len(macroDecl.Signature.Parameters))
+		assert.Equal(
+			t,
+			&ast.FunctionParameter{
+				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(startRow, 9, startRow, 10).Build(),
+				Name:           ast.NewIdentifierBuilder().WithName("x").WithStartEnd(startRow, 9, startRow, 10).Build(),
+			},
+			macroDecl.Signature.Parameters[0],
+		)
+	})
+
+	t.Run("parse invalid macro signature", func(t *testing.T) {
+		source := `
+	<* docs *>
+	macro fn void scary() {
+	}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
+
+		assert.NotNil(t, macroDecl)
+		assert.True(t, macroDecl.Error)
+		assert.Nil(t, macroDecl.Signature.Name)
+	})
 }

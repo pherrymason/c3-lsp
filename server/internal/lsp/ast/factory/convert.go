@@ -825,14 +825,21 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 	}
 
 	nameNode = node.Child(1).ChildByFieldName("name")
+	nodeAttributes := ast.NewAttrNodeFromSitterNode(c.getNextID(), node)
+	var identNode *ast.Ident
+	if nameNode == nil {
+		nodeAttributes.Error = true
+	} else {
+		identNode = ast.NewIdentifierBuilder().
+			WithId(c.getNextID()).
+			WithName(nameNode.Content(sourceCode)).
+			WithSitterPos(nameNode).
+			Build()
+	}
 	macro := &ast.MacroDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: nodeAttributes,
 		Signature: &ast.MacroSignature{
-			Name: ast.NewIdentifierBuilder().
-				WithId(c.getNextID()).
-				WithName(nameNode.Content(sourceCode)).
-				WithSitterPos(nameNode).
-				Build(),
+			Name:       identNode,
 			Parameters: parameters,
 		},
 	}
