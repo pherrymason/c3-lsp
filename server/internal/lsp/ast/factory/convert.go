@@ -39,8 +39,8 @@ func (g *AutoIncrementGenerator) GenerateID() ast.NodeId {
 	return nextID
 }
 
-func GetCST(sourceCode string) *sitter.Node {
-	return cst.GetParsedTreeFromString(sourceCode).RootNode()
+func GetCST(sourceCode string) *sitter.Tree {
+	return cst.GetParsedTreeFromString(sourceCode)
 }
 
 type ASTConverter struct {

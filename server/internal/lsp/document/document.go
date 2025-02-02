@@ -6,6 +6,7 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
+	sitter "github.com/smacker/go-tree-sitter"
 )
 
 type Module struct {
@@ -18,8 +19,13 @@ type Document struct {
 	Owned           bool
 	DiagnosedErrors bool
 	Ast             *ast.File
+	Cst             *sitter.Tree
 	Version         uint
 	Imports         []Module
+}
+
+func (d *Document) Close() {
+	d.Cst.Close()
 }
 
 type Storage struct {
@@ -32,7 +38,7 @@ func NewStore() *Storage {
 	}
 }
 
-func (pd *Storage) OpenDocument(uri string, text string, version uint) *Document {
+func (d *Storage) OpenDocument(uri string, text string, version uint) *Document {
 	document := &Document{
 		Uri:      uri,
 		FullPath: utils.NormalizePath(uri),
@@ -41,12 +47,12 @@ func (pd *Storage) OpenDocument(uri string, text string, version uint) *Document
 		Version:  version,
 	}
 
-	pd.Documents[uri] = document
+	d.Documents[uri] = document
 
 	return document
 }
 
-func (pd *Storage) OpenDocumentFromPath(path string, text string, version uint) {
+func (d *Storage) OpenDocumentFromPath(path string, text string, version uint) {
 	converter := factory.NewASTConverter()
 	uri := fs.ConvertPathToURI(path, option.None[string]())
 	document := &Document{
@@ -58,13 +64,14 @@ func (pd *Storage) OpenDocumentFromPath(path string, text string, version uint) 
 		Ast:      converter.ConvertToAST(factory.GetCST(text), text, path),
 	}
 
-	pd.Documents[uri] = document
+	d.Documents[uri] = document
 }
 
-func (pd *Storage) CloseDocument(uri string) {
-	delete(pd.Documents, uri)
+func (d *Storage) CloseDocument(uri string) {
+	d.Documents[uri].Close()
+	delete(d.Documents, uri)
 }
 
-func (pd *Storage) GetDocument(uri string) (*Document, error) {
-	return pd.Documents[uri], nil
+func (d *Storage) GetDocument(uri string) (*Document, error) {
+	return d.Documents[uri], nil
 }

@@ -28,6 +28,7 @@ type Server struct {
 	options ServerOpts
 	version string
 
+	workspace    *analysis.Workspace
 	documents    *document.Storage
 	astConverter *factory.ASTConverter
 	symbolTable  *analysis.SymbolTable
@@ -74,9 +75,10 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		options: opts,
 		version: version,
 
-		documents:    document.NewStore(),
-		astConverter: factory.NewASTConverter(),
-		symbolTable:  analysis.NewSymbolTable(),
+		workspace: analysis.NewWorkspace(),
+		//documents:    document.NewStore(),
+		//astConverter: factory.NewASTConverter(),
+		//symbolTable:  analysis.NewSymbolTable(),
 
 		state:  &state,
 		parser: &parser,

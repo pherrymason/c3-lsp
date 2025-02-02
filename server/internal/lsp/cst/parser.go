@@ -26,7 +26,8 @@ func GetParsedTreeFromString(source string) *sitter.Tree {
 	sourceCode := []byte(source)
 	parser := NewSitterParser()
 	n := parser.Parse(nil, sourceCode)
-
+	parser.Close()
+	
 	return n
 }
 
