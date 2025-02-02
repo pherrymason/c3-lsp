@@ -61,13 +61,14 @@ func (c *ASTConverter) getNextID() ast.NodeId {
 	return c.idGenerator.GenerateID()
 }
 
-func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) *ast.File {
+func (c *ASTConverter) ConvertToAST(cstNode *sitter.Tree, sourceCode string, fileName string) *ast.File {
 	c.generateConversionInfo()
 	source := []byte(sourceCode)
 
 	var prg *ast.File
-	if cstNode.Type() == "source_file" {
-		prg = ast.NewFile(c.getNextID(), fileName, lsp.NewRangeFromSitterNode(cstNode), []*ast.Module{})
+	rootNode := cstNode.RootNode()
+	if rootNode.Type() == "source_file" {
+		prg = ast.NewFile(c.getNextID(), fileName, lsp.NewRangeFromSitterNode(rootNode), []*ast.Module{})
 	}
 
 	anonymousModule := false
@@ -76,8 +77,8 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 	var lastDocComment *ast.DocComment
 
 	var node *sitter.Node
-	for i := 0; i < int(cstNode.ChildCount()); i++ {
-		node = cstNode.Child(i)
+	for i := 0; i < int(rootNode.ChildCount()); i++ {
+		node = rootNode.Child(i)
 		parsedModulesCount := len(prg.Modules)
 		if parsedModulesCount == 0 && node.Type() != "module" && node.Type() != "doc_comment" {
 			anonymousModule = true
@@ -2013,27 +2014,31 @@ at_ident: _ => token(seq('@', IDENT)),
 */
 func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte) *ast.DocComment {
 	body := ""
+	hasBody := false
 	bodyNode := node.Child(1)
 	if bodyNode.Type() == "doc_comment_text" {
 		body = dedent.Dedent(bodyNode.Content(sourceCode))
+		hasBody = true
 	}
 
 	docComment := ast.NewDocComment(body)
 
-	if node.ChildCount() >= 4 {
-		for i := 2; i <= int(node.ChildCount())-2; i++ {
+	if (hasBody && node.ChildCount() >= 4) || (!hasBody && node.ChildCount() >= 3) {
+		for i := 1; i <= int(node.ChildCount())-2; i++ {
 			contractNode := node.Child(i)
+			// Skip the body
+			// (We already skip '<*' and '*>' since we skip first and last indices above)
 			if contractNode.Type() == "doc_comment_contract" {
 				name := contractNode.ChildByFieldName("name").Content(sourceCode)
-				body := ""
+				bodyContract := ""
 				if contractNode.ChildCount() >= 2 {
 					// Right now, contracts can only have a single line, so we don't dedent.
 					// They can also be arbitrary expressions, so it's best to not modify them
 					// at the moment.
-					body = contractNode.Child(1).Content(sourceCode)
+					bodyContract = contractNode.Child(1).Content(sourceCode)
 				}
 
-				contract := ast.NewDocCommentContract(name, body)
+				contract := ast.NewDocCommentContract(name, bodyContract)
 
 				docComment.AddContracts([]*ast.DocCommentContract{contract})
 			}

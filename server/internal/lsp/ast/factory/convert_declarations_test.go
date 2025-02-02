@@ -829,6 +829,32 @@ jkl`
 		assert.Equal(t, expectedDoc, fnDecl.NodeAttributes.DocComment.Get().DisplayBodyWithContracts())
 	})
 
+	t.Run("parses function with only contracts", func(t *testing.T) {
+		source := `<*
+			@pure
+			@param [in] pointer
+			@require number > 0, number < 1000 : "invalid number"
+			@ensure return == 1
+		*>
+		fn void test(int number, char ch, int* pointer) {
+			return 1;
+		}`
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source), source, "file.c3")
+
+		fnDecl := tree.Modules[0].Declarations[0].(*ast.FunctionDecl)
+
+		expectedDoc := `**@pure**
+
+**@param** [in] pointer
+
+**@require** number > 0, number < 1000 : "invalid number"
+
+**@ensure** return == 1`
+		assert.Equal(t, "", fnDecl.NodeAttributes.DocComment.Get().GetBody())
+		assert.Equal(t, expectedDoc, fnDecl.NodeAttributes.DocComment.Get().DisplayBodyWithContracts())
+	})
+
 	t.Run("parses extern function declaration", func(t *testing.T) {
 		source := `module foo;
 	fn void init_window(int width, int height, char* title) @extern("InitWindow");`

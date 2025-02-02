@@ -41,7 +41,10 @@ func (d *DocComment) DisplayBodyWithContracts() string {
 	out := d.body
 
 	for _, c := range d.contracts {
-		out += "\n\n**" + c.name + "**"
+		if out != "" {
+			out += "\n\n"
+		}
+		out += "**" + c.name + "**"
 		if c.body != "" {
 			out += " " + c.body
 		}
