@@ -138,14 +138,14 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 }
 
 func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
-	source := `fn void test(int number, char ch, int* pointer) {
-		return 1;
-	}`
-	docId := "docId"
-	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
 	t.Run("Finds function", func(t *testing.T) {
+		source := `fn void test(int number, char ch, int* pointer) {
+		return 1;
+	}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
@@ -172,7 +172,6 @@ func TestExtractSymbols_FunctionsWithArguments(t *testing.T) {
 		}`
 		docId := "docId"
 		doc := document.NewDocument(docId, source)
-		parser := createParser()
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		expectedDoc := `abc
@@ -207,7 +206,6 @@ jkl`
 		}`
 		docId := "docId"
 		doc := document.NewDocument(docId, source)
-		parser := createParser()
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
@@ -242,7 +240,6 @@ Hello world.
 		}`
 		docId := "docId"
 		doc := document.NewDocument(docId, source)
-		parser := createParser()
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
@@ -262,6 +259,11 @@ Hello world.
 	})
 
 	t.Run("Finds function arguments", func(t *testing.T) {
+		source := `fn void test(int number, char ch, int* pointer) {
+		return 1;
+	}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
