@@ -67,14 +67,15 @@ type (
 
 	MacroDecl struct {
 		NodeAttributes
-		ParentTypeId option.Option[*Ident]
-		Signature    *MacroSignature
-		Body         *Block
+		Signature *MacroSignature
+		//Body      *Block
+		Body *CompoundStmt
 	}
 	MacroSignature struct {
-		Name       *Ident
-		Parameters []*FunctionParameter
-		ReturnType *TypeInfo
+		ParentTypeId option.Option[*Ident]
+		Name         *Ident
+		Parameters   []*FunctionParameter
+		ReturnType   *TypeInfo
 	}
 
 	// DefDecl can be used for

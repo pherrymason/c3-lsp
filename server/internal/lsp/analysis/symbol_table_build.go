@@ -80,7 +80,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		v.currentScope.RegisterSymbol(n.Ident.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
 
 	case *ast.MacroDecl:
-		v.currentScope.RegisterSymbol(
+		_, symbol := v.currentScope.RegisterSymbol(
 			n.Signature.Name.Name,
 			n.Range,
 			n,
@@ -91,15 +91,43 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		if n.Body != nil {
 			v.pushScope(n)
 		}
+		if n.Signature.ParentTypeId.IsSome() {
+			// Should register method as children of parent type
+			// TODO this will fail if macro is defined before the struct
+			parentSymbol := v.table.findSymbolInScope(
+				n.Signature.ParentTypeId.Get().Name,
+				v.currentScope,
+			)
+			if parentSymbol != nil {
+				parentSymbol.AppendChild(symbol, Method)
+			}
+		}
+
+		for _, param := range n.Signature.Parameters {
+			_, sym := v.currentScope.RegisterSymbol(param.Name.Name,
+				param.GetRange(),
+				param,
+				v.currentModule,
+				v.currentFilePath.URI,
+				ast.VAR,
+			)
+
+			if param.Type != nil {
+				typeName := param.Type.Identifier.String()
+				sym.Type = TypeDefinition{
+					Name:      typeName, // TODO does this having module path break anything?
+					IsBuiltIn: param.Type.BuiltIn,
+					NodeDecl:  param.Type,
+				}
+			}
+		}
 
 	case *ast.FunctionDecl:
 		_, symbol := v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FUNCTION)
-		if n.Body != nil {
-			v.pushScope(n)
-		}
 
 		if n.ParentTypeId.IsSome() {
 			// Should register method as children of parent type
+			// TODO this will fail if function is defined before the struct
 			parentSymbol := v.table.findSymbolInScope(
 				n.ParentTypeId.Get().Name,
 				v.currentScope,
@@ -109,21 +137,24 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 			}
 		}
 
-	case *ast.FunctionSignature:
-		for _, param := range n.Parameters {
-			_, sym := v.currentScope.RegisterSymbol(param.Name.Name,
-				param.GetRange(),
-				param,
-				v.currentModule,
-				v.currentFilePath.URI,
-				ast.VAR,
-			)
+		if n.Body != nil {
+			v.pushScope(n)
 
-			typeName := param.Type.Identifier.String()
-			sym.Type = TypeDefinition{
-				Name:      typeName, // TODO does this having module path break anything?
-				IsBuiltIn: param.Type.BuiltIn,
-				NodeDecl:  param.Type,
+			for _, param := range n.Signature.Parameters {
+				_, sym := v.currentScope.RegisterSymbol(param.Name.Name,
+					param.GetRange(),
+					param,
+					v.currentModule,
+					v.currentFilePath.URI,
+					ast.VAR,
+				)
+
+				typeName := param.Type.Identifier.String()
+				sym.Type = TypeDefinition{
+					Name:      typeName, // TODO does this having module path break anything?
+					IsBuiltIn: param.Type.BuiltIn,
+					NodeDecl:  param.Type,
+				}
 			}
 		}
 
@@ -203,6 +234,10 @@ func (v *symbolTableGenerator) Exit(node ast.Node, propertyName string) {
 		v.popScope()
 
 	case *ast.FunctionDecl:
+		if n.Body != nil {
+			v.popScope()
+		}
+	case *ast.MacroDecl:
 		if n.Body != nil {
 			v.popScope()
 		}

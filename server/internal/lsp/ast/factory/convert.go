@@ -820,6 +820,17 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 		signature.ReturnType = c.convert_type(returnTypeNode, sourceCode)
 	}
 
+	methodType := headerNode.ChildByFieldName("method_type")
+	if methodType != nil {
+		signature.ParentTypeId = option.Some(
+			ast.NewIdentifierBuilder().
+				WithId(c.getNextID()).
+				WithName(methodType.Content(sourceCode)).
+				WithSitterPos(methodType).
+				Build(),
+		)
+	}
+
 	nameNode = headerNode.ChildByFieldName("name")
 	nodeAttributes := ast.NewAttrNodeFromSitterNode(c.getNextID(), node)
 	if nameNode == nil {
@@ -853,13 +864,29 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 		NodeAttributes: nodeAttributes,
 		Signature:      signature,
 	}
-	/*
-		if node.ChildByFieldName("body") != nil {
+
+	macroBodyNode := node.ChildByFieldName("body")
+	if macroBodyNode != nil {
+		for i := 0; i < int(macroBodyNode.ChildCount()); i++ {
+			nb := macroBodyNode.Child(i)
+			if nb.Type() == "implies_body" {
+				macro.Body = &ast.CompoundStmt{
+					Statements: []ast.Statement{
+						&ast.ExpressionStmt{
+							Expr: c.convert_expression(nb.NextSibling(), sourceCode),
+						},
+					},
+				}
+			} else if nb.Type() == "compound_stmt" {
+				macro.Body = c.convert_compound_stmt(nb, sourceCode).(*ast.CompoundStmt)
+			}
+		}
+		/*
 			variables := p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)
 			variables = append(arguments, variables...)
-			macro.AddVariables(variables)
-		}
-	*/
+			macro.AddVariables(variables)*/
+	}
+
 	return macro
 }
 

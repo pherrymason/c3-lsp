@@ -1095,6 +1095,48 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(2, 8, 2, 11), macroDecl.Signature.ReturnType.GetRange())
 	})
 
+	t.Run("parse macro struct member", func(t *testing.T) {
+		source := `macro Object* UserStruct.@method() {
+			@body();
+			return 1;
+		}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
+
+		assert.Equal(t, lsp.NewRange(0, 0, 3, 3), macroDecl.Range)
+		assert.Equal(t, "@method", macroDecl.Signature.Name.Name)
+		assert.Equal(t, "Object", macroDecl.Signature.ReturnType.Identifier.Name)
+		assert.Equal(t, uint(1), macroDecl.Signature.ReturnType.Pointer)
+		assert.Equal(t, lsp.NewRange(0, 6, 0, 13), macroDecl.Signature.ReturnType.GetRange())
+		assert.True(t, macroDecl.Signature.ParentTypeId.IsSome())
+		assert.Equal(t, "UserStruct", macroDecl.Signature.ParentTypeId.Get().Name)
+	})
+
+	t.Run("parse macro struct member with arguments", func(t *testing.T) {
+		source := `macro Object* UserStruct.@method(self, int* pointer; @body) {
+			@body();
+			return 1;
+		}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
+
+		assert.Equal(t, 2, len(macroDecl.Signature.Parameters))
+		assert.Equal(t, lsp.NewRange(0, 33, 0, 37), macroDecl.Signature.Parameters[0].Range)
+		assert.Equal(t, "self", macroDecl.Signature.Parameters[0].Name.Name)
+		assert.Equal(t, lsp.NewRange(0, 33, 0, 37), macroDecl.Signature.Parameters[0].Name.Range)
+		assert.Nil(t, macroDecl.Signature.Parameters[0].Type)
+
+		assert.Equal(t, lsp.NewRange(0, 39, 0, 51), macroDecl.Signature.Parameters[1].Range)
+		assert.Equal(t, "pointer", macroDecl.Signature.Parameters[1].Name.Name)
+		assert.Equal(t, lsp.NewRange(0, 44, 0, 51), macroDecl.Signature.Parameters[1].Name.Range)
+		assert.Equal(t, "int", macroDecl.Signature.Parameters[1].Type.Identifier.Name)
+		assert.Equal(t, lsp.NewRange(0, 39, 0, 43), macroDecl.Signature.Parameters[1].Type.Range)
+	})
+
 	t.Run("parse invalid macro signature", func(t *testing.T) {
 		source := `
 	<* docs *>
