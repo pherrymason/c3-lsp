@@ -16,6 +16,12 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 	}
 
 	symbol := symbolResult.Get()
+	hover := buildHover(symbol)
+
+	return &hover
+}
+
+func buildHover(symbol *Symbol) protocol.Hover {
 	var description string
 	var sizeInfo string // TODO reimplement this
 	var extraLine string
@@ -47,16 +53,34 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 		)
 
 	case ast.MACRO:
-		f := symbol.NodeDecl.(*ast.MacroDecl)
+		macro := symbol.NodeDecl.(*ast.MacroDecl)
+		typeMethod := ""
+		if macro.Signature.ParentTypeId.IsSome() {
+			typeMethod = macro.Signature.ParentTypeId.Get().Name + "."
+		}
 		args := []string{}
-		for _, arg := range f.Signature.Parameters {
+		for _, arg := range macro.Signature.Parameters {
 			args = append(args, arg.Type.Identifier.String()+" "+arg.Name.Name)
+		}
+		trailing := ""
+		if macro.Signature.TrailingBlockParam != nil {
+			trailing = "; " + macro.Signature.TrailingBlockParam.Name.Name
+			paramCount := len(macro.Signature.TrailingBlockParam.Parameters)
+			if paramCount > 0 {
+				params := []string{}
+				for i := 0; i < paramCount; i++ {
+					params = append(params, macro.Signature.TrailingBlockParam.Parameters[0].Name.Name)
+				}
+
+				trailing += "(" + strings.Join(params, ", ") + ")"
+			}
 		}
 
 		description = fmt.Sprintf(
-			"macro %s(%s)",
-			f.Signature.Name.Name,
-			strings.Join(args, ", "),
+			"macro %s%s(%s)",
+			typeMethod,
+			macro.Signature.Name.Name,
+			strings.Join(args, ", ")+trailing,
 		)
 	}
 
@@ -70,7 +94,7 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 		extraLine += "\n\n" + docComment.Get().DisplayBodyWithContracts()
 	}
 
-	hover := protocol.Hover{
+	return protocol.Hover{
 		Contents: protocol.MarkupContent{
 			Kind: protocol.MarkupKindMarkdown,
 			Value: "```c3" + "\n" +
@@ -79,6 +103,4 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 				extraLine,
 		},
 	}
-
-	return &hover
 }

@@ -6,11 +6,14 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+// SymbolsTable
+// Deprecated
 type SymbolsTable struct {
 	parsedModulesByDocument map[protocol.DocumentUri]UnitModules
 	pendingToResolve        PendingToResolve
 }
 
+// Deprecated
 func NewSymbolsTable() SymbolsTable {
 	return SymbolsTable{
 		parsedModulesByDocument: make(map[protocol.DocumentUri]UnitModules),
@@ -18,6 +21,7 @@ func NewSymbolsTable() SymbolsTable {
 	}
 }
 
+// Deprecated
 func (st *SymbolsTable) Register(unitModules UnitModules, pendingToResolve PendingToResolve) {
 	st.parsedModulesByDocument[unitModules.DocId()] = unitModules
 

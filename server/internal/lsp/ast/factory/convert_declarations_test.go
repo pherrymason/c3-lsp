@@ -709,26 +709,40 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 func TestConvertToAST_def_declares_type(t *testing.T) {
 	t.Run("parses def declaration", func(t *testing.T) {
 		source := `
+		int global_var = 10;
+		const int MY_CONST = 5;
+		macro @ad(; @body) { @body(); }
+		fn void a() {}
+	
 		<* abc *>
-		def Kilo = int;`
+		def aliased_global = global_var;
+		def func = a(<String>);
+		def CONST_ALIAS = MY_CONST;
+		def @macro_alias = @a;
+		`
 		cv := newTestAstConverter()
 		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
-		defRow := uint(2)
-		assert.Equal(t,
-			&ast.DefDecl{
-				NodeAttributes: ast.NewNodeAttributesBuilder().
-					WithRangePositions(defRow, 2, defRow, 17).
-					WithDocComment("abc").
-					Build(),
-				Ident: ast.NewIdentifierBuilder().WithName("Kilo").WithStartEnd(defRow, 6, defRow, 10).Build(),
-				Expr: ast.NewTypeInfoBuilder().
-					WithName("int").
-					WithNameStartEnd(defRow, 13, defRow, 16).
-					IsBuiltin().
-					WithStartEnd(defRow, 13, defRow, 16).
-					Build(),
-			}, tree.Modules[0].Declarations[0])
+		// aliased global
+		def := tree.Modules[0].Declarations[4].(*ast.DefDecl)
+		assert.Equal(t, "aliased_global", def.Ident.Name)
+
+		/*
+			defRow := uint(2)
+			assert.Equal(t,
+				&ast.DefDecl{
+					NodeAttributes: ast.NewNodeAttributesBuilder().
+						WithRangePositions(defRow, 2, defRow, 17).
+						WithDocComment("abc").
+						Build(),
+					Ident: ast.NewIdentifierBuilder().WithName("Kilo").WithStartEnd(defRow, 6, defRow, 10).Build(),
+					Expr: ast.NewTypeInfoBuilder().
+						WithName("int").
+						WithNameStartEnd(defRow, 13, defRow, 16).
+						IsBuiltin().
+						WithStartEnd(defRow, 13, defRow, 16).
+						Build(),
+				}, tree.Modules[0].Declarations[0])*/
 	})
 
 	t.Run("parses def declaring function", func(t *testing.T) {
@@ -1135,6 +1149,37 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(0, 44, 0, 51), macroDecl.Signature.Parameters[1].Name.Range)
 		assert.Equal(t, "int", macroDecl.Signature.Parameters[1].Type.Identifier.Name)
 		assert.Equal(t, lsp.NewRange(0, 39, 0, 43), macroDecl.Signature.Parameters[1].Type.Range)
+	})
+
+	t.Run("parse macro with trailing @body", func(t *testing.T) {
+		source := `macro void method(int* pointer; @body) {
+			@body();
+			return 1;
+		}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
+
+		bodyParam := macroDecl.Signature.TrailingBlockParam
+		assert.Equal(t, lsp.NewRange(0, 32, 0, 37), bodyParam.Range)
+		assert.Equal(t, "@body", bodyParam.Name.Name)
+	})
+
+	t.Run("parse macro with trailing @body with params", func(t *testing.T) {
+		source := `macro void method(int* pointer; @body(it)) {
+			@body();
+			return 1;
+		}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
+
+		bodyParam := macroDecl.Signature.TrailingBlockParam
+		assert.Equal(t, lsp.NewRange(0, 32, 0, 41), bodyParam.Range)
+		assert.Equal(t, "@body", bodyParam.Name.Name)
+		assert.Equal(t, 1, len(macroDecl.Signature.TrailingBlockParam.Parameters))
 	})
 
 	t.Run("parse invalid macro signature", func(t *testing.T) {

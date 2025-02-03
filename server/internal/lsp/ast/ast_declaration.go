@@ -68,14 +68,20 @@ type (
 	MacroDecl struct {
 		NodeAttributes
 		Signature *MacroSignature
-		//Body      *Block
-		Body *CompoundStmt
+		Body      *CompoundStmt
 	}
 	MacroSignature struct {
-		ParentTypeId option.Option[*Ident]
-		Name         *Ident
-		Parameters   []*FunctionParameter
-		ReturnType   *TypeInfo
+		ParentTypeId       option.Option[*Ident]
+		Name               *Ident
+		Parameters         []*FunctionParameter
+		TrailingBlockParam *TrailingBlockParam
+		ReturnType         *TypeInfo
+	}
+
+	TrailingBlockParam struct {
+		NodeAttributes
+		Name       *Ident
+		Parameters []*FunctionParameter
 	}
 
 	// DefDecl can be used for
@@ -109,10 +115,12 @@ type (
 	}
 )
 
-func (v *GenDecl) declNode()   {}
-func (v *FaultDecl) declNode() {}
-func (v *DefDecl) declNode()   {}
-func (v *MacroDecl) declNode() {}
+func (v *GenDecl) declNode()            {}
+func (v *FaultDecl) declNode()          {}
+func (v *DefDecl) declNode()            {}
+func (v *MacroDecl) declNode()          {}
+func (v *MacroSignature) declNode()     {}
+func (v *TrailingBlockParam) declNode() {}
 
 func (v *FunctionDecl) declNode()  {}
 func (v *InterfaceDecl) declNode() {}

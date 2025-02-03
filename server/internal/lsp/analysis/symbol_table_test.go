@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
 	"github.com/stretchr/testify/assert"
@@ -154,4 +155,45 @@ func TestSymbolBuild_registers_function_arguments_as_variables_in_the_scope(t *t
 
 	macroScope := scope.Children[2]
 	assert.Equal(t, 3, len(macroScope.Symbols), "macro scope does not have expected symbols")
+}
+
+func TestSymbolBuild_registers_macro_trailing_param(t *testing.T) {
+	t.Run("detects @body as function", func(t *testing.T) {
+		source := `module foo;
+		macro void foo(self, int arg1; @body) {}`
+
+		astConverter := factory.NewASTConverter()
+		tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
+
+		result := BuildSymbolTable(tree, "")
+
+		modulesGroup := result.scopeTree["file.c3"]
+		scope := modulesGroup.GetModuleScope("foo")
+
+		macroScope := scope.Children[0]
+		assert.Equal(t, "@body", macroScope.Symbols[2].Name)
+		assert.Equal(t, ast.Token(ast.FUNCTION), macroScope.Symbols[2].Kind)
+		assert.Equal(t, lsp.NewRange(1, 33, 1, 38), macroScope.Symbols[2].Range)
+	})
+
+	t.Run("detects @body with params as function", func(t *testing.T) {
+		source := `module foo;
+		macro void foo(self, int arg1; @body(it)) {}`
+
+		astConverter := factory.NewASTConverter()
+		tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
+
+		result := BuildSymbolTable(tree, "")
+
+		modulesGroup := result.scopeTree["file.c3"]
+		scope := modulesGroup.GetModuleScope("foo")
+
+		macroScope := scope.Children[0]
+		assert.Equal(t, "@body", macroScope.Symbols[2].Name)
+		assert.Equal(t, ast.Token(ast.FUNCTION), macroScope.Symbols[2].Kind)
+		assert.Equal(t, lsp.NewRange(1, 33, 1, 42), macroScope.Symbols[2].Range)
+
+		// @body params are not to be used inside the body of the macro, so no need to register them as symbols.
+	})
+
 }

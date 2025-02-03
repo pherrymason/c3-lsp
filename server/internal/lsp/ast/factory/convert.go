@@ -846,16 +846,43 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 	var parameters []*ast.FunctionParameter
 	nodeParameters := node.Child(2)
 	if nodeParameters.ChildCount() > 2 {
-		for i := uint32(0); i < nodeParameters.ChildCount(); i++ {
-			argNode := nodeParameters.Child(int(i))
+		for i := 0; i < int(nodeParameters.ChildCount()); i++ {
+			argNode := nodeParameters.Child(i)
+			// '@body' in macro name(args; @body) { ... }
+			if argNode.Type() == "trailing_block_param" {
+				macroParam := &ast.TrailingBlockParam{
+					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), argNode),
+					Name: ast.NewIdentifierBuilder().
+						WithId(c.getNextID()).
+						WithName(argNode.Child(0).Content(sourceCode)).
+						WithSitterPos(argNode.Child(0)).
+						Build(),
+					Parameters: []*ast.FunctionParameter{},
+				}
+				if argNode.ChildCount() >= 2 && argNode.Child(1).Type() == "fn_parameter_list" {
+					fpl := argNode.Child(1)
+					for p := 0; p < int(fpl.ChildCount()); p++ {
+						fp := fpl.Child(p)
+						if fp.Type() == "parameter" {
+							debugNode(fp, sourceCode, "fp")
+							macroParam.Parameters = append(
+								macroParam.Parameters,
+								c.convert_function_parameter(fp, option.None[*ast.Ident](), sourceCode),
+							)
+						}
+					}
+				}
+				signature.TrailingBlockParam = macroParam
+
+			} else if argNode.Type() == "parameter" {
+				parameters = append(
+					parameters,
+					c.convert_function_parameter(argNode, option.None[*ast.Ident](), sourceCode),
+				)
+			}
 			if argNode.Type() != "parameter" {
 				continue
 			}
-
-			parameters = append(
-				parameters,
-				c.convert_function_parameter(argNode, option.None[*ast.Ident](), sourceCode),
-			)
 		}
 	}
 	signature.Parameters = parameters

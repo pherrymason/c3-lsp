@@ -23,10 +23,11 @@ type symbolTableGenerator struct {
 	table *SymbolTable
 
 	// State properties to keep track
-	currentModule   *ast.Module
-	currentFilePath *ast.File
-	currentScope    *Scope
-	scopePushed     uint
+	currentModule                   *ast.Module
+	currentFilePath                 *ast.File
+	currentScope                    *Scope
+	scopePushed                     uint
+	scopePushedBecauseMacroTrailing bool
 }
 
 func newSymbolTableVisitor(symbolTable *SymbolTable) symbolTableGenerator {
@@ -80,6 +81,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		v.currentScope.RegisterSymbol(n.Ident.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
 
 	case *ast.MacroDecl:
+		addedScope := false
 		_, symbol := v.currentScope.RegisterSymbol(
 			n.Signature.Name.Name,
 			n.Range,
@@ -89,6 +91,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 			ast.MACRO,
 		)
 		if n.Body != nil {
+			addedScope = true
 			v.pushScope(n)
 		}
 		if n.Signature.ParentTypeId.IsSome() {
@@ -120,6 +123,26 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 					NodeDecl:  param.Type,
 				}
 			}
+		}
+
+		if n.Signature.TrailingBlockParam != nil {
+			// Register trailing block param function
+			trailing := n.Signature.TrailingBlockParam
+			if !addedScope {
+				v.pushScope(n)
+				v.scopePushedBecauseMacroTrailing = true
+			}
+
+			v.currentScope.RegisterSymbol(
+				trailing.Name.Name,
+				trailing.Range,
+				trailing,
+				v.currentModule,
+				v.currentFilePath.URI,
+				ast.FUNCTION,
+			)
+
+			// @body params are not to be used inside the body of the macro, so no need to register them as symbols. They will be useful in hover and autocomplete though. This info can be accessed through symbol.NodeDecl.
 		}
 
 	case *ast.FunctionDecl:
@@ -240,6 +263,11 @@ func (v *symbolTableGenerator) Exit(node ast.Node, propertyName string) {
 	case *ast.MacroDecl:
 		if n.Body != nil {
 			v.popScope()
+		}
+	case *ast.TrailingBlockParam:
+		if v.scopePushedBecauseMacroTrailing {
+			v.popScope()
+			v.scopePushedBecauseMacroTrailing = false
 		}
 	}
 }

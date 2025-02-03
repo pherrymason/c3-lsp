@@ -205,6 +205,22 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		}
 		Walk(v, n.Body, "Body")
 
+	case *ast.MacroDecl:
+		if n.Signature.ParentTypeId.IsSome() {
+			Walk(v, n.Signature.ParentTypeId.Get(), "Signature.ParentTypeId")
+		}
+		Walk(v, n.Signature.Name, "Signature.Name")
+		walkList(v, n.Signature.Parameters, "Signature.Parameters")
+		if n.Signature.TrailingBlockParam != nil {
+			Walk(v, n.Signature.TrailingBlockParam, "Signature.TrailingBlockParam")
+		}
+		if n.Signature.ReturnType != nil {
+			Walk(v, n.Signature.ReturnType, "Signature.ReturnType")
+		}
+		if n.Body != nil {
+			Walk(v, n.Body, "Body")
+		}
+
 	case *ast.ParenExpr:
 		Walk(v, n.X, "X")
 
