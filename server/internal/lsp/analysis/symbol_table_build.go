@@ -242,6 +242,15 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 			ast.STRUCT,
 		)
 
+	case ast.DEF:
+		v.currentScope.RegisterSymbol(
+			n.Spec.(*ast.DefSpec).Name.Name,
+			n.Range,
+			n,
+			v.currentModule,
+			v.currentFilePath.URI,
+			ast.DEF,
+		)
 	default:
 	}
 }

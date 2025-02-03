@@ -263,7 +263,7 @@ func (c *ASTConverter) convert_global_declaration(node *sitter.Node, source []by
 	}
 
 	valueSpec := &ast.ValueSpec{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -312,7 +312,7 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 		StaticValues: []ast.Expression{},
 	}
 	spec := &ast.TypeSpec{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(nodeId, node),
+		//NodeAttributes: ast.NewAttrNodeFromSitterNode(nodeId, node),
 		Name: ast.NewIdentifierBuilder().
 			WithId(nodeId).
 			WithName(node.ChildByFieldName("name").Content(sourceCode)).
@@ -407,7 +407,7 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 }
 
 func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
-	specId := c.getNextID()
+	//specId := c.getNextID()
 	typeId := c.getNextID()
 	structType := &ast.StructType{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(typeId, node),
@@ -415,7 +415,7 @@ func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode 
 		Fields:         []*ast.StructField{},
 	}
 	spec := &ast.TypeSpec{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(specId, node),
+		//NodeAttributes: ast.NewAttrNodeFromSitterNode(specId, node),
 		Name: ast.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithSitterPos(node.ChildByFieldName("name")).
@@ -533,7 +533,7 @@ func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCo
 		Fields: []*ast.StructField{},
 	}
 	spec := &ast.TypeSpec{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Name: ast.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithSitterPos(node).
@@ -693,7 +693,7 @@ func (c *ASTConverter) convert_const_declaration(node *sitter.Node, source []byt
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 	valueSpec := &ast.ValueSpec{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	var identNode *sitter.Node
@@ -731,31 +731,101 @@ func (c *ASTConverter) convert_const_declaration(node *sitter.Node, source []byt
 }
 
 /*
-define_declaration [13, 0] - [13, 15]
+		convert_def_declaration
 
-	type_ident [13, 4] - [13, 8]
-	typedef_type [13, 11] - [13, 14]
-	type [13, 11] - [13, 14]
-		base_type [13, 11] - [13, 14]
-		base_type_name [13, 11] - [13, 14]
+	    define_declaration: $ => seq(
+		  'def',
+		  choice(
+		    $.define_ident,
+		    $.define_attribute,
+		    seq(
+		      $.type_ident,
+		      optional($.attributes),
+		      '=',
+		      $.typedef_type,
+		    ),
+		  ),
+		  optional($.attributes),
+		  ';'
+		),
 */
 func (c *ASTConverter) convert_def_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
-	defBuilder := ast.NewDefDeclBuilder(c.getNextID()).
-		WithSitterPos(node)
-
+	defSpec := &ast.DefSpec{}
+	debugNode(node, sourceCode, "def")
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		switch n.Type() {
-		case "type_ident", "define_ident":
-			defBuilder.WithName(n.Content(sourceCode)).
-				WithIdentifierSitterPos(n)
+		case "type_ident":
+			defSpec.Name = ast.NewIdentifierBuilder().
+				WithSitterPos(n).
+				WithName(n.Content(sourceCode)).
+				Build()
+
+		case "define_ident":
+			// define_ident: $ => seq(
+			//      choice(
+			//        seq($.ident, '=', $.define_path_ident),
+			//        seq($.const_ident, '=', $.path_const_ident),
+			//        seq($.at_ident, '=', $.define_path_at_ident),
+			//      ),
+			//      optional($.generic_arguments),
+			//    )
+			nameNode := n.Child(0)
+			defSpec.Name = ast.NewIdentifierBuilder().
+				WithSitterPos(nameNode).
+				WithName(nameNode.Content(sourceCode)).
+				Build()
+
+			resolvesTo := n.Child(2)
+			switch resolvesTo.Type() {
+			case "define_path_ident":
+				// define_path_ident: $ => seq(
+				//      optional($._module_path),
+				//      optional(seq($.type_ident, '.')),
+				//      $.ident,
+				//    )
+				defSpec.Value = c.convert_define_path_ident(resolvesTo, sourceCode)
+
+			case "path_const_ident":
+				// path_const_ident: $ => seq(
+				// optional($._module_path),
+				// $.const_ident),
+				pci := resolvesTo.Child(0)
+				if pci.Type() == "const_ident" {
+					defSpec.Value = c.convert_ident(pci, sourceCode)
+				} else {
+					defSpec.Value = c.convert_module_type_ident(resolvesTo, sourceCode)
+				}
+
+			case "define_path_at_ident":
+				// define_path_at_ident: $ => seq(
+				//      optional($._module_path),
+				//      optional(seq($.type_ident, '.')),
+				//      $.at_ident,
+				//    )
+				modulePath := c.convert_define_path_ident(resolvesTo, sourceCode)
+				defSpec.Value = modulePath
+			}
+
+			if n.ChildCount() >= 4 {
+				genericParametersNode := n.Child(3)
+				for g := 0; g < int(genericParametersNode.ChildCount()); g++ {
+					child := genericParametersNode.Child(g)
+					if child.Type() == "type" {
+						defSpec.GenericParameters = append(
+							defSpec.GenericParameters,
+							c.convert_type(child, sourceCode),
+						)
+					}
+				}
+			}
 
 		case "typedef_type":
 			var _type *ast.TypeInfo
 			if n.Child(0).Type() == "type" {
 				// Might contain module path
 				_type = c.convert_type(n.Child(0), sourceCode)
-				defBuilder.WithExpression(_type)
+				defSpec.Value = _type
 			} else if n.Child(0).Type() == "func_typedef" {
 				funcTypeDefNode := n.Child(0)
 				name := funcTypeDefNode.Child(2)
@@ -765,13 +835,88 @@ func (c *ASTConverter) convert_def_declaration(node *sitter.Node, sourceCode []b
 					Params:         c.convert_function_parameter_list(name, option.None[*ast.Ident](), sourceCode),
 				}
 
-				defBuilder.WithExpression(funcType)
+				defSpec.Value = funcType
 			}
 		}
 	}
 
-	def := defBuilder.Build()
-	return &def
+	def := &ast.GenDecl{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		Token:          ast.Token(ast.DEF),
+		Spec:           defSpec,
+	}
+	return def
+}
+
+// convert_define_path_ident
+// Very similar to convert_module_type_ident, but it might return an ast.SelectorExpr
+// define_path_at_ident: $ => seq(
+// - optional($._module_path),
+// - optional(seq($.type_ident, '.')),
+// - $.at_ident,
+// )
+func (c *ASTConverter) convert_define_path_ident(node *sitter.Node, source []byte) ast.Expression {
+	rootId := c.getNextID()
+	var ident, typeIdent *ast.Ident
+	pathTokens := []string{}
+	modulePathRange := lsp.Range{}
+	firstModuleFound := false
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		nodeType := n.Type()
+		switch nodeType {
+		// optional
+		case "module_type_resolution", "module_resolution":
+			pathTokens = append(pathTokens, n.Child(0).Content(source))
+			if !firstModuleFound {
+				firstModuleFound = true
+				modulePathRange.Start = lsp.Position{Line: uint(n.StartPoint().Row), Column: uint(n.StartPoint().Column)}
+			}
+			modulePathRange.End = lsp.Position{Line: uint(n.EndPoint().Row), Column: uint(n.EndPoint().Column)}
+
+		// optional
+		case "type_ident":
+			typeIdent = ast.NewIdentifierBuilder().
+				WithId(rootId).
+				WithSitterPos(n).
+				WithName(n.Content(source)).
+				Build()
+
+		case "ident", "const_ident", "at_ident":
+			ident = ast.NewIdentifierBuilder().
+				WithId(rootId).
+				WithSitterPos(n).
+				WithName(n.Content(source)).
+				Build()
+		}
+	}
+
+	if len(pathTokens) > 0 {
+		modulePath := ast.NewIdentifierBuilder().
+			WithId(c.getNextID()).
+			WithName(strings.Join(pathTokens, "::")).
+			WithRange(modulePathRange).
+			Build()
+
+		if typeIdent != nil {
+			typeIdent.ModulePath = modulePath
+			typeIdent.Range.Start = modulePath.Range.Start
+		} else if ident != nil {
+			ident.ModulePath = modulePath
+			ident.Range.Start = modulePath.Range.Start
+		}
+	}
+
+	if typeIdent != nil && ident != nil {
+		// Return ast.SelectorExpr
+		return &ast.SelectorExpr{
+			X:   typeIdent,
+			Sel: ident,
+		}
+	} else {
+		return ident
+	}
 }
 
 func (c *ASTConverter) convert_interface_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
@@ -968,7 +1113,7 @@ func (c *ASTConverter) convert_module_type_ident(node *sitter.Node, sourceCode [
 			}
 			modulePathRange.End = lsp.Position{Line: uint(n.EndPoint().Row), Column: uint(n.EndPoint().Column)}
 
-		case "type_ident", "ident":
+		case "type_ident", "ident", "const_ident":
 			ident = ast.NewIdentifierBuilder().
 				WithId(rootId).
 				WithSitterPos(node).
@@ -1544,7 +1689,6 @@ func (c *ASTConverter) convert_type_access_expr(node *sitter.Node, source []byte
 }
 
 func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.Expression {
-	//debugNode(node, source, "????")
 	argument := node.ChildByFieldName("argument")
 	var argumentNode ast.Expression
 

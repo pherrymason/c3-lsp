@@ -176,7 +176,21 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		Walk(v, n.ReturnType, "ReturnType")
 
 	case *ast.GenDecl:
-		Walk(v, n.Spec, "Spec")
+		switch spec := n.Spec.(type) {
+		case *ast.ValueSpec:
+			Walk(v, spec.Type, "Type")
+			walkList(v, spec.Names, "Names")
+			Walk(v, spec.Value, "Value")
+		case *ast.TypeSpec:
+			Walk(v, spec.Name, "Name")
+			walkList(v, spec.TypeParams, "TypeParams")
+			Walk(v, spec.TypeDescription, "TypeDescription")
+		case *ast.DefSpec:
+			Walk(v, spec.Name, "Name")
+			Walk(v, spec.Value, "Value")
+			walkList(v, spec.GenericParameters, "GenericParameters")
+		}
+		//Walk(v, n.Spec, "Spec")
 
 	case *ast.IfStmt:
 		// TODO Label
@@ -283,10 +297,10 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		Walk(v, n.Consequence, "Consequence")
 		Walk(v, n.Alternative, "Alternative")
 
-	case *ast.TypeSpec:
-		Walk(v, n.Name, "Name")
-		walkList(v, n.TypeParams, "TypeParams")
-		Walk(v, n.TypeDescription, "TypeDescription")
+		//	case *ast.TypeSpec:
+		//		Walk(v, n.Name, "Name")
+		//		walkList(v, n.TypeParams, "TypeParams")
+		//		Walk(v, n.TypeDescription, "TypeDescription")
 
 	case *ast.TypeInfo:
 		if n.Identifier != nil {
@@ -299,10 +313,10 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 	case *ast.UpdateExpression:
 		Walk(v, n.Argument, "Argument")
 
-	case *ast.ValueSpec:
-		Walk(v, n.Type, "Type")
-		walkList(v, n.Names, "Names")
-		Walk(v, n.Value, "Value")
+		//	case *ast.ValueSpec:
+		//		Walk(v, n.Type, "Type")
+		//		walkList(v, n.Names, "Names")
+		//		Walk(v, n.Value, "Value")
 
 	case *ast.StructType:
 		walkList(v, n.Implements, "Implements")

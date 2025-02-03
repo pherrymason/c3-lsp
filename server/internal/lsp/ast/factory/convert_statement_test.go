@@ -21,8 +21,8 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 				Token:          ast.Token(ast.CONST),
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 15).Build(),
 				Spec: &ast.ValueSpec{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 15).Build(),
-					Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).Build()},
+					//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 15).Build(),
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).Build()},
 					Type: ast.NewTypeInfoBuilder().
 						WithName("int").
 						IsBuiltin().
@@ -38,8 +38,8 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 				Token:          ast.Token(ast.CONST),
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 19).Build(),
 				Spec: &ast.ValueSpec{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 19).Build(),
-					Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).Build()},
+					//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 19).Build(),
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 13, 1, 14).Build()},
 					Type: ast.NewTypeInfoBuilder().
 						WithName("int").
 						IsBuiltin().
@@ -60,9 +60,9 @@ func TestConvertToAST_declaration_stmt_constant(t *testing.T) {
 				Token:          ast.Token(ast.CONST),
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 11).Build(),
 				Spec: &ast.ValueSpec{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 11).Build(),
-					Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 9, 1, 10).Build()},
-					Type:           nil,
+					//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(1, 3, 1, 11).Build(),
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("I").WithStartEnd(1, 9, 1, 10).Build()},
+					Type:  nil,
 				},
 			},
 		},
@@ -97,8 +97,8 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 9).Build(),
 				Token:          ast.VAR,
 				Spec: &ast.ValueSpec{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 9).Build(),
-					Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("i").WithStartEnd(2, 7, 2, 8).Build()},
+					//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 9).Build(),
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("i").WithStartEnd(2, 7, 2, 8).Build()},
 					Type: ast.NewTypeInfoBuilder().
 						WithName("int").
 						IsBuiltin().
@@ -114,8 +114,8 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 13).Build(),
 				Token:          ast.VAR,
 				Spec: &ast.ValueSpec{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 13).Build(),
-					Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("i").WithStartEnd(2, 7, 2, 8).Build()},
+					//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 13).Build(),
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("i").WithStartEnd(2, 7, 2, 8).Build()},
 					Type: ast.NewTypeInfoBuilder().
 						WithName("int").
 						IsBuiltin().
@@ -136,8 +136,8 @@ func TestConvertToAST_declaration_stmt_local_variable(t *testing.T) {
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 20).Build(),
 				Token:          ast.VAR,
 				Spec: &ast.ValueSpec{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 20).Build(),
-					Names:          []*ast.Ident{ast.NewIdentifierBuilder().WithName("i").WithStartEnd(2, 14, 2, 15).Build()},
+					//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(2, 3, 2, 20).Build(),
+					Names: []*ast.Ident{ast.NewIdentifierBuilder().WithName("i").WithStartEnd(2, 14, 2, 15).Build()},
 					Type: ast.NewTypeInfoBuilder().
 						WithName("int").
 						IsBuiltin().
@@ -639,7 +639,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 								NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 15).Build(),
 								Token:          ast.VAR,
 								Spec: &ast.ValueSpec{
-									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 15).Build(),
+									//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 15).Build(),
 									Names: []*ast.Ident{
 										ast.NewIdentifierBuilder().
 											WithName("i").
@@ -707,7 +707,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 								NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 20).Build(),
 								Token:          ast.VAR,
 								Spec: &ast.ValueSpec{
-									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 20).Build(),
+									//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 20).Build(),
 									Names: []*ast.Ident{
 										ast.NewIdentifierBuilder().
 											WithName("i").
@@ -785,7 +785,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 								NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 15).Build(),
 								Token:          ast.VAR,
 								Spec: &ast.ValueSpec{
-									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 15).Build(),
+									//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 8, 3, 15).Build(),
 									Names: []*ast.Ident{
 										ast.NewIdentifierBuilder().
 											WithName("i").
@@ -855,7 +855,7 @@ func TestConvertToAST_for_stmt(t *testing.T) {
 								NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 14).Build(),
 								Token:          ast.VAR,
 								Spec: &ast.ValueSpec{
-									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 14).Build(),
+									//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 14).Build(),
 									Names: []*ast.Ident{
 										ast.NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
 									},
@@ -983,7 +983,7 @@ func TestConvertToAST_foreach_stmt(t *testing.T) {
 								NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
 								Token:          ast.VAR,
 								Spec: &ast.ValueSpec{
-									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
+									//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
 									Names: []*ast.Ident{
 										ast.NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
 									},
@@ -1070,7 +1070,7 @@ func TestConvertToAST_while_stmt(t *testing.T) {
 								NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
 								Token:          ast.VAR,
 								Spec: &ast.ValueSpec{
-									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
+									//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
 									Names: []*ast.Ident{
 										ast.NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
 									},
@@ -1161,7 +1161,7 @@ func TestConvertToAST_do_stmt(t *testing.T) {
 								NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
 								Token:          ast.VAR,
 								Spec: &ast.ValueSpec{
-									NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
+									//NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(4, 4, 4, 10).Build(),
 									Names: []*ast.Ident{
 										ast.NewIdentifierBuilder().WithName("i").WithStartEnd(4, 8, 4, 9).Build(),
 									},

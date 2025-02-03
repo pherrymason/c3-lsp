@@ -11,7 +11,7 @@ import (
 type (
 	// The Spec type stands for any of *ImportSpec, *ValueSpec, and *TypeSpec.
 	Spec interface {
-		Node
+		//Node
 		specNode()
 	}
 
@@ -22,7 +22,7 @@ type (
 	}
 
 	ValueSpec struct {
-		NodeAttributes
+		//NodeAttributes
 		Names []*Ident
 		Type  *TypeInfo  // value type, or nil
 		Value Expression // initial values, or nil
@@ -31,17 +31,24 @@ type (
 	// TypeSpec represents declarations of types like aliases, definition of types
 	// or parametrized types (generics)
 	TypeSpec struct {
-		NodeAttributes
+		//NodeAttributes
 		Name            *Ident       // type name
 		TypeParams      []Expression // Generic type parameters; or nil
 		Assign          token.Pos    // position of '=', if any
 		TypeDescription Expression   // ast node describing the type with detail: EnumType, bStructType, StructType
+	}
+
+	DefSpec struct {
+		Name              *Ident
+		Value             Expression
+		GenericParameters []*TypeInfo
 	}
 )
 
 func (i *ImportSpec) specNode() {}
 func (v *ValueSpec) specNode()  {}
 func (v *TypeSpec) specNode()   {}
+func (v *DefSpec) specNode()    {}
 
 const (
 	StructTypeNormal = iota

@@ -282,7 +282,6 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 
 		structRange := lsp.NewRange(2, 1, 6, 2)
 		assert.Equal(t, structRange, decl.Range)
-		assert.Equal(t, structRange, spec.Range)
 		assert.Equal(t, structRange, structType.Range)
 		assert.Equal(t, "MyStruct", spec.Name.Name)
 		assert.Equal(t, lsp.NewRange(2, 8, 2, 16), spec.Name.Range)
@@ -706,43 +705,116 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 	})
 }
 
-func TestConvertToAST_def_declares_type(t *testing.T) {
-	t.Run("parses def declaration", func(t *testing.T) {
+func TestConvertToAST_def_declares(t *testing.T) {
+	t.Run("parses def: global var alias", func(t *testing.T) {
 		source := `
 		int global_var = 10;
-		const int MY_CONST = 5;
-		macro @ad(; @body) { @body(); }
-		fn void a() {}
-	
-		<* abc *>
 		def aliased_global = global_var;
-		def func = a(<String>);
-		def CONST_ALIAS = MY_CONST;
-		def @macro_alias = @a;
+		def aliased_global2 = ext::global_var;
 		`
+
 		cv := newTestAstConverter()
 		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
 		// aliased global
-		def := tree.Modules[0].Declarations[4].(*ast.DefDecl)
-		assert.Equal(t, "aliased_global", def.Ident.Name)
+		def := tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		assert.Equal(t, "aliased_global", def.Spec.(*ast.DefSpec).Name.Name)
+		line := uint(2)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 34), def.Range)
+		assert.Equal(t, lsp.NewRange(line, 6, line, 20), def.Spec.(*ast.DefSpec).Name.Range)
+		assert.Equal(t, "global_var", def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Name)
+		assert.Equal(t, lsp.NewRange(line, 23, line, 33), def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Range)
 
-		/*
-			defRow := uint(2)
-			assert.Equal(t,
-				&ast.DefDecl{
-					NodeAttributes: ast.NewNodeAttributesBuilder().
-						WithRangePositions(defRow, 2, defRow, 17).
-						WithDocComment("abc").
-						Build(),
-					Ident: ast.NewIdentifierBuilder().WithName("Kilo").WithStartEnd(defRow, 6, defRow, 10).Build(),
-					Expr: ast.NewTypeInfoBuilder().
-						WithName("int").
-						WithNameStartEnd(defRow, 13, defRow, 16).
-						IsBuiltin().
-						WithStartEnd(defRow, 13, defRow, 16).
-						Build(),
-				}, tree.Modules[0].Declarations[0])*/
+		// aliased imported global
+		line = uint(3)
+		def = tree.Modules[0].Declarations[2].(*ast.GenDecl)
+		assert.Equal(t, "aliased_global2", def.Spec.(*ast.DefSpec).Name.Name)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 40), def.Range)
+		assert.Equal(t, lsp.NewRange(line, 6, line, 21), def.Spec.(*ast.DefSpec).Name.Range)
+		assert.Equal(t, "global_var", def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Name)
+		assert.Equal(t, "ext::global_var", def.Spec.(*ast.DefSpec).Value.(*ast.Ident).String())
+		assert.Equal(t, lsp.NewRange(line, 24, line, 39), def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Range)
+	})
+
+	t.Run("parses def: const alias", func(t *testing.T) {
+		source := `
+		const int MY_CONST = 5;
+		def CONST_ALIAS = MY_CONST;
+		def CONST_ALIAS2 = app::MY_CONST;
+		`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		// aliased const
+		line := uint(2)
+		def := tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		assert.Equal(t, "CONST_ALIAS", def.Spec.(*ast.DefSpec).Name.Name)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 29), def.Range)
+		assert.Equal(t, lsp.NewRange(line, 6, line, 17), def.Spec.(*ast.DefSpec).Name.Range)
+		assert.Equal(t, "MY_CONST", def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Name)
+		assert.Equal(t, lsp.NewRange(line, 20, line, 28), def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Range)
+
+		// exported const
+		line = uint(3)
+		def = tree.Modules[0].Declarations[2].(*ast.GenDecl)
+		assert.Equal(t, "CONST_ALIAS2", def.Spec.(*ast.DefSpec).Name.Name)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 35), def.Range)
+		assert.Equal(t, lsp.NewRange(line, 6, line, 18), def.Spec.(*ast.DefSpec).Name.Range)
+		assert.Equal(t, "MY_CONST", def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Name)
+		assert.Equal(t, "app", def.Spec.(*ast.DefSpec).Value.(*ast.Ident).ModulePath.Name)
+		assert.Equal(t, lsp.NewRange(line, 21, line, 34), def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Range)
+	})
+
+	t.Run("parses def: func alias with generics", func(t *testing.T) {
+		source := `
+		def func = a(<String,int>);`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		line := uint(1)
+		def := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		assert.Equal(t, "func", def.Spec.(*ast.DefSpec).Name.Name)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 29), def.Range)
+		assert.Equal(t, lsp.NewRange(line, 6, line, 10), def.Spec.(*ast.DefSpec).Name.Range)
+		assert.Equal(t, "a", def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Name)
+		assert.Equal(t, lsp.NewRange(line, 13, line, 14), def.Spec.(*ast.DefSpec).Value.(*ast.Ident).Range)
+		assert.Equal(t, 2, len(def.Spec.(*ast.DefSpec).GenericParameters))
+	})
+
+	t.Run("parses def: alias to imported struct method", func(t *testing.T) {
+		source := `
+		def x = Type.hello;
+		def y = app::Type.hello;
+		`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		line := uint(1)
+		def := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		assert.Equal(t, "x", def.Spec.(*ast.DefSpec).Name.Name)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 21), def.Range)
+		assert.Equal(t, lsp.NewRange(line, 6, line, 7), def.Spec.(*ast.DefSpec).Name.Range)
+
+		selector := def.Spec.(*ast.DefSpec).Value.(*ast.SelectorExpr)
+		assert.Equal(t, "hello", selector.Sel.Name)
+		assert.Equal(t, lsp.NewRange(line, 15, line, 20), selector.Sel.Range)
+		assert.Equal(t, "Type", selector.X.(*ast.Ident).String())
+		assert.Equal(t, lsp.NewRange(line, 10, line, 14), selector.X.(*ast.Ident).Range)
+
+		// Imported struct method
+		line = uint(2)
+		def = tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		assert.Equal(t, "y", def.Spec.(*ast.DefSpec).Name.Name)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 26), def.Range)
+		assert.Equal(t, lsp.NewRange(line, 6, line, 7), def.Spec.(*ast.DefSpec).Name.Range)
+
+		selector = def.Spec.(*ast.DefSpec).Value.(*ast.SelectorExpr)
+		assert.Equal(t, "hello", selector.Sel.Name)
+		assert.Equal(t, "app::Type", selector.X.(*ast.Ident).String())
+		assert.Equal(t, lsp.NewRange(line, 10, line, 19), selector.X.(*ast.Ident).Range)
 	})
 
 	t.Run("parses def declaring function", func(t *testing.T) {
@@ -750,6 +822,7 @@ func TestConvertToAST_def_declares_type(t *testing.T) {
 		cv := newTestAstConverter()
 		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
+		declaration := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		assert.Equal(t,
 			&ast.FuncType{
 				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(0, 11, 0, 24).Build(),
@@ -770,7 +843,7 @@ func TestConvertToAST_def_declares_type(t *testing.T) {
 							Build(),
 					},
 				},
-			}, tree.Modules[0].Declarations[0].(*ast.DefDecl).Expr)
+			}, declaration.Spec.(*ast.DefSpec).Value)
 	})
 }
 
