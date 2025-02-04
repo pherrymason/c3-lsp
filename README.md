@@ -71,6 +71,7 @@ Once these initial objectives are completed, we will explore additional function
 ## Useful links:
 - LSP specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
 - treesitter
+  - C3 treesitter grammar: https://github.com/c3lang/tree-sitter-c3
   - Queries docs: https://tree-sitter.github.io/tree-sitter/using-parsers#pattern-matching-with-queries
   - Queries: https://emacs-tree-sitter.github.io/syntax-highlighting/queries/
   - Tree-sitter - a new parsing system for programming tools (video) https://www.thestrangeloop.com/2018/tree-sitter---a-new-parsing-system-for-programming-tools.html
