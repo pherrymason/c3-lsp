@@ -12,6 +12,8 @@ import (
 const STRUCT_SEPARATOR = '.'
 const MODULE_SEPARATOR = ':'
 
+// Document
+// Deprecated
 type Document struct {
 	URI string
 	//NeedsRefreshDiagnostics bool

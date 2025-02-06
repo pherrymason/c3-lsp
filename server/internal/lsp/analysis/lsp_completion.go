@@ -7,6 +7,15 @@ import (
 )
 
 func BuildCompletionList(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) []protocol.CompletionItem {
+	/*posContext := getPositionContext(document, pos)
+	symbolResult := FindSymbolAtPosition(pos, document.Uri, symbolTable, document.Ast)
+
+	if symbolResult.IsNone() {
+		return []protocol.CompletionItem{}
+	}
+
+	symbol := symbolResult.Get()
+	*/
 	var items []protocol.CompletionItem
 
 	return items

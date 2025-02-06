@@ -195,5 +195,36 @@ func TestSymbolBuild_registers_macro_trailing_param(t *testing.T) {
 
 		// @body params are not to be used inside the body of the macro, so no need to register them as symbols.
 	})
+}
 
+func TestSymbolBuild_registers_def(t *testing.T) {
+	t.Run("detects", func(t *testing.T) {
+		source := `module foo;
+		def aliased_global = global_var;
+		def alias_export = ext::global_var;
+		def CONST_ALIAS = MY_CONST;
+		def func = a(<String>);
+		def @macro_alias = @a;`
+
+		astConverter := factory.NewASTConverter()
+		tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
+
+		result := BuildSymbolTable(tree, "")
+		scope := result.scopeTree["file.c3"].GetModuleScope("foo")
+
+		assert.Equal(t, "aliased_global", scope.Symbols[0].Name)
+		assert.Equal(t, lsp.NewRange(1, 2, 1, 34), scope.Symbols[0].Range)
+
+		assert.Equal(t, "alias_export", scope.Symbols[1].Name)
+		assert.Equal(t, lsp.NewRange(2, 2, 2, 37), scope.Symbols[1].Range)
+
+		assert.Equal(t, "CONST_ALIAS", scope.Symbols[2].Name)
+		assert.Equal(t, lsp.NewRange(3, 2, 3, 29), scope.Symbols[2].Range)
+
+		assert.Equal(t, "func", scope.Symbols[3].Name)
+		assert.Equal(t, lsp.NewRange(4, 2, 4, 25), scope.Symbols[3].Range)
+
+		assert.Equal(t, "@macro_alias", scope.Symbols[4].Name)
+		assert.Equal(t, lsp.NewRange(5, 2, 5, 24), scope.Symbols[4].Range)
+	})
 }

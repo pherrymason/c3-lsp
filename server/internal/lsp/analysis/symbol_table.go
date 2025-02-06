@@ -266,7 +266,19 @@ func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName 
 			switch spec := n.Spec.(type) {
 			case *ast.ValueSpec:
 				typeName = spec.Type.Identifier.String() // TODO this will fail if type contains Module path
+
+			case *ast.DefSpec:
+				switch defValue := spec.Value.(type) {
+				case *ast.Ident:
+					typeName = defValue.Name
+				default:
+					panic("unsupported defValue")
+				}
 			}
+		}
+
+		if typeName == "" {
+			return nil
 		}
 
 		// Second search, we need to search for symbol with typeName

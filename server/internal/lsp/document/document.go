@@ -21,7 +21,10 @@ type Document struct {
 	Ast             *ast.File
 	Cst             *sitter.Tree
 	Version         uint
-	Imports         []Module
+
+	LastGoodCst *sitter.Tree
+	LastGoodAst *sitter.Tree
+	Imports     []Module
 }
 
 func (d *Document) Close() {
