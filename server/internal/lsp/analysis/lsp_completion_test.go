@@ -197,10 +197,11 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 		fn void Obj.foo(){}
 		fn void Obj.fooBar(){}
 		fn void Obj.abc(){}
+		fn void foo(){} // To confuse algorithm
 		fn void main() {
 		Obj o;`
 
-		line := uint32(9)
+		line := uint32(10)
 		cases := []struct {
 			input    string
 			expected []protocol.CompletionItem
@@ -218,6 +219,55 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 			{"o.fooB",
 				[]protocol.CompletionItem{
 					completionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 6), ""),
+				},
+			},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, *tt.expected[idx].Kind, *item.Kind)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit)
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+					assert.Equal(t, *tt.expected[idx].Detail, *item.Detail)
+				}
+			})
+		}
+	})
+
+	t.Run("Should suggest deep struct method names while in function scope", func(t *testing.T) {
+		sourceStart := `
+		struct Deep{int freight;}
+		fn void Deep.fooDeep(){}	
+		struct Obj{int freight;Deep dep;}
+		fn void Obj.foo(){}
+		fn void foo(){} // To confuse algorithm
+		fn void main() {
+		Obj o;`
+
+		line := uint32(8)
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"o.f",
+				[]protocol.CompletionItem{
+					completionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3), ""),
+					completionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3), ""),
+				},
+			},
+			{"o.dep.foo",
+				[]protocol.CompletionItem{
+					completionItem("fooDeep", protocol.CompletionItemKindFunction, "fn void fooDeep()", protocol2.NewLSPRange(line, 6, line, 9), ""),
 				},
 			},
 		}
