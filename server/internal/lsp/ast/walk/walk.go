@@ -178,7 +178,10 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 	case *ast.GenDecl:
 		switch spec := n.Spec.(type) {
 		case *ast.ValueSpec:
-			Walk(v, spec.Type, "Type")
+			if spec.Type != nil {
+				// It is a possibility that a bad source does not have a type yet.
+				Walk(v, spec.Type, "Type")
+			}
 			walkList(v, spec.Names, "Names")
 			Walk(v, spec.Value, "Value")
 		case *ast.TypeSpec:

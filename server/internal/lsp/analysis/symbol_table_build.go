@@ -202,11 +202,13 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 		)
 
 		typeExpression := n.Spec.(*ast.ValueSpec).Type
-		typeName := typeExpression.Identifier.String()
-		symbol.Type = TypeDefinition{
-			Name:      typeName, // TODO does this having module path break anything?
-			IsBuiltIn: typeExpression.BuiltIn,
-			NodeDecl:  typeExpression,
+		if typeExpression != nil {
+			typeName := typeExpression.String()
+			symbol.Type = TypeDefinition{
+				Name:      typeName, // TODO does this having module path break anything?
+				IsBuiltIn: typeExpression.BuiltIn,
+				NodeDecl:  typeExpression,
+			}
 		}
 
 	case ast.ENUM:

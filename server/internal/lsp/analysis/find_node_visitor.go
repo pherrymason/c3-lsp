@@ -31,7 +31,7 @@ func (v *FindNodeVisitor) Enter(node ast.Node, propertyName string) walk.Visitor
 
 		// Continue traversing child nodes
 		switch node.(type) {
-		case *ast.Ident, *ast.BasicLit:
+		case *ast.Ident, *ast.BasicLit, *ast.ErrorNode:
 			v.stopSearch = true
 		default:
 		}

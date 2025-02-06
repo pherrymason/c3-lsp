@@ -193,6 +193,9 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 				declaration.SetDocComment(lastDocComment)
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
+		case "ERROR":
+			declaration := c.convert_error(node, source)
+			lastMod.Declarations = append(lastMod.Declarations, declaration.(ast.Declaration))
 		}
 
 		lastNode = node
@@ -2261,6 +2264,13 @@ func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte)
 	}
 
 	return docComment
+}
+
+func (c *ASTConverter) convert_error(node *sitter.Node, source []byte) ast.Node {
+	return &ast.ErrorNode{
+		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		Content:        node.Content(source),
+	}
 }
 
 func debugNode(node *sitter.Node, source []byte, tag string) {

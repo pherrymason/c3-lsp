@@ -113,7 +113,7 @@ func TestConvertToAST_module_with_imports(t *testing.T) {
 // Convert global variable declaration
 
 func TestConvertToAST_global_variable(t *testing.T) {
-	t.Run("parses global variable unitialized", func(t *testing.T) {
+	t.Run("parses global variable uninitialized", func(t *testing.T) {
 		source := `module foo;
 	<* abc *>
 	int hello;`

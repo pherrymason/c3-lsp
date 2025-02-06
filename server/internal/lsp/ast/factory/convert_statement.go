@@ -38,6 +38,7 @@ func (c *ASTConverter) convert_statement(node *sitter.Node, source []byte) ast.S
 		NodeOfType("ct_switch_stmt"),
 		NodeOfType("ct_foreach_stmt"),
 		NodeOfType("ct_for_stmt"),
+		NodeOfType("ERROR"),
 	}
 	c.debug = false
 	dd, _ := c.anyOf("statement", rules, node, source, c.debug)

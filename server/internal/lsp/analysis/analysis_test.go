@@ -5,16 +5,44 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
+	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 )
 
+type testServer struct {
+	documents   *document.Storage
+	symbolTable *SymbolTable
+}
+
+func newTestServer() testServer {
+	return testServer{
+		documents:   document.NewStore(),
+		symbolTable: NewSymbolTable(),
+	}
+}
+
+func startTestServer(source string, uri string) (testServer, lsp.Position) {
+	srv := newTestServer()
+
+	source, position := parseBodyWithCursor(source)
+
+	astConverter := factory.NewASTConverter()
+
+	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, uri)
+	doc := srv.documents.OpenDocument(uri, source, 1)
+	doc.Ast = tree
+	UpdateSymbolTable(srv.symbolTable, tree, uri)
+
+	return srv, position
+}
+
 // Parses a test body with a '|||' cursor, returning the body without
 // the cursor and the position of that cursor.
 //
-// Useful for tests where we check what the language server responds if the
+// Useful for tests where we check what the language testServer responds if the
 // user cursor is at a certain position.
 func parseBodyWithCursor(body string) (string, lsp.Position) {
 	cursorLine, cursorCol := utils.FindLineColOfSubstring(body, "|||")

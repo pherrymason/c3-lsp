@@ -151,6 +151,8 @@ func (c *ASTConverter) generateConversionInfo() {
 		"false":              {method: cv_expr_fn(c.convert_literal)},
 		"null":               {method: cv_expr_fn(c.convert_literal)},
 
+		"ERROR": {method: c.convert_error},
+
 		// Custom ones ----------------
 		"..type_with_initializer_list..":   {method: cv_expr_fn(c.convert_type_with_initializer_list)},
 		"..lambda_declaration_with_body..": {method: cv_expr_fn(c.convert_lambda_declaration_with_body)},

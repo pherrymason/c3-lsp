@@ -2,6 +2,7 @@ package ast
 
 import (
 	"github.com/pherrymason/c3-lsp/pkg/option"
+	"strings"
 )
 
 // -------------------------------------------------------------------------
@@ -340,7 +341,18 @@ func (l *RethrowExpression) exprNode()     {}
 func (l *TernaryExpression) exprNode()     {}
 func (l *UpdateExpression) exprNode()      {}
 
-func (TypeInfo) exprNode()                      {}
+func (TypeInfo) exprNode() {}
+func (t *TypeInfo) String() string {
+	id := t.Identifier.String()
+	if t.Pointer > 0 {
+		id += strings.Repeat("*", int(t.Pointer))
+	}
+	if t.Optional {
+		id += "!"
+	}
+
+	return id
+}
 func (*InitializerList) exprNode()              {}
 func (*InlineTypeWithInitialization) exprNode() {}
 func (l *Field) exprNode()                      {}

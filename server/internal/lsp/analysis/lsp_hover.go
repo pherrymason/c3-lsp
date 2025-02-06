@@ -39,18 +39,7 @@ func buildHover(symbol *Symbol) protocol.Hover {
 		}
 
 	case ast.FUNCTION:
-		f := symbol.NodeDecl.(*ast.FunctionDecl)
-		args := []string{}
-		for _, arg := range f.Signature.Parameters {
-			args = append(args, arg.Type.Identifier.String()+" "+arg.Name.Name)
-		}
-
-		description = fmt.Sprintf(
-			"fn %s %s(%s)",
-			f.Signature.ReturnType.Identifier.Name,
-			f.Signature.Name.Name,
-			strings.Join(args, ", "),
-		)
+		description = functionDescriptionString(symbol)
 
 	case ast.MACRO:
 		macro := symbol.NodeDecl.(*ast.MacroDecl)
@@ -103,4 +92,20 @@ func buildHover(symbol *Symbol) protocol.Hover {
 				extraLine,
 		},
 	}
+}
+
+func functionDescriptionString(symbol *Symbol) string {
+	f := symbol.NodeDecl.(*ast.FunctionDecl)
+	args := []string{}
+	for _, arg := range f.Signature.Parameters {
+		args = append(args, arg.Type.Identifier.String()+" "+arg.Name.Name)
+	}
+
+	description := fmt.Sprintf(
+		"fn %s %s(%s)",
+		f.Signature.ReturnType.Identifier.Name,
+		f.Signature.Name.Name,
+		strings.Join(args, ", "),
+	)
+	return description
 }

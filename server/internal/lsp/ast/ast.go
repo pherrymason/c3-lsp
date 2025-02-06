@@ -33,7 +33,9 @@ const (
 	ENUM
 	FAULT
 	DEF
+	DISTINCT
 	FUNCTION
+	METHOD
 	FIELD
 	MACRO
 )
@@ -129,6 +131,7 @@ func NewFile(nodeId NodeId, uri protocol.URI, aRange lsp.Range, modules []*Modul
 
 	return node
 }
+
 func (f *File) AddModule(module *Module) {
 	f.Modules = append(f.Modules, module)
 }
@@ -193,3 +196,12 @@ type DeclOrExpr struct {
 
 func (*DeclOrExpr) exprNode() {}
 func (*DeclOrExpr) declNode() {}
+
+type ErrorNode struct {
+	NodeAttributes
+	Content string
+}
+
+func (*ErrorNode) declNode() {}
+func (*ErrorNode) exprNode() {}
+func (*ErrorNode) stmtNode() {}

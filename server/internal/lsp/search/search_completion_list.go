@@ -212,7 +212,7 @@ func (s *Search) BuildCompletionList(
 					Character: uint(position.Character - 1),
 				})
 				if error != nil {
-			// Probably, theres no symbol at cursor!
+			// Probably, there's no symbol at cursor!
 			filterMembers = false
 		}
 	*/
@@ -235,7 +235,7 @@ func (s *Search) BuildCompletionList(
 	}
 
 	if symbolInPosition.IsSeparator() {
-		// Probably, theres no symbol at cursor!
+		// Probably, there's no symbol at cursor!
 		filterMembers = false
 	}
 	s.logger.Debug(fmt.Sprintf("building completion list: \"%s\"", symbolInPosition.Text())) //TODO warp %s en "

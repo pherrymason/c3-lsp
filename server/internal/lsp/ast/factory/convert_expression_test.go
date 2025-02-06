@@ -474,108 +474,144 @@ func TestConvertToAST_declaration_with_initializer_list_assignment(t *testing.T)
 	}
 }
 
-func TestConvertToAST_function_statements_with_declarations(t *testing.T) {
-	source := `
+func TestConvertToAST_function_statements(t *testing.T) {
+	t.Run("statements_with_declarations", func(t *testing.T) {
+		source := `
 	module foo;
 	fn void main() {
 		int cat = 1;
 		MyStruct object;
 	}`
 
-	cv := newTestAstConverter()
-	cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
-}
+		cv := newTestAstConverter()
+		cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+	})
 
-func TestConvertToAST_function_statements_call(t *testing.T) {
-	t.Skip("TODO")
-	source := `
+	t.Run("statement calls", func(t *testing.T) {
+		t.Skip("TODO")
+		source := `
 	module foo;
 	fn void main() {
 		call();
 	}`
 
-	cv := newTestAstConverter()
-	cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
-}
+		cv := newTestAstConverter()
+		cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+	})
 
-func TestConvertToAST_function_statements_call_with_arguments(t *testing.T) {
-	t.Skip("TODO")
-	source := `
+	t.Run("statements call with arguments", func(t *testing.T) {
+		t.Skip("TODO")
+		source := `
 	module foo;
 	fn void main() {
 		call2(cat);
 	}`
 
-	cv := newTestAstConverter()
-	cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
-}
+		cv := newTestAstConverter()
+		cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+	})
 
-func TestConvertToAST_function_statements_call_chain(t *testing.T) {
-	cases := []struct {
-		skip     bool
-		input    string
-		expected *ast.CallExpr
-	}{
-		{
-			skip:  true,
-			input: "object.call(1);",
-			expected: &ast.CallExpr{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 16).Build(),
-				Identifier: &ast.SelectorExpr{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 13).Build(),
-					X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).Build(),
-					Sel:            ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).Build(),
-				},
-				Arguments: []ast.Expression{
-					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 14, 3, 15).Build(),
-						Kind:           ast.INT,
-						Value:          "1"},
-				},
-			},
-		},
-		{
-			skip:  true,
-			input: "object.prop.call(1);",
-			expected: &ast.CallExpr{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 21).Build(),
-				Identifier: &ast.SelectorExpr{
-					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 14, 3, 18).Build(),
-					X: &ast.SelectorExpr{
+	t.Run("statement call chain", func(t *testing.T) {
+		cases := []struct {
+			skip     bool
+			input    string
+			expected *ast.CallExpr
+		}{
+			{
+				skip:  true,
+				input: "object.call(1);",
+				expected: &ast.CallExpr{
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 16).Build(),
+					Identifier: &ast.SelectorExpr{
 						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 13).Build(),
 						X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).Build(),
-						Sel:            ast.NewIdentifierBuilder().WithName("prop").WithStartEnd(3, 9, 3, 13).Build(),
+						Sel:            ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 9, 3, 13).Build(),
 					},
-					Sel: ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 14, 3, 18).Build(),
-				},
-				Arguments: []ast.Expression{
-					&ast.BasicLit{
-						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 19, 3, 20).Build(),
-						Kind:           ast.INT, Value: "1"},
+					Arguments: []ast.Expression{
+						&ast.BasicLit{
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 14, 3, 15).Build(),
+							Kind:           ast.INT,
+							Value:          "1"},
+					},
 				},
 			},
-		},
-	}
-
-	for i, tt := range cases {
-		if tt.skip {
-			continue
+			{
+				skip:  true,
+				input: "object.prop.call(1);",
+				expected: &ast.CallExpr{
+					NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 2, 3, 21).Build(),
+					Identifier: &ast.SelectorExpr{
+						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 14, 3, 18).Build(),
+						X: &ast.SelectorExpr{
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 9, 3, 13).Build(),
+							X:              ast.NewIdentifierBuilder().WithName("object").WithStartEnd(3, 2, 3, 8).Build(),
+							Sel:            ast.NewIdentifierBuilder().WithName("prop").WithStartEnd(3, 9, 3, 13).Build(),
+						},
+						Sel: ast.NewIdentifierBuilder().WithName("call").WithStartEnd(3, 14, 3, 18).Build(),
+					},
+					Arguments: []ast.Expression{
+						&ast.BasicLit{
+							NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(3, 19, 3, 20).Build(),
+							Kind:           ast.INT, Value: "1"},
+					},
+				},
+			},
 		}
-		t.Run(fmt.Sprintf("function_statements_call_chain[%d]", i), func(t *testing.T) {
-			source := `
+
+		for i, tt := range cases {
+			if tt.skip {
+				continue
+			}
+			t.Run(fmt.Sprintf("function_statements_call_chain[%d]", i), func(t *testing.T) {
+				source := `
 	module foo;
 	fn void main() {
 		` + tt.input + `
 	}`
 
-			cv := newTestAstConverter()
-			tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
-			compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
-			call := compound.Statements[0].(*ast.ExpressionStmt).Expr.(*ast.CallExpr)
+				cv := newTestAstConverter()
+				tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+				compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
+				call := compound.Statements[0].(*ast.ExpressionStmt).Expr.(*ast.CallExpr)
 
-			assert.Equal(t, tt.expected, call)
-		})
-	}
+				assert.Equal(t, tt.expected, call)
+			})
+		}
+	})
+
+	t.Run("ERRORS: statement with incomplete variable", func(t *testing.T) {
+		source := `
+	module foo;
+	fn void main() {
+		a
+	}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
+		err, ok := compound.Statements[0].(*ast.ErrorNode)
+		assert.True(t, ok)
+		assert.Equal(t, lsp.NewRange(3, 2, 3, 3), err.Range)
+		assert.Equal(t, "a", err.Content)
+	})
+
+	t.Run("ERRORS: statement with incomplete constant", func(t *testing.T) {
+		source := `
+	module foo;
+	fn void main() {
+		MY
+	}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
+		err, ok := compound.Statements[0].(*ast.ErrorNode)
+		assert.True(t, ok)
+		assert.Equal(t, lsp.NewRange(3, 2, 3, 4), err.Range)
+		assert.Equal(t, "MY", err.Content)
+	})
 }
 
 func TestConvertToAST_field_expr(t *testing.T) {

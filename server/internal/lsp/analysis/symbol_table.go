@@ -66,8 +66,8 @@ type ModulesList struct {
 	modules map[string]*Scope
 }
 
-func (mg *ModulesList) GetModuleScope(name string) *Scope {
-	scope, exists := mg.modules[name]
+func (mg *ModulesList) GetModuleScope(moduleName string) *Scope {
+	scope, exists := mg.modules[moduleName]
 	if !exists {
 		return nil
 	}
@@ -109,6 +109,19 @@ func (s *SymbolTable) RegisterNewRootScope(file string, node *ast.Module) *Scope
 	})
 
 	return scope
+}
+
+func (s *SymbolTable) GetSymbolsInScope(scope *Scope) []*Symbol {
+	symbols := []*Symbol{}
+	for {
+		symbols = append(symbols, scope.Symbols...)
+		if scope.Parent.IsNone() {
+			break
+		}
+		scope = scope.Parent.Get()
+	}
+
+	return symbols
 }
 
 func (s *SymbolTable) findSymbolInScope(name string, scope *Scope) *Symbol {
