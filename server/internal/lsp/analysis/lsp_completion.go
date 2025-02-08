@@ -174,6 +174,8 @@ func getCompletionKind(symbol *Symbol) protocol.CompletionItemKind {
 
 	case ast.METHOD:
 		return protocol.CompletionItemKindMethod
+	case ast.MACRO:
+		return protocol.CompletionItemKindFunction
 
 	case ast.ENUM, ast.FAULT:
 		return protocol.CompletionItemKindEnum
@@ -213,6 +215,8 @@ func getCompletionDetail(s *Symbol) *string {
 	case ast.FUNCTION:
 		// TODO
 		detail = functionDescriptionString(s)
+	case ast.MACRO:
+		detail = macroDescriptionString(s, false)
 	case ast.ENUM:
 		detail = "Enum"
 	case ast.FAULT:

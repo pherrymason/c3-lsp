@@ -42,35 +42,7 @@ func buildHover(symbol *Symbol) protocol.Hover {
 		description = functionDescriptionString(symbol)
 
 	case ast.MACRO:
-		macro := symbol.NodeDecl.(*ast.MacroDecl)
-		typeMethod := ""
-		if macro.Signature.ParentTypeId.IsSome() {
-			typeMethod = macro.Signature.ParentTypeId.Get().Name + "."
-		}
-		args := []string{}
-		for _, arg := range macro.Signature.Parameters {
-			args = append(args, arg.Type.Identifier.String()+" "+arg.Name.Name)
-		}
-		trailing := ""
-		if macro.Signature.TrailingBlockParam != nil {
-			trailing = "; " + macro.Signature.TrailingBlockParam.Name.Name
-			paramCount := len(macro.Signature.TrailingBlockParam.Parameters)
-			if paramCount > 0 {
-				params := []string{}
-				for i := 0; i < paramCount; i++ {
-					params = append(params, macro.Signature.TrailingBlockParam.Parameters[0].Name.Name)
-				}
-
-				trailing += "(" + strings.Join(params, ", ") + ")"
-			}
-		}
-
-		description = fmt.Sprintf(
-			"macro %s%s(%s)",
-			typeMethod,
-			macro.Signature.Name.Name,
-			strings.Join(args, ", ")+trailing,
-		)
+		description = macroDescriptionString(symbol, true)
 	}
 
 	isModule := false
@@ -92,6 +64,54 @@ func buildHover(symbol *Symbol) protocol.Hover {
 				extraLine,
 		},
 	}
+}
+
+func macroDescriptionString(symbol *Symbol, includeMacroName bool) string {
+	macro := symbol.NodeDecl.(*ast.MacroDecl)
+	typeMethod := ""
+	if macro.Signature.ParentTypeId.IsSome() {
+		typeMethod = macro.Signature.ParentTypeId.Get().Name + "."
+	}
+	args := []string{}
+	for _, arg := range macro.Signature.Parameters {
+		typeName := ""
+		if arg.Type != nil {
+			typeName = arg.Type.String() + " "
+		}
+		args = append(args, typeName+arg.Name.Name)
+	}
+	trailing := ""
+	if macro.Signature.TrailingBlockParam != nil {
+		trailing = "; " + macro.Signature.TrailingBlockParam.Name.Name
+		paramCount := len(macro.Signature.TrailingBlockParam.Parameters)
+		if paramCount > 0 {
+			params := []string{}
+			for i := 0; i < paramCount; i++ {
+				parameter := macro.Signature.TrailingBlockParam.Parameters[i]
+				typeName := ""
+				if parameter.Type != nil {
+					typeName = parameter.Type.String() + " "
+				}
+				paramString := fmt.Sprintf("%s%s", typeName, parameter.Name.Name)
+				params = append(params, paramString)
+			}
+
+			trailing += "(" + strings.Join(params, ", ") + ")"
+		}
+	}
+
+	macroName := " " + macro.Signature.Name.Name
+	if !includeMacroName {
+		macroName = ""
+	}
+
+	description := fmt.Sprintf(
+		"macro%s%s(%s)",
+		typeMethod,
+		macroName,
+		strings.Join(args, ", ")+trailing,
+	)
+	return description
 }
 
 func functionDescriptionString(symbol *Symbol) string {

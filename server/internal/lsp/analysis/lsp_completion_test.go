@@ -143,6 +143,59 @@ func TestBuildCompletionList_suggests_variables(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Should macro names", func(t *testing.T) {
+		sourceStart := `
+		<* abc *>
+		macro process(x){}
+		macro @process(x){}
+		macro empty(){}
+		macro @empty(){}
+		macro int transform(int x; @body){ return 5; }
+		macro replace(float* x; @body(int* a, float b)){}
+		fn void main() {`
+
+		line := uint32(9)
+		cases := []struct {
+			input    string
+			expected protocol.CompletionItem
+		}{
+			{"p",
+				completionItem("process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 1), "abc"),
+			},
+			{"proc",
+				completionItem("process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 4), "abc"),
+			},
+			{"emp",
+				completionItem("empty", protocol.CompletionItemKindFunction, "macro()", protocol2.NewLSPRange(line, 0, line, 3), ""),
+			},
+			{"trans",
+				completionItem("transform", protocol.CompletionItemKindFunction, "macro(int x; @body)", protocol2.NewLSPRange(line, 0, line, 5), ""),
+			},
+			{"repla",
+				completionItem("replace", protocol.CompletionItemKindFunction, "macro(float* x; @body(int* a, float b))", protocol2.NewLSPRange(line, 0, line, 5), ""),
+			},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, 1, len(completionList))
+				assert.Equal(t, tt.expected.Label, completionList[0].Label)
+				assert.Equal(t, protocol.CompletionItemKindFunction, *completionList[0].Kind)
+				assert.Equal(t, tt.expected.TextEdit, completionList[0].TextEdit)
+				if tt.expected.Documentation == nil {
+					assert.Nil(t, completionList[0].Documentation)
+				} else {
+					assert.Equal(t, tt.expected.Documentation, completionList[0].Documentation)
+				}
+				assert.NotNil(t, completionList[0].Detail)
+				assert.Equal(t, *tt.expected.Detail, *completionList[0].Detail)
+			})
+		}
+	})
 }
 
 func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
