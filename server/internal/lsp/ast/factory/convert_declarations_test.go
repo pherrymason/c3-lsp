@@ -1166,6 +1166,22 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 		)
 	})
 
+	t.Run("does not mix docblocks", func(t *testing.T) {
+		source := `module foo;
+	<* abc *>
+	macro m(x) {return x + 2;}
+	macro n() {}
+	`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		macroDecl := tree.Modules[0].Declarations[0].(*ast.MacroDecl)
+
+		assert.Equal(t, "abc", macroDecl.DocComment.Get().GetBody())
+
+		assert.Equal(t, true, tree.Modules[0].Declarations[1].(*ast.MacroDecl).DocComment.IsNone())
+	})
+
 	t.Run("parse macro with return type", func(t *testing.T) {
 		source := `
 		<* docs *>

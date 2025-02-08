@@ -108,6 +108,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			module := convert_module(node, source)
 			if lastDocComment != nil {
 				module.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 
 			prg.AddModule(module)
@@ -128,6 +129,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_global_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, &declaration)
 
@@ -135,6 +137,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_enum_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
@@ -142,6 +145,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_struct_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
@@ -149,6 +153,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_bitstruct_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
@@ -156,6 +161,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_fault_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
@@ -163,6 +169,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_const_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
@@ -170,6 +177,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_def_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
@@ -177,6 +185,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_function_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
@@ -184,6 +193,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_interface_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
@@ -191,6 +201,7 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			declaration := c.convert_macro_declaration(node, source)
 			if lastDocComment != nil {
 				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 		case "ERROR":
