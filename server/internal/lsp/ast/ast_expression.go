@@ -350,6 +350,14 @@ func (t *TypeInfo) String() string {
 	if t.Optional {
 		id += "!"
 	}
+	if len(t.Generics) > 0 {
+		id += "(<"
+		list := []string{}
+		for _, gn := range t.Generics {
+			list = append(list, gn.String())
+		}
+		id += strings.Join(list, ", ") + ">)"
+	}
 
 	return id
 }

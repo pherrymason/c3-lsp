@@ -797,6 +797,7 @@ func TestConvertToAST_def_declares(t *testing.T) {
 		assert.Equal(t, "x", def.Spec.(*ast.DefSpec).Name.Name)
 		assert.Equal(t, lsp.NewRange(line, 2, line, 21), def.Range)
 		assert.Equal(t, lsp.NewRange(line, 6, line, 7), def.Spec.(*ast.DefSpec).Name.Range)
+		//assert.True(t, def.Spec.(*ast.DefSpec).ResolvesToType)
 
 		selector := def.Spec.(*ast.DefSpec).Value.(*ast.SelectorExpr)
 		assert.Equal(t, "hello", selector.Sel.Name)
@@ -815,6 +816,23 @@ func TestConvertToAST_def_declares(t *testing.T) {
 		assert.Equal(t, "hello", selector.Sel.Name)
 		assert.Equal(t, "app::Type", selector.X.(*ast.Ident).String())
 		assert.Equal(t, lsp.NewRange(line, 10, line, 19), selector.X.(*ast.Ident).Range)
+		//assert.True(t, def.Spec.(*ast.DefSpec).ResolvesToType)
+	})
+
+	t.Run("parses def: flags def as type", func(t *testing.T) {
+		source := `
+		def TypeAlias = Type;
+		def TypeAlias = mod::Type;
+		`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		def := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		assert.True(t, def.Spec.(*ast.DefSpec).ResolvesToType)
+
+		def = tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		assert.True(t, def.Spec.(*ast.DefSpec).ResolvesToType)
 	})
 
 	t.Run("parses def declaring function", func(t *testing.T) {

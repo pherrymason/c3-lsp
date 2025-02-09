@@ -775,6 +775,7 @@ func (c *ASTConverter) convert_def_declaration(node *sitter.Node, sourceCode []b
 				WithSitterPos(n).
 				WithName(n.Content(sourceCode)).
 				Build()
+			defSpec.ResolvesToType = true
 
 		case "define_ident":
 			// define_ident: $ => seq(

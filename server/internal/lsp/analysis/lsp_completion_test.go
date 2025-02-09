@@ -455,6 +455,288 @@ func TestBuildCompletionList_should_suggest_enums(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Should suggest enum associated values", func(t *testing.T) {
+		sourceStart := `
+		enum Color : (int assoc, float abc) {
+			RED = { 1, 2.0 },
+			BLUE = { 2, 4.0 }
+		}
+		fn void main() {`
+		line := uint32(6)
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find associated values on enum type",
+				"Color.a",
+				[]protocol.CompletionItem{}},
+			{
+				"Find associated values on explicit constant",
+				"Color.RED.a",
+				[]protocol.CompletionItem{
+					createCompletionItem("abc", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("assoc", protocol.CompletionItemKindVariable, "int", protocol2.NewLSPRange(line, 6, line, 9)),
+				}},
+
+			{
+				"Find matching associated values on explicit constant",
+				"Color.RED.asso",
+				[]protocol.CompletionItem{
+					createCompletionItem("assoc", protocol.CompletionItemKindVariable, "int", protocol2.NewLSPRange(line, 6, line, 9)),
+				}},
+
+			{
+				"Find associated values on enum instance variable",
+				`Color clr = Color.RED;
+clr.a`,
+				[]protocol.CompletionItem{
+					createCompletionItem("abc", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("assoc", protocol.CompletionItemKindVariable, "int", protocol2.NewLSPRange(line, 6, line, 9)),
+				}},
+
+			{
+				"Find matching associated values on enum instance variable",
+				`Color clr = Color.RED;
+clr.asso`,
+				[]protocol.CompletionItem{
+					createCompletionItem("assoc", protocol.CompletionItemKindVariable, "int", protocol2.NewLSPRange(line, 6, line, 9)),
+				}},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%s", tt.input), func(t *testing.T) {
+
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit, "test edit is wrong")
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+					assert.Equal(t, *tt.expected[idx].Detail, *item.Detail)
+				}
+			})
+		}
+	})
+
+	t.Run("Should suggest Enum methods", func(t *testing.T) {
+		sourceStart := `
+		enum Color { RED, GREEN, BLUE, COBALT }
+		fn Color Color.transparentize(self) {}
+		fn void main() {
+`
+		line := uint32(6)
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find enum methods by type name prefix",
+				"Color.",
+				[]protocol.CompletionItem{
+					createCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol2.NewLSPRange(4, 6, 4, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+					createCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
+				}},
+			{
+				"Find matching enum method by type name prefix",
+				"Color.transpa",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol2.NewLSPRange(4, 6, 4, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find enum methods with explicit enum value prefix",
+				"Color.GREEN.",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol2.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find matching enum methods with explicit enum value prefix",
+				"Color.GREEN.transp",
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol2.NewLSPRange(4, 12, 4, 13),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find enum methods by instance variable prefix",
+				`Color green = Color.GREEN;
+green.`,
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol2.NewLSPRange(5, 6, 5, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+			{
+				"Find matching enum method by instance variable prefix",
+				`Color green = Color.GREEN;
+green.transp`,
+				[]protocol.CompletionItem{
+					{
+						Label: "Color.transparentize",
+						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
+						TextEdit: protocol.TextEdit{
+							NewText: "transparentize",
+							Range:   protocol2.NewLSPRange(5, 6, 5, 7),
+						},
+						Detail: cast.ToPtr("fn Color(Color self)"),
+					},
+				},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete enum methods: #%s", tt.name), func(t *testing.T) {
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit, "test edit is wrong")
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+					assert.Equal(t, *tt.expected[idx].Detail, *item.Detail)
+				}
+			})
+		}
+	})
+}
+
+func TestBuildCompletionList_definitions(t *testing.T) {
+
+	t.Run("Should suggest definitions", func(t *testing.T) {
+		sourceStart := `
+		<* abc *>
+		def Kilo = int;
+		def KiloPtr = Kilo*;
+		def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
+		def MyMap = HashMap(<String, Feature>);
+		def Camera = raylib::Camera;
+
+		def func = a(<String>);
+		def aliased_global = global_var;
+		def CONST_ALIAS = MY_CONST;
+		def @macro_alias = @a;
+		fn void main() {`
+
+		//		line := uint32(4)
+		expectedKind := protocol.CompletionItemKindTypeParameter
+
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"Kil", []protocol.CompletionItem{
+				createCompletionItemWithDoc("Kilo", protocol.CompletionItemKindTypeParameter, "Type alias for 'int'", protocol2.NewLSPRange(1, 0, 1, 3), "abc"),
+				//{Label: "Kilo", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: asMarkdown("abc")},
+				{Label: "KiloPtr", Kind: &expectedKind, Detail: cast.ToPtr("Type alias for 'Kilo*'"), Documentation: nil},
+			}},
+			{"KiloP", []protocol.CompletionItem{
+				{Label: "KiloPtr", Kind: &expectedKind, Detail: cast.ToPtr("Type alias for 'Kilo*'"), Documentation: nil},
+			}},
+			{"MyFunct", []protocol.CompletionItem{
+				{Label: "MyFunction", Kind: &expectedKind, Detail: cast.ToPtr("Type alias for 'fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)'"), Documentation: nil},
+			}},
+			{"MyMa", []protocol.CompletionItem{
+				{Label: "MyMap", Kind: &expectedKind, Detail: cast.ToPtr("Type alias for 'HashMap(<String, Feature>)'"), Documentation: nil},
+			}},
+			{"Came", []protocol.CompletionItem{
+				{Label: "Camera", Kind: &expectedKind, Detail: cast.ToPtr("Type alias for 'raylib::Camera'"), Documentation: nil},
+			}},
+			{"fun", []protocol.CompletionItem{
+				{Label: "func", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'a(<String>)'"), Documentation: nil},
+			}},
+			{"aliased_g", []protocol.CompletionItem{
+				{Label: "aliased_global", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'global_var'"), Documentation: nil},
+			}},
+			{"CONST_AL", []protocol.CompletionItem{
+				{Label: "CONST_ALIAS", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'MY_CONST'"), Documentation: nil},
+			}},
+			{"@macro_alias", []protocol.CompletionItem{
+				{Label: "@macro_alias", Kind: &expectedKind, Detail: cast.ToPtr("Alias for '@a'"), Documentation: nil},
+			}},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%s", tt.input), func(t *testing.T) {
+
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
+					//	assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit, "test edit is wrong")
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+
+					if item.Detail != nil {
+						assert.Equal(t, *tt.expected[idx].Detail, *item.Detail, "Wrong Detail")
+					} else {
+						assert.Fail(t, "Detail is nil")
+					}
+				}
+			})
+		}
+	})
 }
 
 func TestBuildCompletionList_should_suggest_nothing_when_on_literal(t *testing.T) {

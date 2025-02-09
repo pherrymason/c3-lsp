@@ -42,6 +42,7 @@ type (
 		Name              *Ident
 		Value             Expression
 		GenericParameters []*TypeInfo
+		ResolvesToType    bool
 	}
 )
 

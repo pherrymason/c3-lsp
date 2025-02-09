@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
@@ -220,6 +221,9 @@ func getCompletionKind(symbol *Symbol) protocol.CompletionItemKind {
 	case ast.FIELD:
 		return protocol.CompletionItemKindField
 
+	case ast.DEF:
+		return protocol.CompletionItemKindTypeParameter
+
 	default:
 		return protocol.CompletionItemKindText
 	}
@@ -256,13 +260,16 @@ func getCompletionDetail(s *Symbol) *string {
 	case ast.CONST:
 		detail = s.Type.Name
 	case ast.DEF:
-		if false { //d.resolvesToType.IsSome() {
-			//return "Type"
+		if s.NodeDecl.(*ast.GenDecl).Spec.(*ast.DefSpec).ResolvesToType {
+			codeifier := defValueToCodeVisitor{}
+			walk.Walk(&codeifier, s.NodeDecl.(*ast.GenDecl), "")
+			detail = "Type alias for '" + codeifier.code + "'"
 		} else if strings.HasPrefix(s.Name, "@") {
-			detail = ""
+			detail = "Alias for '" + s.NodeDecl.(*ast.GenDecl).Spec.(*ast.DefSpec).Value.(*ast.Ident).Name + "'"
 		} else {
-			// TODO: Resolve the identifier and display its information?
-			detail = "Alias for '" + "???" + "'"
+			codeifier := defValueToCodeVisitor{}
+			walk.Walk(&codeifier, s.NodeDecl.(*ast.GenDecl), "")
+			detail = "Alias for '" + codeifier.code + "'"
 		}
 	case ast.STRUCT:
 		detail = "Type"
