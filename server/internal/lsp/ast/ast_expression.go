@@ -15,11 +15,11 @@ import (
 // An expression is represented by a tree consisting of one
 // or more of the following concrete expression nodes.
 type (
-	// Ident Represent a defined element.
-	// myValue
-	// myObject.property
-	// myObject.subobject.property
-	// It can be built
+	// Ident Represents the identification of an element.
+	// myIdent = 3;
+	// myIdent.property
+	// myObject.myIdent.property
+	// ident()
 	Ident struct {
 		NodeAttributes
 		ModulePath  *Ident

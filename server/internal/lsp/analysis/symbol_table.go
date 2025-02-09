@@ -287,6 +287,9 @@ func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName 
 				default:
 					panic("unsupported defValue")
 				}
+			case *ast.TypeSpec:
+				// It is already a type, we can return
+				return symbolFound
 			}
 		}
 

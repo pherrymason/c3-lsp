@@ -2278,8 +2278,11 @@ func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte)
 	return docComment
 }
 
+// convert_error
+// Creates a ErrorNode with information regarding source code that could not be parsed by treesitter.
+// It tries to do some simple analysis and create some meaningful ast nodes (TODO)
 func (c *ASTConverter) convert_error(node *sitter.Node, source []byte) ast.Node {
-	//debugNode(node, source, "error")
+	debugNode(node, source, "error")
 	var detectedIdent *ast.UnknownNode
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -2295,7 +2298,7 @@ func (c *ASTConverter) convert_error(node *sitter.Node, source []byte) ast.Node 
 					break
 				}
 				nodeType := sibling.Type()
-				//log.Printf("%s:\"%s\"", nodeType, sibling.Content(source))
+				log.Printf("%s:\"%s\"", nodeType, sibling.Content(source))
 				if utils.InSlice(nodeType, validTypes) {
 					accumulator = append(accumulator, sibling.Content(source))
 					unknownRange.Start = lsp.NewPosition(uint(sibling.StartPoint().Row), uint(sibling.StartPoint().Column))

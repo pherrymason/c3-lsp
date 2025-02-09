@@ -3,6 +3,8 @@ package analysis
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
+	"strings"
 )
 
 // PositionContext defines information about what's in current position
@@ -25,6 +27,7 @@ type astContext struct {
 
 	// Information related to node being under an ast.SelectorExpr
 	isSelExpr          bool
+	selExpr            *ast.SelectorExpr
 	lowestSelExprIndex int
 }
 
@@ -53,6 +56,7 @@ func getASTNodeContext(path []PathStep) astContext {
 				parentNodeIsSelectorExpr = true
 				astCtxt.isSelExpr = true
 				astCtxt.lowestSelExprIndex = i
+				astCtxt.selExpr = stepNode
 			}
 
 		case *ast.FunctionDecl:
@@ -74,4 +78,83 @@ func getASTNodeContext(path []PathStep) astContext {
 	}
 
 	return astCtxt
+}
+
+// getAstContextFromString does some analysis from pure string.
+// This is weaker than getASTNodeContext, but we are forced to do it because treesitter sometimes emits error nodes.
+func getAstContextFromString(astCtxt astContext, content string) astContext {
+	length := len(content)
+	hasFieldAccess := false
+	for i := length - 1; i >= 0; i-- {
+		if rune(content[i]) == '.' {
+			hasFieldAccess = true
+			break
+		}
+	}
+
+	if hasFieldAccess {
+		astCtxt.isSelExpr = true
+		// Build an ast.SelectorExpr from string
+		// Rewind in content until a space or {()} is found
+		startWordPosition := length
+		for i := length - 1; i >= 0; i-- {
+			r := rune(content[i])
+			//log.Printf("%c ", r)
+			if utils.IsIdentValidCharacter(r) || r == '.' {
+				startWordPosition = i
+			} else {
+				break
+			}
+		}
+
+		ident := content[startWordPosition:]
+		astCtxt.selExpr = parseSelectorExpression(ident)
+		//strings.Split(ident, ".")
+		//log.Printf("Rewinded symbol: %s", ident)
+	}
+
+	return astCtxt
+}
+
+func parseSelectorExpression(input string) *ast.SelectorExpr {
+	parts := strings.SplitN(input, "::", 2) // Divide by "::"
+	var baseExpr ast.Expression
+	var moduleIdent *ast.Ident
+
+	if len(parts) == 2 {
+		// Si hay "::", la parte antes de "::" es el módulo
+		moduleIdent = &ast.Ident{Name: parts[0]}
+		// La parte después de "::" contiene los fields
+		parts = parts[1:]
+	}
+
+	fields := strings.Split(parts[0], ".")
+
+	// Build nested ast.SelectorExpr
+	for _, field := range fields {
+		if field == "" {
+			continue
+		}
+
+		if baseExpr == nil {
+			baseExpr = &ast.Ident{Name: field}
+			if moduleIdent != nil {
+				baseExpr.(*ast.Ident).ModulePath = moduleIdent
+			}
+		} else {
+			baseExpr = &ast.SelectorExpr{
+				X:   baseExpr,
+				Sel: &ast.Ident{Name: field},
+			}
+		}
+	}
+
+	_, ok := baseExpr.(*ast.Ident)
+	if ok {
+		baseExpr = &ast.SelectorExpr{
+			X: baseExpr,
+		}
+	}
+
+	return baseExpr.(*ast.SelectorExpr)
 }

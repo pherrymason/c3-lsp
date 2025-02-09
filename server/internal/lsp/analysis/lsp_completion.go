@@ -8,6 +8,7 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	protocol "github.com/tliron/glsp/protocol_3_16"
+	"log"
 	"slices"
 	"strings"
 )
@@ -15,18 +16,25 @@ import (
 func BuildCompletionList(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) []protocol.CompletionItem {
 
 	nodeAtPosition, path := FindNode(document.Ast, pos)
+	astCtxt := getASTNodeContext(path)
+
 	var search string
+
 	if path != nil && nodeAtPosition != nil {
 		switch n := nodeAtPosition.(type) {
 		case *ast.Ident:
 			search = n.Name
 		case *ast.ErrorNode:
-			// TODO n.Content might contain dirt
-			search = n.Content
+			if n.DetectedIdent != nil {
+				search = n.DetectedIdent.Content
+			} else {
+				// TODO n.Content might contain dirt
+				search = n.Content
+			}
+			astCtxt = getAstContextFromString(astCtxt, search)
 		}
 	}
 
-	astCtxt := getASTNodeContext(path)
 	var items []protocol.CompletionItem
 	fileName := document.Uri
 
@@ -59,8 +67,15 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		}
 		// TODO If inside a deeper scope, prefer local symbols.
 	} else {
+		// When autocompleting a selector Expression, search is selectorExpr.Sel.Name
+		if astCtxt.selExpr.Sel == nil {
+			search = ""
+		} else {
+			search = astCtxt.selExpr.Sel.Name
+		}
+
 		// We need to solve first SelectorExpr.X!
-		parentSymbol := solveXAtSelectorExpr(path[astCtxt.lowestSelExprIndex].node.(*ast.SelectorExpr), pos, fileName, astCtxt, symbolTable, 0)
+		parentSymbol := solveXAtSelectorExpr(astCtxt.selExpr, pos, fileName, astCtxt, symbolTable, 0)
 
 		// Get all available children symbols of parentSymbol
 		symbols := collectChildSymbols(parentSymbol, astCtxt, fileName)
@@ -151,7 +166,14 @@ func getEditRange(document *document.Document, pos lsp.Position) protocol.Range 
 	// Some string manipulation...
 	// Find where current ident starts
 	index := pos.IndexIn(document.Text)
-	if !utils.IsAZ09_(rune(document.Text[index-1])) {
+	log.Printf("%c", rune(document.Text[index-1]))
+	if rune(document.Text[index-1]) == '.' {
+		// We will replace just until this point
+		return protocol.Range{
+			Start: lsp.NewPositionFromIndex(index, document.Text).ToProtocol(),
+			End:   lsp.NewPositionFromIndex(index, document.Text).ToProtocol(),
+		}
+	} else if !utils.IsAZ09_(rune(document.Text[index-1])) {
 		panic("not a valid range")
 	}
 

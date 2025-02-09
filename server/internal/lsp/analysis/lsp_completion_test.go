@@ -268,9 +268,9 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 			},
 			{"o.f",
 				[]protocol.CompletionItem{
-					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
 					createCompletionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
 					createCompletionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
 				},
 			},
 			{"o.fooB",
@@ -318,8 +318,8 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 		}{
 			{"o.f",
 				[]protocol.CompletionItem{
-					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
 					createCompletionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
 				},
 			},
 			{"o.dep.foo",
@@ -369,8 +369,8 @@ func TestBuildCompletionList_should_suggest_enums(t *testing.T) {
 			},
 			{"Co",
 				[]protocol.CompletionItem{
-					createCompletionItem("Cough", protocol.CompletionItemKindEnum, "Enum", protocol2.NewLSPRange(line, 0, line, 2)),
 					createCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "Enum", protocol2.NewLSPRange(line, 0, line, 2), "doc"),
+					createCompletionItem("Cough", protocol.CompletionItemKindEnum, "Enum", protocol2.NewLSPRange(line, 0, line, 2)),
 				},
 			},
 		}
@@ -421,22 +421,22 @@ func TestBuildCompletionList_should_suggest_enums(t *testing.T) {
 				"Find all enum enumerables when prefixed with enum name",
 				"Color.",
 				[]protocol.CompletionItem{
-					createCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
-					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
-					createCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
-					createCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
+					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
+					createCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
+					createCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
 				}},
 			{
 				"Find matching enum enumerables",
 				"Color.COB",
 				[]protocol.CompletionItem{
-					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
 				},
 			},
 		}
 
-		for n, tt := range cases {
-			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%s", tt.input), func(t *testing.T) {
 
 				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
 
@@ -444,7 +444,7 @@ func TestBuildCompletionList_should_suggest_enums(t *testing.T) {
 				for idx, item := range completionList {
 					assert.Equal(t, tt.expected[idx].Label, item.Label)
 					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
-					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit, "test edit is wrong")
 					if tt.expected[idx].Documentation == nil {
 						assert.Nil(t, item.Documentation)
 					} else {
