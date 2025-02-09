@@ -25,7 +25,11 @@ func getCompletionList(source string) []protocol.CompletionItem {
 	return BuildCompletionList(getDocument, position, srv.documents, srv.symbolTable)
 }
 
-func completionItem(label string, kind protocol.CompletionItemKind, detail string, editRange protocol.Range, documentation string) protocol.CompletionItem {
+func createCompletionItem(label string, kind protocol.CompletionItemKind, detail string, editRange protocol.Range) protocol.CompletionItem {
+	return createCompletionItemWithDoc(label, kind, detail, editRange, "")
+}
+
+func createCompletionItemWithDoc(label string, kind protocol.CompletionItemKind, detail string, editRange protocol.Range, documentation string) protocol.CompletionItem {
 	item := protocol.CompletionItem{
 		Label: label,
 		Kind:  cast.ToPtr(kind),
@@ -57,19 +61,19 @@ func TestBuildCompletionList_suggests_variables(t *testing.T) {
 			expected protocol.CompletionItem
 		}{
 			{"v",
-				completionItem("variable", protocol.CompletionItemKindVariable, "int!", protocol2.NewLSPRange(7, 0, 7, 1), ""),
+				createCompletionItem("variable", protocol.CompletionItemKindVariable, "int!", protocol2.NewLSPRange(7, 0, 7, 1)),
 			},
 			{"va",
-				completionItem("variable", protocol.CompletionItemKindVariable, "int!", protocol2.NewLSPRange(7, 0, 7, 2), ""),
+				createCompletionItem("variable", protocol.CompletionItemKindVariable, "int!", protocol2.NewLSPRange(7, 0, 7, 2)),
 			},
 			{"x",
-				completionItem("xanadu", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(7, 0, 7, 1), ""),
+				createCompletionItem("xanadu", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(7, 0, 7, 1)),
 			},
 			{"docu",
-				completionItem("documented", protocol.CompletionItemKindVariable, "float*", protocol2.NewLSPRange(7, 0, 7, 4), "doc"),
+				createCompletionItemWithDoc("documented", protocol.CompletionItemKindVariable, "float*", protocol2.NewLSPRange(7, 0, 7, 4), "doc"),
 			},
 			//{"MY_C",
-			//	completionItem("MY_CONST", protocol.CompletionItemKindConstant, "int", protocol2.NewLSPRange(7, 0, 7, 4), "const doc"),
+			//	createCompletionItem("MY_CONST", protocol.CompletionItemKindConstant, "int", protocol2.NewLSPRange(7, 0, 7, 4), "const doc"),
 			//},
 		}
 
@@ -109,19 +113,19 @@ func TestBuildCompletionList_suggests_variables(t *testing.T) {
 			expected protocol.CompletionItem
 		}{
 			{"v",
-				completionItem("variable", protocol.CompletionItemKindVariable, "int!", protocol2.NewLSPRange(line, 0, line, 1), ""),
+				createCompletionItem("variable", protocol.CompletionItemKindVariable, "int!", protocol2.NewLSPRange(line, 0, line, 1)),
 			},
 			{"va",
-				completionItem("variable", protocol.CompletionItemKindVariable, "int!", protocol2.NewLSPRange(line, 0, line, 2), ""),
+				createCompletionItem("variable", protocol.CompletionItemKindVariable, "int!", protocol2.NewLSPRange(line, 0, line, 2)),
 			},
 			{"x",
-				completionItem("xanadu", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(line, 0, line, 1), ""),
+				createCompletionItem("xanadu", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(line, 0, line, 1)),
 			},
 			{"docu",
-				completionItem("documented", protocol.CompletionItemKindVariable, "float*", protocol2.NewLSPRange(line, 0, line, 4), "doc"),
+				createCompletionItemWithDoc("documented", protocol.CompletionItemKindVariable, "float*", protocol2.NewLSPRange(line, 0, line, 4), "doc"),
 			},
 			{"MY_C",
-				completionItem("MY_CONST", protocol.CompletionItemKindConstant, "int", protocol2.NewLSPRange(line, 0, line, 4), "const doc"),
+				createCompletionItemWithDoc("MY_CONST", protocol.CompletionItemKindConstant, "int", protocol2.NewLSPRange(line, 0, line, 4), "const doc"),
 			},
 		}
 
@@ -161,19 +165,19 @@ func TestBuildCompletionList_suggests_variables(t *testing.T) {
 			expected protocol.CompletionItem
 		}{
 			{"p",
-				completionItem("process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 1), "abc"),
+				createCompletionItemWithDoc("process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 1), "abc"),
 			},
 			{"proc",
-				completionItem("process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 4), "abc"),
+				createCompletionItemWithDoc("process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 4), "abc"),
 			},
 			{"emp",
-				completionItem("empty", protocol.CompletionItemKindFunction, "macro()", protocol2.NewLSPRange(line, 0, line, 3), ""),
+				createCompletionItem("empty", protocol.CompletionItemKindFunction, "macro()", protocol2.NewLSPRange(line, 0, line, 3)),
 			},
 			{"trans",
-				completionItem("transform", protocol.CompletionItemKindFunction, "macro(int x; @body)", protocol2.NewLSPRange(line, 0, line, 5), ""),
+				createCompletionItem("transform", protocol.CompletionItemKindFunction, "macro(int x; @body)", protocol2.NewLSPRange(line, 0, line, 5)),
 			},
 			{"repla",
-				completionItem("replace", protocol.CompletionItemKindFunction, "macro(float* x; @body(int* a, float b))", protocol2.NewLSPRange(line, 0, line, 5), ""),
+				createCompletionItem("replace", protocol.CompletionItemKindFunction, "macro(float* x; @body(int* a, float b))", protocol2.NewLSPRange(line, 0, line, 5)),
 			},
 		}
 
@@ -215,8 +219,8 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 			},
 			{"f",
 				[]protocol.CompletionItem{
-					completionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 0, line, 1), ""),
-					completionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 0, line, 1), ""),
+					createCompletionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 0, line, 1)),
+					createCompletionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 0, line, 1)),
 				},
 			},
 		}
@@ -264,14 +268,14 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 			},
 			{"o.f",
 				[]protocol.CompletionItem{
-					completionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3), ""),
-					completionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3), ""),
-					completionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 3), ""),
+					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 3)),
 				},
 			},
 			{"o.fooB",
 				[]protocol.CompletionItem{
-					completionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 6), ""),
+					createCompletionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 6)),
 				},
 			},
 		}
@@ -314,13 +318,13 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 		}{
 			{"o.f",
 				[]protocol.CompletionItem{
-					completionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3), ""),
-					completionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3), ""),
+					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
 				},
 			},
 			{"o.dep.foo",
 				[]protocol.CompletionItem{
-					completionItem("fooDeep", protocol.CompletionItemKindFunction, "fn void fooDeep()", protocol2.NewLSPRange(line, 6, line, 9), ""),
+					createCompletionItem("fooDeep", protocol.CompletionItemKindFunction, "fn void fooDeep()", protocol2.NewLSPRange(line, 6, line, 9)),
 				},
 			},
 		}
@@ -334,6 +338,112 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 				for idx, item := range completionList {
 					assert.Equal(t, tt.expected[idx].Label, item.Label)
 					assert.Equal(t, *tt.expected[idx].Kind, *item.Kind)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit)
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+					assert.Equal(t, *tt.expected[idx].Detail, *item.Detail)
+				}
+			})
+		}
+	})
+}
+
+func TestBuildCompletionList_should_suggest_enums(t *testing.T) {
+	t.Run("Should suggest Enum type", func(t *testing.T) {
+		sourceStart := `
+		enum Cough { COH, COUGH, COUGHCOUGH}
+		<* doc *>
+		enum Color { RED, GREEN, BLUE }
+		fn void main(){`
+
+		line := uint32(5)
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"A",
+				[]protocol.CompletionItem{},
+			},
+			{"Co",
+				[]protocol.CompletionItem{
+					createCompletionItem("Cough", protocol.CompletionItemKindEnum, "Enum", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "Enum", protocol2.NewLSPRange(line, 0, line, 2), "doc"),
+				},
+			},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit)
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+					assert.Equal(t, *tt.expected[idx].Detail, *item.Detail)
+				}
+			})
+		}
+	})
+
+	t.Run("Should suggest Enumerable type", func(t *testing.T) {
+		sourceStart := `
+		enum Cough { COH, COUGH, COUGHCOUGH}
+		enum Color { RED, GREEN, BLUE, COBALT }
+		fn void main() {`
+		line := uint32(4)
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find enumerables starting with string",
+				"CO",
+				[]protocol.CompletionItem{
+					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+				}},
+
+			{
+				"Find all enum enumerables when prefixed with enum name",
+				"Color.",
+				[]protocol.CompletionItem{
+					createCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+				}},
+			{
+				"Find matching enum enumerables",
+				"Color.COB",
+				[]protocol.CompletionItem{
+					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 0, line, 2)),
+				},
+			},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
 					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit)
 					if tt.expected[idx].Documentation == nil {
 						assert.Nil(t, item.Documentation)

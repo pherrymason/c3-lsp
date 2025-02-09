@@ -1,12 +1,14 @@
 package analysis
 
 import (
+	"cmp"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	protocol "github.com/tliron/glsp/protocol_3_16"
+	"slices"
 	"strings"
 )
 
@@ -80,7 +82,9 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		}
 	}
 
-	// Look for symbols starting with `search`
+	slices.SortFunc(items, func(a, b protocol.CompletionItem) int {
+		return cmp.Compare(strings.ToLower(a.Label), strings.ToLower(b.Label))
+	})
 
 	return items
 }
@@ -179,6 +183,8 @@ func getCompletionKind(symbol *Symbol) protocol.CompletionItemKind {
 
 	case ast.ENUM, ast.FAULT:
 		return protocol.CompletionItemKindEnum
+	case ast.ENUM_VALUE:
+		return protocol.CompletionItemKindEnumMember
 
 	case ast.VAR:
 		return protocol.CompletionItemKindVariable
@@ -219,6 +225,8 @@ func getCompletionDetail(s *Symbol) *string {
 		detail = macroDescriptionString(s, false)
 	case ast.ENUM:
 		detail = "Enum"
+	case ast.ENUM_VALUE:
+		detail = "Enum Value"
 	case ast.FAULT:
 		detail = "Fault"
 	case ast.VAR:
