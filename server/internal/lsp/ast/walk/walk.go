@@ -117,7 +117,7 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		if n.BaseType.IsSome() {
 			Walk(v, n.BaseType.Get(), "BaseType")
 		}
-		walkList(v, n.StaticValues, "StaticValues")
+		walkList(v, n.AssociatedValues, "AssociatedValues")
 		walkList(v, n.Values, "Values")
 
 	case *ast.ElseStatement:

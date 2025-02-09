@@ -276,9 +276,9 @@ type (
 
 	EnumType struct {
 		NodeAttributes
-		BaseType     option.Option[*TypeInfo] // Enums can be typed.
-		StaticValues []Expression             // Enums in C3 can have static values: https://c3-lang.org/language-overview/types/#enum-associated-values
-		Values       []*EnumValue             // Every unique value of the enum
+		BaseType         option.Option[*TypeInfo] // Enums can be typed.
+		AssociatedValues []*Field                 // Enums in C3 can have associated values: https://c3-lang.org/language-overview/types/#enum-associated-values
+		Values           []*EnumValue             // Every unique value of the enum
 	}
 
 	EnumValue struct {

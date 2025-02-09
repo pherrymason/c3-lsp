@@ -324,7 +324,7 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 
 	nodeId := c.getNextID()
 	enumType := &ast.EnumType{
-		StaticValues: []ast.Expression{},
+		AssociatedValues: []*ast.Field{},
 	}
 	spec := &ast.TypeSpec{
 		//NodeAttributes: ast.NewAttrNodeFromSitterNode(nodeId, node),
@@ -339,26 +339,39 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 		n := node.Child(i)
 		switch n.Type() {
 		case "enum_spec":
-			enumType.BaseType = option.Some(c.convert_type(n.Child(1), sourceCode))
-			if n.ChildCount() >= 3 {
-				paramList := n.Child(2)
-				for p := 0; p < int(paramList.ChildCount()); p++ {
-					paramNode := paramList.Child(p)
-					if paramNode.Type() == "enum_param_declaration" {
-						convertType := c.convert_type(paramNode.Child(0), sourceCode)
-						enumType.StaticValues = append(
-							enumType.StaticValues,
-							&ast.Field{
-								NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), paramNode),
-								Name: ast.NewIdentifierBuilder().
-									WithId(c.getNextID()).
-									WithName(paramNode.Child(1).Content(sourceCode)).
-									WithSitterPos(paramNode.Child(1)).
-									Build(),
-								Type: convertType,
-							},
-						)
+			//enumType.BaseType = option.Some(c.convert_type(n.Child(1), sourceCode))
+			typeNode := n.ChildByFieldName("type")
+			paramListIndex := 1
+			if typeNode != nil {
+				// Custom enum backing type is optional
+				enumType.BaseType = option.Some(c.convert_type(typeNode, sourceCode))
+				paramListIndex = 2
+			}
+
+			paramList := n.Child(paramListIndex)
+
+			for p := 0; p < int(paramList.ChildCount()); p++ {
+				paramNode := paramList.Child(p)
+				if paramNode.Type() == "enum_param_declaration" {
+					paramTypeNode := paramNode.ChildByFieldName("type")
+					paramNameNode := paramNode.ChildByFieldName("name")
+					if paramTypeNode == nil || paramNameNode == nil {
+						continue
 					}
+
+					convertType := c.convert_type(paramTypeNode, sourceCode)
+					enumType.AssociatedValues = append(
+						enumType.AssociatedValues,
+						&ast.Field{
+							NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), paramNode),
+							Name: ast.NewIdentifierBuilder().
+								WithId(c.getNextID()).
+								WithName(paramNode.Child(1).Content(sourceCode)).
+								WithSitterPos(paramNode.Child(1)).
+								Build(),
+							Type: convertType,
+						},
+					)
 				}
 			}
 

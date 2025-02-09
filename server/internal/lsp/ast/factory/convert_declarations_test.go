@@ -211,7 +211,7 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 		enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
 		assert.Equal(t, option.None[*ast.TypeInfo](), enumType.BaseType)
 
-		assert.Equal(t, []ast.Expression{}, enumType.StaticValues, "No fields should be present")
+		assert.Equal(t, []ast.Field{}, enumType.AssociatedValues, "No fields should be present")
 		assert.Len(t, enumType.Values, 3)
 		assert.Equal(t, "RED", enumType.Values[0].Name.Name)
 		assert.Equal(t, lsp.NewRange(2, 15, 2, 18), enumType.Values[0].Name.Range)
@@ -226,41 +226,68 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 }
 
 func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
-	source := `module foo;
+	t.Run("test with backing type", func(t *testing.T) {
+		source := `module foo;
 	enum State : int (String desc, bool active, char ke) {
 		PENDING = {"pending start", false, 'c'},
 		RUNNING = {"running", true, 'e'},
 	}`
 
-	cv := newTestAstConverter()
-	tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
 
-	enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
-	enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
-	assert.Len(t, enumType.StaticValues, 3)
+		enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
+		assert.Len(t, enumType.AssociatedValues, 3)
 
-	assert.Equal(t,
-		ast.NewIdentifierBuilder().
-			WithName("desc").
-			WithStartEnd(1, 26, 1, 30).Build(),
-		enumType.StaticValues[0].(*ast.Field).Name,
-	)
-	assert.Equal(t, "String", enumType.StaticValues[0].(*ast.Field).Type.Identifier.String())
-	assert.Equal(t, lsp.NewRange(1, 19, 1, 25), enumType.StaticValues[0].(*ast.Field).Type.Identifier.Range)
+		assert.Equal(t,
+			ast.NewIdentifierBuilder().
+				WithName("desc").
+				WithStartEnd(1, 26, 1, 30).Build(),
+			enumType.AssociatedValues[0].Name,
+		)
+		assert.Equal(t, "String", enumType.AssociatedValues[0].Type.Identifier.String())
+		assert.Equal(t, lsp.NewRange(1, 19, 1, 25), enumType.AssociatedValues[0].Type.Identifier.Range)
 
-	assert.Equal(t, ast.NewIdentifierBuilder().
-		WithName("active").
-		WithStartEnd(1, 37, 1, 43).Build(),
-		enumType.StaticValues[1].(*ast.Field).Name,
-	)
-	assert.Equal(t, "bool", enumType.StaticValues[1].(*ast.Field).Type.Identifier.String())
+		assert.Equal(t, ast.NewIdentifierBuilder().
+			WithName("active").
+			WithStartEnd(1, 37, 1, 43).Build(),
+			enumType.AssociatedValues[1].Name,
+		)
+		assert.Equal(t, "bool", enumType.AssociatedValues[1].Type.Identifier.String())
 
-	assert.Equal(t, ast.NewIdentifierBuilder().
-		WithName("ke").
-		WithStartEnd(1, 50, 1, 52).Build(),
-		enumType.StaticValues[2].(*ast.Field).Name,
-	)
-	assert.Equal(t, "char", enumType.StaticValues[2].(*ast.Field).Type.Identifier.String())
+		assert.Equal(t, ast.NewIdentifierBuilder().
+			WithName("ke").
+			WithStartEnd(1, 50, 1, 52).Build(),
+			enumType.AssociatedValues[2].Name,
+		)
+		assert.Equal(t, "char", enumType.AssociatedValues[2].Type.Identifier.String())
+	})
+
+	t.Run("test without backing type", func(t *testing.T) {
+		source := `module foo;
+	enum State : (int counter) {
+		PENDING = 0,
+		RUNNING = 1,
+	}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
+		assert.Len(t, enumType.AssociatedValues, 1)
+
+		assert.Equal(t, lsp.NewRange(1, 15, 1, 26), enumType.AssociatedValues[0].Range)
+		assert.Equal(t,
+			ast.NewIdentifierBuilder().
+				WithName("counter").
+				WithStartEnd(1, 19, 1, 26).Build(),
+			enumType.AssociatedValues[0].Name,
+		)
+		assert.Equal(t, "int", enumType.AssociatedValues[0].Type.Identifier.String())
+		assert.Equal(t, lsp.NewRange(1, 15, 1, 18), enumType.AssociatedValues[0].Type.Identifier.Range)
+	})
 }
 
 func TestConvertToAST_struct_decl(t *testing.T) {
