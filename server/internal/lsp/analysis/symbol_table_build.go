@@ -72,7 +72,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 				f,
 				v.currentModule,
 				v.currentFilePath.URI,
-				ast.FIELD,
+				ast.ENUM_VALUE,
 			)
 			fault.AppendChild(m, Field)
 		}
@@ -229,7 +229,7 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 				value,
 				v.currentModule,
 				v.currentFilePath.URI,
-				ast.FIELD,
+				ast.ENUM_VALUE,
 			)
 			enumSym.AppendChild(enumFieldSym, Field)
 		}
