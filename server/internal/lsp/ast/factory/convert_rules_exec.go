@@ -59,6 +59,7 @@ func (c *ASTConverter) generateConversionInfo() {
 
 		// Statements
 
+		"access_ident":           {method: cv_expr_fn(c.convert_ident)},
 		"assignment_expr":        {method: cv_expr_fn(c.convert_assignment_expr)},
 		"assert_stmt":            {method: cv_stmt_fn(c.convert_assert_stmt)},
 		"at_ident":               {method: cv_expr_fn(c.convert_ident)},
@@ -175,7 +176,7 @@ func (c *ASTConverter) choice(types []string, node *sitter.Node, source []byte, 
 		rules = append(rules, NodeOfType(typ))
 	}
 
-	result, _ := c.anyOf("x", rules, node, source, debug)
+	result, _ := c.anyOf("choice", rules, node, source, debug)
 	return result
 }
 

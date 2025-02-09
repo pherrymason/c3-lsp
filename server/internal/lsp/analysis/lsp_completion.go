@@ -7,6 +7,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"log"
@@ -16,40 +17,23 @@ import (
 
 func BuildCompletionList(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) []protocol.CompletionItem {
 
-	nodeAtPosition, path := FindNode(document.Ast, pos)
-	astCtxt := getASTNodeContext(path)
-
-	var search string
-
-	if path != nil && nodeAtPosition != nil {
-		switch n := nodeAtPosition.(type) {
-		case *ast.Ident:
-			search = n.Name
-		case *ast.ErrorNode:
-			if n.DetectedIdent != nil {
-				search = n.DetectedIdent.Content
-			} else {
-				// TODO n.Content might contain dirt
-				search = n.Content
-			}
-			astCtxt = getAstContextFromString(astCtxt, search)
-		}
-	}
+	_, path := FindNode(document.Ast, pos)
+	posCtxt := getContextFromPosition(path, pos, document.Text, ContextHintForCompletion)
 
 	var items []protocol.CompletionItem
 	fileName := document.Uri
 
 	editRange := getEditRange(document, pos)
-	if astCtxt.isSelExpr == false {
+	if posCtxt.isSelExpr == false {
 		// Search between globally available symbols.
-		moduleScope := symbolTable.scopeTree[fileName].GetModuleScope(astCtxt.moduleName.String())
+		moduleScope := symbolTable.scopeTree[fileName].GetModuleScope(posCtxt.moduleName.String())
 
 		// get current scope
 		scope := FindClosestScope(moduleScope, pos)
 		availableSymbols := symbolTable.GetSymbolsInScope(scope)
 
 		for _, symbol := range availableSymbols {
-			if strings.HasPrefix(symbol.Name, search) {
+			if strings.HasPrefix(symbol.Name, posCtxt.identUnderCursor) {
 				if symbol.Range.HasPosition(pos) {
 					// Exclude symbol in current cursor position
 					continue
@@ -68,22 +52,20 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		}
 		// TODO If inside a deeper scope, prefer local symbols.
 	} else {
-		// When autocompleting a selector Expression, search is selectorExpr.Sel.Name
-		if astCtxt.selExpr.Sel == nil {
-			search = ""
-		} else {
-			search = astCtxt.selExpr.Sel.Name
-		}
-
 		// We need to solve first SelectorExpr.X!
-		parentSymbol := solveXAtSelectorExpr(astCtxt.selExpr, pos, fileName, astCtxt, symbolTable, 0)
+		parentSymbol, parentSymbols := solveXAtSelectorExpr(posCtxt.selExpr, pos, fileName, posCtxt, symbolTable, 0)
 
 		// Get all available children symbols of parentSymbol
-		symbols := collectChildSymbols(parentSymbol, astCtxt, fileName)
+		symbols := collectChildSymbols(parentSymbol, posCtxt, fileName, option.None[ast.Token]())
+		if parentSymbol.Kind == ast.ENUM_VALUE {
+			// Enum values also have access to Enum methods
+			enumMethods := collectChildSymbols(parentSymbols[len(parentSymbols)-1], posCtxt, fileName, option.Some(ast.Token(ast.METHOD)))
+			symbols = append(symbols, enumMethods...)
+		}
 
 		// child symbols collected, filter them
 		for _, symbol := range symbols {
-			if strings.HasPrefix(symbol.Name, search) {
+			if posCtxt.identUnderCursor == "" || strings.HasPrefix(symbol.Name, posCtxt.identUnderCursor) {
 				items = append(items, protocol.CompletionItem{
 					Label: symbol.Name,
 					Kind:  cast.ToPtr(getCompletionKind(symbol)),
@@ -105,15 +87,15 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 	return items
 }
 
-func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName string) []*Symbol {
+func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName string, filterKind option.Option[ast.Token]) []*Symbol {
 	symbols := []*Symbol{}
 	// This logic here is very similar to resolveChildSymbol but we want all symbols
 	switch parentSymbol.Kind {
 	case ast.ENUM, ast.FAULT:
 		for _, childRel := range parentSymbol.Children {
-			if childRel.Tag == Field /*&& childRel.Child.Name == nextIdent*/ {
+			if childRel.Tag == Field && (filterKind.IsNone() || (filterKind.IsSome() && filterKind.Get() == ast.ENUM_VALUE)) {
 				symbols = append(symbols, childRel.Child)
-			} else if childRel.Tag == Method /*&& childRel.Child.Name == nextIdent*/ {
+			} else if childRel.Tag == Method && (filterKind.IsNone() || (filterKind.IsSome() && filterKind.Get() == ast.METHOD)) {
 				symbols = append(symbols, childRel.Child)
 			}
 		}
@@ -197,6 +179,10 @@ func getEditRange(document *document.Document, pos lsp.Position) protocol.Range 
 func getCompletionKind(symbol *Symbol) protocol.CompletionItemKind {
 	switch symbol.Kind {
 	case ast.FUNCTION:
+		if symbol.NodeDecl.(*ast.FunctionDecl).ParentTypeId.IsSome() {
+			return protocol.CompletionItemKindMethod
+		}
+
 		return protocol.CompletionItemKindFunction
 
 	case ast.METHOD:

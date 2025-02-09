@@ -268,14 +268,14 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 			},
 			{"o.f",
 				[]protocol.CompletionItem{
-					createCompletionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
-					createCompletionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItem("foo", protocol.CompletionItemKindMethod, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItem("fooBar", protocol.CompletionItemKindMethod, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 3)),
 					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
 				},
 			},
 			{"o.fooB",
 				[]protocol.CompletionItem{
-					createCompletionItem("fooBar", protocol.CompletionItemKindFunction, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 6)),
+					createCompletionItem("fooBar", protocol.CompletionItemKindMethod, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 6)),
 				},
 			},
 		}
@@ -318,13 +318,13 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 		}{
 			{"o.f",
 				[]protocol.CompletionItem{
-					createCompletionItem("foo", protocol.CompletionItemKindFunction, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItem("foo", protocol.CompletionItemKindMethod, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
 					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
 				},
 			},
 			{"o.dep.foo",
 				[]protocol.CompletionItem{
-					createCompletionItem("fooDeep", protocol.CompletionItemKindFunction, "fn void fooDeep()", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("fooDeep", protocol.CompletionItemKindMethod, "fn void fooDeep()", protocol2.NewLSPRange(line, 6, line, 9)),
 				},
 			},
 		}
@@ -533,7 +533,7 @@ clr.asso`,
 		fn Color Color.transparentize(self) {}
 		fn void main() {
 `
-		line := uint32(6)
+		line := uint32(4)
 		cases := []struct {
 			name     string
 			input    string
@@ -543,32 +543,32 @@ clr.asso`,
 				"Find enum methods by type name prefix",
 				"Color.",
 				[]protocol.CompletionItem{
-					createCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
-					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("BLUE", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
+					createCompletionItem("COBALT", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
+					createCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
+					createCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
 					{
-						Label: "Color.transparentize",
+						Label: "transparentize",
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
-							Range:   protocol2.NewLSPRange(4, 6, 4, 7),
+							Range:   protocol2.NewLSPRange(line, 6, line, 6),
 						},
-						Detail: cast.ToPtr("fn Color(Color self)"),
+						Detail: cast.ToPtr("fn Color transparentize(Color self)"),
 					},
-					createCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
-					createCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 9)),
 				}},
 			{
 				"Find matching enum method by type name prefix",
 				"Color.transpa",
 				[]protocol.CompletionItem{
 					{
-						Label: "Color.transparentize",
+						Label: "transparentize",
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
-							Range:   protocol2.NewLSPRange(4, 6, 4, 7),
+							Range:   protocol2.NewLSPRange(line, 6, line, 13),
 						},
-						Detail: cast.ToPtr("fn Color(Color self)"),
+						Detail: cast.ToPtr("fn Color transparentize(Color self)"),
 					},
 				},
 			},
@@ -577,13 +577,13 @@ clr.asso`,
 				"Color.GREEN.",
 				[]protocol.CompletionItem{
 					{
-						Label: "Color.transparentize",
+						Label: "transparentize",
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
-							Range:   protocol2.NewLSPRange(4, 12, 4, 13),
+							Range:   protocol2.NewLSPRange(line, 12, line, 12),
 						},
-						Detail: cast.ToPtr("fn Color(Color self)"),
+						Detail: cast.ToPtr("fn Color transparentize(Color self)"),
 					},
 				},
 			},
@@ -592,13 +592,13 @@ clr.asso`,
 				"Color.GREEN.transp",
 				[]protocol.CompletionItem{
 					{
-						Label: "Color.transparentize",
+						Label: "transparentize",
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
-							Range:   protocol2.NewLSPRange(4, 12, 4, 13),
+							Range:   protocol2.NewLSPRange(line, 12, line, 18),
 						},
-						Detail: cast.ToPtr("fn Color(Color self)"),
+						Detail: cast.ToPtr("fn Color transparentize(Color self)"),
 					},
 				},
 			},
@@ -612,7 +612,7 @@ green.`,
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
-							Range:   protocol2.NewLSPRange(5, 6, 5, 7),
+							Range:   protocol2.NewLSPRange(line, 33, line, 33),
 						},
 						Detail: cast.ToPtr("fn Color(Color self)"),
 					},
@@ -628,7 +628,7 @@ green.transp`,
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
-							Range:   protocol2.NewLSPRange(5, 6, 5, 7),
+							Range:   protocol2.NewLSPRange(line, 6, line, 12),
 						},
 						Detail: cast.ToPtr("fn Color(Color self)"),
 					},
@@ -638,7 +638,7 @@ green.transp`,
 
 		for _, tt := range cases {
 			t.Run(fmt.Sprintf("Autocomplete enum methods: #%s", tt.name), func(t *testing.T) {
-				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+				completionList := getCompletionList(sourceStart + tt.input + "|||\n}")
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				for idx, item := range completionList {

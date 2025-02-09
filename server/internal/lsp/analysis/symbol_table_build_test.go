@@ -228,3 +228,52 @@ func TestSymbolBuild_registers_def(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(5, 2, 5, 24), scope.Symbols[4].Range)
 	})
 }
+
+func TestSymbolBuild_registers_enums(t *testing.T) {
+	t.Run("registers enum", func(t *testing.T) {
+		source := `module foo;
+		enum Colors:int { RED, BLUE, GREEN }`
+
+		astConverter := factory.NewASTConverter()
+		tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
+
+		result := BuildSymbolTable(tree, "")
+
+		modulesGroup := result.scopeTree["file.c3"]
+		scope := modulesGroup.GetModuleScope("foo")
+
+		assert.Equal(t, "Colors", scope.Symbols[0].Name)
+		assert.Equal(t, ast.Token(ast.ENUM), scope.Symbols[0].Kind)
+		assert.Equal(t, lsp.NewRange(1, 2, 1, 38), scope.Symbols[0].Range)
+
+		assert.Equal(t, "RED", scope.Symbols[1].Name)
+		assert.Equal(t, ast.Token(ast.ENUM_VALUE), scope.Symbols[1].Kind)
+		assert.Equal(t, lsp.NewRange(1, 20, 1, 23), scope.Symbols[1].Range)
+
+		assert.Equal(t, "BLUE", scope.Symbols[2].Name)
+		assert.Equal(t, ast.Token(ast.ENUM_VALUE), scope.Symbols[2].Kind)
+		assert.Equal(t, lsp.NewRange(1, 25, 1, 29), scope.Symbols[2].Range)
+
+		assert.Equal(t, "GREEN", scope.Symbols[3].Name)
+		assert.Equal(t, ast.Token(ast.ENUM_VALUE), scope.Symbols[3].Kind)
+		assert.Equal(t, lsp.NewRange(1, 31, 1, 36), scope.Symbols[3].Range)
+	})
+
+	t.Run("registers method", func(t *testing.T) {
+		source := `module foo;
+		enum Colors:int { RED, BLUE, GREEN }
+		fn void Colors.method() {}`
+
+		astConverter := factory.NewASTConverter()
+		tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
+
+		result := BuildSymbolTable(tree, "")
+
+		modulesGroup := result.scopeTree["file.c3"]
+		scope := modulesGroup.GetModuleScope("foo")
+
+		assert.Equal(t, "method", scope.Symbols[4].Name)
+		assert.Equal(t, ast.Token(ast.FUNCTION), scope.Symbols[4].Kind)
+		assert.Equal(t, lsp.NewRange(2, 2, 2, 28), scope.Symbols[4].Range)
+	})
+}

@@ -3,21 +3,27 @@ package analysis
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
+
+func findSymbol(source string, pos lsp.Position) option.Option[*Symbol] {
+	fileName := "app.c3"
+	tree := getTree(source, fileName)
+	symbolTable := BuildSymbolTable(tree, fileName)
+
+	return FindSymbolAtPosition(pos, fileName, symbolTable, tree, source)
+}
 
 func TestFindsSymbol_Declaration_variable(t *testing.T) {
 	t.Run("Find global variable declaration in same module", func(t *testing.T) {
 		source := `int number = 0;
 		fn void main(){number + 2;}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 1, Column: 18}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
+
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "number", symbol.Name)
@@ -32,12 +38,8 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 			number + 2;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 3, Column: 4}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		symbol := symbolOpt.Get()
 
 		assert.Equal(t, "number", symbol.Name)
@@ -55,12 +57,8 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 			|}
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 5, Column: 5}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		symbol := symbolOpt.Get()
 
 		assert.Equal(t, "number", symbol.Name)
@@ -75,12 +73,8 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 			tick = tick + 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 3, Column: 4}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		symbol := symbolOpt.Get()
 
 		assert.Equal(t, "tick", symbol.Name)
@@ -101,12 +95,8 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		char fps = tick * 60;
 		`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 9, Column: 14} // Cursor at char fps = t|ick * 60;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		symbol := symbolOpt.Get()
 
 		assert.Equal(t, "tick", symbol.Name)
@@ -124,12 +114,8 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		char fps = tick * 60;
 		`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 5, Column: 14} // Cursor at char fps = t|ick * 60;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		symbol := symbolOpt.Get()
 
 		assert.Equal(t, "tick", symbol.Name)
@@ -153,12 +139,8 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		char fps = foo::tick * 60;
 		`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 11, Column: 19} // Cursor at char fps = foo::t|ick * 60;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		symbol := symbolOpt.Get()
 
 		assert.Equal(t, "tick", symbol.Name)
@@ -184,13 +166,13 @@ func TestFindsSymbol_Declaration_variable(t *testing.T) {
 		UpdateSymbolTable(symbolTable, tree, fileName)
 
 		secondFileName := "foo.c3"
-		source = `module foo;
+		source2 := `module foo;
 		char tick;`
-		tree2 := getTree(source, secondFileName)
+		tree2 := getTree(source2, secondFileName)
 		UpdateSymbolTable(symbolTable, tree2, secondFileName)
 
 		cursorPosition := lsp.Position{Line: 6, Column: 19} // Cursor at char fps = foo::t|ick * 60;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		symbol := symbolOpt.Get()
 
 		assert.Equal(t, "tick", symbol.Name)
@@ -205,12 +187,8 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		source := `enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 		fn void main(){WindowStatus status;}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 1, Column: 18}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "WindowStatus", symbol.Name)
@@ -236,7 +214,7 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		symbolTable := BuildSymbolTable(tree, fileName)
 
 		cursorPosition := lsp.Position{Line: 5, Column: 26}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "OPEN", symbol.Name)
@@ -244,7 +222,7 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 
 		cursorPosition = lsp.Position{Line: 6, Column: 37}
-		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol = symbolOpt.Get()
 		assert.Equal(t, "BACKGROUND", symbol.Name)
@@ -261,12 +239,8 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 			status.foo();
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 5, Column: 11}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "foo", symbol.Name)
@@ -283,12 +257,8 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		import foo;
 		fn void main(){foo::WindowStatus status;}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 6, Column: 23} // Cursor at foo::W|indowStatus status;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "WindowStatus", symbol.Name)
@@ -306,18 +276,33 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		import foo;
 		fn void main(){foo::WindowStatus status = foo::WindowStatus.BACKGROUND;}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 6, Column: 62} // Cursor at foo::WindowStatus.B|ACKGROUND;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "BACKGROUND", symbol.Name)
 		assert.Equal(t, "foo", symbol.Module.String())
 		assert.Equal(t, lsp.NewRange(2, 28, 2, 38), symbol.NodeDecl.GetRange())
-		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+		assert.Equal(t, ast.Token(ast.ENUM_VALUE), symbol.Kind)
+	})
+
+	t.Run("Should not find enumerator on enumerator", func(t *testing.T) {
+		// TODO Because now we work with the ast, this is invalid and generates an invalid AST, meaning, from the AST we cannot determine MINIMIZED belongs to an ast.SelectorExpr and thus, searching algorithm does not goes the chaining branch.
+		source := `
+			enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			fn void main() {
+				WindowStatus status;
+				status = WindowStatus.BACKGROUND.MINIMIZED;
+			}`
+
+		cursorPosition := lsp.Position{Line: 4, Column: 38} // Cursor is at `status = WindowStatus.BACKGROUND.M|INIMIZED`
+		symbolOpt := findSymbol(source, cursorPosition)
+		assert.False(t, symbolOpt.IsSome())
+		/*
+			position := buildPosition(4, 38) // Cursor is at `status = WindowStatus.BACKGROUND.M|INIMIZED`
+			symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+
+			assert.True(t, symbolOption.IsNone(), "Element found")*/
 	})
 }
 
@@ -326,12 +311,8 @@ func TestFindsSymbol_Declaration_fault(t *testing.T) {
 		source := `fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 		fn void main(){WindowError err;}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 1, Column: 18}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "WindowError", symbol.Name)
@@ -343,17 +324,13 @@ func TestFindsSymbol_Declaration_fault(t *testing.T) {
 		source := `fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 		fn void main(){WindowError err = UNEXPECTED_ERROR;}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 1, Column: 36}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "UNEXPECTED_ERROR", symbol.Name)
 		assert.Equal(t, lsp.NewRange(0, 20, 0, 36), symbol.NodeDecl.GetRange())
-		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+		assert.Equal(t, ast.Token(ast.ENUM_VALUE), symbol.Kind)
 	})
 
 	t.Run("Find fault method in same module", func(t *testing.T) {
@@ -365,12 +342,8 @@ func TestFindsSymbol_Declaration_fault(t *testing.T) {
 			err.foo();
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 5, Column: 8}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "foo", symbol.Name)
@@ -388,12 +361,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			Animal dog;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 4, Column: 4}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "Animal", symbol.Name)
@@ -417,7 +386,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		symbolTable := BuildSymbolTable(tree, fileName)
 
 		cursorPosition := lsp.Position{Line: 6, Column: 8}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "life", symbol.Name)
@@ -430,7 +399,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		// Following is testing finding the symbol when cursor is in property that is not a builtin type
 		// -----------------------------------------------
 		cursorPosition = lsp.Position{Line: 7, Column: 8}
-		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol = symbolOpt.Get()
 		assert.Equal(t, "taxId", symbol.Name)
@@ -443,7 +412,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		// Following is testing finding the symbol when cursor is in Selector.Expr
 		// -----------------------------------------------
 		cursorPosition = lsp.Position{Line: 6, Column: 4} // Cursor at d|og.life
-		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 
 		assert.True(t, symbolOpt.IsSome())
 		symbol = symbolOpt.Get()
@@ -462,12 +431,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			dog.bark();
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 4, Column: 8}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "bark", symbol.Name)
@@ -495,7 +460,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		symbolTable := BuildSymbolTable(tree, fileName)
 
 		cursorPosition := lsp.Position{Line: 10, Column: 14} // cursor at dog.being.l|ife = 3
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "life", symbol.Name)
@@ -508,7 +473,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		// Following is testing finding the symbol when cursor is in Selector.Expr
 		// -----------------------------------------------
 		cursorPosition = lsp.Position{Line: 10, Column: 8} // Cursor is at dog.b|eing.life
-		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol = symbolOpt.Get()
 		assert.Equal(t, "being", symbol.Name)
@@ -537,12 +502,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			dog.xeno.life = 10;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 15, Column: 13} // Cursor at `dog.xeno.l|ife = 10;`
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "life", symbol.Name)
@@ -567,12 +528,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			dog.bark().length = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 11, Column: 15}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "length", symbol.Name)
@@ -601,12 +558,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			dog.bark().length = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 15, Column: 15} // Cursor at dog.bark().l|ength = 3;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "length", symbol.Name)
@@ -627,12 +580,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			bark().length = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 7, Column: 11}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "length", symbol.Name)
@@ -657,12 +606,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			foo::bark().length = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 11, Column: 16} // Cursor at `foo::bark().l|ength = 3;`
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "length", symbol.Name)
@@ -683,12 +628,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		fn void Confusion.stop() {}
 		fn void Sound.stop(){}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 5, Column: 9}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "stop", symbol.Name)
@@ -710,12 +651,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			self.playing = true
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 9, Column: 9} // Cursor at `self.p|laying = true;`
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "playing", symbol.Name)
@@ -738,12 +675,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			obj.a = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 10, Column: 7} // Cursor at obj.|a = 3;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
 	})
 
@@ -764,12 +697,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			obj.a = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 13, Column: 7} // Cursor at obj.|a = 3;
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
 		assert.Equal(t, "foo", symbolOpt.Get().Module.String())
 	})
@@ -786,12 +715,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			obj.data.a = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 8, Column: 8} // Cursor at `obj.d|ata.a = 3`
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
 		assert.Equal(t, "data", symbolOpt.Get().Name)
 	})
@@ -808,12 +733,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			obj.data.a = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 8, Column: 12} // Cursor at `obj.data.|a = 3`
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome(), "Symbol not found")
 		assert.Equal(t, "a", symbolOpt.Get().Name)
 		assert.Equal(t, lsp.NewRange(3, 5, 3, 11), symbolOpt.Get().Range)
@@ -840,7 +761,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 		symbolTable := BuildSymbolTable(tree, fileName)
 
 		cursorPosition := lsp.Position{Line: 9, Column: 16} // Cursor at self.sub.j|ump();
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "jump", symbol.Name)
@@ -850,7 +771,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 
 		// Testing cursor at `self.j|ump();` should find `fn void Foo.jump(&self)`
 		cursorPosition = lsp.Position{Line: 10, Column: 9} //
-		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol = symbolOpt.Get()
 		assert.Equal(t, "jump", symbol.Name)
@@ -860,7 +781,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 
 		// Testing cursor at `self.o|verloaded();` should find `fn void Bar.overloaded(&self)`
 		cursorPosition = lsp.Position{Line: 11, Column: 9} //
-		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol = symbolOpt.Get()
 		assert.Equal(t, "overloaded", symbol.Name)
@@ -870,7 +791,7 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 
 		// Testing cursor at `self.sub.o|verloaded();` should find `fn void For.jump(&self)`
 		cursorPosition = lsp.Position{Line: 12, Column: 13}
-		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt = FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 		assert.True(t, symbolOpt.IsSome())
 		symbol = symbolOpt.Get()
 		assert.Equal(t, "overloaded", symbol.Name)
@@ -886,12 +807,8 @@ func TestFindsSymbol_Declaration_struct(t *testing.T) {
 			bool a;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 2, Column: 15}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "Animal", symbol.Name)
@@ -906,12 +823,8 @@ func TestFindsSymbol_Declaration_def(t *testing.T) {
 		source := `def Kilo = int;
 		Kilo value = 3;`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 1, Column: 3}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "Kilo", symbol.Name)
@@ -931,11 +844,7 @@ func TestFindsSymbol_Declaration_def(t *testing.T) {
 		`
 
 		source, position := parseBodyWithCursor(source)
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
-		symbolOpt := FindSymbolAtPosition(position, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, position)
 
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
@@ -954,12 +863,8 @@ func TestFindsSymbol_Declaration_function(t *testing.T) {
 		run(3);
 	}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 3, Column: 3}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "run", symbol.Name)
@@ -974,12 +879,8 @@ func TestFindsSymbol_Declaration_function(t *testing.T) {
 		init_window(200, 200, "hello");
 	}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 3, Column: 3}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "init_window", symbol.Name)
@@ -999,12 +900,8 @@ func TestFindsSymbol_Declaration_function(t *testing.T) {
 			bark().length = 3;
 		}`
 
-		fileName := "app.c3"
-		tree := getTree(source, fileName)
-		symbolTable := BuildSymbolTable(tree, fileName)
-
 		cursorPosition := lsp.Position{Line: 7, Column: 4}
-		symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+		symbolOpt := findSymbol(source, cursorPosition)
 		assert.True(t, symbolOpt.IsSome())
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "bark", symbol.Name)

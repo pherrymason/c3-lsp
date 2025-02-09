@@ -164,7 +164,8 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 			v.pushScope(n)
 
 			for _, param := range n.Signature.Parameters {
-				_, sym := v.currentScope.RegisterSymbol(param.Name.Name,
+				_, sym := v.currentScope.RegisterSymbol(
+					param.Name.Name,
 					param.GetRange(),
 					param,
 					v.currentModule,

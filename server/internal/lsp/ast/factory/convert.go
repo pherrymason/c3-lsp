@@ -1576,7 +1576,7 @@ func (c *ASTConverter) convert_base_expression(node *sitter.Node, source []byte)
 		}, "..type_with_initializer_list.."),
 
 		NodeOfType("field_expr"),
-		NodeOfType("type_access_expr"), // TODO
+		NodeOfType("type_access_expr"),
 		NodeOfType("paren_expr"),
 		NodeOfType("expr_block"),
 
@@ -1695,7 +1695,15 @@ func (c *ASTConverter) convert_type_access_expr(node *sitter.Node, source []byte
 	idNode := c.getNextID()
 	argumentNode := node.ChildByFieldName("argument")
 	x = c.convert_type(argumentNode, source)
-	y = c.choice([]string{"access_ident", "const_ident"}, node.ChildByFieldName("field"), source, false).(*ast.Ident)
+
+	fieldNode := node.ChildByFieldName("field")
+	log.Print(fieldNode.Type(), fieldNode.Content(source))
+	yN := c.choice([]string{"access_ident", "const_ident"}, fieldNode, source, false)
+
+	y, ok := yN.(*ast.Ident)
+	if !ok {
+		panic("COuld not convert field")
+	}
 
 	return &ast.SelectorExpr{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(idNode, node),

@@ -21,9 +21,11 @@ type PositionContext struct {
 // astContext
 // Has context information about a specific AST node.
 type astContext struct {
-	selfType   *ast.Ident
-	pathStep   []PathStep
-	moduleName ModuleName
+	selfType             *ast.Ident
+	pathStep             []PathStep
+	moduleName           ModuleName
+	identUnderCursor     string // single ident under cursor
+	fullIdentUnderCursor string // full ident under cursor. Difference with `identUnderCursor`is that this one includes the whole chain of selectors
 
 	// Information related to node being under an ast.SelectorExpr
 	isSelExpr          bool
@@ -80,6 +82,77 @@ func getASTNodeContext(path []PathStep) astContext {
 	return astCtxt
 }
 
+const (
+	ContextHintForGoTo = iota
+	ContextHintForCompletion
+)
+
+func getContextFromPosition(path []PathStep, pos lsp.Position, content string, hint int) astContext {
+	posCtxt := getASTNodeContext(path)
+
+	// Rewind in content until a space or {()} is found
+	index := pos.IndexIn(content)
+
+	startFullWord := index
+	startIdentWord := index
+	endIdentWord := index
+	hasFieldAccess := false
+	// Rewind in content until a space or {()} is found
+	for i := index - 1; i >= 0; i-- {
+		r := rune(content[i])
+		//		log.Printf("%c ", r)
+
+		if utils.IsIdentValidCharacter(r) || r == '.' {
+			if r == '.' {
+				hasFieldAccess = true
+			}
+
+			if !hasFieldAccess {
+				startIdentWord = i
+			}
+			startFullWord = i
+		} else {
+			break
+		}
+	}
+
+	if hint == ContextHintForGoTo {
+		// Forward to find end of word
+		endFullWord := index
+		stopCheckingIdentWord := false
+		for i := index; i < len(content); i++ {
+			r := rune(content[i])
+			//log.Printf("%c ", r)
+
+			if utils.IsIdentValidCharacter(r) {
+				if !stopCheckingIdentWord {
+					endIdentWord = i
+				}
+				endFullWord = i
+				if r == '.' {
+					stopCheckingIdentWord = true
+					endFullWord = i
+					hasFieldAccess = true
+				}
+			} else {
+				break
+			}
+		}
+		posCtxt.fullIdentUnderCursor = content[startFullWord : endFullWord+1]
+		posCtxt.identUnderCursor = content[startIdentWord : endIdentWord+1]
+	} else {
+		posCtxt.fullIdentUnderCursor = content[startFullWord:index]
+		posCtxt.identUnderCursor = content[startIdentWord:index]
+	}
+
+	if hasFieldAccess {
+		posCtxt.isSelExpr = true
+		posCtxt.selExpr = parseSelectorExpression(posCtxt.fullIdentUnderCursor)
+	}
+
+	return posCtxt
+}
+
 // getAstContextFromString does some analysis from pure string.
 // This is weaker than getASTNodeContext, but we are forced to do it because treesitter sometimes emits error nodes.
 func getAstContextFromString(astCtxt astContext, content string) astContext {
@@ -132,9 +205,9 @@ func parseSelectorExpression(input string) *ast.SelectorExpr {
 
 	// Build nested ast.SelectorExpr
 	for _, field := range fields {
-		if field == "" {
-			continue
-		}
+		//if field == "" {
+		//	continue
+		//}
 
 		if baseExpr == nil {
 			baseExpr = &ast.Ident{Name: field}

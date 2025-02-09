@@ -19,10 +19,6 @@ type FindNodeVisitor struct {
 }
 
 func (v *FindNodeVisitor) Enter(node ast.Node, propertyName string) walk.Visitor {
-	if node == nil {
-		return nil
-	}
-
 	// Verify if the position is inside the range of the node
 	if node.GetRange().HasPosition(v.pos) {
 		// Store current node if it is more specific

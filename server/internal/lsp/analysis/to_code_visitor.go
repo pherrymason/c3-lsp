@@ -13,10 +13,6 @@ type defValueToCodeVisitor struct {
 }
 
 func (v *defValueToCodeVisitor) Enter(node ast.Node, propertyName string) walk.Visitor {
-	if node == nil {
-		return nil
-	}
-
 	switch n := node.(type) {
 	case *ast.GenDecl:
 		switch spec := n.Spec.(type) {

@@ -101,11 +101,12 @@ func TestFindSymbol_ignores_language_keywords(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.source, func(t *testing.T) {
 			fileName := tt.source
-			tree := getTree("module foo;"+tt.source, fileName)
+			source := "module foo;" + tt.source
+			tree := getTree(source, fileName)
 			symbolTable := BuildSymbolTable(tree, "")
 
 			cursorPosition := lsp.Position{Line: 0, Column: 12}
-			symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree)
+			symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)
 
 			assert.True(t, symbolOpt.IsNone(), fmt.Sprintf("Found symbol for keyword %s", tt.source))
 		})

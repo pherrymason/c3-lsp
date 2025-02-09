@@ -10,7 +10,7 @@ import (
 )
 
 func GetHoverInfo(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) *protocol.Hover {
-	symbolResult := FindSymbolAtPosition(pos, document.Uri, symbolTable, document.Ast)
+	symbolResult := FindSymbolAtPosition(pos, document.Uri, symbolTable, document.Ast, document.Text)
 	if symbolResult.IsNone() {
 		return nil
 	}
