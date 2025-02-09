@@ -1697,12 +1697,11 @@ func (c *ASTConverter) convert_type_access_expr(node *sitter.Node, source []byte
 	x = c.convert_type(argumentNode, source)
 
 	fieldNode := node.ChildByFieldName("field")
-	log.Print(fieldNode.Type(), fieldNode.Content(source))
 	yN := c.choice([]string{"access_ident", "const_ident"}, fieldNode, source, false)
 
 	y, ok := yN.(*ast.Ident)
 	if !ok {
-		panic("COuld not convert field")
+		panic("Could not convert field")
 	}
 
 	return &ast.SelectorExpr{
