@@ -53,6 +53,10 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 	} else {
 		// We need to solve first SelectorExpr.X!
 		parentSymbol, parentSymbols := solveXAtSelectorExpr(posCtxt.selExpr, pos, fileName, posCtxt, symbolTable, 0)
+		if parentSymbol == nil {
+			return nil
+		}
+
 		//canReadMembers := canReadMembersOf(parentSymbol)
 		symbols := []*Symbol{}
 
@@ -60,7 +64,7 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		collect := SymbolAll
 		if parentSymbolKind == ast.VAR || parentSymbolKind == ast.FIELD {
 			parentSymbol = symbolTable.SolveType(parentSymbol.TypeDef.Name, NewLocation(fileName, pos, posCtxt.moduleName))
-			if parentSymbol.Kind == ast.ENUM {
+			if parentSymbol.Kind == ast.ENUM || parentSymbol.Kind == ast.FAULT {
 				// Enum instantiated variables will only have access to methods. Not to other enum values
 				collect = SymbolMethod
 			}
@@ -69,8 +73,8 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		// Get all available children symbols of parentSymbol
 		symbols = collectChildSymbols(parentSymbol, posCtxt, fileName, collect)
 
-		if parentSymbol.Kind == ast.ENUM_VALUE {
-			// Enum values also have access to Enum methods
+		if parentSymbol.Kind == ast.ENUM_VALUE || parentSymbol.Kind == ast.FAULT_CONSTANT {
+			// Enum values and Fault constants also have access to Enum methods
 			enumMethods := collectChildSymbols(parentSymbols[len(parentSymbols)-1], posCtxt, fileName, SymbolMethod)
 			symbols = append(symbols, enumMethods...)
 		}
@@ -213,7 +217,7 @@ func getCompletionKind(symbol *Symbol) protocol.CompletionItemKind {
 
 	case ast.ENUM, ast.FAULT:
 		return protocol.CompletionItemKindEnum
-	case ast.ENUM_VALUE:
+	case ast.ENUM_VALUE, ast.FAULT_CONSTANT:
 		return protocol.CompletionItemKindEnumMember
 
 	case ast.VAR:
@@ -262,10 +266,12 @@ func getCompletionDetail(s *Symbol) *string {
 		detail = "Enum Value"
 	case ast.FAULT:
 		detail = "Fault"
+	case ast.FAULT_CONSTANT:
+		detail = "Fault Constant"
 	case ast.VAR:
-		detail = s.Type.Name
+		detail = s.TypeDef.Name
 	case ast.CONST:
-		detail = s.Type.Name
+		detail = s.TypeDef.Name
 	case ast.DEF:
 		if s.NodeDecl.(*ast.GenDecl).Spec.(*ast.DefSpec).ResolvesToType {
 			codeifier := defValueToCodeVisitor{}

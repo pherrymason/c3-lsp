@@ -307,6 +307,8 @@ func (s *SymbolTable) SolveType(name string, location Location) *Symbol {
 				// It is already a type, we can return
 				return symbolFound
 			}
+		case *ast.FaultDecl:
+			typeName = n.Name.Name
 		}
 
 		if typeName == "" {

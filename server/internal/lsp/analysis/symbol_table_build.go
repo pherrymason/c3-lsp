@@ -66,7 +66,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		_, fault := v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FAULT)
 
 		for _, f := range n.Members {
-			_, m := v.currentScope.RegisterSymbol(f.Name.Name, f.GetRange(), f, v.currentModule, v.currentFilePath.URI, ast.ENUM_VALUE)
+			_, m := v.currentScope.RegisterSymbol(f.Name.Name, f.GetRange(), f, v.currentModule, v.currentFilePath.URI, ast.FAULT_CONSTANT)
 			fault.AppendChild(m, Field)
 		}
 

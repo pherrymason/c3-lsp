@@ -661,6 +661,294 @@ green.transp`,
 	})
 }
 
+func TestBuildCompletionList_should_suggest_faults(t *testing.T) {
+	t.Run("Should suggest Fault type", func(t *testing.T) {
+		sourceStart := `
+		fault WindowError { COH, COUGH, COUGHCOUGH}
+		<* doc *>
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS }
+		fn void main(){`
+
+		line := uint32(5)
+		cases := []struct {
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{"X",
+				[]protocol.CompletionItem{},
+			},
+			{"Wind",
+				[]protocol.CompletionItem{
+					createCompletionItem("WindowError", protocol.CompletionItemKindEnum, "Fault", protocol2.NewLSPRange(line, 0, line, 4)),
+					createCompletionItemWithDoc("WindowFileError", "WindowFileError", protocol.CompletionItemKindEnum, "Fault", protocol2.NewLSPRange(line, 0, line, 4), "doc"),
+				},
+			},
+			{
+				"WindowFile",
+				[]protocol.CompletionItem{
+					createCompletionItemWithDoc("WindowFileError", "WindowFileError", protocol.CompletionItemKindEnum, "Fault", protocol2.NewLSPRange(line, 0, line, 10), "doc"),
+				},
+			},
+		}
+
+		for n, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
+
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit)
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+					assert.Equal(t, *tt.expected[idx].Detail, *item.Detail)
+				}
+			})
+		}
+	})
+
+	t.Run("Should suggest Fault constant type", func(t *testing.T) {
+		sourceStart := `
+		fault WindowError { COH, COUGH, COUGHCOUGH}
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		fn void main() {`
+		line := uint32(4)
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find constants starting with string",
+				"CO",
+				[]protocol.CompletionItem{
+					createCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 0, line, 2)),
+					createCompletionItem("COULD_NOT_CREATE", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 0, line, 2)),
+				}},
+
+			{
+				"Find all fault constnats when prefixed with fault name",
+				"WindowError.",
+				[]protocol.CompletionItem{
+					createCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 12, line, 12)),
+					createCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 12, line, 12)),
+					createCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 12, line, 12)),
+				}},
+			{
+				"Find matching fault constants",
+				"WindowFileError.NOT",
+				[]protocol.CompletionItem{
+					createCompletionItem("NOT_FOUND", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 16, line, 19)),
+				},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%s", tt.input), func(t *testing.T) {
+
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit, "test edit is wrong")
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+					assert.Equal(t, *tt.expected[idx].Detail, *item.Detail)
+				}
+			})
+		}
+	})
+
+	t.Run("Should not suggest Fault constant type after explicit constant", func(t *testing.T) {
+		sourceStart := `
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		fn void main() {`
+
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find constants prefixed with fault constant",
+				"WindowFileError.NOT_FOUND.",
+				[]protocol.CompletionItem{},
+			},
+			{
+				"Do not find matching constants prefixed with fault constant",
+				"WindowFileError.NOT_FOUND.NO_PE",
+				[]protocol.CompletionItem{},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%s", tt.input), func(t *testing.T) {
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+			})
+		}
+	})
+
+	t.Run("Should not suggest Fault constant type after instance", func(t *testing.T) {
+		sourceStart := `
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		fn void main() {
+			WindowFileError inst = NOT_FOUND;
+`
+
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find constants prefixed with fault instance",
+				"inst.",
+				[]protocol.CompletionItem{},
+			},
+			{
+				// This passes, only because any symbols inside main function is not found, not because it could not find NO_PE* in the fault instance.
+				"Do not find matching constants prefixed with fault instance",
+				"inst.NO_PE",
+				[]protocol.CompletionItem{},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%s", tt.input), func(t *testing.T) {
+				completionList := getCompletionList(sourceStart + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+			})
+		}
+	})
+
+	t.Run("Should not suggest Fault constant type after instance in struct member", func(t *testing.T) {
+		sourceStart := `
+		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
+		struct MyStruct { WindowFileError f; }
+		fn void main() {
+			MyStruct st = { WindowFileError.NOT_FOUND };
+`
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Do not find constants prefixed with fault instance in struct member",
+				"st.f.",
+				[]protocol.CompletionItem{},
+			},
+			{
+				"Do not find matching constants prefixed with fault instance in struct member",
+				"st.f.NO_PE",
+				[]protocol.CompletionItem{},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Autocomplete enum methods: #%s", tt.name), func(t *testing.T) {
+				completionList := getCompletionList(sourceStart + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+			})
+		}
+	})
+
+	t.Run("Should suggest Fault methods", func(t *testing.T) {
+		source := `
+		fault WindowError { UNEXPECTED_ERROR, NORMAL_ERROR }
+		fn void WindowError.display(self) {}
+		fn void main() {`
+		line := uint32(4)
+		cases := []struct {
+			name     string
+			input    string
+			expected []protocol.CompletionItem
+		}{
+			{
+				"Find fault methods by type name prefix",
+				"WindowError.",
+				[]protocol.CompletionItem{
+					createCompletionItemWithLabel("WindowError.display", "display", protocol.CompletionItemKindMethod, "fn void display(WindowError self)", protocol2.NewLSPRange(line, 12, line, 12)),
+					createCompletionItem("NORMAL_ERROR", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 12, line, 12)),
+					createCompletionItem("UNEXPECTED_ERROR", protocol.CompletionItemKindEnumMember, "Fault Constant", protocol2.NewLSPRange(line, 12, line, 12)),
+				}},
+			{
+				"Find matching fault method by type name prefix",
+				"WindowError.disp",
+				[]protocol.CompletionItem{
+					createCompletionItemWithLabel("WindowError.display", "display", protocol.CompletionItemKindMethod, "fn void display(WindowError self)", protocol2.NewLSPRange(line, 12, line, 16)),
+				},
+			},
+			{
+				"Find fault methods with explicit constant prefix",
+				"WindowError.UNEXPECTED_ERROR.",
+				[]protocol.CompletionItem{
+					createCompletionItemWithLabel("WindowError.display", "display", protocol.CompletionItemKindMethod, "fn void display(WindowError self)", protocol2.NewLSPRange(line, 29, line, 29)),
+				},
+			},
+			{
+				"Find matching fault methods with explicit constant prefix",
+				"WindowError.UNEXPECTED_ERROR.disp",
+				[]protocol.CompletionItem{
+					createCompletionItemWithLabel("WindowError.display", "display", protocol.CompletionItemKindMethod, "fn void display(WindowError self)", protocol2.NewLSPRange(line, 29, line, 33)),
+				},
+			},
+			{
+				"Find fault methods by instance variable prefix",
+				`WindowError e = WindowError.UNEXPECTED_ERROR;
+e.`,
+				[]protocol.CompletionItem{
+					createCompletionItemWithLabel("WindowError.display", "display", protocol.CompletionItemKindMethod, "fn void display(WindowError self)", protocol2.NewLSPRange(line+1, 2, line+1, 2)),
+				},
+			},
+			{
+				"Find matching fault methods by instance variable prefix",
+				`WindowError e = WindowError.UNEXPECTED_ERROR;
+e.disp`,
+				[]protocol.CompletionItem{
+					createCompletionItemWithLabel("WindowError.display", "display", protocol.CompletionItemKindMethod, "fn void display(WindowError self)", protocol2.NewLSPRange(line+1, 2, line+1, 6)),
+				},
+			},
+		}
+
+		for _, tt := range cases {
+			t.Run(fmt.Sprintf("Case #%s", tt.input), func(t *testing.T) {
+
+				completionList := getCompletionList(source + "\n" + tt.input + "|||\n}")
+
+				assert.Equal(t, len(tt.expected), len(completionList))
+				for idx, item := range completionList {
+					assert.Equal(t, tt.expected[idx].Label, item.Label)
+					assert.Equal(t, tt.expected[idx].Kind, item.Kind)
+					assert.Equal(t, tt.expected[idx].TextEdit, item.TextEdit, "test edit is wrong")
+					if tt.expected[idx].Documentation == nil {
+						assert.Nil(t, item.Documentation)
+					} else {
+						assert.Equal(t, tt.expected[idx].Documentation, item.Documentation)
+					}
+					assert.Equal(t, *tt.expected[idx].Detail, *item.Detail)
+				}
+			})
+		}
+	})
+}
+
 func TestBuildCompletionList_definitions(t *testing.T) {
 
 	t.Run("Should suggest definitions", func(t *testing.T) {
