@@ -31,6 +31,7 @@ const (
 	UNION
 	INTERFACE
 	ENUM
+	ENUM_VALUE
 	FAULT
 	DEF
 	DISTINCT
@@ -198,6 +199,12 @@ func (*DeclOrExpr) exprNode() {}
 func (*DeclOrExpr) declNode() {}
 
 type ErrorNode struct {
+	NodeAttributes
+	Content       string
+	DetectedIdent *UnknownNode
+}
+
+type UnknownNode struct {
 	NodeAttributes
 	Content string
 }

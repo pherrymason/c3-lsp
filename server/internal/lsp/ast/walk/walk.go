@@ -123,6 +123,11 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 	case *ast.ElseStatement:
 		Walk(v, n.Statement, "Statement")
 
+	case *ast.ErrorNode:
+		if n.DetectedIdent != nil {
+			Walk(v, n.DetectedIdent, "DetectedIdent")
+		}
+
 	case *ast.ExpressionStmt:
 		Walk(v, n.Expr, "Expr")
 

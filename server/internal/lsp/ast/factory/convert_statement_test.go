@@ -2,6 +2,7 @@ package factory
 
 import (
 	"fmt"
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"testing"
 
@@ -1317,4 +1318,74 @@ func TestConvertToAST_assert_stmt(t *testing.T) {
 			assert.Equal(t, tt.expected, funcDecl.Body.(*ast.CompoundStmt).Statements[0].(*ast.AssertStatement))
 		})
 	}
+}
+
+func TestConvertToAST_error_node(t *testing.T) {
+
+	t.Run("ERRORS: statement with incomplete variable", func(t *testing.T) {
+		source := `
+	module foo;
+	fn void main() {
+		a
+	}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
+		err, ok := compound.Statements[0].(*ast.ErrorNode)
+		assert.True(t, ok)
+		assert.Equal(t, lsp.NewRange(3, 2, 3, 3), err.Range)
+		assert.Equal(t, "a", err.Content)
+	})
+
+	t.Run("ERRORS: statement with incomplete constant", func(t *testing.T) {
+		source := `
+	module foo;
+	fn void main() {
+		MY
+	}`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
+		err, ok := compound.Statements[0].(*ast.ErrorNode)
+		assert.True(t, ok)
+		assert.Equal(t, lsp.NewRange(3, 2, 3, 4), err.Range)
+		assert.Equal(t, "MY", err.Content)
+	})
+
+	t.Run("type selector expression not finished", func(t *testing.T) {
+		source := `
+		module app;
+		<* bb *>
+		fn void main(){
+		Color.
+		}`
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		node := tree.Modules[0].Declarations[0].(*ast.ErrorNode)
+		assert.NotNil(t, node.DetectedIdent)
+		assert.Equal(t, "Color.", node.DetectedIdent.Content)
+		assert.Equal(t, lsp.NewRange(4, 2, 4, 8), node.DetectedIdent.Range)
+	})
+
+	t.Run("ident selector expression not finished", func(t *testing.T) {
+		t.Skip("Use this as template. but this obj. does not cause a block_comment_text")
+		source := `
+		module app;
+		<* bb *>
+		fn void main(){
+		obj.
+		}`
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		node := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt).Statements[0].(*ast.ErrorNode)
+		assert.NotNil(t, node.DetectedIdent)
+		assert.Equal(t, "obj.", node.DetectedIdent.Content)
+		assert.Equal(t, lsp.NewRange(4, 2, 4, 6), node.DetectedIdent.Range)
+	})
 }

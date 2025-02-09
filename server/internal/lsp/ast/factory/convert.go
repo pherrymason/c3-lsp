@@ -13,6 +13,7 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	sitter "github.com/smacker/go-tree-sitter"
 	"log"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -2278,9 +2279,49 @@ func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte)
 }
 
 func (c *ASTConverter) convert_error(node *sitter.Node, source []byte) ast.Node {
+	//debugNode(node, source, "error")
+	var detectedIdent *ast.UnknownNode
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		if n.Type() == "block_comment_text" {
+			// Grab previous nodes as content
+			sibling := n.PrevSibling()
+			accumulator := []string{}
+			unknownRange := lsp.Range{End: lsp.NewPosition(uint(sibling.EndPoint().Row), uint(sibling.EndPoint().Column))}
+
+			validTypes := []string{".", "::", "type", "ident"}
+			for {
+				if sibling == nil {
+					break
+				}
+				nodeType := sibling.Type()
+				//log.Printf("%s:\"%s\"", nodeType, sibling.Content(source))
+				if utils.InSlice(nodeType, validTypes) {
+					accumulator = append(accumulator, sibling.Content(source))
+					unknownRange.Start = lsp.NewPosition(uint(sibling.StartPoint().Row), uint(sibling.StartPoint().Column))
+
+					sibling = sibling.PrevSibling()
+				} else {
+					// Reached start of sentence
+					break
+				}
+			}
+
+			slices.Reverse(accumulator)
+			detectedIdent = &ast.UnknownNode{
+				NodeAttributes: ast.NewNodeAttributesBuilder().
+					WithId(c.getNextID()).
+					WithRange(unknownRange).
+					Build(),
+				Content: strings.Join(accumulator, ""),
+			}
+		}
+	}
+
 	return &ast.ErrorNode{
 		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Content:        node.Content(source),
+		DetectedIdent:  detectedIdent,
 	}
 }
 

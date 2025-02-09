@@ -578,40 +578,6 @@ func TestConvertToAST_function_statements(t *testing.T) {
 			})
 		}
 	})
-
-	t.Run("ERRORS: statement with incomplete variable", func(t *testing.T) {
-		source := `
-	module foo;
-	fn void main() {
-		a
-	}`
-
-		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
-
-		compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
-		err, ok := compound.Statements[0].(*ast.ErrorNode)
-		assert.True(t, ok)
-		assert.Equal(t, lsp.NewRange(3, 2, 3, 3), err.Range)
-		assert.Equal(t, "a", err.Content)
-	})
-
-	t.Run("ERRORS: statement with incomplete constant", func(t *testing.T) {
-		source := `
-	module foo;
-	fn void main() {
-		MY
-	}`
-
-		cv := newTestAstConverter()
-		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
-
-		compound := tree.Modules[0].Declarations[0].(*ast.FunctionDecl).Body.(*ast.CompoundStmt)
-		err, ok := compound.Statements[0].(*ast.ErrorNode)
-		assert.True(t, ok)
-		assert.Equal(t, lsp.NewRange(3, 2, 3, 4), err.Range)
-		assert.Equal(t, "MY", err.Content)
-	})
 }
 
 func TestConvertToAST_field_expr(t *testing.T) {
