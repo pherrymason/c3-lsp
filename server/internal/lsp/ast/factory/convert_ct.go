@@ -28,7 +28,6 @@ func (c *ASTConverter) convert_compile_time_call_expr(node *sitter.Node, source 
 			break
 		}
 
-		debugNode(n, source, "ct")
 		if n.Type() == "(" {
 			Lparen = int(n.StartPoint().Column)
 		} else if n.Type() == ")" {

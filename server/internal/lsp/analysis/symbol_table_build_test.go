@@ -33,27 +33,27 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	modulesGroup := result.scopeTree["file.c3"]
 	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 16, len(scope.Symbols))
-	assert.Equal(t, "cat", scope.Symbols[0].Name)
-	assert.Equal(t, "dog", scope.Symbols[1].Name)
-	assert.Equal(t, "Colors", scope.Symbols[2].Name)
-	assert.Equal(t, "RED", scope.Symbols[3].Name)
-	assert.Equal(t, "BLUE", scope.Symbols[4].Name)
-	assert.Equal(t, "GREEN", scope.Symbols[5].Name)
-	assert.Equal(t, "Obj", scope.Symbols[6].Name)
-	assert.Equal(t, "Err", scope.Symbols[7].Name)
-	assert.Equal(t, "OOPS", scope.Symbols[8].Name)
-	assert.Equal(t, "FIAL", scope.Symbols[9].Name)
-	assert.Equal(t, "A_CONSTANT", scope.Symbols[10].Name)
-	assert.Equal(t, "Int32", scope.Symbols[11].Name)
-	assert.Equal(t, "foo", scope.Symbols[12].Name)
-	assert.Equal(t, "method", scope.Symbols[13].Name)
-	assert.Equal(t, "m", scope.Symbols[14].Name)
+	assert.Equal(t, "cat", scope.Symbols[0].Identifier)
+	assert.Equal(t, "dog", scope.Symbols[1].Identifier)
+	assert.Equal(t, "Colors", scope.Symbols[2].Identifier)
+	assert.Equal(t, "RED", scope.Symbols[3].Identifier)
+	assert.Equal(t, "BLUE", scope.Symbols[4].Identifier)
+	assert.Equal(t, "GREEN", scope.Symbols[5].Identifier)
+	assert.Equal(t, "Obj", scope.Symbols[6].Identifier)
+	assert.Equal(t, "Err", scope.Symbols[7].Identifier)
+	assert.Equal(t, "OOPS", scope.Symbols[8].Identifier)
+	assert.Equal(t, "FIAL", scope.Symbols[9].Identifier)
+	assert.Equal(t, "A_CONSTANT", scope.Symbols[10].Identifier)
+	assert.Equal(t, "Int32", scope.Symbols[11].Identifier)
+	assert.Equal(t, "foo", scope.Symbols[12].Identifier)
+	assert.Equal(t, "method", scope.Symbols[13].Identifier)
+	assert.Equal(t, "m", scope.Symbols[14].Identifier)
 	assert.Equal(t, ast.Token(ast.MACRO), scope.Symbols[14].Kind)
-	assert.Equal(t, "@method", scope.Symbols[15].Name)
+	assert.Equal(t, "@method", scope.Symbols[15].Identifier)
 	assert.Equal(t, ast.Token(ast.MACRO), scope.Symbols[15].Kind)
 
 	for _, symbol := range scope.Symbols {
-		assert.Equal(t, "file.c3", symbol.URI, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.URI))
+		assert.Equal(t, "file.c3", symbol.URI, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Identifier, symbol.URI))
 	}
 }
 
@@ -72,12 +72,12 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 	modulesGroup := result.scopeTree["file.c3"]
 	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 1, len(scope.Symbols))
-	assert.Equal(t, "main", scope.Symbols[0].Name)
+	assert.Equal(t, "main", scope.Symbols[0].Identifier)
 	scope = scope.Children[0]
-	assert.Equal(t, "cat", scope.Symbols[0].Name)
+	assert.Equal(t, "cat", scope.Symbols[0].Identifier)
 
 	for _, symbol := range scope.Symbols {
-		assert.Equal(t, "file.c3", symbol.URI, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Name, symbol.URI))
+		assert.Equal(t, "file.c3", symbol.URI, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Identifier, symbol.URI))
 	}
 }
 
@@ -96,7 +96,7 @@ func TestSymbolBuild_registers_structs(t *testing.T) {
 		modulesGroup := symbolTable.scopeTree[fileName]
 		scope := modulesGroup.GetModuleScope("test")
 
-		assert.Equal(t, "Bar", scope.Symbols[0].Name)
+		assert.Equal(t, "Bar", scope.Symbols[0].Identifier)
 	})
 }
 
@@ -116,14 +116,14 @@ func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 	modulesGroup := result.scopeTree["file.c3"]
 	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 3, len(scope.Symbols))
-	assert.Equal(t, "Obj", scope.Symbols[0].Name)
+	assert.Equal(t, "Obj", scope.Symbols[0].Identifier)
 	// Method 1
 	assert.Equal(t, Relation{Child: scope.Symbols[1], Tag: Method}, scope.Symbols[0].Children[0], "method 1 is not registered as child of struct symbol")
-	assert.Equal(t, "method", scope.Symbols[1].Name)
+	assert.Equal(t, "method", scope.Symbols[1].Identifier)
 
 	// Method 2
 	assert.Equal(t, Relation{Child: scope.Symbols[2], Tag: Method}, scope.Symbols[0].Children[1], "method 2 is not registered as child of struct symbol")
-	assert.Equal(t, "@foo", scope.Symbols[2].Name)
+	assert.Equal(t, "@foo", scope.Symbols[2].Identifier)
 }
 
 func TestSymbolBuild_registers_function_arguments_as_variables_in_the_scope(t *testing.T) {
@@ -145,10 +145,10 @@ func TestSymbolBuild_registers_function_arguments_as_variables_in_the_scope(t *t
 
 	assert.Equal(t, 4, len(scope.Symbols))
 	mainFn := scope.Symbols[0]
-	assert.Equal(t, "main", mainFn.Name)
+	assert.Equal(t, "main", mainFn.Identifier)
 	mainScope := scope.Children[0]
 	assert.Equal(t, 1, len(mainScope.Symbols))
-	assert.Equal(t, "arg", mainScope.Symbols[0].Name)
+	assert.Equal(t, "arg", mainScope.Symbols[0].Identifier)
 
 	methodScope := scope.Children[1]
 	assert.Equal(t, 2, len(methodScope.Symbols), "method scope does not have expected symbols")
@@ -171,7 +171,7 @@ func TestSymbolBuild_registers_macro_trailing_param(t *testing.T) {
 		scope := modulesGroup.GetModuleScope("foo")
 
 		macroScope := scope.Children[0]
-		assert.Equal(t, "@body", macroScope.Symbols[2].Name)
+		assert.Equal(t, "@body", macroScope.Symbols[2].Identifier)
 		assert.Equal(t, ast.Token(ast.FUNCTION), macroScope.Symbols[2].Kind)
 		assert.Equal(t, lsp.NewRange(1, 33, 1, 38), macroScope.Symbols[2].Range)
 	})
@@ -189,7 +189,7 @@ func TestSymbolBuild_registers_macro_trailing_param(t *testing.T) {
 		scope := modulesGroup.GetModuleScope("foo")
 
 		macroScope := scope.Children[0]
-		assert.Equal(t, "@body", macroScope.Symbols[2].Name)
+		assert.Equal(t, "@body", macroScope.Symbols[2].Identifier)
 		assert.Equal(t, ast.Token(ast.FUNCTION), macroScope.Symbols[2].Kind)
 		assert.Equal(t, lsp.NewRange(1, 33, 1, 42), macroScope.Symbols[2].Range)
 
@@ -212,19 +212,19 @@ func TestSymbolBuild_registers_def(t *testing.T) {
 		result := BuildSymbolTable(tree, "")
 		scope := result.scopeTree["file.c3"].GetModuleScope("foo")
 
-		assert.Equal(t, "aliased_global", scope.Symbols[0].Name)
+		assert.Equal(t, "aliased_global", scope.Symbols[0].Identifier)
 		assert.Equal(t, lsp.NewRange(1, 2, 1, 34), scope.Symbols[0].Range)
 
-		assert.Equal(t, "alias_export", scope.Symbols[1].Name)
+		assert.Equal(t, "alias_export", scope.Symbols[1].Identifier)
 		assert.Equal(t, lsp.NewRange(2, 2, 2, 37), scope.Symbols[1].Range)
 
-		assert.Equal(t, "CONST_ALIAS", scope.Symbols[2].Name)
+		assert.Equal(t, "CONST_ALIAS", scope.Symbols[2].Identifier)
 		assert.Equal(t, lsp.NewRange(3, 2, 3, 29), scope.Symbols[2].Range)
 
-		assert.Equal(t, "func", scope.Symbols[3].Name)
+		assert.Equal(t, "func", scope.Symbols[3].Identifier)
 		assert.Equal(t, lsp.NewRange(4, 2, 4, 25), scope.Symbols[3].Range)
 
-		assert.Equal(t, "@macro_alias", scope.Symbols[4].Name)
+		assert.Equal(t, "@macro_alias", scope.Symbols[4].Identifier)
 		assert.Equal(t, lsp.NewRange(5, 2, 5, 24), scope.Symbols[4].Range)
 	})
 }
@@ -242,19 +242,19 @@ func TestSymbolBuild_registers_enums(t *testing.T) {
 		modulesGroup := result.scopeTree["file.c3"]
 		scope := modulesGroup.GetModuleScope("foo")
 
-		assert.Equal(t, "Colors", scope.Symbols[0].Name)
+		assert.Equal(t, "Colors", scope.Symbols[0].Identifier)
 		assert.Equal(t, ast.Token(ast.ENUM), scope.Symbols[0].Kind)
 		assert.Equal(t, lsp.NewRange(1, 2, 1, 38), scope.Symbols[0].Range)
 
-		assert.Equal(t, "RED", scope.Symbols[1].Name)
+		assert.Equal(t, "RED", scope.Symbols[1].Identifier)
 		assert.Equal(t, ast.Token(ast.ENUM_VALUE), scope.Symbols[1].Kind)
 		assert.Equal(t, lsp.NewRange(1, 20, 1, 23), scope.Symbols[1].Range)
 
-		assert.Equal(t, "BLUE", scope.Symbols[2].Name)
+		assert.Equal(t, "BLUE", scope.Symbols[2].Identifier)
 		assert.Equal(t, ast.Token(ast.ENUM_VALUE), scope.Symbols[2].Kind)
 		assert.Equal(t, lsp.NewRange(1, 25, 1, 29), scope.Symbols[2].Range)
 
-		assert.Equal(t, "GREEN", scope.Symbols[3].Name)
+		assert.Equal(t, "GREEN", scope.Symbols[3].Identifier)
 		assert.Equal(t, ast.Token(ast.ENUM_VALUE), scope.Symbols[3].Kind)
 		assert.Equal(t, lsp.NewRange(1, 31, 1, 36), scope.Symbols[3].Range)
 	})
@@ -272,7 +272,7 @@ func TestSymbolBuild_registers_enums(t *testing.T) {
 		modulesGroup := result.scopeTree["file.c3"]
 		scope := modulesGroup.GetModuleScope("foo")
 
-		assert.Equal(t, "method", scope.Symbols[4].Name)
+		assert.Equal(t, "method", scope.Symbols[4].Identifier)
 		assert.Equal(t, ast.Token(ast.FUNCTION), scope.Symbols[4].Kind)
 		assert.Equal(t, lsp.NewRange(2, 2, 2, 28), scope.Symbols[4].Range)
 	})

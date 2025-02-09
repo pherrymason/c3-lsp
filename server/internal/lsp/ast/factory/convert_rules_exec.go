@@ -181,7 +181,6 @@ func (c *ASTConverter) choice(types []string, node *sitter.Node, source []byte, 
 }
 
 func (c *ASTConverter) anyOf(name string, rules []NodeRule, node *sitter.Node, source []byte, debug bool) (ast.Node, *NodeRule) {
-	//fmt.Printf("anyOf: ")
 	if debug {
 		debugNode(node, source, "AnyOf["+name+"]")
 	}

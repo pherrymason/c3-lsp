@@ -26,15 +26,24 @@ func (s *Scope) pushScope(Range lsp.Range) *Scope {
 	return newScope
 }
 
-func (s *Scope) RegisterSymbol(name string, nRange lsp.Range, n ast.Node, module *ast.Module, filePath string, kind ast.Token) (SymbolID, *Symbol) {
+func (s *Scope) RegisterSymbolWithLabel(label string, ident string, nRange lsp.Range, n ast.Node, module *ast.Module, filePath string, kind ast.Token) (SymbolID, *Symbol) {
+	return s.internalRegisterSymbol(option.Some(label), ident, nRange, n, module, filePath, kind)
+}
+
+func (s *Scope) RegisterSymbol(ident string, nRange lsp.Range, n ast.Node, module *ast.Module, filePath string, kind ast.Token) (SymbolID, *Symbol) {
+	return s.internalRegisterSymbol(option.None[string](), ident, nRange, n, module, filePath, kind)
+}
+
+func (s *Scope) internalRegisterSymbol(label option.Option[string], ident string, nRange lsp.Range, n ast.Node, module *ast.Module, filePath string, kind ast.Token) (SymbolID, *Symbol) {
 	symbol := &Symbol{
-		Name:     name,
-		Module:   NewModuleName(module.Name),
-		URI:      filePath,
-		NodeDecl: n,
-		Range:    nRange,
-		Scope:    s,
-		Kind:     kind,
+		Label:      label,
+		Identifier: ident,
+		Module:     NewModuleName(module.Name),
+		URI:        filePath,
+		NodeDecl:   n,
+		Range:      nRange,
+		Scope:      s,
+		Kind:       kind,
 	}
 	s.Symbols = append(s.Symbols, symbol)
 

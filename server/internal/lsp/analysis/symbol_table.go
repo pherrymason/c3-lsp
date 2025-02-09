@@ -7,6 +7,20 @@ import (
 	"strings"
 )
 
+type Location struct {
+	FileName string
+	Position lsp.Position
+	Module   ModuleName
+}
+
+func NewLocation(fileName string, position lsp.Position, module ModuleName) Location {
+	return Location{
+		FileName: fileName,
+		Position: position,
+		Module:   module,
+	}
+}
+
 // SymbolTable stores list of symbols defined in the project.
 // Each symbol has an "address". This address allows to now where the symbol
 /*
@@ -124,13 +138,21 @@ func (s *SymbolTable) GetSymbolsInScope(scope *Scope) []*Symbol {
 	return symbols
 }
 
+func (s *SymbolTable) findSymbolInLocation(name string, location Location) *Symbol {
+	moduleGroup := s.scopeTree[location.FileName]
+	scope := moduleGroup.GetModuleScope(location.Module.String())
+	scope = FindClosestScope(scope, location.Position)
+
+	return s.findSymbolInScope(name, scope)
+}
+
 func (s *SymbolTable) findSymbolInScope(name string, scope *Scope) *Symbol {
 	var symbolFound *Symbol
 	currentScope := scope
 	found := false
 	for {
 		for _, symbol := range currentScope.Symbols {
-			if symbol.Name != name {
+			if symbol.Identifier != name {
 				continue
 			}
 
@@ -149,16 +171,10 @@ func (s *SymbolTable) findSymbolInScope(name string, scope *Scope) *Symbol {
 	return symbolFound
 }
 
-type fromPosition struct {
-	position lsp.Position
-	fileName string
-	module   ModuleName
-}
-
 // FindSymbolByPosition Searches a symbol with ident=identName taking into consideration what is accessible from a given position (`from`)
 // identName: identity to search
 // from: Information about identity position.
-func (s *SymbolTable) FindSymbolByPosition(identName string, explicitIdentModule option.Option[string], from fromPosition) option.Option[*Symbol] {
+func (s *SymbolTable) FindSymbolByPosition(identName string, explicitIdentModule option.Option[string], from Location) option.Option[*Symbol] {
 	type SymbolScope struct {
 		symbol     *Symbol
 		rangeScope lsp.Range
@@ -166,13 +182,13 @@ func (s *SymbolTable) FindSymbolByPosition(identName string, explicitIdentModule
 
 	var symbolFound *Symbol
 
-	moduleScope := s.scopeTree[from.fileName].GetModuleScope(from.module.String())
+	moduleScope := s.scopeTree[from.FileName].GetModuleScope(from.Module.String())
 
 	visitedFiles := make(map[string]bool)
 	toVisit := []FileModulePtr{
 		{
-			fileName: from.fileName,
-			module:   from.module,
+			fileName: from.FileName,
+			module:   from.Module,
 			scope:    moduleScope,
 		},
 	}
@@ -203,7 +219,7 @@ func (s *SymbolTable) FindSymbolByPosition(identName string, explicitIdentModule
 		if !skipSymbolSearch {
 			if iteration == 0 {
 				// other iterations, are searching in root scope of imported module, position is not relevant
-				scope = FindClosestScope(moduleScope, from.position)
+				scope = FindClosestScope(moduleScope, from.Position)
 			}
 			if scope == nil {
 				return option.None[*Symbol]()
@@ -256,11 +272,11 @@ func findImportedFiles(s *SymbolTable, scope *Scope, currentModule ModuleName, v
 
 // SolveType Finds type of Symbol with `name` based on a position and a fileName.
 // TODO Be able to specify module to which name belongs to. This will be needed to be able to find types imported from different modules
-func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName string, currentModule ModuleName) *Symbol {
+func (s *SymbolTable) SolveType(name string, location Location) *Symbol {
 	// 1- Find the scope
-	moduleGroup := s.scopeTree[fileName]
-	scope := moduleGroup.GetModuleScope(currentModule.String())
-	scope = FindClosestScope(scope, ctxPosition)
+	moduleGroup := s.scopeTree[location.FileName]
+	scope := moduleGroup.GetModuleScope(location.Module.String())
+	scope = FindClosestScope(scope, location.Position)
 	// TODO If `module` is specified, check if scope belongs to that module, else, see if there are any imports to select the proper scope.
 
 	// 2- Try to find the symbol in the scope stack
@@ -298,8 +314,9 @@ func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName 
 		}
 
 		// Second search, we need to search for symbol with typeName
-		from := fromPosition{position: symbolFound.Range.Start, fileName: fileName, module: currentModule}
-		symbol := s.FindSymbolByPosition(typeName, option.None[string](), from)
+		//from := fromPosition{position: symbolFound.Range.Start, fileName: location.FileName, module: location.Module}
+		location2 := Location{FileName: location.FileName, Position: symbolFound.Range.Start, Module: location.Module}
+		symbol := s.FindSymbolByPosition(typeName, option.None[string](), location2)
 		if symbol.IsNone() {
 			return nil
 		} else {
@@ -313,19 +330,29 @@ func (s *SymbolTable) SolveType(name string, ctxPosition lsp.Position, fileName 
 type SymbolID int
 
 type Symbol struct {
-	Name     string
-	Module   ModuleName
-	URI      string
-	Range    lsp.Range
-	NodeDecl ast.Node // Declaration node of this symbol
-	Kind     ast.Token
-	Type     TypeDefinition
-	Children []Relation
-	Scope    *Scope
+	Label      option.Option[string]
+	Identifier string
+	Module     ModuleName
+	URI        string
+	Range      lsp.Range
+	NodeDecl   ast.Node // Declaration node of this symbol
+	Kind       ast.Token
+	TypeDef    TypeDefinition
+	TypeSymbol *Symbol
+	Children   []Relation
+	Scope      *Scope
 }
 
 func (s *Symbol) AppendChild(child *Symbol, relationType RelationType) {
 	s.Children = append(s.Children, Relation{child, relationType})
+}
+
+func (s *Symbol) GetLabel() string {
+	if s.Label.IsSome() {
+		return s.Label.Get()
+	}
+
+	return s.Identifier
 }
 
 type ModuleName struct {

@@ -27,15 +27,15 @@ func buildHover(symbol *Symbol) protocol.Hover {
 	var extraLine string
 	switch symbol.Kind {
 	case ast.VAR, ast.CONST:
-		description = fmt.Sprintf("%s %s", symbol.Type.Name, symbol.Name)
+		description = fmt.Sprintf("%s %s", symbol.TypeDef.Name, symbol.Identifier)
 
 	case ast.STRUCT, ast.AnonymousStructField:
-		description = fmt.Sprintf("%s", symbol.Name)
+		description = fmt.Sprintf("%s", symbol.Identifier)
 
 	case ast.FIELD:
-		switch symbol.Type.NodeDecl.(type) {
+		switch symbol.TypeDef.NodeDecl.(type) {
 		case *ast.TypeInfo:
-			description = fmt.Sprintf("%s %s", symbol.Type.Name, symbol.Name)
+			description = fmt.Sprintf("%s %s", symbol.TypeDef.Name, symbol.Identifier)
 		}
 
 	case ast.FUNCTION:

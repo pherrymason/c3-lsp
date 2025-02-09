@@ -766,7 +766,7 @@ func (c *ASTConverter) convert_const_declaration(node *sitter.Node, source []byt
 */
 func (c *ASTConverter) convert_def_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
 	defSpec := &ast.DefSpec{}
-	debugNode(node, sourceCode, "def")
+	//debugNode(node, sourceCode, "def")
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		switch n.Type() {
@@ -1025,7 +1025,7 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 					for p := 0; p < int(fpl.ChildCount()); p++ {
 						fp := fpl.Child(p)
 						if fp.Type() == "parameter" {
-							debugNode(fp, sourceCode, "fp")
+							//debugNode(fp, sourceCode, "fp")
 							macroParam.Parameters = append(
 								macroParam.Parameters,
 								c.convert_function_parameter(fp, option.None[*ast.Ident](), sourceCode),
@@ -1318,7 +1318,7 @@ func (c *ASTConverter) convert_function_signature(node *sitter.Node, sourceCode 
 
 func (c *ASTConverter) convert_function_parameter_list(node *sitter.Node, typeIdentifier option.Option[*ast.Ident], source []byte) []*ast.FunctionParameter {
 	if node.Type() != "fn_parameter_list" {
-		debugNode(node, source, "fn_parameter_list")
+		//debugNode(node, source, "fn_parameter_list")
 		panic(
 			fmt.Sprintf("Wrong node provided: Expected fn_parameter_list, provided %s", node.Type()),
 		)
@@ -2290,7 +2290,7 @@ func (c *ASTConverter) convert_doc_comment(node *sitter.Node, sourceCode []byte)
 // Creates a ErrorNode with information regarding source code that could not be parsed by treesitter.
 // It tries to do some simple analysis and create some meaningful ast nodes (TODO)
 func (c *ASTConverter) convert_error(node *sitter.Node, source []byte) ast.Node {
-	debugNode(node, source, "error")
+	//debugNode(node, source, "error")
 	var detectedIdent *ast.UnknownNode
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -2306,7 +2306,7 @@ func (c *ASTConverter) convert_error(node *sitter.Node, source []byte) ast.Node 
 					break
 				}
 				nodeType := sibling.Type()
-				log.Printf("%s:\"%s\"", nodeType, sibling.Content(source))
+				//log.Printf("%s:\"%s\"", nodeType, sibling.Content(source))
 				if utils.InSlice(nodeType, validTypes) {
 					accumulator = append(accumulator, sibling.Content(source))
 					unknownRange.Start = lsp.NewPosition(uint(sibling.StartPoint().Row), uint(sibling.StartPoint().Column))

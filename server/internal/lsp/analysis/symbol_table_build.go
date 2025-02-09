@@ -66,14 +66,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		_, fault := v.currentScope.RegisterSymbol(n.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FAULT)
 
 		for _, f := range n.Members {
-			_, m := v.currentScope.RegisterSymbol(
-				f.Name.Name,
-				f.GetRange(),
-				f,
-				v.currentModule,
-				v.currentFilePath.URI,
-				ast.ENUM_VALUE,
-			)
+			_, m := v.currentScope.RegisterSymbol(f.Name.Name, f.GetRange(), f, v.currentModule, v.currentFilePath.URI, ast.ENUM_VALUE)
 			fault.AppendChild(m, Field)
 		}
 
@@ -82,14 +75,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 
 	case *ast.MacroDecl:
 		addedScope := false
-		_, symbol := v.currentScope.RegisterSymbol(
-			n.Signature.Name.Name,
-			n.Range,
-			n,
-			v.currentModule,
-			v.currentFilePath.URI,
-			ast.MACRO,
-		)
+		_, symbol := v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.MACRO)
 		if n.Body != nil {
 			addedScope = true
 			v.pushScope(n)
@@ -107,17 +93,11 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		}
 
 		for _, param := range n.Signature.Parameters {
-			_, sym := v.currentScope.RegisterSymbol(param.Name.Name,
-				param.GetRange(),
-				param,
-				v.currentModule,
-				v.currentFilePath.URI,
-				ast.VAR,
-			)
+			_, sym := v.currentScope.RegisterSymbol(param.Name.Name, param.GetRange(), param, v.currentModule, v.currentFilePath.URI, ast.VAR)
 
 			if param.Type != nil {
 				typeName := param.Type.Identifier.String()
-				sym.Type = TypeDefinition{
+				sym.TypeDef = TypeDefinition{
 					Name:      typeName, // TODO does this having module path break anything?
 					IsBuiltIn: param.Type.BuiltIn,
 					NodeDecl:  param.Type,
@@ -133,48 +113,46 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 				v.scopePushedBecauseMacroTrailing = true
 			}
 
-			v.currentScope.RegisterSymbol(
-				trailing.Name.Name,
-				trailing.Range,
-				trailing,
-				v.currentModule,
-				v.currentFilePath.URI,
-				ast.FUNCTION,
-			)
+			v.currentScope.RegisterSymbol(trailing.Name.Name, trailing.Range, trailing, v.currentModule, v.currentFilePath.URI, ast.FUNCTION)
 
 			// @body params are not to be used inside the body of the macro, so no need to register them as symbols. They will be useful in hover and autocomplete though. This info can be accessed through symbol.NodeDecl.
 		}
 
 	case *ast.FunctionDecl:
-		_, symbol := v.currentScope.RegisterSymbol(n.Signature.Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.FUNCTION)
-
+		var parentSymbol *Symbol
+		label := n.Signature.Name.Name
 		if n.ParentTypeId.IsSome() {
 			// Should register method as children of parent type
 			// TODO this will fail if function is defined before the struct
-			parentSymbol := v.table.findSymbolInScope(
+			parentSymbol = v.table.findSymbolInScope(
 				n.ParentTypeId.Get().Name,
 				v.currentScope,
 			)
-			if parentSymbol != nil {
-				parentSymbol.AppendChild(symbol, Method)
-			}
+			label = n.ParentTypeId.Get().Name + "." + label
+		}
+
+		_, symbol := v.currentScope.RegisterSymbolWithLabel(
+			label,
+			n.Signature.Name.Name,
+			n.Range,
+			n,
+			v.currentModule,
+			v.currentFilePath.URI,
+			ast.FUNCTION,
+		)
+
+		if parentSymbol != nil {
+			parentSymbol.AppendChild(symbol, Method)
 		}
 
 		if n.Body != nil {
 			v.pushScope(n)
 
 			for _, param := range n.Signature.Parameters {
-				_, sym := v.currentScope.RegisterSymbol(
-					param.Name.Name,
-					param.GetRange(),
-					param,
-					v.currentModule,
-					v.currentFilePath.URI,
-					ast.VAR,
-				)
+				_, sym := v.currentScope.RegisterSymbol(param.Name.Name, param.GetRange(), param, v.currentModule, v.currentFilePath.URI, ast.VAR)
 
 				typeName := param.Type.Identifier.String()
-				sym.Type = TypeDefinition{
+				sym.TypeDef = TypeDefinition{
 					Name:      typeName, // TODO does this having module path break anything?
 					IsBuiltIn: param.Type.BuiltIn,
 					NodeDecl:  param.Type,
@@ -193,19 +171,12 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 	switch n.Token {
 	case ast.VAR, ast.CONST:
-		_, symbol := v.currentScope.RegisterSymbol(
-			n.Spec.(*ast.ValueSpec).Names[0].Name,
-			n.Range,
-			n,
-			v.currentModule,
-			v.currentFilePath.URI,
-			n.Token,
-		)
+		_, symbol := v.currentScope.RegisterSymbol(n.Spec.(*ast.ValueSpec).Names[0].Name, n.Range, n, v.currentModule, v.currentFilePath.URI, n.Token)
 
 		typeExpression := n.Spec.(*ast.ValueSpec).Type
 		if typeExpression != nil {
 			typeName := typeExpression.String()
-			symbol.Type = TypeDefinition{
+			symbol.TypeDef = TypeDefinition{
 				Name:      typeName, // TODO does this having module path break anything?
 				IsBuiltIn: typeExpression.BuiltIn,
 				NodeDecl:  typeExpression,
@@ -213,47 +184,19 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 		}
 
 	case ast.ENUM:
-		_, enumSym := v.currentScope.RegisterSymbol(
-			n.Spec.(*ast.TypeSpec).Name.Name,
-			n.Range,
-			n,
-			v.currentModule,
-			v.currentFilePath.URI,
-			ast.ENUM,
-		)
+		_, enumSym := v.currentScope.RegisterSymbol(n.Spec.(*ast.TypeSpec).Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.ENUM)
 
 		enumType := n.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
 		for _, value := range enumType.Values {
-			_, enumFieldSym := v.currentScope.RegisterSymbol(
-				value.Name.Name,
-				value.Range,
-				value,
-				v.currentModule,
-				v.currentFilePath.URI,
-				ast.ENUM_VALUE,
-			)
+			_, enumFieldSym := v.currentScope.RegisterSymbol(value.Name.Name, value.Range, value, v.currentModule, v.currentFilePath.URI, ast.ENUM_VALUE)
 			enumSym.AppendChild(enumFieldSym, Field)
 		}
 
 	case ast.STRUCT:
-		v.currentScope.RegisterSymbol(
-			n.Spec.(*ast.TypeSpec).Name.Name,
-			n.Range,
-			n,
-			v.currentModule,
-			v.currentFilePath.URI,
-			ast.STRUCT,
-		)
+		v.currentScope.RegisterSymbol(n.Spec.(*ast.TypeSpec).Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.STRUCT)
 
 	case ast.DEF:
-		v.currentScope.RegisterSymbol(
-			n.Spec.(*ast.DefSpec).Name.Name,
-			n.Range,
-			n,
-			v.currentModule,
-			v.currentFilePath.URI,
-			ast.DEF,
-		)
+		v.currentScope.RegisterSymbol(n.Spec.(*ast.DefSpec).Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
 	default:
 	}
 }

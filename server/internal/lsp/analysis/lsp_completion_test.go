@@ -25,16 +25,20 @@ func getCompletionList(source string) []protocol.CompletionItem {
 	return BuildCompletionList(getDocument, position, srv.documents, srv.symbolTable)
 }
 
-func createCompletionItem(label string, kind protocol.CompletionItemKind, detail string, editRange protocol.Range) protocol.CompletionItem {
-	return createCompletionItemWithDoc(label, kind, detail, editRange, "")
+func createCompletionItem(newText string, kind protocol.CompletionItemKind, detail string, editRange protocol.Range) protocol.CompletionItem {
+	return createCompletionItemWithDoc(newText, newText, kind, detail, editRange, "")
 }
 
-func createCompletionItemWithDoc(label string, kind protocol.CompletionItemKind, detail string, editRange protocol.Range, documentation string) protocol.CompletionItem {
+func createCompletionItemWithLabel(label string, newText string, kind protocol.CompletionItemKind, detail string, editRange protocol.Range) protocol.CompletionItem {
+	return createCompletionItemWithDoc(label, newText, kind, detail, editRange, "")
+}
+
+func createCompletionItemWithDoc(label string, newText string, kind protocol.CompletionItemKind, detail string, editRange protocol.Range, documentation string) protocol.CompletionItem {
 	item := protocol.CompletionItem{
 		Label: label,
 		Kind:  cast.ToPtr(kind),
 		TextEdit: protocol.TextEdit{
-			NewText: label,
+			NewText: newText,
 			Range:   editRange,
 		},
 		Detail: cast.ToPtr(detail),
@@ -70,7 +74,7 @@ func TestBuildCompletionList_suggests_variables(t *testing.T) {
 				createCompletionItem("xanadu", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(7, 0, 7, 1)),
 			},
 			{"docu",
-				createCompletionItemWithDoc("documented", protocol.CompletionItemKindVariable, "float*", protocol2.NewLSPRange(7, 0, 7, 4), "doc"),
+				createCompletionItemWithDoc("documented", "documented", protocol.CompletionItemKindVariable, "float*", protocol2.NewLSPRange(7, 0, 7, 4), "doc"),
 			},
 			//{"MY_C",
 			//	createCompletionItem("MY_CONST", protocol.CompletionItemKindConstant, "int", protocol2.NewLSPRange(7, 0, 7, 4), "const doc"),
@@ -122,10 +126,10 @@ func TestBuildCompletionList_suggests_variables(t *testing.T) {
 				createCompletionItem("xanadu", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(line, 0, line, 1)),
 			},
 			{"docu",
-				createCompletionItemWithDoc("documented", protocol.CompletionItemKindVariable, "float*", protocol2.NewLSPRange(line, 0, line, 4), "doc"),
+				createCompletionItemWithDoc("documented", "documented", protocol.CompletionItemKindVariable, "float*", protocol2.NewLSPRange(line, 0, line, 4), "doc"),
 			},
 			{"MY_C",
-				createCompletionItemWithDoc("MY_CONST", protocol.CompletionItemKindConstant, "int", protocol2.NewLSPRange(line, 0, line, 4), "const doc"),
+				createCompletionItemWithDoc("MY_CONST", "MY_CONST", protocol.CompletionItemKindConstant, "int", protocol2.NewLSPRange(line, 0, line, 4), "const doc"),
 			},
 		}
 
@@ -165,10 +169,10 @@ func TestBuildCompletionList_suggests_variables(t *testing.T) {
 			expected protocol.CompletionItem
 		}{
 			{"p",
-				createCompletionItemWithDoc("process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 1), "abc"),
+				createCompletionItemWithDoc("process", "process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 1), "abc"),
 			},
 			{"proc",
-				createCompletionItemWithDoc("process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 4), "abc"),
+				createCompletionItemWithDoc("process", "process", protocol.CompletionItemKindFunction, "macro(x)", protocol2.NewLSPRange(line, 0, line, 4), "abc"),
 			},
 			{"emp",
 				createCompletionItem("empty", protocol.CompletionItemKindFunction, "macro()", protocol2.NewLSPRange(line, 0, line, 3)),
@@ -268,14 +272,14 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 			},
 			{"o.f",
 				[]protocol.CompletionItem{
-					createCompletionItem("foo", protocol.CompletionItemKindMethod, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
-					createCompletionItem("fooBar", protocol.CompletionItemKindMethod, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItemWithLabel("Obj.foo", "foo", protocol.CompletionItemKindMethod, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItemWithLabel("Obj.fooBar", "fooBar", protocol.CompletionItemKindMethod, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 3)),
 					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
 				},
 			},
 			{"o.fooB",
 				[]protocol.CompletionItem{
-					createCompletionItem("fooBar", protocol.CompletionItemKindMethod, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 6)),
+					createCompletionItemWithLabel("Obj.fooBar", "fooBar", protocol.CompletionItemKindMethod, "fn void fooBar()", protocol2.NewLSPRange(line, 2, line, 6)),
 				},
 			},
 		}
@@ -318,13 +322,13 @@ func TestBuildCompletionList_should_suggest_functions(t *testing.T) {
 		}{
 			{"o.f",
 				[]protocol.CompletionItem{
-					createCompletionItem("foo", protocol.CompletionItemKindMethod, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
+					createCompletionItemWithLabel("Obj.foo", "foo", protocol.CompletionItemKindMethod, "fn void foo()", protocol2.NewLSPRange(line, 2, line, 3)),
 					createCompletionItem("freight", protocol.CompletionItemKindField, "Struct member", protocol2.NewLSPRange(line, 2, line, 3)),
 				},
 			},
 			{"o.dep.foo",
 				[]protocol.CompletionItem{
-					createCompletionItem("fooDeep", protocol.CompletionItemKindMethod, "fn void fooDeep()", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItemWithLabel("Deep.fooDeep", "fooDeep", protocol.CompletionItemKindMethod, "fn void fooDeep()", protocol2.NewLSPRange(line, 6, line, 9)),
 				},
 			},
 		}
@@ -369,7 +373,7 @@ func TestBuildCompletionList_should_suggest_enums(t *testing.T) {
 			},
 			{"Co",
 				[]protocol.CompletionItem{
-					createCompletionItemWithDoc("Color", protocol.CompletionItemKindEnum, "Enum", protocol2.NewLSPRange(line, 0, line, 2), "doc"),
+					createCompletionItemWithDoc("Color", "Color", protocol.CompletionItemKindEnum, "Enum", protocol2.NewLSPRange(line, 0, line, 2), "doc"),
 					createCompletionItem("Cough", protocol.CompletionItemKindEnum, "Enum", protocol2.NewLSPRange(line, 0, line, 2)),
 				},
 			},
@@ -548,7 +552,7 @@ clr.asso`,
 					createCompletionItem("GREEN", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
 					createCompletionItem("RED", protocol.CompletionItemKindEnumMember, "Enum Value", protocol2.NewLSPRange(line, 6, line, 6)),
 					{
-						Label: "transparentize",
+						Label: "Color.transparentize",
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
@@ -562,7 +566,7 @@ clr.asso`,
 				"Color.transpa",
 				[]protocol.CompletionItem{
 					{
-						Label: "transparentize",
+						Label: "Color.transparentize",
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
@@ -577,7 +581,7 @@ clr.asso`,
 				"Color.GREEN.",
 				[]protocol.CompletionItem{
 					{
-						Label: "transparentize",
+						Label: "Color.transparentize",
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
@@ -592,7 +596,7 @@ clr.asso`,
 				"Color.GREEN.transp",
 				[]protocol.CompletionItem{
 					{
-						Label: "transparentize",
+						Label: "Color.transparentize",
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
@@ -612,9 +616,9 @@ green.`,
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
-							Range:   protocol2.NewLSPRange(line, 33, line, 33),
+							Range:   protocol2.NewLSPRange(line+1, 6, line+1, 6),
 						},
-						Detail: cast.ToPtr("fn Color(Color self)"),
+						Detail: cast.ToPtr("fn Color transparentize(Color self)"),
 					},
 				},
 			},
@@ -628,9 +632,9 @@ green.transp`,
 						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
 						TextEdit: protocol.TextEdit{
 							NewText: "transparentize",
-							Range:   protocol2.NewLSPRange(line, 6, line, 12),
+							Range:   protocol2.NewLSPRange(line+1, 6, line+1, 12),
 						},
-						Detail: cast.ToPtr("fn Color(Color self)"),
+						Detail: cast.ToPtr("fn Color transparentize(Color self)"),
 					},
 				},
 			},
@@ -682,7 +686,7 @@ func TestBuildCompletionList_definitions(t *testing.T) {
 			expected []protocol.CompletionItem
 		}{
 			{"Kil", []protocol.CompletionItem{
-				createCompletionItemWithDoc("Kilo", protocol.CompletionItemKindTypeParameter, "Type alias for 'int'", protocol2.NewLSPRange(1, 0, 1, 3), "abc"),
+				createCompletionItemWithDoc("Kilo", "", protocol.CompletionItemKindTypeParameter, "Type alias for 'int'", protocol2.NewLSPRange(1, 0, 1, 3), "abc"),
 				//{Label: "Kilo", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: asMarkdown("abc")},
 				{Label: "KiloPtr", Kind: &expectedKind, Detail: cast.ToPtr("Type alias for 'Kilo*'"), Documentation: nil},
 			}},

@@ -28,11 +28,11 @@ func BuildSignatureHelp(document *document.Document, pos lsp.Position, storage *
 	symbolResult := symbolTable.FindSymbolByPosition(
 		ident.Name,
 		explicitIdentModule,
-		fromPosition{
-			position: visitor.callExpr.StartPosition(),
-			fileName: document.Uri,
-			module:   NewModuleName(visitor.module),
-		},
+		NewLocation(
+			document.Uri,
+			visitor.callExpr.StartPosition(),
+			NewModuleName(visitor.module),
+		),
 	)
 
 	if symbolResult.IsNone() {
@@ -85,7 +85,7 @@ func BuildSignatureHelp(document *document.Document, pos lsp.Position, storage *
 	}
 
 	signature := protocol.SignatureInformation{
-		Label:         symbol.Name + "(" + strings.Join(argsToStringify, ", ") + ")",
+		Label:         symbol.Identifier + "(" + strings.Join(argsToStringify, ", ") + ")",
 		Parameters:    parameters,
 		Documentation: docs,
 	}

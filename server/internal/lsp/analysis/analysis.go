@@ -5,13 +5,13 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"github.com/pherrymason/c3-lsp/pkg/option"
-	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
+/*
 type Location struct {
 	Uri   protocol.URI
 	Range protocol.Range
-}
+}*/
 
 func PositionInNode(node ast.Node, pos lsp.Position) bool {
 	char := pos.Column
@@ -62,6 +62,8 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 
 	if scopeCtxt.isSelExpr {
 		step := path[scopeCtxt.lowestSelExprIndex+1]
+		//log.Print("Prop:", step.propertyName)
+		// If cursor is at last part of a SelectorExpr, we need to solve the type of SelectorExpr.X
 		if step.propertyName == "Sel" {
 			//if selectorsChained > 1 {
 			// Even if we are resolving final part of a SelectorExpr, we are in the middle of a bigger chain of SelectorExpr. This means
@@ -83,7 +85,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 		}*/
 	// -------------------------------------------------
 	// Normal search
-	from := fromPosition{position: pos, fileName: fileName, module: scopeCtxt.moduleName}
+	from := NewLocation(fileName, pos, scopeCtxt.moduleName)
 	sym := symbolTable.FindSymbolByPosition(scopeCtxt.fullIdentUnderCursor, explicitIdentModule, from)
 
 	return sym
@@ -105,7 +107,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			// We need to go to parent FunctionDecl and see if `self` is a defined argument
 			if context.selfType != nil {
 				parentSymbolName = context.selfType.Name
-				from := fromPosition{position: context.selfType.StartPosition(), fileName: fileName, module: context.moduleName}
+				from := NewLocation(fileName, context.selfType.StartPosition(), context.moduleName)
 				explicitModule := option.None[string]()
 				if context.selfType.ModulePath != nil {
 					explicitModule = option.Some(context.selfType.ModulePath.Name)
@@ -121,7 +123,8 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 				// !!!!! we've found a self, but function is not flagged as method! Confusion triggered!!!
 			}
 		} else {
-			parentSymbol = symbolTable.SolveType(base.Name, pos, fileName, context.moduleName)
+			location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
+			parentSymbol = symbolTable.SolveType(base.Name, location)
 		}
 
 		if parentSymbol == nil {
@@ -130,7 +133,8 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 		chainedSymbols = append(chainedSymbols, parentSymbol)
 
 	case *ast.TypeInfo:
-		from := fromPosition{position: base.Identifier.StartPosition(), fileName: fileName, module: context.moduleName}
+		//from := fromPosition{position: base.Identifier.StartPosition(), fileName: fileName, module: context.moduleName}
+		from := NewLocation(fileName, base.Identifier.StartPosition(), context.moduleName)
 		explicitModule := option.None[string]()
 		if base.Identifier.ModulePath != nil {
 			explicitModule = option.Some(base.Identifier.ModulePath.Name)
@@ -164,7 +168,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			chainedSymbols = append(chainedSymbols, parentChain...)
 
 		case *ast.Ident:
-			from := fromPosition{position: pos, fileName: fileName, module: context.moduleName}
+			from := NewLocation(fileName, pos, context.moduleName)
 			explicitModule := option.None[string]()
 			if i.ModulePath != nil {
 				explicitModule = option.Some(i.ModulePath.Name)
@@ -195,11 +199,11 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, context astContext, symbolTable *SymbolTable, deepLevel uint) (*Symbol, []*Symbol) {
 	// To be able to resolve selectorExpr.Sel, we need to know first what is selectorExpr.X is or what does it return.
 	var parentSymbol *Symbol
-	chainSymbols := []*Symbol{}
+	chainedSymbols := []*Symbol{}
 
 	switch base := selectorExpr.X.(type) {
 	case *ast.Ident:
-		// X is a plain Ident. We need to resolve Ident Type:
+		// X is a plain Ident. We need to resolve Ident TypeDef:
 		// - Ident might be a variable. What's its type? Struct/Enum/Fault?
 		// - Ident might be `self`.
 		parentSymbolName := base.Name
@@ -207,12 +211,12 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 			// We need to go to parent FunctionDecl and see if `self` is a defined argument
 			if context.selfType != nil {
 				parentSymbolName = context.selfType.Name
-				from := fromPosition{position: context.selfType.StartPosition(), fileName: fileName, module: context.moduleName}
 				explicitModule := option.None[string]()
 				if context.selfType.ModulePath != nil {
 					explicitModule = option.Some(context.selfType.ModulePath.Name)
 				}
 
+				from := NewLocation(fileName, context.selfType.StartPosition(), context.moduleName)
 				result := symbolTable.FindSymbolByPosition(
 					context.selfType.Name,
 					explicitModule,
@@ -223,7 +227,10 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 				// !!!!! we've found a self, but function is not flagged as method! Confusion triggered!!!
 			}
 		} else {
-			parentSymbol = symbolTable.SolveType(base.Name, pos, fileName, context.moduleName)
+			// TODO in some completion cases, we are more interested in the symbol of base.Identifier itself than in its type.
+			location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
+			parentSymbol = symbolTable.findSymbolInLocation(base.Name, location)
+			//parentSymbol = symbolTable.SolveType(base.Identifier, location)
 		}
 
 		if parentSymbol == nil {
@@ -231,11 +238,12 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 		}
 
 	case *ast.TypeInfo:
-		from := fromPosition{position: base.Identifier.StartPosition(), fileName: fileName, module: context.moduleName}
 		explicitModule := option.None[string]()
 		if base.Identifier.ModulePath != nil {
 			explicitModule = option.Some(base.Identifier.ModulePath.Name)
 		}
+
+		from := NewLocation(fileName, base.Identifier.StartPosition(), context.moduleName)
 		result := symbolTable.FindSymbolByPosition(
 			base.Identifier.Name,
 			explicitModule,
@@ -250,7 +258,7 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 			return nil, nil
 		}
 		parentSymbol = selSymbol
-		chainSymbols = append(chainSymbols, selChainedSymbols...)
+		chainedSymbols = append(chainedSymbols, selChainedSymbols...)
 
 	case *ast.CallExpr:
 		ident := base.Identifier
@@ -261,11 +269,11 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 				return nil, nil
 			}
 		case *ast.Ident:
-			from := fromPosition{position: pos, fileName: fileName, module: context.moduleName}
 			explicitModule := option.None[string]()
 			if i.ModulePath != nil {
 				explicitModule = option.Some(i.ModulePath.Name)
 			}
+			from := NewLocation(fileName, pos, context.moduleName)
 			sym := symbolTable.FindSymbolByPosition(i.Name, explicitModule, from)
 			if sym.IsNone() {
 				return nil, nil
@@ -277,7 +285,7 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 		return nil, nil
 	}
 
-	return parentSymbol, chainSymbols
+	return parentSymbol, chainedSymbols
 }
 
 func resolveChildSymbol(parentSymbol *Symbol,
@@ -289,9 +297,9 @@ func resolveChildSymbol(parentSymbol *Symbol,
 	switch parentSymbol.Kind {
 	case ast.ENUM, ast.FAULT:
 		for _, childRel := range parentSymbol.Children {
-			if childRel.Tag == Field && childRel.Child.Name == nextIdent {
+			if childRel.Tag == Field && childRel.Child.Identifier == nextIdent {
 				return childRel.Child
-			} else if childRel.Tag == Method && childRel.Child.Name == nextIdent {
+			} else if childRel.Tag == Method && childRel.Child.Identifier == nextIdent {
 				return childRel.Child
 			}
 		}
@@ -333,7 +341,7 @@ func resolveChildSymbol(parentSymbol *Symbol,
 	case ast.FUNCTION:
 		fn := parentSymbol.NodeDecl.(*ast.FunctionDecl)
 		returnType := fn.Signature.ReturnType
-		from := fromPosition{position: returnType.Range.Start, fileName: fileName, module: parentSymbol.Module}
+		from := NewLocation(fileName, returnType.Range.Start, parentSymbol.Module)
 		explicitModule := option.None[string]()
 		if returnType.Identifier.ModulePath != nil {
 			explicitModule = option.Some(returnType.Identifier.ModulePath.Name)
@@ -376,20 +384,20 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 					}
 
 					return &Symbol{
-						Name:     member.Names[0].Name,
-						Module:   moduleName,
-						URI:      fileName,
-						Range:    member.Range,
-						NodeDecl: member,
-						Kind:     ast.FIELD,
-						Type: TypeDefinition{
+						Identifier: member.Names[0].Name,
+						Module:     moduleName,
+						URI:        fileName,
+						Range:      member.Range,
+						NodeDecl:   member,
+						Kind:       ast.FIELD,
+						TypeDef: TypeDefinition{
 							typeName,
 							t.BuiltIn,
 							t,
 						},
 					}
 				}
-				from := fromPosition{position: member.Range.Start, fileName: fileName, module: moduleName}
+				from := NewLocation(fileName, member.Range.Start, moduleName)
 				explicitModule := option.None[string]()
 				if t.Identifier.ModulePath != nil {
 					explicitModule = option.Some(t.Identifier.ModulePath.Name)
@@ -407,13 +415,13 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 
 			case *ast.StructType:
 				return &Symbol{
-					Name:     member.Names[0].Name,
-					Module:   moduleName,
-					URI:      fileName,
-					Range:    member.Range,
-					NodeDecl: member,
-					Kind:     ast.AnonymousStructField,
-					Type: TypeDefinition{
+					Identifier: member.Names[0].Name,
+					Module:     moduleName,
+					URI:        fileName,
+					Range:      member.Range,
+					NodeDecl:   member,
+					Kind:       ast.AnonymousStructField,
+					TypeDef: TypeDefinition{
 						Name:      "",
 						IsBuiltIn: false,
 						NodeDecl:  member,
@@ -431,14 +439,14 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 
 	// Not found in members, we need to search struct methods
 	for _, relatedSymbol := range parentSymbol.Children {
-		if relatedSymbol.Tag == Method && relatedSymbol.Child.Name == searchIdent {
+		if relatedSymbol.Tag == Method && relatedSymbol.Child.Identifier == searchIdent {
 			return relatedSymbol.Child
 		}
 	}
 
 	// Not found, look inside each inlinedCandidates, maybe is a subproperty of them
 	for _, inlinedTypeIdent := range inlinedCandidates {
-		from := fromPosition{position: inlinedTypeIdent.Range.Start, fileName: fileName, module: moduleName}
+		from := NewLocation(fileName, inlinedTypeIdent.StartPosition(), moduleName)
 		explicitModule := option.None[string]()
 		if inlinedTypeIdent.ModulePath != nil {
 			explicitModule = option.Some(inlinedTypeIdent.ModulePath.Name)
@@ -460,7 +468,7 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 				symbolTable,
 				solveType,
 			)
-			if child != nil && child.Name == searchIdent {
+			if child != nil && child.Identifier == searchIdent {
 				return child
 			}
 		}
