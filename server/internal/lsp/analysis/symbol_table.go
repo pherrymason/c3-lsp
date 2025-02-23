@@ -328,7 +328,7 @@ func (s *SymbolTable) SolveType(name string, explicitIdentModule option.Option[s
 		}
 	}
 
-	return symbolFound.Get()
+	return nil
 }
 
 type SymbolID int
