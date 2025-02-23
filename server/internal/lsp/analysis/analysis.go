@@ -5,6 +5,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"github.com/pherrymason/c3-lsp/pkg/option"
+	"log"
 )
 
 /*
@@ -94,112 +95,142 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 // solveSelAtSelectorExpr resolves Sel Ident symbol.
 func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, context astContext, symbolTable *SymbolTable, deepLevel uint) (*Symbol, []*Symbol) {
 	// To be able to resolve selectorExpr.Sel, we need to know first what is selectorExpr.X is or what does it return.
-	var parentSymbol *Symbol
+	var xSymbol *Symbol
 	chainedSymbols := []*Symbol{}
 	isInstance := false
+	isType := false
 
-	switch base := selectorExpr.X.(type) {
-	case *ast.Ident:
-		// X is a plain Ident. We need to resolve Ident Type:
-		// - Ident might be a variable. What's its type? Struct/Enum/Fault?
-		// - Ident might be `self`.
-		parentSymbolName := base.Name
-		if parentSymbolName == "self" {
-			// We need to go to parent FunctionDecl and see if `self` is a defined argument
-			if context.selfType != nil {
-				parentSymbolName = context.selfType.Name
-				from := NewLocation(fileName, context.selfType.StartPosition(), context.moduleName)
-				explicitModule := option.None[string]()
-				if context.selfType.ModulePath != nil {
-					explicitModule = option.Some(context.selfType.ModulePath.Name)
-				}
-
-				result := symbolTable.FindSymbolByPosition(
-					context.selfType.Name,
-					explicitModule,
-					from,
-				)
-				isInstance = true
-				parentSymbol = result.GetOrElse(nil)
-			} else {
-				// !!!!! we've found a self, but function is not flagged as method! Confusion triggered!!!
-			}
-		} else {
-			location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
-			parentSymbol = symbolTable.SolveType(base.Name, option.None[string](), location)
-			isInstance = true
-		}
-
-		if parentSymbol == nil {
-			return nil, nil
-		}
-		chainedSymbols = append(chainedSymbols, parentSymbol)
-
-	case *ast.TypeInfo:
-		//from := fromPosition{position: base.Identifier.StartPosition(), fileName: fileName, module: context.moduleName}
-		from := NewLocation(fileName, base.Identifier.StartPosition(), context.moduleName)
+	// Get definition of selectorExpr.X
+	xSymbol, chainedSymbols, isType = solveXAtSelectorExpr(selectorExpr, pos, fileName, context, symbolTable, deepLevel)
+	log.Printf("%t", isType)
+	// Do we need to check its type?
+	if xSymbol.Kind == ast.VAR {
+		location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
+		xSymbol = symbolTable.SolveType(xSymbol.Identifier, option.None[string](), location)
+		isInstance = true
+	} else if xSymbol.Kind == ast.FIELD {
 		explicitModule := option.None[string]()
-		if base.Identifier.ModulePath != nil {
-			explicitModule = option.Some(base.Identifier.ModulePath.Name)
-		}
-		result := symbolTable.FindSymbolByPosition(
-			base.Identifier.Name,
-			explicitModule,
-			from,
-		)
-		parentSymbol = result.GetOrElse(nil)
-		chainedSymbols = append(chainedSymbols, parentSymbol)
-
-	case *ast.SelectorExpr:
-		// X is a SelectorExpr itself, we need to solve the type of base.Sel
-		selSymbol, parentChain := solveSelAtSelectorExpr(base, pos, fileName, context, symbolTable, deepLevel+1)
-		if selSymbol == nil {
-			return nil, nil
-		}
-
-		explicitModule := option.None[string]()
-		switch selSymbol.TypeDef.NodeDecl.(type) {
+		typeName := ""
+		switch typeNode := xSymbol.TypeDef.NodeDecl.(type) {
 		case *ast.TypeInfo:
-			if selSymbol.TypeDef.NodeDecl.(*ast.TypeInfo).Identifier.ModulePath != nil {
-				explicitModule = option.Some(selSymbol.TypeDef.NodeDecl.(*ast.TypeInfo).Identifier.ModulePath.String())
+			if typeNode.Identifier.ModulePath != nil {
+				explicitModule = option.Some(typeNode.Identifier.ModulePath.String())
 			}
+			typeName = typeNode.Identifier.Name
 		}
 
 		location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
-		parentSymbol = symbolTable.SolveType(selSymbol.TypeDef.Name, explicitModule, location)
-
+		optRes := symbolTable.FindSymbolByPosition(typeName, explicitModule, location)
+		xSymbol = optRes.GetOrElse(nil)
 		isInstance = true
-		chainedSymbols = append(chainedSymbols, parentChain...)
+	}
 
-	case *ast.CallExpr:
-		ident := base.Identifier
-		isInstance = true
-		switch i := ident.(type) {
+	/*
+		switch base := selectorExpr.X.(type) {
+		case *ast.Ident:
+			// X is a plain Ident. We need to resolve Ident Type:
+			// - Ident might be a variable. What's its type? Struct/Enum/Fault?
+			// - Ident might be `self`.
+			parentSymbolName := base.Name
+			if parentSymbolName == "self" {
+				// We need to go to parent FunctionDecl and see if `self` is a defined argument
+				if context.selfType != nil {
+					parentSymbolName = context.selfType.Name
+					from := NewLocation(fileName, context.selfType.StartPosition(), context.moduleName)
+					explicitModule := option.None[string]()
+					if context.selfType.ModulePath != nil {
+						explicitModule = option.Some(context.selfType.ModulePath.Name)
+					}
+
+					result := symbolTable.FindSymbolByPosition(
+						context.selfType.Name,
+						explicitModule,
+						from,
+					)
+					isInstance = true
+					xSymbol = result.GetOrElse(nil)
+				} else {
+					// !!!!! we've found a self, but function is not flagged as method! Confusion triggered!!!
+				}
+			} else {
+				location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
+				xSymbol = symbolTable.SolveType(base.Name, option.None[string](), location)
+				isInstance = true
+			}
+
+			if xSymbol == nil {
+				return nil, nil
+			}
+			chainedSymbols = append(chainedSymbols, xSymbol)
+
+		case *ast.TypeInfo:
+			explicitModule := option.None[string]()
+			if base.Identifier.ModulePath != nil {
+				explicitModule = option.Some(base.Identifier.ModulePath.Name)
+			}
+
+			from := NewLocation(fileName, base.Identifier.StartPosition(), context.moduleName)
+			result := symbolTable.FindSymbolByPosition(
+				base.Identifier.Name,
+				explicitModule,
+				from,
+			)
+			xSymbol = result.GetOrElse(nil)
+			chainedSymbols = append(chainedSymbols, xSymbol)
+
 		case *ast.SelectorExpr:
-			selSymbol, parentChain := solveSelAtSelectorExpr(i, pos, fileName, context, symbolTable, deepLevel+1)
+			// X is a SelectorExpr itself, we need to solve the type of base.Sel
+			selSymbol, parentChain := solveSelAtSelectorExpr(base, pos, fileName, context, symbolTable, deepLevel+1)
 			if selSymbol == nil {
 				return nil, nil
 			}
-			parentSymbol = selSymbol
+
+			explicitModule := option.None[string]()
+			typeName := selSymbol.TypeDef.Name
+			switch typeNode := selSymbol.TypeDef.NodeDecl.(type) {
+			case *ast.TypeInfo:
+				if typeNode.Identifier.ModulePath != nil {
+					explicitModule = option.Some(typeNode.Identifier.ModulePath.String())
+				}
+				typeName = typeNode.Identifier.Name
+			}
+
+			location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
+			optRes := symbolTable.FindSymbolByPosition(typeName, explicitModule, location)
+			xSymbol = optRes.GetOrElse(nil)
+
+			isInstance = true
 			chainedSymbols = append(chainedSymbols, parentChain...)
 
-		case *ast.Ident:
-			from := NewLocation(fileName, pos, context.moduleName)
-			explicitModule := option.None[string]()
-			if i.ModulePath != nil {
-				explicitModule = option.Some(i.ModulePath.Name)
-			}
-			sym := symbolTable.FindSymbolByPosition(i.Name, explicitModule, from)
-			if sym.IsNone() {
-				return nil, nil
-			}
-			parentSymbol = sym.Get()
-			chainedSymbols = append(chainedSymbols, parentSymbol)
-		}
+		case *ast.CallExpr:
+			ident := base.Identifier
+			isInstance = true
+			switch i := ident.(type) {
+			case *ast.SelectorExpr:
+				selSymbol, parentChain := solveSelAtSelectorExpr(i, pos, fileName, context, symbolTable, deepLevel+1)
+				if selSymbol == nil {
+					return nil, nil
+				}
+				xSymbol = selSymbol
+				chainedSymbols = append(chainedSymbols, parentChain...)
 
-	default:
-		return nil, nil
-	}
+			case *ast.Ident:
+				explicitModule := option.None[string]()
+				if i.ModulePath != nil {
+					explicitModule = option.Some(i.ModulePath.Name)
+				}
+				from := NewLocation(fileName, pos, context.moduleName)
+				sym := symbolTable.FindSymbolByPosition(i.Name, explicitModule, from)
+				if sym.IsNone() {
+					return nil, nil
+				}
+				xSymbol = sym.Get()
+				chainedSymbols = append(chainedSymbols, xSymbol)
+			}
+
+		default:
+			return nil, nil
+		}*/
 
 	// We've found X type, we are ready to find selectorExpr.Sel inside `X`'s type:
 	solveElementType := false
@@ -207,8 +238,9 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 		solveElementType = false
 	}
 
+	// Resolves selectorExpr.Sel identifier under the elements of xSymbol
 	childSymbol := resolveChildSymbol(
-		parentSymbol,
+		xSymbol,
 		selectorExpr.Sel.Name,
 		context.moduleName,
 		fileName,
@@ -220,10 +252,11 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 }
 
 // solveXAtSelectorExpr resolves ast.SelectorExpr.X. It also returns all symbols traversed until X.Sel if applies.
-func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, context astContext, symbolTable *SymbolTable, deepLevel uint) (*Symbol, []*Symbol) {
+func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fileName string, context astContext, symbolTable *SymbolTable, deepLevel uint) (*Symbol, []*Symbol, bool) {
 	// To be able to resolve selectorExpr.Sel, we need to know first what is selectorExpr.X is or what does it return.
 	var parentSymbol *Symbol
 	chainedSymbols := []*Symbol{}
+	isType := false
 
 	switch base := selectorExpr.X.(type) {
 	case *ast.Ident:
@@ -258,10 +291,11 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 		}
 
 		if parentSymbol == nil {
-			return nil, nil
+			return nil, nil, false
 		}
 
 	case *ast.TypeInfo:
+		isType = true
 		explicitModule := option.None[string]()
 		if base.Identifier.ModulePath != nil {
 			explicitModule = option.Some(base.Identifier.ModulePath.Name)
@@ -279,7 +313,7 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 		// X is a SelectorExpr itself, we need to solve the type of base.Sel
 		selSymbol, selChainedSymbols := solveSelAtSelectorExpr(base, pos, fileName, context, symbolTable, deepLevel+1)
 		if selSymbol == nil {
-			return nil, nil
+			return nil, nil, false
 		}
 		parentSymbol = selSymbol
 		chainedSymbols = append(chainedSymbols, selChainedSymbols...)
@@ -290,9 +324,10 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 		case *ast.SelectorExpr:
 			parentSymbol, _ = solveSelAtSelectorExpr(i, pos, fileName, context, symbolTable, deepLevel+1)
 			if parentSymbol == nil {
-				return nil, nil
+				return nil, nil, false
 			}
 		case *ast.Ident:
+			isType = true
 			explicitModule := option.None[string]()
 			if i.ModulePath != nil {
 				explicitModule = option.Some(i.ModulePath.Name)
@@ -300,16 +335,16 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 			from := NewLocation(fileName, pos, context.moduleName)
 			sym := symbolTable.FindSymbolByPosition(i.Name, explicitModule, from)
 			if sym.IsNone() {
-				return nil, nil
+				return nil, nil, false
 			}
 			parentSymbol = sym.Get()
 		}
 
 	default:
-		return nil, nil
+		return nil, nil, false
 	}
 
-	return parentSymbol, chainedSymbols
+	return parentSymbol, chainedSymbols, isType
 }
 
 func resolveChildSymbol(parentSymbol *Symbol,

@@ -53,7 +53,7 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		// TODO If inside a deeper scope, prefer local symbols.
 	} else {
 		// We need to solve first SelectorExpr.X!
-		parentSymbol, _ := solveXAtSelectorExpr(posCtxt.selExpr, pos, fileName, posCtxt, symbolTable, 0)
+		parentSymbol, _, _ := solveXAtSelectorExpr(posCtxt.selExpr, pos, fileName, posCtxt, symbolTable, 0)
 		if parentSymbol == nil {
 			return nil
 		}
