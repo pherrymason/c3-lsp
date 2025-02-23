@@ -68,6 +68,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		for _, f := range n.Members {
 			_, m := v.currentScope.RegisterSymbol(f.Name.Name, f.GetRange(), f, v.currentModule, v.currentFilePath.URI, ast.FAULT_CONSTANT)
 			fault.AppendChild(m, Field)
+			m.TypeSymbol = fault
 		}
 
 	case *ast.DefDecl:
@@ -190,6 +191,11 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 		for _, value := range enumType.Values {
 			_, enumFieldSym := v.currentScope.RegisterSymbol(value.Name.Name, value.Range, value, v.currentModule, v.currentFilePath.URI, ast.ENUM_VALUE)
 			enumSym.AppendChild(enumFieldSym, Field)
+			enumFieldSym.TypeDef = TypeDefinition{
+				Name:     enumSym.Identifier,
+				NodeDecl: n,
+			}
+			enumFieldSym.TypeSymbol = enumSym
 		}
 
 	case ast.STRUCT:

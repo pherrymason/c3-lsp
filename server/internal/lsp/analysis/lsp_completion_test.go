@@ -481,15 +481,15 @@ func TestBuildCompletionList_should_suggest_enums(t *testing.T) {
 				"Find associated values on explicit constant",
 				"Color.RED.a",
 				[]protocol.CompletionItem{
-					createCompletionItem("abc", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(line, 6, line, 9)),
-					createCompletionItem("assoc", protocol.CompletionItemKindVariable, "int", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("abc", protocol.CompletionItemKindField, "float", protocol2.NewLSPRange(line, 10, line, 11)),
+					createCompletionItem("assoc", protocol.CompletionItemKindField, "int", protocol2.NewLSPRange(line, 10, line, 11)),
 				}},
 
 			{
 				"Find matching associated values on explicit constant",
 				"Color.RED.asso",
 				[]protocol.CompletionItem{
-					createCompletionItem("assoc", protocol.CompletionItemKindVariable, "int", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("assoc", protocol.CompletionItemKindField, "int", protocol2.NewLSPRange(line, 10, line, 14)),
 				}},
 
 			{
@@ -497,8 +497,8 @@ func TestBuildCompletionList_should_suggest_enums(t *testing.T) {
 				`Color clr = Color.RED;
 clr.a`,
 				[]protocol.CompletionItem{
-					createCompletionItem("abc", protocol.CompletionItemKindVariable, "float", protocol2.NewLSPRange(line, 6, line, 9)),
-					createCompletionItem("assoc", protocol.CompletionItemKindVariable, "int", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("abc", protocol.CompletionItemKindField, "float", protocol2.NewLSPRange(line+1, 4, line+1, 5)),
+					createCompletionItem("assoc", protocol.CompletionItemKindField, "int", protocol2.NewLSPRange(line+1, 4, line+1, 5)),
 				}},
 
 			{
@@ -506,7 +506,7 @@ clr.a`,
 				`Color clr = Color.RED;
 clr.asso`,
 				[]protocol.CompletionItem{
-					createCompletionItem("assoc", protocol.CompletionItemKindVariable, "int", protocol2.NewLSPRange(line, 6, line, 9)),
+					createCompletionItem("assoc", protocol.CompletionItemKindField, "int", protocol2.NewLSPRange(line+1, 4, line+1, 8)),
 				}},
 		}
 

@@ -248,7 +248,7 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
 
-	t.Run("Find enum declaration in explictly imported module", func(t *testing.T) {
+	t.Run("Find enum declaration in explicitly imported module", func(t *testing.T) {
 		source := `
 		module foo;
 		enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
@@ -267,7 +267,7 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.ENUM), symbol.Kind)
 	})
 
-	t.Run("Find enum constant in explictly imported module", func(t *testing.T) {
+	t.Run("Find enum constant in explicitly imported module", func(t *testing.T) {
 		source := `
 		module foo;
 		enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
@@ -317,6 +317,82 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		symbolOpt := findSymbol(source, position)
 		assert.False(t, symbolOpt.IsSome())
 	})
+
+	t.Run("Should find local enumerator definition associated value without custom backing type", func(t *testing.T) {
+		source := `enum WindowStatus : (int counter) {
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
+			}
+			fn void main() {
+				int status = WindowStatus.BACKGROUND.c|||ounter;
+			}`
+
+		source, position := parseBodyWithCursor(source)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome(), "Element not found")
+		variable := symbolOpt.Get()
+		assert.Equal(t, "counter", variable.Identifier)
+		assert.Equal(t, "int", variable.TypeDef.Name)
+	})
+
+	t.Run("Should find associated value on enum instance variable", func(t *testing.T) {
+		source := `enum WindowStatus : int (int counter) {
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
+			}
+			fn void main() {
+				WindowStatus status = WindowStatus.BACKGROUND;
+				int value = status.c|||ounter;
+			}`
+
+		source, position := parseBodyWithCursor(source)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome(), "Element not found")
+		variable := symbolOpt.Get()
+		assert.Equal(t, "counter", variable.Identifier)
+		assert.Equal(t, "int", variable.TypeDef.Name)
+	})
+
+	t.Run("Should find associated value on enum instance struct member", func(t *testing.T) {
+		source := `enum WindowStatus : int (int counter) {
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
+			}
+			struct MyStruct { WindowStatus stat; }
+			fn void main() {
+				MyStruct wrapper = { WindowStatus.BACKGROUND };
+				int value = wrapper.stat.c|||ounter;
+			}`
+
+		source, position := parseBodyWithCursor(source)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome(), "Element not found")
+		variable := symbolOpt.Get()
+		assert.Equal(t, "counter", variable.Identifier)
+		assert.Equal(t, "int", variable.TypeDef.Name)
+	})
+
+	t.Run("Should not find associated value on enum type", func(t *testing.T) {
+		source := `enum WindowStatus : int (int counter) {
+				OPEN = 1,
+				BACKGROUND = 2,
+				MINIMIZED = 3
+			}
+			fn void main() {
+				WindowStatus.c|||ounter;
+			}`
+
+		source, position := parseBodyWithCursor(source)
+		symbolOpt := findSymbol(source, position)
+
+		assert.False(t, symbolOpt.IsSome(), "Element should not be found")
+	})
 }
 
 func TestFindsSymbol_Declaration_fault(t *testing.T) {
@@ -343,7 +419,7 @@ func TestFindsSymbol_Declaration_fault(t *testing.T) {
 		symbol := symbolOpt.Get()
 		assert.Equal(t, "UNEXPECTED_ERROR", symbol.Identifier)
 		assert.Equal(t, lsp.NewRange(0, 20, 0, 36), symbol.NodeDecl.GetRange())
-		assert.Equal(t, ast.Token(ast.ENUM_VALUE), symbol.Kind)
+		assert.Equal(t, ast.Token(ast.FAULT_CONSTANT), symbol.Kind)
 	})
 
 	t.Run("Find fault method in same module", func(t *testing.T) {

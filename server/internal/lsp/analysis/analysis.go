@@ -96,6 +96,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 	// To be able to resolve selectorExpr.Sel, we need to know first what is selectorExpr.X is or what does it return.
 	var parentSymbol *Symbol
 	chainedSymbols := []*Symbol{}
+	isInstance := false
 
 	switch base := selectorExpr.X.(type) {
 	case *ast.Ident:
@@ -118,6 +119,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 					explicitModule,
 					from,
 				)
+				isInstance = true
 				parentSymbol = result.GetOrElse(nil)
 			} else {
 				// !!!!! we've found a self, but function is not flagged as method! Confusion triggered!!!
@@ -125,6 +127,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 		} else {
 			location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
 			parentSymbol = symbolTable.SolveType(base.Name, location)
+			isInstance = true
 		}
 
 		if parentSymbol == nil {
@@ -153,11 +156,21 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 		if selSymbol == nil {
 			return nil, nil
 		}
-		parentSymbol = selSymbol
+
+		moduleName := context.moduleName
+		if selSymbol.TypeDef.NodeDecl.(*ast.TypeInfo).Identifier.ModulePath != nil {
+			moduleName = NewModuleName(selSymbol.TypeDef.NodeDecl.(*ast.TypeInfo).Identifier.ModulePath.String())
+		}
+		//parentSymbol = selSymbol
+		location := Location{FileName: fileName, Position: pos, Module: moduleName}
+		parentSymbol = symbolTable.SolveType(selSymbol.TypeDef.Name, location)
+
+		isInstance = true
 		chainedSymbols = append(chainedSymbols, parentChain...)
 
 	case *ast.CallExpr:
 		ident := base.Identifier
+		isInstance = true
 		switch i := ident.(type) {
 		case *ast.SelectorExpr:
 			selSymbol, parentChain := solveSelAtSelectorExpr(i, pos, fileName, context, symbolTable, deepLevel+1)
@@ -186,12 +199,20 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 	}
 
 	// We've found X type, we are ready to find selectorExpr.Sel inside `X`'s type:
-	solveElementType := true
+	solveElementType := false
 	if deepLevel == 0 {
 		solveElementType = false
 	}
 
-	childSymbol := resolveChildSymbol(parentSymbol, selectorExpr.Sel.Name, context.moduleName, fileName, symbolTable, solveElementType)
+	childSymbol := resolveChildSymbol(
+		parentSymbol,
+		selectorExpr.Sel.Name,
+		context.moduleName,
+		fileName,
+		symbolTable,
+		solveElementType,
+		isInstance,
+	)
 	return childSymbol, chainedSymbols
 }
 
@@ -289,7 +310,7 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 }
 
 func resolveChildSymbol(parentSymbol *Symbol,
-	nextIdent string, moduleName ModuleName, fileName string, symbolTable *SymbolTable, solveType bool) *Symbol {
+	nextIdent string, moduleName ModuleName, fileName string, symbolTable *SymbolTable, solveType bool, canRedMembers bool) *Symbol {
 	if parentSymbol == nil {
 		return nil
 	}
@@ -302,6 +323,23 @@ func resolveChildSymbol(parentSymbol *Symbol,
 			} else if childRel.Tag == Method && childRel.Child.Identifier == nextIdent {
 				return childRel.Child
 			}
+		}
+
+		// provide also associated values
+		if canRedMembers {
+			enumGenDeclNode := parentSymbol.NodeDecl.(*ast.GenDecl)
+			symbol := searchIdentInEnumAssocValues(enumGenDeclNode, nextIdent, moduleName, fileName)
+			if symbol != nil {
+				return symbol
+			}
+		}
+
+	case ast.ENUM_VALUE:
+		// enum value can access methods, and associated values
+		enumGenDeclNode := parentSymbol.TypeSymbol.NodeDecl.(*ast.GenDecl)
+		symbol := searchIdentInEnumAssocValues(enumGenDeclNode, nextIdent, moduleName, fileName)
+		if symbol != nil {
+			return symbol
 		}
 
 	case ast.STRUCT:
@@ -361,7 +399,29 @@ func resolveChildSymbol(parentSymbol *Symbol,
 				fileName,
 				symbolTable,
 				solveType,
+				true,
 			)
+		}
+	}
+
+	return nil
+}
+
+func searchIdentInEnumAssocValues(enumGenDeclNode *ast.GenDecl, nextIdent string, moduleName ModuleName, fileName string) *Symbol {
+	for _, assoc := range enumGenDeclNode.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType).AssociatedValues {
+		if assoc.Name.Name == nextIdent {
+			return &Symbol{
+				Identifier: assoc.Name.Name,
+				Module:     moduleName,
+				URI:        fileName,
+				Range:      assoc.Range,
+				NodeDecl:   assoc,
+				Kind:       ast.FIELD,
+				TypeDef: TypeDefinition{
+					Name:      assoc.Type.Identifier.Name,
+					IsBuiltIn: assoc.Type.BuiltIn,
+				},
+			}
 		}
 	}
 
@@ -467,6 +527,7 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 				fileName,
 				symbolTable,
 				solveType,
+				true,
 			)
 			if child != nil && child.Identifier == searchIdent {
 				return child

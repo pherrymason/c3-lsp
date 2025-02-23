@@ -52,7 +52,7 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		// TODO If inside a deeper scope, prefer local symbols.
 	} else {
 		// We need to solve first SelectorExpr.X!
-		parentSymbol, parentSymbols := solveXAtSelectorExpr(posCtxt.selExpr, pos, fileName, posCtxt, symbolTable, 0)
+		parentSymbol, _ := solveXAtSelectorExpr(posCtxt.selExpr, pos, fileName, posCtxt, symbolTable, 0)
 		if parentSymbol == nil {
 			return nil
 		}
@@ -66,18 +66,12 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 			parentSymbol = symbolTable.SolveType(parentSymbol.TypeDef.Name, NewLocation(fileName, pos, posCtxt.moduleName))
 			if parentSymbol.Kind == ast.ENUM || parentSymbol.Kind == ast.FAULT {
 				// Enum instantiated variables will only have access to methods. Not to other enum values
-				collect = SymbolMethod
+				collect = SymbolMethod // | SymbolMember
 			}
 		}
 
 		// Get all available children symbols of parentSymbol
 		symbols = collectChildSymbols(parentSymbol, posCtxt, fileName, collect)
-
-		if parentSymbol.Kind == ast.ENUM_VALUE || parentSymbol.Kind == ast.FAULT_CONSTANT {
-			// Enum values and Fault constants also have access to Enum methods
-			enumMethods := collectChildSymbols(parentSymbols[len(parentSymbols)-1], posCtxt, fileName, SymbolMethod)
-			symbols = append(symbols, enumMethods...)
-		}
 
 		// child symbols collected, filter them
 		for _, symbol := range symbols {
@@ -124,6 +118,31 @@ func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName stri
 				symbols = append(symbols, childRel.Child)
 			}
 		}
+		if parentSymbol.Kind == ast.ENUM && !filterMember {
+			symbols = append(symbols, collectEnumAssociatedValues(parentSymbol.NodeDecl.(*ast.GenDecl), fileName, parentSymbol.Module)...)
+		}
+
+	case ast.ENUM_VALUE:
+		// Enum values can access associated values
+		enumGenDecl := parentSymbol.TypeSymbol.NodeDecl.(*ast.GenDecl)
+		symbols = append(symbols, collectEnumAssociatedValues(enumGenDecl, fileName, parentSymbol.Module)...)
+
+		if filterMethod {
+			for _, relatedSymbol := range parentSymbol.TypeSymbol.Children {
+				if relatedSymbol.Tag == Method {
+					symbols = append(symbols, relatedSymbol.Child)
+				}
+			}
+		}
+
+	case ast.FAULT_CONSTANT:
+		if filterMethod {
+			for _, relatedSymbol := range parentSymbol.TypeSymbol.Children {
+				if relatedSymbol.Tag == Method {
+					symbols = append(symbols, relatedSymbol.Child)
+				}
+			}
+		}
 
 	case ast.STRUCT:
 		genDecl := parentSymbol.NodeDecl.(*ast.GenDecl)
@@ -167,6 +186,26 @@ func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName stri
 			}
 		}
 	}
+	return symbols
+}
+
+func collectEnumAssociatedValues(enumGenDecl *ast.GenDecl, fileName string, module ModuleName) []*Symbol {
+	symbols := []*Symbol{}
+	for _, assoc := range enumGenDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType).AssociatedValues {
+		symbols = append(symbols, &Symbol{
+			Identifier: assoc.Name.Name,
+			Module:     module,
+			URI:        fileName,
+			Range:      assoc.Range,
+			NodeDecl:   assoc,
+			Kind:       ast.FIELD,
+			TypeDef: TypeDefinition{
+				Name:      assoc.Type.Identifier.Name,
+				IsBuiltIn: assoc.Type.BuiltIn,
+			},
+		})
+	}
+
 	return symbols
 }
 
@@ -291,13 +330,15 @@ func getCompletionDetail(s *Symbol) *string {
 	case ast.DISTINCT:
 		detail = "Type"
 	case ast.FIELD:
-		switch s.NodeDecl.(type) {
+		switch node := s.NodeDecl.(type) {
 		case *ast.EnumValue:
 			detail = "Enum Value"
 		case *ast.FaultMember:
 			detail = "Fault Constant"
 		case *ast.StructField:
 			detail = "Struct member"
+		case *ast.Field:
+			detail = node.Type.String()
 		}
 	default:
 		detail = ""
