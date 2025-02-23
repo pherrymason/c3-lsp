@@ -126,7 +126,7 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			}
 		} else {
 			location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
-			parentSymbol = symbolTable.SolveType(base.Name, location)
+			parentSymbol = symbolTable.SolveType(base.Name, option.None[string](), location)
 			isInstance = true
 		}
 
@@ -157,13 +157,16 @@ func solveSelAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, fi
 			return nil, nil
 		}
 
-		moduleName := context.moduleName
-		if selSymbol.TypeDef.NodeDecl.(*ast.TypeInfo).Identifier.ModulePath != nil {
-			moduleName = NewModuleName(selSymbol.TypeDef.NodeDecl.(*ast.TypeInfo).Identifier.ModulePath.String())
+		explicitModule := option.None[string]()
+		switch selSymbol.TypeDef.NodeDecl.(type) {
+		case *ast.TypeInfo:
+			if selSymbol.TypeDef.NodeDecl.(*ast.TypeInfo).Identifier.ModulePath != nil {
+				explicitModule = option.Some(selSymbol.TypeDef.NodeDecl.(*ast.TypeInfo).Identifier.ModulePath.String())
+			}
 		}
-		//parentSymbol = selSymbol
-		location := Location{FileName: fileName, Position: pos, Module: moduleName}
-		parentSymbol = symbolTable.SolveType(selSymbol.TypeDef.Name, location)
+
+		location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
+		parentSymbol = symbolTable.SolveType(selSymbol.TypeDef.Name, explicitModule, location)
 
 		isInstance = true
 		chainedSymbols = append(chainedSymbols, parentChain...)

@@ -7,6 +7,7 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"log"
@@ -63,7 +64,7 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		parentSymbolKind := parentSymbol.Kind
 		collect := SymbolAll
 		if parentSymbolKind == ast.VAR || parentSymbolKind == ast.FIELD {
-			parentSymbol = symbolTable.SolveType(parentSymbol.TypeDef.Name, NewLocation(fileName, pos, posCtxt.moduleName))
+			parentSymbol = symbolTable.SolveType(parentSymbol.TypeDef.Name, option.None[string](), NewLocation(fileName, pos, posCtxt.moduleName))
 			if parentSymbol.Kind == ast.ENUM || parentSymbol.Kind == ast.FAULT {
 				// Enum instantiated variables will only have access to methods. Not to other enum values
 				collect = SymbolMethod // | SymbolMember

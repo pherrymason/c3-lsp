@@ -272,7 +272,7 @@ func findImportedFiles(s *SymbolTable, scope *Scope, currentModule ModuleName, v
 
 // SolveType Finds type of Symbol with `name` based on a position and a fileName.
 // TODO Be able to specify module to which name belongs to. This will be needed to be able to find types imported from different modules
-func (s *SymbolTable) SolveType(name string, location Location) *Symbol {
+func (s *SymbolTable) SolveType(name string, explicitIdentModule option.Option[string], location Location) *Symbol {
 	// 1- Find the scope
 	moduleGroup := s.scopeTree[location.FileName]
 	scope := moduleGroup.GetModuleScope(location.Module.String())
@@ -280,17 +280,19 @@ func (s *SymbolTable) SolveType(name string, location Location) *Symbol {
 	// TODO If `module` is specified, check if scope belongs to that module, else, see if there are any imports to select the proper scope.
 
 	// 2- Try to find the symbol in the scope stack
-	symbolFound := s.findSymbolInScope(name, scope)
+	//symbolFound := s.findSymbolInScope(name, scope)
+	symbolFound := s.FindSymbolByPosition(name, explicitIdentModule, location)
 
-	if symbolFound == nil {
+	if symbolFound.IsNone() {
 		// Search on imports
 		// TODO
 	}
 
-	if symbolFound != nil {
+	if symbolFound.IsSome() {
+		symbol := symbolFound.Get()
 		// Extract type info
 		var typeName string
-		switch n := symbolFound.NodeDecl.(type) {
+		switch n := symbol.NodeDecl.(type) {
 		case *ast.GenDecl:
 			switch spec := n.Spec.(type) {
 			case *ast.ValueSpec:
@@ -305,7 +307,7 @@ func (s *SymbolTable) SolveType(name string, location Location) *Symbol {
 				}
 			case *ast.TypeSpec:
 				// It is already a type, we can return
-				return symbolFound
+				return symbol
 			}
 		case *ast.FaultDecl:
 			typeName = n.Name.Name
@@ -317,16 +319,16 @@ func (s *SymbolTable) SolveType(name string, location Location) *Symbol {
 
 		// Second search, we need to search for symbol with typeName
 		//from := fromPosition{position: symbolFound.Range.Start, fileName: location.FileName, module: location.Module}
-		location2 := Location{FileName: location.FileName, Position: symbolFound.Range.Start, Module: location.Module}
-		symbol := s.FindSymbolByPosition(typeName, option.None[string](), location2)
-		if symbol.IsNone() {
+		location2 := Location{FileName: location.FileName, Position: symbol.Range.Start, Module: location.Module}
+		symbolF := s.FindSymbolByPosition(typeName, option.None[string](), location2)
+		if symbolF.IsNone() {
 			return nil
 		} else {
-			return symbol.Get()
+			return symbolF.Get()
 		}
 	}
 
-	return symbolFound
+	return symbolFound.Get()
 }
 
 type SymbolID int

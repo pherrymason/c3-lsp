@@ -853,6 +853,8 @@ func TestBuildCompletionList_should_suggest_faults(t *testing.T) {
 				"st.f.",
 				[]protocol.CompletionItem{},
 			},
+
+			// This test breaks because this causes a parse error that breaks the ast node.
 			{
 				"Do not find matching constants prefixed with fault instance in struct member",
 				"st.f.NO_PE",
