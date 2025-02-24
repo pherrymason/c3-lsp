@@ -361,6 +361,15 @@ func (t *TypeInfo) String() string {
 
 	return id
 }
+
+func (t *TypeInfo) Module() option.Option[string] {
+	if t.Identifier.ModulePath != nil {
+		return option.Some(t.Identifier.ModulePath.String())
+	}
+
+	return option.None[string]()
+}
+
 func (*InitializerList) exprNode()              {}
 func (*InlineTypeWithInitialization) exprNode() {}
 func (l *Field) exprNode()                      {}

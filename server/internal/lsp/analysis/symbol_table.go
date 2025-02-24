@@ -270,9 +270,10 @@ func findImportedFiles(s *SymbolTable, scope *Scope, currentModule ModuleName, v
 	return toVisit, visited
 }
 
-// SolveType Finds type of Symbol with `name` based on a position and a fileName.
+// SearchSymbolAndSolveType Runs two searches, one searching a symbol with name `name`, and then a second one to get the Type of that symbol.
+// Finds it based on a position and a fileName.
 // TODO Be able to specify module to which name belongs to. This will be needed to be able to find types imported from different modules
-func (s *SymbolTable) SolveType(name string, explicitIdentModule option.Option[string], location Location) *Symbol {
+func (s *SymbolTable) SearchSymbolAndSolveType(name string, explicitIdentModule option.Option[string], location Location) *Symbol {
 	// 1- Find the scope
 	moduleGroup := s.scopeTree[location.FileName]
 	scope := moduleGroup.GetModuleScope(location.Module.String())
@@ -289,46 +290,54 @@ func (s *SymbolTable) SolveType(name string, explicitIdentModule option.Option[s
 	}
 
 	if symbolFound.IsSome() {
-		symbol := symbolFound.Get()
-		// Extract type info
-		var typeName string
-		switch n := symbol.NodeDecl.(type) {
-		case *ast.GenDecl:
-			switch spec := n.Spec.(type) {
-			case *ast.ValueSpec:
-				typeName = spec.Type.Identifier.String() // TODO this will fail if type contains Module path
-
-			case *ast.DefSpec:
-				switch defValue := spec.Value.(type) {
-				case *ast.Ident:
-					typeName = defValue.Name
-				default:
-					panic("unsupported defValue")
-				}
-			case *ast.TypeSpec:
-				// It is already a type, we can return
-				return symbol
-			}
-		case *ast.FaultDecl:
-			typeName = n.Name.Name
-		}
-
-		if typeName == "" {
-			return nil
-		}
-
-		// Second search, we need to search for symbol with typeName
-		//from := fromPosition{position: symbolFound.Range.Start, fileName: location.FileName, module: location.Module}
-		location2 := Location{FileName: location.FileName, Position: symbol.Range.Start, Module: location.Module}
-		symbolF := s.FindSymbolByPosition(typeName, option.None[string](), location2)
-		if symbolF.IsNone() {
-			return nil
-		} else {
-			return symbolF.Get()
-		}
+		return s.SolveSymbolType(symbolFound.Get())
 	}
 
 	return nil
+}
+
+// SolveSymbolType Tries to solve the type of a symbol.
+// Ignores symbol.TypeDef, and instead looks at the declaration node (NodeDecl).
+func (s *SymbolTable) SolveSymbolType(symbol *Symbol) *Symbol {
+	var typeName string
+	explicitModule := option.None[string]()
+	switch n := symbol.NodeDecl.(type) {
+	case *ast.GenDecl:
+		switch spec := n.Spec.(type) {
+		case *ast.ValueSpec:
+			explicitModule = spec.Type.Module()
+			typeName = spec.Type.Identifier.Name
+
+		case *ast.DefSpec:
+			switch defValue := spec.Value.(type) {
+			case *ast.Ident:
+				typeName = defValue.Name
+			default:
+				panic("unsupported defValue")
+			}
+		case *ast.TypeSpec:
+			// It is already a type, we can return
+			return symbol
+		}
+	case *ast.FaultDecl:
+		typeName = n.Name.Name
+	case *ast.StructField:
+		explicitModule = n.Type.(*ast.TypeInfo).Module()
+		typeName = n.Type.(*ast.TypeInfo).Identifier.Name
+	}
+
+	if typeName == "" {
+		return nil
+	}
+
+	// Second search, we need to search for symbol with typeName
+	location := Location{FileName: symbol.URI, Position: symbol.Range.Start, Module: symbol.Module}
+	symbolF := s.FindSymbolByPosition(typeName, explicitModule, location)
+	if symbolF.IsNone() {
+		return nil
+	} else {
+		return symbolF.Get()
+	}
 }
 
 type SymbolID int

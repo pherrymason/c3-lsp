@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -999,4 +1000,180 @@ func TestFindsSymbol_Declaration_function(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(4, 2, 4, 20), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
+}
+
+func Test_accessRulesOnSelectorExpr(t *testing.T) {
+	cases := []struct {
+		name          string
+		input         string
+		expectedType  string
+		expectedRange lsp.Range
+	}{
+		{
+			"access to struct field",
+			`
+		struct Sound {int length;}
+		fn void main(){
+			Sound sound;
+			sound.l|||ength = 3;
+		}`,
+			"int", lsp.NewRange(1, 16, 1, 27),
+		},
+		{
+			"access to child struct field",
+			`
+        struct Animal {int life;}
+		struct Dog {Animal being;}
+		fn void main(){
+			Dog dog;
+			dog.being.l|||ife = 3;
+		}`,
+			"int", lsp.NewRange(1, 23, 1, 32),
+		},
+		{
+			"access to struct property returned by function",
+			`
+		struct Dog {int life;}
+		fn Dog newDog() {}
+		fn void main(){
+			newDog().l|||ife
+		}`,
+			"int", lsp.NewRange(1, 14, 1, 23),
+		},
+		{
+			"access to struct property returned by method",
+			`
+        struct Sound {int freq;}
+		struct Dog {Animal being;}
+		fn Sound Dog.bark() {}
+		fn void main(){
+			Dog dog;
+			dog.bark().f|||req;
+		}`,
+			"int", lsp.NewRange(1, 22, 1, 31),
+		},
+		{
+			"access to struct property returned by method with self",
+			`
+		struct Dog {int life;}
+		fn int Dog.bark(self) { return self.l|||ife;}
+		fn void main(){}`,
+			"int", lsp.NewRange(1, 14, 1, 23),
+		},
+		{
+			"Access to enum value without instantiating enum",
+			`
+        enum Status { AVALUE,BVALUE }
+		fn void main(){
+			Status.A|||VALUE;
+		}`,
+			"Status", lsp.NewRange(1, 22, 1, 28),
+		},
+		{
+			"Access to enum value with instantiated enum",
+			`
+        enum Status { AVALUE,BVALUE }
+		fn void main(){
+			Status s;
+			s.A|||VALUE;
+		}`,
+			"Status", lsp.NewRange(1, 22, 1, 28),
+		},
+		{
+			"Should find local enumerator definition associated value without custom backing type",
+			`
+        enum Status : (int counter) { AVALUE,BVALUE }
+		fn void main(){
+			int status = Status.AVALUE.c|||ounter;
+		}`,
+			"int", lsp.NewRange(1, 23, 1, 34),
+		},
+		{
+			"Should find local enumerator definition associated value without custom backing type through instantiated enum",
+			`
+        enum Status : (int counter) { AVALUE,BVALUE }
+		fn void main(){
+			Status status = Status.AVALUE;
+			int value = status.c|||ounter;
+		}`,
+			"int", lsp.NewRange(1, 23, 1, 34),
+		},
+		{"Should find local enumerator definition associated value with custom backing type",
+			`
+        enum Status : int (int counter) { AVALUE,BVALUE }
+		fn void main(){
+			Status.AVALUE.c|||ounter;
+		}`,
+			"int", lsp.NewRange(1, 27, 1, 38),
+		},
+		{
+			"Should find local enumerator definition associated value with custom backing type through instantiated enum",
+			`
+        enum Status : int (int counter) { AVALUE,BVALUE }
+		fn void main(){
+			Status status = Status.AVALUE;			
+			status.c|||ounter;
+		}`,
+			"int", lsp.NewRange(1, 27, 1, 38),
+		},
+		{
+			"Should find local enumerator definition through instantiated struct",
+			`
+        enum Status : int (int counter) { AVALUE,BVALUE }
+		struct Obj { Status status; }
+		fn void main(){
+			Obj o;			
+			o.status.c|||ounter;
+		}`,
+			"int", lsp.NewRange(1, 27, 1, 38),
+		},
+		{
+			"Should find property returned by aliased function",
+			`
+        struct MyStruct {
+			float number;
+		}
+		fn MyStruct a() {}
+		def func = a;
+		fn void main(){
+			func().n|||umber;
+		}`,
+			"float", lsp.NewRange(2, 3, 2, 16),
+		},
+		{
+			"Should find struct in other module",
+			`module foo2;
+		struct Alien {int life;}
+
+		module foo;
+		struct Alien {int life;}
+
+		module app;
+		import foo;
+		import foo2;
+		struct Animal { 
+			foo::Alien xeno; // Alien is referenced by specifying module
+		}
+		fn void main(){
+			Animal dog;
+			dog.xeno.l|||ife = 10;
+		}`,
+			"int", lsp.NewRange(4, 16, 4, 25),
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(fmt.Sprintf("Case %s", tt.name), func(t *testing.T) {
+
+			source, position := parseBodyWithCursor(tt.input)
+			symbolOpt := findSymbol(source, position)
+			assert.True(t, symbolOpt.IsSome())
+			if symbolOpt.IsNone() {
+				return
+			}
+
+			assert.Equal(t, tt.expectedType, symbolOpt.Get().TypeDef.Name)
+			assert.Equal(t, tt.expectedRange, symbolOpt.Get().Range)
+		})
+	}
 }

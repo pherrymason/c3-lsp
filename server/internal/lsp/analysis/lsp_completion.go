@@ -10,7 +10,6 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	protocol "github.com/tliron/glsp/protocol_3_16"
-	"log"
 	"slices"
 	"strings"
 )
@@ -64,7 +63,7 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		parentSymbolKind := parentSymbol.Kind
 		collect := SymbolAll
 		if parentSymbolKind == ast.VAR || parentSymbolKind == ast.FIELD {
-			parentSymbol = symbolTable.SolveType(parentSymbol.TypeDef.Name, option.None[string](), NewLocation(fileName, pos, posCtxt.moduleName))
+			parentSymbol = symbolTable.SearchSymbolAndSolveType(parentSymbol.TypeDef.Name, option.None[string](), NewLocation(fileName, pos, posCtxt.moduleName))
 			if parentSymbol.Kind == ast.ENUM || parentSymbol.Kind == ast.FAULT {
 				// Enum instantiated variables will only have access to methods. Not to other enum values
 				collect = SymbolMethod // | SymbolMember
@@ -214,7 +213,7 @@ func getEditRange(document *document.Document, pos lsp.Position) protocol.Range 
 	// Some string manipulation...
 	// Find where current ident starts
 	index := pos.IndexIn(document.Text)
-	log.Printf("%c", rune(document.Text[index-1]))
+	//log.Printf("%c", rune(document.Text[index-1]))
 	if rune(document.Text[index-1]) == '.' {
 		// We will replace just until this point
 		return protocol.Range{
