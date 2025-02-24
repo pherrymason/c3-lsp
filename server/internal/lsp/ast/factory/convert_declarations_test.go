@@ -211,7 +211,7 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 		enumType := enumDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
 		assert.Equal(t, option.None[*ast.TypeInfo](), enumType.BaseType)
 
-		assert.Equal(t, []ast.Field{}, enumType.AssociatedValues, "No fields should be present")
+		assert.Equal(t, []*ast.Field{}, enumType.AssociatedValues, "No fields should be present")
 		assert.Len(t, enumType.Values, 3)
 		assert.Equal(t, "RED", enumType.Values[0].Name.Name)
 		assert.Equal(t, lsp.NewRange(2, 15, 2, 18), enumType.Values[0].Name.Range)

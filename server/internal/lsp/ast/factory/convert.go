@@ -349,29 +349,30 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 			}
 
 			paramList := n.Child(paramListIndex)
+			if paramList != nil {
+				for p := 0; p < int(paramList.ChildCount()); p++ {
+					paramNode := paramList.Child(p)
+					if paramNode.Type() == "enum_param_declaration" {
+						paramTypeNode := paramNode.ChildByFieldName("type")
+						paramNameNode := paramNode.ChildByFieldName("name")
+						if paramTypeNode == nil || paramNameNode == nil {
+							continue
+						}
 
-			for p := 0; p < int(paramList.ChildCount()); p++ {
-				paramNode := paramList.Child(p)
-				if paramNode.Type() == "enum_param_declaration" {
-					paramTypeNode := paramNode.ChildByFieldName("type")
-					paramNameNode := paramNode.ChildByFieldName("name")
-					if paramTypeNode == nil || paramNameNode == nil {
-						continue
+						convertType := c.convert_type(paramTypeNode, sourceCode)
+						enumType.AssociatedValues = append(
+							enumType.AssociatedValues,
+							&ast.Field{
+								NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), paramNode),
+								Name: ast.NewIdentifierBuilder().
+									WithId(c.getNextID()).
+									WithName(paramNode.Child(1).Content(sourceCode)).
+									WithSitterPos(paramNode.Child(1)).
+									Build(),
+								Type: convertType,
+							},
+						)
 					}
-
-					convertType := c.convert_type(paramTypeNode, sourceCode)
-					enumType.AssociatedValues = append(
-						enumType.AssociatedValues,
-						&ast.Field{
-							NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), paramNode),
-							Name: ast.NewIdentifierBuilder().
-								WithId(c.getNextID()).
-								WithName(paramNode.Child(1).Content(sourceCode)).
-								WithSitterPos(paramNode.Child(1)).
-								Build(),
-							Type: convertType,
-						},
-					)
 				}
 			}
 
