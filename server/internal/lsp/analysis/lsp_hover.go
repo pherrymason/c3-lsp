@@ -100,14 +100,19 @@ func macroDescriptionString(symbol *Symbol, includeMacroName bool) string {
 		}
 	}
 
-	macroName := " " + macro.Signature.Name.Name
+	macroName := ""
 	if !includeMacroName {
 		macroName = ""
+	} else {
+		if typeMethod != "" {
+			macroName = " " + typeMethod + macro.Signature.Name.Name
+		} else {
+			macroName = " " + macro.Signature.Name.Name
+		}
 	}
 
 	description := fmt.Sprintf(
-		"macro%s%s(%s)",
-		typeMethod,
+		"macro%s(%s)",
 		macroName,
 		strings.Join(args, ", ")+trailing,
 	)
