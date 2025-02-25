@@ -312,6 +312,11 @@ func (s *SymbolTable) SolveSymbolType(symbol *Symbol) *Symbol {
 			switch defValue := spec.Value.(type) {
 			case *ast.Ident:
 				typeName = defValue.Name
+				// Here, defValue.Name might be an alias to a type, or an alias to an instance.
+				// in case is an alias to an instance, we need to find the type of that instance.
+
+			case *ast.TypeInfo:
+				typeName = defValue.Identifier.Name
 			default:
 				panic("unsupported defValue")
 			}
@@ -335,9 +340,15 @@ func (s *SymbolTable) SolveSymbolType(symbol *Symbol) *Symbol {
 	symbolF := s.FindSymbolByPosition(typeName, explicitModule, location)
 	if symbolF.IsNone() {
 		return nil
-	} else {
-		return symbolF.Get()
 	}
+
+	sym := symbolF.Get()
+	if sym.Kind == ast.VAR {
+		// This is still a variable (might happen when checking an ast.DEF, we need to find the type of this variable
+		return s.SolveSymbolType(sym)
+	}
+
+	return sym
 }
 
 type SymbolID int

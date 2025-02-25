@@ -231,7 +231,7 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 	})
 
-	t.Run("Find enum method in same module", func(t *testing.T) {
+	t.Run("Find enum method definition on instance variable", func(t *testing.T) {
 		source := `enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 		fn int foo() {} // To confuse algorithm
 		fn void WindowStatus.foo() {}
@@ -247,6 +247,24 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		assert.Equal(t, "foo", symbol.Identifier)
 		assert.Equal(t, lsp.NewRange(2, 2, 2, 31), symbol.NodeDecl.GetRange())
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
+
+	t.Run("Should find enum method definition on explicit enumerator", func(t *testing.T) {
+		code := `
+		enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+		fn bool WindowStatus.isOpen(){}
+
+		fn void main() {
+			WindowStatus.OPEN.i|||sOpen();
+		}`
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome())
+		//if symbolOpt.IsSome() {
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "isOpen", symbol.Identifier)
+		//}
 	})
 
 	t.Run("Find enum declaration in explicitly imported module", func(t *testing.T) {
@@ -423,7 +441,7 @@ func TestFindsSymbol_Declaration_fault(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FAULT_CONSTANT), symbol.Kind)
 	})
 
-	t.Run("Find fault method in same module", func(t *testing.T) {
+	t.Run("Find fault method on instance variable in same module", func(t *testing.T) {
 		source := `fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
 		fn int foo() {} // To confuse algorithm
 		fn void WindowError.foo() {}
@@ -441,6 +459,46 @@ func TestFindsSymbol_Declaration_fault(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
 	})
 
+	t.Run("Should find fault method on fault constant", func(t *testing.T) {
+		code := `
+			fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			fn bool WindowError.isBad() {}
+			fn void main() {
+				WindowError.UNEXPECTED_ERROR.i|||sBad();
+			}`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome())
+		if symbolOpt.IsNone() {
+			return
+		}
+
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "isBad", symbol.Identifier)
+	})
+
+	t.Run("Find fault method after instance variable in struct member", func(t *testing.T) {
+		code := `
+			fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			fn bool WindowError.isBad() {}
+			struct MyStruct { WindowError f; }
+			MyStruct st = { WindowError.UNEXPECTED_ERROR };
+			WindowError bad = st.f.i|||sBad();
+		`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome())
+		if symbolOpt.IsNone() {
+			return
+		}
+
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "isBad", symbol.Identifier)
+	})
 }
 
 func TestFindsSymbol_Declaration_struct(t *testing.T) {
@@ -944,6 +1002,102 @@ func TestFindsSymbol_Declaration_def(t *testing.T) {
 		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
 		assert.Equal(t, "float", symbol.TypeDef.Name)
 	})
+
+	t.Run("Should find enumerator on def-aliased enum", func(t *testing.T) {
+		code :=
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			def AliasStatus = WindowStatus;
+			WindowStatus stat = AliasStatus.O|||PEN;`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "OPEN", symbol.Identifier)
+		assert.Equal(t, lsp.NewRange(0, 20, 0, 24), symbol.Range)
+		assert.Equal(t, ast.Token(ast.ENUM_VALUE), symbol.Kind)
+		assert.Equal(t, "WindowStatus", symbol.TypeDef.Name)
+	})
+
+	t.Run("Should find associated value on def-aliased instance", func(t *testing.T) {
+		code :=
+			`enum WindowStatus : (int assoc) {
+				OPEN = 5,
+				BACKGROUND = 6,
+				MINIMIZED = 7
+			}
+			WindowStatus stat = WindowStatus.OPEN;
+			def alias_stat = stat;
+			int val = alias_stat.a|||ssoc;`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "assoc", symbol.Identifier)
+		assert.Equal(t, lsp.NewRange(0, 21, 0, 30), symbol.Range)
+		assert.Equal(t, ast.Token(ast.FIELD), symbol.Kind)
+		assert.Equal(t, "int", symbol.TypeDef.Name)
+	})
+
+	t.Run("Should find enum method on def-aliased global variable", func(t *testing.T) {
+		code :=
+			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+			WindowStatus stat = WindowStatus.OPEN;
+			def aliased_stat = stat;
+			fn bool WindowStatus.isOpen() {}
+			fn void main() {
+				aliased_stat.is|||Open();
+			}`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "isOpen", symbol.Identifier)
+		assert.Equal(t, lsp.NewRange(3, 3, 3, 35), symbol.Range)
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
+
+	t.Run("Should find fault constant on def-aliased fault", func(t *testing.T) {
+		code :=
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			WindowError constant = WindowError.UNEXPECTED_ERROR;
+			def AliasedFault = WindowError;
+			WindowError value = AliasedFault.U|||NEXPECTED_ERROR;`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "UNEXPECTED_ERROR", symbol.Identifier)
+		assert.Equal(t, lsp.NewRange(0, 20, 0, 36), symbol.Range)
+		assert.Equal(t, ast.Token(ast.FAULT_CONSTANT), symbol.Kind)
+	})
+
+	t.Run("Should find fault method on def-aliased global variable", func(t *testing.T) {
+		code :=
+			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			WindowError constant = WindowError.UNEXPECTED_ERROR;
+			def ct_alias = constant;
+			fn bool WindowError.isBad() {}
+			fn void main() {
+				ct_alias.is|||Bad();
+			}`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsSome())
+		symbol := symbolOpt.Get()
+		assert.Equal(t, "isBad", symbol.Identifier)
+		assert.Equal(t, lsp.NewRange(3, 3, 3, 33), symbol.Range)
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
 }
 
 func TestFindsSymbol_Declaration_function(t *testing.T) {
@@ -1117,7 +1271,7 @@ func Test_accessRulesOnSelectorExpr(t *testing.T) {
 			"int", lsp.NewRange(1, 27, 1, 38),
 		},
 		{
-			"Should find local enumerator definition through instantiated struct",
+			"Should find local enumerator definition through instance variable in struct member",
 			`
         enum Status : int (int counter) { AVALUE,BVALUE }
 		struct Obj { Status status; }
@@ -1126,7 +1280,17 @@ func Test_accessRulesOnSelectorExpr(t *testing.T) {
 			o.status.c|||ounter;
 		}`,
 			"int", lsp.NewRange(1, 27, 1, 38),
-		},
+		}, /*
+					{
+						"Should find enum method on explicit enumerator",
+						`
+			        	enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
+						fn bool WindowStatus.isOpen(){}
+						fn void main() {
+							WindowStatus.OPEN.i|||sOpen();
+						}`,
+						"", lsp.NewRange(2, 3, 2, 34),
+					},*/
 		{
 			"Should find property returned by aliased function",
 			`
