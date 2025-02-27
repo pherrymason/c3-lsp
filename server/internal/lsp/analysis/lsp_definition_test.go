@@ -261,10 +261,10 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 		symbolOpt := findSymbol(source, position)
 
 		assert.True(t, symbolOpt.IsSome())
-		//if symbolOpt.IsSome() {
-		symbol := symbolOpt.Get()
-		assert.Equal(t, "isOpen", symbol.Identifier)
-		//}
+		if symbolOpt.IsSome() {
+			symbol := symbolOpt.Get()
+			assert.Equal(t, "isOpen", symbol.Identifier)
+		}
 	})
 
 	t.Run("Find enum declaration in explicitly imported module", func(t *testing.T) {
@@ -325,6 +325,7 @@ func TestFindsSymbol_Declaration_enum(t *testing.T) {
 	})
 
 	t.Run("Should not find enumerator on enumerator variable", func(t *testing.T) {
+		// TODO This causes bad AST generation. "status." is ignored!
 		source := `
 			enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 			fn void main() {
@@ -1097,6 +1098,126 @@ func TestFindsSymbol_Declaration_def(t *testing.T) {
 		assert.Equal(t, "isBad", symbol.Identifier)
 		assert.Equal(t, lsp.NewRange(3, 3, 3, 33), symbol.Range)
 		assert.Equal(t, ast.Token(ast.FUNCTION), symbol.Kind)
+	})
+}
+
+func TestFindsSymbol_Declaration_distinct(t *testing.T) {
+	t.Run("Find local distinct definition", func(t *testing.T) {
+		code :=
+			`distinct Kilo = int;
+			K|||ilo value = 3;`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.False(t, symbolOpt.IsNone(), "Element not found")
+		assert.Equal(t, "Kilo", symbolOpt.Get().Identifier)
+	})
+
+	t.Run("Find local distinct inline definition", func(t *testing.T) {
+		code :=
+			`distinct Kilo = inline int;
+			K|||ilo value = 3;`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.False(t, symbolOpt.IsNone(), "Element not found")
+		assert.Equal(t, "Kilo", symbolOpt.Get().Identifier)
+	})
+
+	t.Run("Should find distinct method definition", func(t *testing.T) {
+		code :=
+			`distinct Kilo = int;
+			fn bool Kilo.isLarge(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		sym := symbolOpt.Get()
+		assert.Equal(t, ast.Token(ast.FUNCTION), sym.Kind, fmt.Sprintf("The symbol is not a method, %d was found", sym.Kind))
+		assert.Equal(t, "isLarge", symbolOpt.Get().Identifier)
+	})
+
+	t.Run("Should not find non-inline distinct base type method definition", func(t *testing.T) {
+		// TODO: Replicate this
+		code :=
+			`struct Abc { int a; }
+			distinct Kilo = Abc;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.True(t, symbolOpt.IsNone(), "Element found despite inline")
+	})
+
+	t.Run("Should find inline distinct base type method definition", func(t *testing.T) {
+		code :=
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Abc.isLarge(){ return false; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.False(t, symbolOpt.IsNone(), "Element not found")
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbolOpt.Get().Kind, fmt.Sprintf("The symbol is not a method, %d was found", symbolOpt.Get().Kind))
+		assert.Equal(t, "isLarge", symbolOpt.Get().Identifier)
+	})
+
+	t.Run("Should find inline distinct's own method definition", func(t *testing.T) {
+		code :=
+			`struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Abc.isLarge(){ return false; }
+			fn bool Kilo.isEvenLarger(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||EvenLarger();
+			}
+			`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.False(t, symbolOpt.IsNone(), "Element not found")
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbolOpt.Get().Kind, fmt.Sprintf("The symbol is not a method, %d was found", symbolOpt.Get().Kind))
+		assert.Equal(t, "isEvenLarger", symbolOpt.Get().Identifier)
+	})
+
+	t.Run("Should prioritize clashing inline distinct method name", func(t *testing.T) {
+		code :=
+			`struct Unrelated { int b; }
+			struct Abc { int a; }
+			distinct Kilo = inline Abc;
+			fn bool Unrelated.isLarge() { return false; }
+			fn bool Abc.isLarge(){ return false; }
+			fn bool Kilo.isLarge(){ return true; }
+
+			fn void func(Kilo val) {
+				val.is|||Large();
+			}
+			`
+
+		source, position := parseBodyWithCursor(code)
+		symbolOpt := findSymbol(source, position)
+
+		assert.False(t, symbolOpt.IsNone(), "Element not found")
+		assert.Equal(t, ast.Token(ast.FUNCTION), symbolOpt.Get().Kind, fmt.Sprintf("The symbol is not a method, %d was found", symbolOpt.Get().Kind))
+		assert.Equal(t, "isLarge", symbolOpt.Get().Identifier)
 	})
 }
 

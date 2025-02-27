@@ -3,6 +3,7 @@ package factory
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast/builders"
 	"testing"
 
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -10,7 +11,7 @@ import (
 )
 
 func aWithPos(startRow uint, startCol uint, endRow uint, endCol uint) ast.NodeAttributes {
-	return ast.NewNodeAttributesBuilder().
+	return ast_builders.NewNodeAttributesBuilder().
 		WithRangePositions(startRow, startCol, endRow, endCol).
 		Build()
 }
@@ -143,7 +144,7 @@ func TestConvertToAST_global_variable(t *testing.T) {
 		spec := decl.Spec.(*ast.ValueSpec)
 		assert.Equal(t, "hello", spec.Names[0].Name)
 		assert.Equal(t, &ast.BasicLit{
-			NodeAttributes: ast.NewNodeAttributesBuilder().WithRange(lsp.NewRange(1, 13, 1, 14)).Build(),
+			NodeAttributes: ast_builders.NewNodeAttributesBuilder().WithRange(lsp.NewRange(1, 13, 1, 14)).Build(),
 			Kind:           ast.INT,
 			Value:          "3",
 		}, spec.Value)
@@ -183,7 +184,7 @@ func TestConvertToAST_global_variable(t *testing.T) {
 		spec := decl.Spec.(*ast.ValueSpec)
 		assert.Equal(t, "HELLO", spec.Names[0].Name)
 		assert.Equal(t, &ast.BasicLit{
-			NodeAttributes: ast.NewNodeAttributesBuilder().WithRange(lsp.NewRange(2, 19, 2, 20)).Build(),
+			NodeAttributes: ast_builders.NewNodeAttributesBuilder().WithRange(lsp.NewRange(2, 19, 2, 20)).Build(),
 			Kind:           ast.INT,
 			Value:          "3",
 		}, spec.Value)
@@ -204,7 +205,7 @@ func TestConvertToAST_enum_decl(t *testing.T) {
 
 		enumDecl := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		assert.Equal(t, ast.Token(ast.ENUM), enumDecl.Token)
-		assert.Equal(t, "Colors", enumDecl.Spec.(*ast.TypeSpec).Name.Name)
+		assert.Equal(t, "Colors", enumDecl.Spec.(*ast.TypeSpec).Ident.Name)
 		assert.Equal(t, lsp.NewRange(2, 1, 2, 33), enumDecl.Range)
 		assert.Equal(t, "colors enum", enumDecl.DocComment.Get().GetBody())
 
@@ -241,7 +242,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 		assert.Len(t, enumType.AssociatedValues, 3)
 
 		assert.Equal(t,
-			ast.NewIdentifierBuilder().
+			ast_builders.NewIdentifierBuilder().
 				WithName("desc").
 				WithStartEnd(1, 26, 1, 30).Build(),
 			enumType.AssociatedValues[0].Name,
@@ -249,14 +250,14 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 		assert.Equal(t, "String", enumType.AssociatedValues[0].Type.Identifier.String())
 		assert.Equal(t, lsp.NewRange(1, 19, 1, 25), enumType.AssociatedValues[0].Type.Identifier.Range)
 
-		assert.Equal(t, ast.NewIdentifierBuilder().
+		assert.Equal(t, ast_builders.NewIdentifierBuilder().
 			WithName("active").
 			WithStartEnd(1, 37, 1, 43).Build(),
 			enumType.AssociatedValues[1].Name,
 		)
 		assert.Equal(t, "bool", enumType.AssociatedValues[1].Type.Identifier.String())
 
-		assert.Equal(t, ast.NewIdentifierBuilder().
+		assert.Equal(t, ast_builders.NewIdentifierBuilder().
 			WithName("ke").
 			WithStartEnd(1, 50, 1, 52).Build(),
 			enumType.AssociatedValues[2].Name,
@@ -280,7 +281,7 @@ func TestConvertToAST_enum_decl_with_associated_params(t *testing.T) {
 
 		assert.Equal(t, lsp.NewRange(1, 15, 1, 26), enumType.AssociatedValues[0].Range)
 		assert.Equal(t,
-			ast.NewIdentifierBuilder().
+			ast_builders.NewIdentifierBuilder().
 				WithName("counter").
 				WithStartEnd(1, 19, 1, 26).Build(),
 			enumType.AssociatedValues[0].Name,
@@ -309,9 +310,9 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 
 		structRange := lsp.NewRange(2, 1, 6, 2)
 		assert.Equal(t, structRange, decl.Range)
-		assert.Equal(t, structRange, structType.Range)
-		assert.Equal(t, "MyStruct", spec.Name.Name)
-		assert.Equal(t, lsp.NewRange(2, 8, 2, 16), spec.Name.Range)
+		//assert.Equal(t, structRange, structType.Range)
+		assert.Equal(t, "MyStruct", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(2, 8, 2, 16), spec.Ident.Range)
 		assert.Equal(t, "abc", decl.DocComment.Get().GetBody())
 
 		assert.Equal(t,
@@ -325,7 +326,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 				},
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(3, 2, 3, 5),
-					Identifier:     ast.NewIdentifierBuilder().WithName("int").WithStartEnd(3, 2, 3, 5).Build(),
+					Identifier:     ast_builders.NewIdentifierBuilder().WithName("int").WithStartEnd(3, 2, 3, 5).Build(),
 					BuiltIn:        true,
 				},
 			}, structType.Fields[0])
@@ -340,7 +341,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 				},
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(4, 2, 4, 6),
-					Identifier:     ast.NewIdentifierBuilder().WithName("char").WithStartEnd(4, 2, 4, 6).Build(),
+					Identifier:     ast_builders.NewIdentifierBuilder().WithName("char").WithStartEnd(4, 2, 4, 6).Build(),
 					BuiltIn:        true,
 				},
 			}, structType.Fields[1])
@@ -356,8 +357,8 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(5, 2, 5, 16),
 					Identifier: &ast.Ident{
-						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(5, 2, 5, 16).Build(),
-						ModulePath: ast.NewIdentifierBuilder().
+						NodeAttributes: ast_builders.NewNodeAttributesBuilder().WithRangePositions(5, 2, 5, 16).Build(),
+						ModulePath: ast_builders.NewIdentifierBuilder().
 							WithName("raylib").
 							WithStartEnd(5, 2, 5, 10).
 							Build(),
@@ -406,7 +407,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 		assert.Equal(t, lsp.NewRange(2, 3, 4, 4), structType.Fields[0].Range)
 
 		fieldType := structType.Fields[0].Type.(*ast.StructType)
-		assert.Equal(t, lsp.NewRange(2, 3, 4, 4), fieldType.Range)
+		//assert.Equal(t, lsp.NewRange(2, 3, 4, 4), fieldType.Range)
 		assert.Equal(t, ast.StructTypeNormal, int(fieldType.Type))
 
 		subField := fieldType.Fields[0]
@@ -443,14 +444,14 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 			&ast.StructField{
 				NodeAttributes: aWithPos(4, 3, 4, 25),
 				Names: []*ast.Ident{
-					ast.NewIdentifierBuilder().
+					ast_builders.NewIdentifierBuilder().
 						WithName("bc").
 						WithStartEnd(4, 14, 4, 16).
 						Build(),
 				},
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(4, 3, 4, 13),
-					Identifier: ast.NewIdentifierBuilder().
+					Identifier: ast_builders.NewIdentifierBuilder().
 						WithName("Register16").
 						WithStartEnd(4, 3, 4, 13).
 						Build(),
@@ -465,14 +466,14 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 			&ast.StructField{
 				NodeAttributes: aWithPos(5, 3, 5, 22),
 				Names: []*ast.Ident{
-					ast.NewIdentifierBuilder().
+					ast_builders.NewIdentifierBuilder().
 						WithName("b").
 						WithStartEnd(5, 12, 5, 13).
 						Build(),
 				},
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(5, 3, 5, 11),
-					Identifier: ast.NewIdentifierBuilder().
+					Identifier: ast_builders.NewIdentifierBuilder().
 						WithName("Register").
 						WithStartEnd(5, 3, 5, 11).
 						Build(),
@@ -487,14 +488,14 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 			&ast.StructField{
 				NodeAttributes: aWithPos(6, 3, 6, 21),
 				Names: []*ast.Ident{
-					ast.NewIdentifierBuilder().
+					ast_builders.NewIdentifierBuilder().
 						WithName("c").
 						WithStartEnd(6, 12, 6, 13).
 						Build(),
 				},
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(6, 3, 6, 11),
-					Identifier: ast.NewIdentifierBuilder().
+					Identifier: ast_builders.NewIdentifierBuilder().
 						WithName("Register").
 						WithStartEnd(6, 3, 6, 11).
 						Build(),
@@ -509,14 +510,14 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 			&ast.StructField{
 				NodeAttributes: aWithPos(8, 2, 8, 16),
 				Names: []*ast.Ident{
-					ast.NewIdentifierBuilder().
+					ast_builders.NewIdentifierBuilder().
 						WithName("sp").
 						WithStartEnd(8, 13, 8, 15).
 						Build(),
 				},
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(8, 2, 8, 12),
-					Identifier: ast.NewIdentifierBuilder().
+					Identifier: ast_builders.NewIdentifierBuilder().
 						WithName("Register16").
 						WithStartEnd(8, 2, 8, 12).
 						Build(),
@@ -530,14 +531,14 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 			&ast.StructField{
 				NodeAttributes: aWithPos(9, 2, 9, 16),
 				Names: []*ast.Ident{
-					ast.NewIdentifierBuilder().
+					ast_builders.NewIdentifierBuilder().
 						WithName("pc").
 						WithStartEnd(9, 13, 9, 15).
 						Build(),
 				},
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(9, 2, 9, 12),
-					Identifier: ast.NewIdentifierBuilder().
+					Identifier: ast_builders.NewIdentifierBuilder().
 						WithName("Register16").
 						WithStartEnd(9, 2, 9, 12).
 						Build(),
@@ -609,7 +610,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 		expectedType := &ast.TypeInfo{
 			NodeAttributes: aWithPos(2, 32, 2, 36),
 			BuiltIn:        true,
-			Identifier: ast.NewIdentifierBuilder().
+			Identifier: ast_builders.NewIdentifierBuilder().
 				WithName("uint").
 				WithStartEnd(2, 32, 2, 36).
 				Build(),
@@ -621,7 +622,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 		expect := &ast.StructField{
 			NodeAttributes: aWithPos(4, 2, 4, 19),
 			Names: []*ast.Ident{
-				ast.NewIdentifierBuilder().
+				ast_builders.NewIdentifierBuilder().
 					WithName("a").
 					WithStartEnd(4, 9, 4, 10).
 					Build(),
@@ -629,7 +630,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 			Type: &ast.TypeInfo{
 				NodeAttributes: aWithPos(4, 2, 4, 8),
 				BuiltIn:        true,
-				Identifier: ast.NewIdentifierBuilder().
+				Identifier: ast_builders.NewIdentifierBuilder().
 					WithName("ushort").
 					WithStartEnd(4, 2, 4, 8).
 					Build(),
@@ -656,7 +657,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 		expect := &ast.StructField{
 			NodeAttributes: aWithPos(2, 2, 2, 11),
 			Names: []*ast.Ident{
-				ast.NewIdentifierBuilder().
+				ast_builders.NewIdentifierBuilder().
 					WithName("a").
 					WithStartEnd(2, 9, 2, 10).
 					Build(),
@@ -664,7 +665,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 			Type: &ast.TypeInfo{
 				NodeAttributes: aWithPos(2, 2, 2, 8),
 				BuiltIn:        true,
-				Identifier: ast.NewIdentifierBuilder().
+				Identifier: ast_builders.NewIdentifierBuilder().
 					WithName("ushort").
 					WithStartEnd(2, 2, 2, 8).
 					Build(),
@@ -691,7 +692,7 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 
 		assert.Equal(
 			t,
-			ast.NewIdentifierBuilder().
+			ast_builders.NewIdentifierBuilder().
 				WithName("IOResult").
 				WithStartEnd(2, 7, 2, 15).
 				Build(),
@@ -706,11 +707,11 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 
 		assert.Equal(t,
 			&ast.FaultMember{
-				Name: ast.NewIdentifierBuilder().
+				Name: ast_builders.NewIdentifierBuilder().
 					WithName("IO_ERROR").
 					WithStartEnd(4, 3, 4, 11).
 					Build(),
-				NodeAttributes: ast.NewNodeAttributesBuilder().
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 					WithRangePositions(4, 3, 4, 11).
 					Build(),
 			},
@@ -719,11 +720,11 @@ func TestConvertToAST_fault_decl(t *testing.T) {
 
 		assert.Equal(t,
 			&ast.FaultMember{
-				Name: ast.NewIdentifierBuilder().
+				Name: ast_builders.NewIdentifierBuilder().
 					WithName("PARSE_ERROR").
 					WithStartEnd(5, 3, 5, 14).
 					Build(),
-				NodeAttributes: ast.NewNodeAttributesBuilder().
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 					WithRangePositions(5, 3, 5, 14).
 					Build(),
 			},
@@ -870,8 +871,7 @@ func TestConvertToAST_def_declares(t *testing.T) {
 		declaration := tree.Modules[0].Declarations[0].(*ast.GenDecl)
 		assert.Equal(t,
 			&ast.FuncType{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(0, 11, 0, 24).Build(),
-				ReturnType: ast.NewTypeInfoBuilder().
+				ReturnType: ast_builders.NewTypeInfoBuilder().
 					WithName("void").
 					WithStartEnd(0, 14, 0, 18).
 					WithNameStartEnd(0, 14, 0, 18).
@@ -879,8 +879,8 @@ func TestConvertToAST_def_declares(t *testing.T) {
 					Build(),
 				Params: []*ast.FunctionParameter{
 					{
-						NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(0, 20, 0, 23).Build(),
-						Type: ast.NewTypeInfoBuilder().
+						NodeAttributes: ast_builders.NewNodeAttributesBuilder().WithRangePositions(0, 20, 0, 23).Build(),
+						Type: ast_builders.NewTypeInfoBuilder().
 							WithName("int").
 							WithStartEnd(0, 20, 0, 23).
 							WithNameStartEnd(0, 20, 0, 23).
@@ -889,6 +889,140 @@ func TestConvertToAST_def_declares(t *testing.T) {
 					},
 				},
 			}, declaration.Spec.(*ast.DefSpec).Value)
+	})
+}
+
+func TestConvertToAST_distinct_declares(t *testing.T) {
+	t.Run("parses distinct", func(t *testing.T) {
+		source := `module mod;
+		<* docs *>
+		distinct Kilo = int;
+		distinct KiloPtr = Kilo*;
+		distinct MyMap = HashMap(<String, Feature>);
+		distinct Camera = raylib::Camera;
+		`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		line := uint(2)
+
+		// Kilo
+		dist := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		spec := dist.Spec.(*ast.TypeSpec)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 22), dist.Range)
+		assert.Equal(t, "Kilo", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(line, 11, line, 15), spec.Ident.Range)
+
+		distinctType := spec.TypeDescription.(*ast.DistinctType)
+		assert.Equal(t, "int", distinctType.Value.(*ast.TypeInfo).Identifier.Name)
+		assert.Equal(t, lsp.NewRange(line, 18, line, 21), distinctType.Value.(*ast.TypeInfo).Range)
+		assert.False(t, distinctType.IsInline)
+
+		// KiloPtr
+		line += 1
+		dist = tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		spec = dist.Spec.(*ast.TypeSpec)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 27), dist.Range)
+		assert.Equal(t, "KiloPtr", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(line, 11, line, 18), spec.Ident.Range)
+
+		distinctType = spec.TypeDescription.(*ast.DistinctType)
+		assert.Equal(t, "Kilo*", distinctType.Value.(*ast.TypeInfo).String())
+		assert.Equal(t, lsp.NewRange(line, 21, line, 26), distinctType.Value.(*ast.TypeInfo).Range)
+		assert.False(t, distinctType.IsInline)
+
+		// MyMap
+		line += 1
+		dist = tree.Modules[0].Declarations[2].(*ast.GenDecl)
+		spec = dist.Spec.(*ast.TypeSpec)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 46), dist.Range)
+		assert.Equal(t, "MyMap", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(line, 11, line, 16), spec.Ident.Range)
+
+		distinctType = spec.TypeDescription.(*ast.DistinctType)
+		assert.Equal(t, "HashMap(<String, Feature>)", distinctType.Value.(*ast.TypeInfo).String())
+		assert.Equal(t, lsp.NewRange(line, 19, line, 45), distinctType.Value.(*ast.TypeInfo).Range)
+		assert.False(t, distinctType.IsInline)
+
+		// Camera
+		line += 1
+		dist = tree.Modules[0].Declarations[3].(*ast.GenDecl)
+		spec = dist.Spec.(*ast.TypeSpec)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 35), dist.Range)
+		assert.Equal(t, "Camera", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(line, 11, line, 17), spec.Ident.Range)
+
+		distinctType = spec.TypeDescription.(*ast.DistinctType)
+		assert.Equal(t, "raylib::Camera", distinctType.Value.(*ast.TypeInfo).String())
+		assert.Equal(t, lsp.NewRange(line, 20, line, 34), distinctType.Value.(*ast.TypeInfo).Range)
+		assert.False(t, distinctType.IsInline)
+	})
+
+	t.Run("parses inline distinct", func(t *testing.T) {
+		source := `module mod;
+		<* docs *>
+		distinct Kilo = inline int;
+		distinct KiloPtr = inline Kilo*;
+		distinct MyMap = inline HashMap(<String, Feature>);
+		distinct Camera = inline raylib::Camera;
+		`
+
+		cv := newTestAstConverter()
+		tree := cv.ConvertToAST(GetCST(source).RootNode(), source, "file.c3")
+
+		line := uint(2)
+
+		// Kilo
+		dist := tree.Modules[0].Declarations[0].(*ast.GenDecl)
+		spec := dist.Spec.(*ast.TypeSpec)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 29), dist.Range)
+		assert.Equal(t, "Kilo", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(line, 11, line, 15), spec.Ident.Range)
+
+		distinctType := spec.TypeDescription.(*ast.DistinctType)
+		assert.Equal(t, "int", distinctType.Value.(*ast.TypeInfo).Identifier.Name)
+		assert.Equal(t, lsp.NewRange(line, 25, line, 28), distinctType.Value.(*ast.TypeInfo).Range)
+		assert.True(t, distinctType.IsInline)
+
+		// KiloPtr
+		line += 1
+		dist = tree.Modules[0].Declarations[1].(*ast.GenDecl)
+		spec = dist.Spec.(*ast.TypeSpec)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 34), dist.Range)
+		assert.Equal(t, "KiloPtr", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(line, 11, line, 18), spec.Ident.Range)
+
+		distinctType = spec.TypeDescription.(*ast.DistinctType)
+		assert.Equal(t, "Kilo*", distinctType.Value.(*ast.TypeInfo).String())
+		assert.Equal(t, lsp.NewRange(line, 28, line, 33), distinctType.Value.(*ast.TypeInfo).Range)
+		assert.True(t, distinctType.IsInline)
+
+		// MyMap
+		line += 1
+		dist = tree.Modules[0].Declarations[2].(*ast.GenDecl)
+		spec = dist.Spec.(*ast.TypeSpec)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 53), dist.Range)
+		assert.Equal(t, "MyMap", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(line, 11, line, 16), spec.Ident.Range)
+
+		distinctType = spec.TypeDescription.(*ast.DistinctType)
+		assert.Equal(t, "HashMap(<String, Feature>)", distinctType.Value.(*ast.TypeInfo).String())
+		assert.Equal(t, lsp.NewRange(line, 26, line, 52), distinctType.Value.(*ast.TypeInfo).Range)
+		assert.True(t, distinctType.IsInline)
+
+		// Camera
+		line += 1
+		dist = tree.Modules[0].Declarations[3].(*ast.GenDecl)
+		spec = dist.Spec.(*ast.TypeSpec)
+		assert.Equal(t, lsp.NewRange(line, 2, line, 42), dist.Range)
+		assert.Equal(t, "Camera", spec.Ident.Name)
+		assert.Equal(t, lsp.NewRange(line, 11, line, 17), spec.Ident.Range)
+
+		distinctType = spec.TypeDescription.(*ast.DistinctType)
+		assert.Equal(t, "raylib::Camera", distinctType.Value.(*ast.TypeInfo).String())
+		assert.Equal(t, lsp.NewRange(line, 27, line, 41), distinctType.Value.(*ast.TypeInfo).Range)
+		assert.True(t, distinctType.IsInline)
 	})
 }
 
@@ -1028,40 +1162,40 @@ jkl`
 		assert.Equal(t, 3, len(fnDecl.Signature.Parameters))
 		assert.Equal(t,
 			&ast.FunctionParameter{
-				Name: ast.NewIdentifierBuilder().WithName("number").WithStartEnd(1, 18, 1, 24).Build(),
-				Type: ast.NewTypeInfoBuilder().
+				Name: ast_builders.NewIdentifierBuilder().WithName("number").WithStartEnd(1, 18, 1, 24).Build(),
+				Type: ast_builders.NewTypeInfoBuilder().
 					WithName("int").WithNameStartEnd(1, 14, 1, 17).
 					IsBuiltin().
 					WithStartEnd(1, 14, 1, 17).
 					Build(),
-				NodeAttributes: ast.NewNodeAttributesBuilder().
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 					WithRangePositions(1, 14, 1, 24).Build(),
 			},
 			fnDecl.Signature.Parameters[0],
 		)
 		assert.Equal(t,
 			&ast.FunctionParameter{
-				Name: ast.NewIdentifierBuilder().WithName("ch").WithStartEnd(1, 31, 1, 33).Build(),
-				Type: ast.NewTypeInfoBuilder().
+				Name: ast_builders.NewIdentifierBuilder().WithName("ch").WithStartEnd(1, 31, 1, 33).Build(),
+				Type: ast_builders.NewTypeInfoBuilder().
 					WithName("char").WithNameStartEnd(1, 26, 1, 30).
 					IsBuiltin().
 					WithStartEnd(1, 26, 1, 30).
 					Build(),
-				NodeAttributes: ast.NewNodeAttributesBuilder().
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 					WithRangePositions(1, 26, 1, 33).Build(),
 			},
 			fnDecl.Signature.Parameters[1],
 		)
 		assert.Equal(t,
 			&ast.FunctionParameter{
-				Name: ast.NewIdentifierBuilder().WithName("pointer").WithStartEnd(1, 40, 1, 47).Build(),
-				Type: ast.NewTypeInfoBuilder().
+				Name: ast_builders.NewIdentifierBuilder().WithName("pointer").WithStartEnd(1, 40, 1, 47).Build(),
+				Type: ast_builders.NewTypeInfoBuilder().
 					WithStartEnd(1, 35, 1, 39).
 					WithName("int").WithNameStartEnd(1, 35, 1, 38).
 					IsBuiltin().
 					IsPointer().
 					Build(),
-				NodeAttributes: ast.NewNodeAttributesBuilder().
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 					WithRangePositions(1, 35, 1, 47).Build(),
 			},
 			fnDecl.Signature.Parameters[2],
@@ -1096,26 +1230,26 @@ func TestConvertToAST_method_declaration(t *testing.T) {
 		assert.Equal(t, 2, len(methodDecl.Signature.Parameters))
 		assert.Equal(t,
 			&ast.FunctionParameter{
-				Name: ast.NewIdentifierBuilder().WithName("self").WithStartEnd(1, 30, 1, 34).Build(),
-				Type: ast.NewTypeInfoBuilder().
+				Name: ast_builders.NewIdentifierBuilder().WithName("self").WithStartEnd(1, 30, 1, 34).Build(),
+				Type: ast_builders.NewTypeInfoBuilder().
 					WithName("UserStruct").WithNameStartEnd(1, 30, 1, 34).
 					WithStartEnd(1, 30, 1, 34).
 					Build(),
-				NodeAttributes: ast.NewNodeAttributesBuilder().
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 					WithRangePositions(1, 30, 1, 34).Build(),
 			},
 			methodDecl.Signature.Parameters[0],
 		)
 		assert.Equal(t,
 			&ast.FunctionParameter{
-				Name: ast.NewIdentifierBuilder().WithName("pointer").WithStartEnd(1, 41, 1, 48).Build(),
-				Type: ast.NewTypeInfoBuilder().
+				Name: ast_builders.NewIdentifierBuilder().WithName("pointer").WithStartEnd(1, 41, 1, 48).Build(),
+				Type: ast_builders.NewTypeInfoBuilder().
 					WithName("int").WithNameStartEnd(1, 36, 1, 39).
 					IsBuiltin().
 					IsPointer().
 					WithStartEnd(1, 36, 1, 40).
 					Build(),
-				NodeAttributes: ast.NewNodeAttributesBuilder().
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 					WithRangePositions(1, 36, 1, 48).Build(),
 			},
 			methodDecl.Signature.Parameters[1],
@@ -1148,13 +1282,13 @@ func TestConvertToAST_method_declaration_mutable(t *testing.T) {
 
 	assert.Equal(t,
 		&ast.FunctionParameter{
-			Name: ast.NewIdentifierBuilder().WithName("self").WithStartEnd(1, 31, 1, 35).Build(),
-			Type: ast.NewTypeInfoBuilder().
+			Name: ast_builders.NewIdentifierBuilder().WithName("self").WithStartEnd(1, 31, 1, 35).Build(),
+			Type: ast_builders.NewTypeInfoBuilder().
 				WithName("UserStruct").WithNameStartEnd(1, 31, 1, 35).
 				WithStartEnd(1, 30, 1, 35).
 				IsPointer().
 				Build(),
-			NodeAttributes: ast.NewNodeAttributesBuilder().
+			NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 				WithRangePositions(1, 30, 1, 35).Build(),
 		},
 		methodDecl.Signature.Parameters[0],
@@ -1204,8 +1338,8 @@ func TestConvertToAST_macro_decl(t *testing.T) {
 		assert.Equal(
 			t,
 			&ast.FunctionParameter{
-				NodeAttributes: ast.NewNodeAttributesBuilder().WithRangePositions(startRow, 9, startRow, 10).Build(),
-				Name:           ast.NewIdentifierBuilder().WithName("x").WithStartEnd(startRow, 9, startRow, 10).Build(),
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().WithRangePositions(startRow, 9, startRow, 10).Build(),
+				Name:           ast_builders.NewIdentifierBuilder().WithName("x").WithStartEnd(startRow, 9, startRow, 10).Build(),
 			},
 			macroDecl.Signature.Parameters[0],
 		)

@@ -185,7 +185,7 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 		}
 
 	case ast.ENUM:
-		_, enumSym := v.currentScope.RegisterSymbol(n.Spec.(*ast.TypeSpec).Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.ENUM)
+		_, enumSym := v.currentScope.RegisterSymbol(n.Spec.(*ast.TypeSpec).Ident.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.ENUM)
 
 		enumType := n.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
 		for _, value := range enumType.Values {
@@ -199,10 +199,20 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 		}
 
 	case ast.STRUCT:
-		v.currentScope.RegisterSymbol(n.Spec.(*ast.TypeSpec).Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.STRUCT)
+		v.currentScope.RegisterSymbol(n.Spec.(*ast.TypeSpec).Ident.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.STRUCT)
 
 	case ast.DEF:
 		v.currentScope.RegisterSymbol(n.Spec.(*ast.DefSpec).Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
+
+	case ast.DISTINCT:
+		v.currentScope.RegisterSymbol(
+			n.Spec.(*ast.TypeSpec).Ident.Name,
+			n.Range,
+			n,
+			v.currentModule,
+			v.currentFilePath.URI,
+			ast.DISTINCT,
+		)
 	default:
 	}
 }

@@ -2,6 +2,7 @@ package factory
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast/builders"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
@@ -9,7 +10,7 @@ import (
 
 func (c *ASTConverter) convert_ct_type_ident(node *sitter.Node, source []byte) ast.Expression {
 	return &ast.BasicLit{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Kind:           ast.STRING,
 		Value:          node.Content(source)}
 }
@@ -43,11 +44,11 @@ func (c *ASTConverter) convert_compile_time_call_expr(node *sitter.Node, source 
 	}
 
 	callExpr := &ast.CallExpr{
-		NodeAttributes: ast.NewNodeAttributesBuilder().
+		NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 			WithSitterStartEnd(node.StartPoint(), endNode.EndPoint()).
 			Build(),
 		CompileTime: true,
-		Identifier: ast.NewIdentifierBuilder().
+		Identifier: ast_builders.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			Build(),
@@ -75,10 +76,10 @@ func (c *ASTConverter) convert_compile_time_arg(node *sitter.Node, source []byte
 	expr := c.convert_expression(insideParenths, source)
 
 	funcCall := &ast.SubscriptExpression{
-		NodeAttributes: ast.NewNodeAttributesBuilder().
+		NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 			WithSitterStartEnd(node.StartPoint(), endNode.EndPoint()).
 			Build(),
-		Argument: ast.NewIdentifierBuilder().
+		Argument: ast_builders.NewIdentifierBuilder().
 			WithName(node.Content(source)).
 			WithSitterPos(node).
 			IsCompileTime(true).

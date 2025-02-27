@@ -79,12 +79,12 @@ func TestContext_should_detect_word_under_cursor_correctly(t *testing.T) {
 				Content: "int status = obj.",
 			}, propertyName: "Statements"},
 		}
-		pos := lsp.Position{2, 19}
+		pos := lsp.NewPosition(2, 19)
 		ctxt := getContextFromPosition(path, pos, source, ContextHintForGoTo)
 
 		assert.Equal(t, "", ctxt.identUnderCursor)
 		assert.Equal(t, "obj.", ctxt.fullIdentUnderCursor)
-		assert.False(t, ctxt.isSelExpr)
+		assert.True(t, ctxt.isSelExpr)
 	})
 
 	t.Run("parse error with not finished multi level selector expression should flag it as isSelExpr", func(t *testing.T) {

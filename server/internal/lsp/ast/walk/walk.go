@@ -113,13 +113,6 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		Walk(v, n.Condition, "Condition")
 		Walk(v, n.Body, "Body")
 
-	case *ast.EnumType:
-		if n.BaseType.IsSome() {
-			Walk(v, n.BaseType.Get(), "BaseType")
-		}
-		walkList(v, n.AssociatedValues, "AssociatedValues")
-		walkList(v, n.Values, "Values")
-
 	case *ast.ElseStatement:
 		Walk(v, n.Statement, "Statement")
 
@@ -189,10 +182,29 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 			}
 			walkList(v, spec.Names, "Names")
 			Walk(v, spec.Value, "Value")
+
 		case *ast.TypeSpec:
-			Walk(v, spec.Name, "Name")
+			Walk(v, spec.Ident, "Ident")
 			walkList(v, spec.TypeParams, "TypeParams")
-			Walk(v, spec.TypeDescription, "TypeDescription")
+			switch td := spec.TypeDescription.(type) {
+			case *ast.EnumType:
+				if td.BaseType.IsSome() {
+					Walk(v, td.BaseType.Get(), "BaseType")
+				}
+				walkList(v, td.AssociatedValues, "AssociatedValues")
+				walkList(v, td.Values, "Values")
+
+			//case *ast.FuncType:
+
+			case *ast.StructType:
+				walkList(v, td.Implements, "Implements")
+				if td.BackingType.IsSome() {
+					Walk(v, td.BackingType.Get(), "BackingType")
+				}
+				walkList(v, td.Fields, "Fields")
+			}
+			//	Walk(v, spec.TypeDescription, "TypeDescription")
+
 		case *ast.DefSpec:
 			Walk(v, spec.Name, "Name")
 			Walk(v, spec.Value, "Value")
@@ -325,13 +337,6 @@ func Walk(v Visitor, node ast.Node, propertyName string) {
 		//		Walk(v, n.Type, "Type")
 		//		walkList(v, n.Names, "Names")
 		//		Walk(v, n.Value, "Value")
-
-	case *ast.StructType:
-		walkList(v, n.Implements, "Implements")
-		if n.BackingType.IsSome() {
-			Walk(v, n.BackingType.Get(), "BackingType")
-		}
-		walkList(v, n.Fields, "Fields")
 
 	case *ast.WhileStatement:
 		if n.Condition != nil {

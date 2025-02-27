@@ -6,15 +6,15 @@ type DocCommentContract struct {
 }
 
 type DocComment struct {
-	body      string
-	contracts []*DocCommentContract
+	Body      string
+	Contracts []*DocCommentContract
 }
 
 // Creates a doc comment with the given body.
 func NewDocComment(body string) *DocComment {
 	return &DocComment{
-		body:      body,
-		contracts: []*DocCommentContract{},
+		Body:      body,
+		Contracts: []*DocCommentContract{},
 	}
 }
 
@@ -29,18 +29,18 @@ func NewDocCommentContract(name string, body string) *DocCommentContract {
 
 // Add contracts to the given doc comment.
 func (d *DocComment) AddContracts(contracts []*DocCommentContract) {
-	d.contracts = append(d.contracts, contracts...)
+	d.Contracts = append(d.Contracts, contracts...)
 }
 
 func (d *DocComment) GetBody() string {
-	return d.body
+	return d.Body
 }
 
 // Return a string displaying the body and contracts as markdown.
 func (d *DocComment) DisplayBodyWithContracts() string {
-	out := d.body
+	out := d.Body
 
-	for _, c := range d.contracts {
+	for _, c := range d.Contracts {
 		if out != "" {
 			out += "\n\n"
 		}

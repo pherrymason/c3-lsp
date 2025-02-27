@@ -329,6 +329,8 @@ func (s *SymbolTable) SolveSymbolType(symbol *Symbol) *Symbol {
 	case *ast.StructField:
 		explicitModule = n.Type.(*ast.TypeInfo).Module()
 		typeName = n.Type.(*ast.TypeInfo).Identifier.Name
+	case *ast.FunctionParameter:
+		typeName = n.Type.Identifier.Name
 	}
 
 	if typeName == "" {

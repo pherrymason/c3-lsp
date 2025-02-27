@@ -124,11 +124,9 @@ type File struct {
 
 func NewFile(nodeId NodeId, uri protocol.URI, aRange lsp.Range, modules []*Module) *File {
 	node := &File{
-		URI: uri,
-		NodeAttributes: NewNodeAttributesBuilder().
-			WithId(nodeId).
-			WithRange(aRange).Build(),
-		Modules: modules,
+		URI:            uri,
+		NodeAttributes: NodeAttributes{Id: nodeId, Range: aRange},
+		Modules:        modules,
 	}
 
 	return node

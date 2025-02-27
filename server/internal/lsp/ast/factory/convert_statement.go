@@ -2,6 +2,7 @@ package factory
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast/builders"
 	"github.com/pherrymason/c3-lsp/pkg"
 	"log"
 
@@ -53,7 +54,7 @@ func (c *ASTConverter) convert_statement(node *sitter.Node, source []byte) ast.S
 
 func (c *ASTConverter) convert_compound_stmt(node *sitter.Node, source []byte) ast.Statement {
 	cmpStatement := &ast.CompoundStmt{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Statements:     []ast.Statement{},
 	}
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -78,7 +79,7 @@ func (c *ASTConverter) convert_return_stmt(node *sitter.Node, source []byte) ast
 	}
 
 	return &ast.ReturnStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Return:         expr,
 	}
 }
@@ -90,7 +91,7 @@ func (c *ASTConverter) convert_split_declaration_stmt(node *sitter.Node, source 
 func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte) ast.Statement {
 	if node.Type() == "const_declaration" {
 		return &ast.DeclarationStmt{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+			NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 			Decl:           c.convert_const_declaration(node, source),
 		}
 	}
@@ -99,14 +100,12 @@ func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte
 	isTlocal := false
 
 	varDecl := &ast.GenDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.VAR,
 		//Spec:           &ast.ValueSpec{},
 	}
 	end := false
-	valueSpec := &ast.ValueSpec{
-		//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-	}
+	valueSpec := &ast.ValueSpec{}
 	for i := 0; i < int(node.ChildCount()) && !end; i++ {
 		n := node.Child(i)
 		//debugNode(n, source, "dd")
@@ -127,7 +126,7 @@ func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte
 
 		case "local_decl_after_type":
 			//valueSpec.Names =
-			ident := ast.NewIdentifierBuilder().
+			ident := ast_builders.NewIdentifierBuilder().
 				WithId(c.getNextID()).
 				WithName(n.ChildByFieldName("name").Content(source)).
 				WithSitterPos(n.ChildByFieldName("name")).
@@ -144,7 +143,7 @@ func (c *ASTConverter) convert_declaration_stmt(node *sitter.Node, source []byte
 	varDecl.Spec = valueSpec
 
 	return &ast.DeclarationStmt{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Decl:           varDecl,
 	}
 }
@@ -159,7 +158,7 @@ func (c *ASTConverter) convert_continue_stmt(node *sitter.Node, source []byte) a
 	}
 
 	return &ast.ContinueStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Label:          label,
 	}
 }
@@ -174,7 +173,7 @@ func (c *ASTConverter) convert_break_stmt(node *sitter.Node, source []byte) ast.
 	}
 
 	return &ast.BreakStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Label:          label,
 	}
 }
@@ -192,18 +191,18 @@ func (c *ASTConverter) convert_switch_stmt(node *sitter.Node, source []byte) ast
 			var caseValue ast.Statement
 			if conditionNode.Type() == "case_range" {
 				caseValue = &ast.SwitchCaseRange{
-					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
+					NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
 					Start:          c.convert_expression(conditionNode.Child(0), source).(ast.Expression),
 					End:            c.convert_expression(conditionNode.Child(2), source).(ast.Expression),
 				}
 			} else if conditionNode.Type() == "type" {
 				caseValue = &ast.ExpressionStmt{
-					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
+					NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
 					Expr:           c.convert_type(conditionNode, source),
 				}
 			} else {
 				caseValue = &ast.ExpressionStmt{
-					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
+					NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), conditionNode),
 					Expr:           c.convert_expression(conditionNode, source).(ast.Expression),
 				}
 
@@ -221,7 +220,7 @@ func (c *ASTConverter) convert_switch_stmt(node *sitter.Node, source []byte) ast
 			}
 
 			cases = append(cases, &ast.SwitchCase{
-				NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), n),
+				NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), n),
 				Value:          caseValue,
 				Statements:     statements,
 			})
@@ -244,7 +243,7 @@ func (c *ASTConverter) convert_switch_stmt(node *sitter.Node, source []byte) ast
 	}
 
 	return &ast.SwitchStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Label:          label,
 		Condition:      conditionExpression,
 		Cases:          cases,
@@ -276,7 +275,7 @@ func (c *ASTConverter) convert_nextcase_stmt(node *sitter.Node, source []byte) a
 	}
 
 	return &ast.Nextcase{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Label:          label,
 		Value:          value,
 	}
@@ -286,7 +285,7 @@ func (c *ASTConverter) convert_if_stmt(node *sitter.Node, source []byte) ast.Sta
 	conditions := c.convert_paren_conditions(node.ChildByFieldName("condition"), source)
 
 	stmt := &ast.IfStmt{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Label:          option.None[string](),
 		Condition:      conditions,
 	}
@@ -305,7 +304,7 @@ func (c *ASTConverter) convert_if_stmt(node *sitter.Node, source []byte) ast.Sta
 				}
 			}
 			stmt.Else = &ast.ElseStatement{
-				NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), n),
+				NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), n),
 				Statement:      elseStmt,
 			}
 		}
@@ -370,12 +369,11 @@ func (c *ASTConverter) convert_local_declaration_after_type(node *sitter.Node, s
 	}
 
 	varDecl := &ast.GenDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.VAR,
 		Spec: &ast.ValueSpec{
-			//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
 			Names: []*ast.Ident{
-				ast.NewIdentifierBuilder().
+				ast_builders.NewIdentifierBuilder().
 					WithId(c.getNextID()).
 					WithName(node.ChildByFieldName("name").Content(source)).
 					WithSitterPos(node.ChildByFieldName("name")).
@@ -391,7 +389,7 @@ func (c *ASTConverter) convert_local_declaration_after_type(node *sitter.Node, s
 
 func (c *ASTConverter) convert_for_stmt(node *sitter.Node, source []byte) ast.Statement {
 	forStmt := &ast.ForStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -449,19 +447,19 @@ func (c *ASTConverter) convert_decl_or_expression(node *sitter.Node, source []by
 	switch found.(type) {
 	case ast.Expression:
 		return &ast.DeclOrExpr{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
+			NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
 			Expr:           found.(ast.Expression),
 		}
 
 	case ast.Declaration:
 		return &ast.DeclOrExpr{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
+			NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
 			Decl:           found.(ast.Declaration),
 		}
 
 	case ast.Statement:
 		return &ast.DeclOrExpr{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
+			NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), wrapperNode),
 			Stmt:           found.(ast.Statement),
 		}
 
@@ -472,7 +470,7 @@ func (c *ASTConverter) convert_decl_or_expression(node *sitter.Node, source []by
 
 func (c *ASTConverter) convert_foreach_stmt(node *sitter.Node, source []byte) ast.Statement {
 	stmt := &ast.ForeachStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 	foreachVar := &ast.ForeachValue{}
 
@@ -510,7 +508,7 @@ func (c *ASTConverter) convert_foreach_stmt(node *sitter.Node, source []byte) as
 
 func (c *ASTConverter) convert_foreach_var(node *sitter.Node, source []byte) *ast.ForeachValue {
 	value := &ast.ForeachValue{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	//debugNode(node, source, fmt.Sprint(node.ChildCount()))
@@ -534,7 +532,7 @@ func (c *ASTConverter) convert_foreach_var(node *sitter.Node, source []byte) *as
 
 func (c *ASTConverter) convert_while_stmt(node *sitter.Node, source []byte) ast.Statement {
 	stmt := &ast.WhileStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -555,7 +553,7 @@ func (c *ASTConverter) convert_while_stmt(node *sitter.Node, source []byte) ast.
 
 func (c *ASTConverter) convert_do_stmt(node *sitter.Node, source []byte) ast.Statement {
 	stmt := &ast.DoStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -573,7 +571,7 @@ func (c *ASTConverter) convert_do_stmt(node *sitter.Node, source []byte) ast.Sta
 
 func (c *ASTConverter) convert_defer_stmt(node *sitter.Node, source []byte) ast.Statement {
 	stmt := &ast.DeferStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	stmt.Statement = c.convert_statement(
@@ -586,7 +584,7 @@ func (c *ASTConverter) convert_defer_stmt(node *sitter.Node, source []byte) ast.
 
 func (c *ASTConverter) convert_assert_stmt(node *sitter.Node, source []byte) ast.Statement {
 	stmt := &ast.AssertStatement{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	nodes := commaSep(

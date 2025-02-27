@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"strings"
 )
@@ -267,43 +268,10 @@ type (
 		Inlined  bool
 	}
 
-	// An ArrayType represents an array or slice type.
-	ArrayType struct {
-		NodeAttributes
-		Len Expression // length of the array
-		Elt Expression // element type
-	}
-
-	EnumType struct {
-		NodeAttributes
-		BaseType         option.Option[*TypeInfo] // Enums can be typed.
-		AssociatedValues []*Field                 // Enums in C3 can have associated values: https://c3-lang.org/language-overview/types/#enum-associated-values
-		Values           []*EnumValue             // Every unique value of the enum
-	}
-
 	EnumValue struct {
 		NodeAttributes
 		Name  *Ident
 		Value Expression
-	}
-
-	StructType struct {
-		NodeAttributes
-		Type        StructTypeID // Variant of struct: struct | union | bitstruct
-		Implements  []*Ident
-		BackingType option.Option[*TypeInfo] // Used for BitStructs
-		Fields      []*StructField
-	}
-
-	FuncType struct {
-		NodeAttributes
-		ReturnType *TypeInfo
-		Params     []*FunctionParameter
-	}
-
-	InterfaceType struct {
-		NodeAttributes
-		Methods []Expression
 	}
 
 	// TrailingGenericsExpr Used only as a temporal container.
@@ -313,12 +281,72 @@ type (
 		Identifier       *Ident
 		GenericArguments []Expression
 	}
+
+	// TypeDescriptions for TypeSpec
+
+	// An ArrayType represents an array or slice type.
+	ArrayType struct {
+		NullNodeAttributes
+		Len Expression // length of the array
+		Elt Expression // element type
+	}
+
+	EnumType struct {
+		NullNodeAttributes
+		BaseType         option.Option[*TypeInfo] // Enums can be typed.
+		AssociatedValues []*Field                 // Enums in C3 can have associated values: https://c3-lang.org/language-overview/types/#enum-associated-values
+		Values           []*EnumValue             // Every unique value of the enum
+	}
+
+	StructType struct {
+		NullNodeAttributes
+		Type        StructTypeID // Variant of struct: struct | union | bitstruct
+		Implements  []*Ident
+		BackingType option.Option[*TypeInfo] // Used for BitStructs
+		Fields      []*StructField
+	}
+
+	DistinctType struct {
+		NullNodeAttributes
+		IsInline bool
+		Value    Expression
+	}
+
+	FuncType struct {
+		NullNodeAttributes
+		ReturnType *TypeInfo
+		Params     []*FunctionParameter
+	}
+
+	InterfaceType struct {
+		NullNodeAttributes
+		Methods []Expression
+	}
+
+	NullNodeAttributes struct{}
 )
 
-func (*ArgFieldSet) exprNode()             {}
-func (*ArgParamPathSet) exprNode()         {}
-func (e *AssignmentExpression) exprNode()  {}
-func (*Ident) exprNode()                   {}
+func (n NullNodeAttributes) StartPosition() lsp.Position           { return lsp.NewPosition(0, 0) }
+func (n NullNodeAttributes) EndPosition() lsp.Position             { return lsp.NewPosition(0, 0) }
+func (n NullNodeAttributes) GetRange() lsp.Range                   { return lsp.NewRange(0, 0, 0, 0) }
+func (n NullNodeAttributes) GetId() NodeId                         { return 0 }
+func (n *NullNodeAttributes) SetDocComment(docComment *DocComment) {}
+func (n *NullNodeAttributes) GetDocComment() option.Option[*DocComment] {
+	return option.None[*DocComment]()
+}
+
+func (*ArgFieldSet) exprNode()            {}
+func (*ArgParamPathSet) exprNode()        {}
+func (e *AssignmentExpression) exprNode() {}
+func (*Ident) exprNode()                  {}
+func (i *Ident) Module() option.Option[string] {
+	if i.ModulePath != nil {
+		return option.Some(i.ModulePath.String())
+	}
+
+	return option.None[string]()
+}
+
 func (*ParenExpr) exprNode()               {}
 func (*SelectorExpr) exprNode()            {}
 func (Path) exprNode()                     {}
@@ -370,13 +398,15 @@ func (t *TypeInfo) Module() option.Option[string] {
 	return option.None[string]()
 }
 
+func (*DistinctType) exprNode()                 {}
 func (*InitializerList) exprNode()              {}
 func (*InlineTypeWithInitialization) exprNode() {}
 func (l *Field) exprNode()                      {}
 func (l *StructField) exprNode()                {}
-func (l *ArrayType) exprNode()                  {}
-func (l *EnumType) exprNode()                   {}
-func (l *StructType) exprNode()                 {}
-func (l *FuncType) exprNode()                   {}
-func (l *InterfaceType) exprNode()              {}
 func (l *TrailingGenericsExpr) exprNode()       {}
+
+func (l *ArrayType) exprNode()     {}
+func (l *EnumType) exprNode()      {}
+func (l *StructType) exprNode()    {}
+func (l *FuncType) exprNode()      {}
+func (l *InterfaceType) exprNode() {}

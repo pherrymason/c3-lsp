@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast/builders"
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
 	"github.com/pherrymason/c3-lsp/pkg/dedent"
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -182,6 +183,14 @@ func (c *ASTConverter) ConvertToAST(cstNode *sitter.Node, sourceCode string, fil
 			}
 			lastMod.Declarations = append(lastMod.Declarations, declaration)
 
+		case "distinct_declaration":
+			declaration := c.convert_distinct_declaration(node, source)
+			if lastDocComment != nil {
+				declaration.SetDocComment(lastDocComment)
+				lastDocComment = nil
+			}
+			lastMod.Declarations = append(lastMod.Declarations, declaration)
+
 		case "func_definition", "func_declaration":
 			declaration := c.convert_function_declaration(node, source)
 			if lastDocComment != nil {
@@ -261,8 +270,8 @@ func convert_module(node *sitter.Node, source []byte) *ast.Module {
 
 func (c *ASTConverter) convert_imports(node *sitter.Node, source []byte) ast.Statement {
 	imports := &ast.Import{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-		Path: ast.NewIdentifierBuilder().
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		Path: ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(node.ChildByFieldName("path").Content(source)).
 			Build(),
@@ -274,12 +283,10 @@ func (c *ASTConverter) convert_imports(node *sitter.Node, source []byte) ast.Sta
 func (c *ASTConverter) convert_global_declaration(node *sitter.Node, source []byte) ast.GenDecl {
 	variable := ast.GenDecl{
 		Token:          ast.VAR,
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
-	valueSpec := &ast.ValueSpec{
-		//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-	}
+	valueSpec := &ast.ValueSpec{}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		//debugNode(n, source)
@@ -327,8 +334,7 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 		AssociatedValues: []*ast.Field{},
 	}
 	spec := &ast.TypeSpec{
-		//NodeAttributes: ast.NewAttrNodeFromSitterNode(nodeId, node),
-		Name: ast.NewIdentifierBuilder().
+		Ident: ast_builders.NewIdentifierBuilder().
 			WithId(nodeId).
 			WithName(node.ChildByFieldName("name").Content(sourceCode)).
 			Build(),
@@ -363,8 +369,8 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 						enumType.AssociatedValues = append(
 							enumType.AssociatedValues,
 							&ast.Field{
-								NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), paramNode),
-								Name: ast.NewIdentifierBuilder().
+								NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), paramNode),
+								Name: ast_builders.NewIdentifierBuilder().
 									WithId(c.getNextID()).
 									WithName(paramNode.Child(1).Content(sourceCode)).
 									WithSitterPos(paramNode.Child(1)).
@@ -384,7 +390,7 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 				}
 
 				compositeLiteral := &ast.CompositeLiteral{
-					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), n),
+					NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), n),
 				}
 				args := enumeratorNode.ChildByFieldName("args")
 				if args != nil && args.ChildCount() > 0 {
@@ -412,10 +418,15 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 				}
 
 				nameNode := enumeratorNode.ChildByFieldName("name")
+				if nameNode == nil {
+					// Invalid node
+					continue
+				}
+
 				enumType.Values = append(enumType.Values,
 					&ast.EnumValue{
-						NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), nameNode),
-						Name: ast.NewIdentifierBuilder().
+						NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), nameNode),
+						Name: ast_builders.NewIdentifierBuilder().
 							WithId(c.getNextID()).
 							WithName(nameNode.Content(sourceCode)).
 							WithSitterRange(nameNode).
@@ -429,23 +440,19 @@ func (c *ASTConverter) convert_enum_declaration(node *sitter.Node, sourceCode []
 	}
 
 	return &ast.GenDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.Token(ast.ENUM),
 		Spec:           spec,
 	}
 }
 
 func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode []byte) ast.Declaration {
-	//specId := c.getNextID()
-	typeId := c.getNextID()
 	structType := &ast.StructType{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(typeId, node),
-		Type:           ast.StructTypeNormal,
-		Fields:         []*ast.StructField{},
+		Type:   ast.StructTypeNormal,
+		Fields: []*ast.StructField{},
 	}
 	spec := &ast.TypeSpec{
-		//NodeAttributes: ast.NewAttrNodeFromSitterNode(specId, node),
-		Name: ast.NewIdentifierBuilder().
+		Ident: ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithSitterPos(node.ChildByFieldName("name")).
 			WithName(node.ChildByFieldName("name").Content(sourceCode)).
@@ -465,7 +472,7 @@ func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode 
 				if n.Type() == "interface" {
 					structType.Implements = append(
 						structType.Implements,
-						ast.NewIdentifierBuilder().
+						ast_builders.NewIdentifierBuilder().
 							WithId(c.getNextID()).
 							WithName(n.Content(sourceCode)).
 							WithSitterPos(n).
@@ -482,7 +489,7 @@ func (c *ASTConverter) convert_struct_declaration(node *sitter.Node, sourceCode 
 	structType.Fields = c.convert_struct_members(bodyNode, sourceCode)
 
 	return &ast.GenDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.Token(ast.STRUCT),
 		Spec:           spec,
 	}
@@ -500,7 +507,7 @@ func (c *ASTConverter) convert_struct_members(bodyNode *sitter.Node, sourceCode 
 
 		fieldType := &ast.TypeInfo{}
 		structField := &ast.StructField{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), memberNode),
+			NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), memberNode),
 		}
 
 		for x := 0; x < int(memberNode.ChildCount()); x++ {
@@ -528,13 +535,12 @@ func (c *ASTConverter) convert_struct_members(bodyNode *sitter.Node, sourceCode 
 
 			case "struct_body":
 				// Is an anonymous struct
-				subStructFieldType := ast.NewNodeAttributesBuilder().
-					WithRange(structField.Range).
-					Build()
+				//subStructFieldType := ast.NewNodeAttributesBuilder().
+				//	WithRange(structField.Range).
+				//	Build()
 				structField.Type = &ast.StructType{
-					NodeAttributes: subStructFieldType,
-					Type:           ast.StructTypeNormal,
-					Fields:         c.convert_struct_members(n, sourceCode),
+					Type:   ast.StructTypeNormal,
+					Fields: c.convert_struct_members(n, sourceCode),
 				}
 
 			case "inline":
@@ -562,8 +568,7 @@ func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCo
 		Fields: []*ast.StructField{},
 	}
 	spec := &ast.TypeSpec{
-		//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-		Name: ast.NewIdentifierBuilder().
+		Ident: ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithSitterPos(node).
 			WithName(node.ChildByFieldName("name").Content(sourceCode)).
@@ -582,7 +587,7 @@ func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCo
 				if n.Type() == "interface" {
 					structType.Implements = append(
 						structType.Implements,
-						ast.NewIdentifierBuilder().
+						ast_builders.NewIdentifierBuilder().
 							WithId(c.getNextID()).
 							WithName(n.Content(sourceCode)).
 							WithSitterPos(n).
@@ -603,7 +608,7 @@ func (c *ASTConverter) convert_bitstruct_declaration(node *sitter.Node, sourceCo
 	}
 
 	return &ast.GenDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.Token(ast.STRUCT),
 		Spec:           spec,
 	}
@@ -615,7 +620,7 @@ func (c *ASTConverter) convert_bitstruct_members(node *sitter.Node, source []byt
 		bDefNode := node.Child(i)
 		bType := bDefNode.Type()
 		member := &ast.StructField{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), bDefNode),
+			NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), bDefNode),
 		}
 
 		if bType == "bitstruct_member_declaration" {
@@ -688,12 +693,12 @@ func (c *ASTConverter) convert_fault_declaration(node *sitter.Node, sourceCode [
 				if constantNode.Type() == "const_ident" {
 					constants = append(constants,
 						&ast.FaultMember{
-							Name: ast.NewIdentifierBuilder().
+							Name: ast_builders.NewIdentifierBuilder().
 								WithId(c.getNextID()).
 								WithName(constantNode.Content(sourceCode)).
 								WithSitterPos(constantNode).
 								Build(),
-							NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), constantNode),
+							NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), constantNode),
 						},
 					)
 				}
@@ -703,14 +708,14 @@ func (c *ASTConverter) convert_fault_declaration(node *sitter.Node, sourceCode [
 
 	nameNode := node.ChildByFieldName("name")
 	fault := &ast.FaultDecl{
-		Name: ast.NewIdentifierBuilder().
+		Name: ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(nameNode.Content(sourceCode)).
 			WithSitterPos(nameNode).
 			Build(),
 		BackingType:    baseType,
 		Members:        constants,
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	return fault
@@ -719,11 +724,9 @@ func (c *ASTConverter) convert_fault_declaration(node *sitter.Node, sourceCode [
 func (c *ASTConverter) convert_const_declaration(node *sitter.Node, source []byte) ast.Declaration {
 	constant := &ast.GenDecl{
 		Token:          ast.Token(ast.CONST),
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
-	valueSpec := &ast.ValueSpec{
-		//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-	}
+	valueSpec := &ast.ValueSpec{}
 
 	var identNode *sitter.Node
 
@@ -742,7 +745,7 @@ func (c *ASTConverter) convert_const_declaration(node *sitter.Node, source []byt
 	}
 
 	valueSpec.Names = append(valueSpec.Names,
-		ast.NewIdentifierBuilder().
+		ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(identNode.Content(source)).
 			WithSitterPos(identNode).
@@ -785,7 +788,7 @@ func (c *ASTConverter) convert_def_declaration(node *sitter.Node, sourceCode []b
 		n := node.Child(i)
 		switch n.Type() {
 		case "type_ident":
-			defSpec.Name = ast.NewIdentifierBuilder().
+			defSpec.Name = ast_builders.NewIdentifierBuilder().
 				WithSitterPos(n).
 				WithName(n.Content(sourceCode)).
 				Build()
@@ -801,7 +804,7 @@ func (c *ASTConverter) convert_def_declaration(node *sitter.Node, sourceCode []b
 			//      optional($.generic_arguments),
 			//    )
 			nameNode := n.Child(0)
-			defSpec.Name = ast.NewIdentifierBuilder().
+			defSpec.Name = ast_builders.NewIdentifierBuilder().
 				WithSitterPos(nameNode).
 				WithName(nameNode.Content(sourceCode)).
 				Build()
@@ -860,9 +863,8 @@ func (c *ASTConverter) convert_def_declaration(node *sitter.Node, sourceCode []b
 				funcTypeDefNode := n.Child(0)
 				name := funcTypeDefNode.Child(2)
 				funcType := &ast.FuncType{
-					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), funcTypeDefNode),
-					ReturnType:     c.convert_type(funcTypeDefNode.ChildByFieldName("return_type"), sourceCode),
-					Params:         c.convert_function_parameter_list(name, option.None[*ast.Ident](), sourceCode),
+					ReturnType: c.convert_type(funcTypeDefNode.ChildByFieldName("return_type"), sourceCode),
+					Params:     c.convert_function_parameter_list(name, option.None[*ast.Ident](), sourceCode),
 				}
 
 				defSpec.Value = funcType
@@ -871,11 +873,36 @@ func (c *ASTConverter) convert_def_declaration(node *sitter.Node, sourceCode []b
 	}
 
 	def := &ast.GenDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Token:          ast.Token(ast.DEF),
 		Spec:           defSpec,
 	}
 	return def
+}
+
+func (c *ASTConverter) convert_distinct_declaration(node *sitter.Node, source []byte) ast.Declaration {
+
+	distinctBuilder := ast_builders.NewDistinctBuilder(c.getNextID()).
+		WithSitterPos(node)
+
+	nameNode := node.ChildByFieldName("name")
+	if nameNode != nil {
+		distinctBuilder.
+			WithName(nameNode.Content(source)).
+			WithIdentifierRange(nameNode)
+	}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		n := node.Child(i)
+		switch n.Type() {
+		case "inline":
+			distinctBuilder.WithInline(true)
+		case "type":
+			distinctBuilder.WithBaseType(c.convert_type(n, source))
+		}
+	}
+
+	return distinctBuilder.Build()
 }
 
 // convert_define_path_ident
@@ -907,14 +934,14 @@ func (c *ASTConverter) convert_define_path_ident(node *sitter.Node, source []byt
 
 		// optional
 		case "type_ident":
-			typeIdent = ast.NewIdentifierBuilder().
+			typeIdent = ast_builders.NewIdentifierBuilder().
 				WithId(rootId).
 				WithSitterPos(n).
 				WithName(n.Content(source)).
 				Build()
 
 		case "ident", "const_ident", "at_ident":
-			ident = ast.NewIdentifierBuilder().
+			ident = ast_builders.NewIdentifierBuilder().
 				WithId(rootId).
 				WithSitterPos(n).
 				WithName(n.Content(source)).
@@ -923,7 +950,7 @@ func (c *ASTConverter) convert_define_path_ident(node *sitter.Node, source []byt
 	}
 
 	if len(pathTokens) > 0 {
-		modulePath := ast.NewIdentifierBuilder().
+		modulePath := ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(strings.Join(pathTokens, "::")).
 			WithRange(modulePathRange).
@@ -968,8 +995,8 @@ func (c *ASTConverter) convert_interface_declaration(node *sitter.Node, sourceCo
 
 	nameNode := node.ChildByFieldName("name")
 	_interface := &ast.InterfaceDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
-		Name: ast.NewIdentifierBuilder().
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		Name: ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(nameNode.Content(sourceCode)).
 			WithSitterPos(nameNode).
@@ -998,7 +1025,7 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 	methodType := headerNode.ChildByFieldName("method_type")
 	if methodType != nil {
 		signature.ParentTypeId = option.Some(
-			ast.NewIdentifierBuilder().
+			ast_builders.NewIdentifierBuilder().
 				WithId(c.getNextID()).
 				WithName(methodType.Content(sourceCode)).
 				WithSitterPos(methodType).
@@ -1007,11 +1034,11 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 	}
 
 	nameNode = headerNode.ChildByFieldName("name")
-	nodeAttributes := ast.NewAttrNodeFromSitterNode(c.getNextID(), node)
+	nodeAttributes := ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node)
 	if nameNode == nil {
 		nodeAttributes.Error = true
 	} else {
-		signature.Name = ast.NewIdentifierBuilder().
+		signature.Name = ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(nameNode.Content(sourceCode)).
 			WithSitterPos(nameNode).
@@ -1026,8 +1053,8 @@ func (c *ASTConverter) convert_macro_declaration(node *sitter.Node, sourceCode [
 			// '@body' in macro name(args; @body) { ... }
 			if argNode.Type() == "trailing_block_param" {
 				macroParam := &ast.TrailingBlockParam{
-					NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), argNode),
-					Name: ast.NewIdentifierBuilder().
+					NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), argNode),
+					Name: ast_builders.NewIdentifierBuilder().
 						WithId(c.getNextID()).
 						WithName(argNode.Child(0).Content(sourceCode)).
 						WithSitterPos(argNode.Child(0)).
@@ -1112,7 +1139,7 @@ func is_literal(node *sitter.Node) bool {
 }
 
 func (c *ASTConverter) convert_ident(node *sitter.Node, source []byte) ast.Expression {
-	return ast.NewIdentifierBuilder().
+	return ast_builders.NewIdentifierBuilder().
 		WithId(c.getNextID()).
 		WithName(node.Content(source)).
 		IsCompileTime(node.Type() == "ct_ident").
@@ -1144,7 +1171,7 @@ func (c *ASTConverter) convert_module_type_ident(node *sitter.Node, sourceCode [
 			modulePathRange.End = lsp.Position{Line: uint(n.EndPoint().Row), Column: uint(n.EndPoint().Column)}
 
 		case "type_ident", "ident", "const_ident":
-			ident = ast.NewIdentifierBuilder().
+			ident = ast_builders.NewIdentifierBuilder().
 				WithId(rootId).
 				WithSitterPos(node).
 				WithName(n.Content(sourceCode)).
@@ -1153,7 +1180,7 @@ func (c *ASTConverter) convert_module_type_ident(node *sitter.Node, sourceCode [
 	}
 
 	if len(pathTokens) > 0 {
-		ident.ModulePath = ast.NewIdentifierBuilder().
+		ident.ModulePath = ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(strings.Join(pathTokens, "::")).
 			WithRange(modulePathRange).
@@ -1169,7 +1196,7 @@ func (c *ASTConverter) convert_var_decl(node *sitter.Node, source []byte) ast.De
 	//}
 	decl := &ast.GenDecl{
 		Token:          ast.VAR,
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	return decl
@@ -1178,7 +1205,7 @@ func (c *ASTConverter) convert_var_decl(node *sitter.Node, source []byte) ast.De
 func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeInfo {
 	typeInfo := &ast.TypeInfo{
 		Optional:       false,
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Pointer:        uint(0),
 	}
 
@@ -1201,7 +1228,7 @@ func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeI
 
 				switch bn.Type() {
 				case "base_type_name":
-					typeInfo.Identifier = ast.NewIdentifierBuilder().
+					typeInfo.Identifier = ast_builders.NewIdentifierBuilder().
 						WithId(c.getNextID()).
 						WithName(bn.Content(source)).
 						WithSitterPos(n).
@@ -1210,7 +1237,7 @@ func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeI
 
 					typeInfo.BuiltIn = true
 				case "type_ident":
-					typeInfo.Identifier = ast.NewIdentifierBuilder().
+					typeInfo.Identifier = ast_builders.NewIdentifierBuilder().
 						WithId(c.getNextID()).
 						WithName(bn.Content(source)).
 						WithSitterPos(n).
@@ -1256,7 +1283,7 @@ func (c *ASTConverter) convert_function_declaration(node *sitter.Node, source []
 		if methodTypeNode.Child(0).Child(0).Type() == "module_type_ident" {
 			ident = c.convert_module_type_ident(methodTypeNode.Child(0).Child(0), source)
 		} else {
-			ident = ast.NewIdentifierBuilder().
+			ident = ast_builders.NewIdentifierBuilder().
 				WithId(c.getNextID()).
 				WithName(methodTypeNode.Content(source)).
 				WithSitterPos(methodTypeNode).
@@ -1282,7 +1309,7 @@ func (c *ASTConverter) convert_function_declaration(node *sitter.Node, source []
 	}
 
 	funcDecl := &ast.FunctionDecl{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		ParentTypeId:   typeIdentifier,
 		Signature:      signature,
 		Body:           body,
@@ -1308,7 +1335,7 @@ func (c *ASTConverter) convert_function_signature(node *sitter.Node, sourceCode 
 
 	if funcHeader.ChildByFieldName("method_type") != nil {
 		typeIdentifier = option.Some(
-			ast.NewIdentifierBuilder().
+			ast_builders.NewIdentifierBuilder().
 				WithId(c.getNextID()).
 				WithName(funcHeader.ChildByFieldName("method_type").Content(sourceCode)).
 				WithSitterPos(funcHeader.ChildByFieldName("method_type")).
@@ -1317,14 +1344,14 @@ func (c *ASTConverter) convert_function_signature(node *sitter.Node, sourceCode 
 	}
 
 	signatureDecl := &ast.FunctionSignature{
-		Name: ast.NewIdentifierBuilder().
+		Name: ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(nameNode.Content(sourceCode)).
 			WithSitterPos(nameNode).
 			Build(),
 		ReturnType:     c.convert_type(funcHeader.ChildByFieldName("return_type"), sourceCode),
 		Parameters:     c.convert_function_parameter_list(node.Child(2), typeIdentifier, sourceCode),
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 
 	return signatureDecl
@@ -1391,7 +1418,7 @@ func (c *ASTConverter) convert_function_parameter(argNode *sitter.Node, methodId
 		case "type":
 			argType = c.convert_type(n, sourceCode)
 		case "ident":
-			identifier = ast.NewIdentifierBuilder().
+			identifier = ast_builders.NewIdentifierBuilder().
 				WithId(c.getNextID()).
 				WithName(n.Content(sourceCode)).
 				WithSitterPos(n).
@@ -1405,15 +1432,13 @@ func (c *ASTConverter) convert_function_parameter(argNode *sitter.Node, methodId
 				}
 
 				argType = &ast.TypeInfo{
-					Identifier: //&ast.PathIdent{
-					//NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), n),
-					ast.NewIdentifierBuilder().
+					Identifier: ast_builders.NewIdentifierBuilder().
 						WithId(c.getNextID()).
 						WithName(methodIdentifier.Get().Name).
 						WithSitterPos(n).
 						Build(),
 					Pointer: pointer,
-					NodeAttributes: ast.NewNodeAttributesBuilder().
+					NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 						WithId(c.getNextID()).
 						WithSitterPos(argNode).
 						Build(),
@@ -1425,7 +1450,7 @@ func (c *ASTConverter) convert_function_parameter(argNode *sitter.Node, methodId
 	variable := &ast.FunctionParameter{
 		Name: identifier,
 		Type: argType,
-		NodeAttributes: ast.NewNodeAttributesBuilder().
+		NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 			WithId(c.getNextID()).
 			WithSitterPos(argNode).
 			Build(),
@@ -1452,7 +1477,7 @@ func (c *ASTConverter) convert_lambda_declaration(node *sitter.Node, source []by
 	}
 
 	return &ast.LambdaDeclarationExpr{
-		NodeAttributes: ast.NewNodeAttributesBuilder().WithId(c.getNextID()).WithSitterPos(node).Build(),
+		NodeAttributes: ast_builders.NewNodeAttributesBuilder().WithId(c.getNextID()).WithSitterPos(node).Build(),
 		ReturnType:     rType,
 		Parameters:     parameters,
 	}
@@ -1478,7 +1503,7 @@ func (c *ASTConverter) convert_lambda_expr(node *sitter.Node, source []byte) ast
 	lambda.NodeAttributes.Range.End.Line = uint(bodyNode.EndPoint().Row)
 	expression := c.convert_expression(bodyNode, source).(ast.Expression)
 	lambda.Body = &ast.ReturnStatement{
-		NodeAttributes: ast.NewNodeAttributesBuilder().WithId(c.getNextID()).WithSitterPos(bodyNode).Build(),
+		NodeAttributes: ast_builders.NewNodeAttributesBuilder().WithId(c.getNextID()).WithSitterPos(bodyNode).Build(),
 		Return:         option.Some(expression),
 	}
 
@@ -1546,7 +1571,7 @@ func (c *ASTConverter) convert_expr_block(node *sitter.Node, source []byte) ast.
 	}
 
 	return &ast.BlockExpr{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		List:           statements,
 	}
 }
@@ -1555,7 +1580,7 @@ func (c *ASTConverter) convert_expr_stmt(node *sitter.Node, source []byte) ast.S
 	expr := c.convert_expression(node, source)
 
 	return &ast.ExpressionStmt{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Expr:           expr,
 	}
 }
@@ -1655,7 +1680,7 @@ func (c *ASTConverter) convert_assignment_expr(node *sitter.Node, source []byte)
 	}
 
 	return &ast.AssignmentExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Left:           left,
 		Right:          right,
 		Operator:       operator,
@@ -1668,7 +1693,7 @@ func (c *ASTConverter) convert_binary_expr(node *sitter.Node, source []byte) ast
 	right := c.convert_expression(node.ChildByFieldName("right"), source)
 
 	return &ast.BinaryExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Left:           left,
 		Operator:       operator,
 		Right:          right,
@@ -1695,7 +1720,7 @@ func (c *ASTConverter) convert_ternary_expr(node *sitter.Node, source []byte) as
 	condition, _ := c.anyOf("ternary_expr", expected, node.ChildByFieldName("condition"), source, c.debug)
 
 	return &ast.TernaryExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Condition:      condition.(ast.Expression),
 		Consequence:    c.convert_expression(node.ChildByFieldName("consequence"), source),
 		Alternative:    c.convert_expression(node.ChildByFieldName("alternative"), source),
@@ -1719,7 +1744,7 @@ func (c *ASTConverter) convert_type_access_expr(node *sitter.Node, source []byte
 	}
 
 	return &ast.SelectorExpr{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(idNode, node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(idNode, node),
 		X:              x,
 		Sel:            y,
 	}
@@ -1730,7 +1755,7 @@ func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.
 	var argumentNode ast.Expression
 
 	if argument.Type() == "ident" {
-		argumentNode = ast.NewIdentifierBuilder().
+		argumentNode = ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(argument.Content(source)).
 			WithSitterPos(argument).
@@ -1743,7 +1768,7 @@ func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.
 	field := node.ChildByFieldName("field")
 
 	selExpr := &ast.SelectorExpr{
-		NodeAttributes: ast.NewNodeAttributesBuilder().
+		NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 			WithId(c.getNextID()).
 			WithRangePositions(
 				start.Line,
@@ -1753,7 +1778,7 @@ func (c *ASTConverter) convert_field_expr(node *sitter.Node, source []byte) ast.
 			).
 			Build(),
 		X: argumentNode,
-		Sel: ast.NewIdentifierBuilder().
+		Sel: ast_builders.NewIdentifierBuilder().
 			WithId(c.getNextID()).
 			WithName(field.Content(source)).
 			WithSitterPos(field).
@@ -1767,7 +1792,7 @@ func (c *ASTConverter) convert_elvis_orelse_expr(node *sitter.Node, source []byt
 	conditionNode := node.ChildByFieldName("condition")
 
 	return &ast.TernaryExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Condition:      c.convert_expression(conditionNode, source),
 		Consequence:    c.convert_ident(conditionNode, source),
 		Alternative:    c.convert_expression(node.ChildByFieldName("alternative"), source),
@@ -1783,7 +1808,7 @@ func (c *ASTConverter) convert_optional_expr(node *sitter.Node, source []byte) a
 
 	argumentNode := node.ChildByFieldName("argument")
 	return &ast.OptionalExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Operator:       operator,
 		Argument:       c.convert_expression(argumentNode, source),
 	}
@@ -1791,7 +1816,7 @@ func (c *ASTConverter) convert_optional_expr(node *sitter.Node, source []byte) a
 
 func (c *ASTConverter) convert_unary_expr(node *sitter.Node, source []byte) ast.Expression {
 	return &ast.UnaryExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Operator:       node.ChildByFieldName("operator").Content(source),
 		Argument:       c.convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -1799,7 +1824,7 @@ func (c *ASTConverter) convert_unary_expr(node *sitter.Node, source []byte) ast.
 
 func (c *ASTConverter) convert_update_expr(node *sitter.Node, source []byte) ast.Expression {
 	return &ast.UpdateExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Operator:       node.ChildByFieldName("operator").Content(source),
 		Argument:       c.convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -1818,7 +1843,7 @@ func (c *ASTConverter) convert_subscript_expr(node *sitter.Node, source []byte) 
 	}
 
 	return &ast.SubscriptExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Index:          index,
 		Argument:       c.convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -1826,7 +1851,7 @@ func (c *ASTConverter) convert_subscript_expr(node *sitter.Node, source []byte) 
 
 func (c *ASTConverter) convert_cast_expr(node *sitter.Node, source []byte) ast.Expression {
 	return &ast.CastExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Type:           c.convert_type(node.ChildByFieldName("type"), source),
 		Argument:       c.convert_expression(node.ChildByFieldName("value"), source),
 	}
@@ -1834,7 +1859,7 @@ func (c *ASTConverter) convert_cast_expr(node *sitter.Node, source []byte) ast.E
 
 func (c *ASTConverter) convert_rethrow_expr(node *sitter.Node, source []byte) ast.Expression {
 	return &ast.RethrowExpression{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Operator:       node.ChildByFieldName("operator").Content(source),
 		Argument:       c.convert_expression(node.ChildByFieldName("argument"), source),
 	}
@@ -1878,7 +1903,7 @@ func (c *ASTConverter) convert_call_expr(node *sitter.Node, source []byte) ast.E
 	}
 
 	fnCall := &ast.CallExpr{
-		NodeAttributes:   ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes:   ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Identifier:       identifier,
 		GenericArguments: genericArguments,
 		Lparen:           uint(Lparen),
@@ -1902,7 +1927,7 @@ func (c *ASTConverter) convert_trailing_generic_expr(node *sitter.Node, source [
 	operator := c.convert_generic_arguments(node.ChildByFieldName("operator"), source)
 
 	return &ast.TrailingGenericsExpr{
-		NodeAttributes:   ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes:   ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Identifier:       expr.(*ast.Ident),
 		GenericArguments: operator,
 	}
@@ -1932,12 +1957,12 @@ func (c *ASTConverter) convert_type_with_initializer_list(node *sitter.Node, sou
 	initList, ok := baseExpr.(*ast.InitializerList)
 	if !ok {
 		initList = &ast.InitializerList{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+			NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		}
 	}
 
 	expression := &ast.InlineTypeWithInitialization{
-		NodeAttributes: ast.NewNodeAttributesBuilder().
+		NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 			WithId(c.getNextID()).
 			WithRangePositions(
 				uint(node.StartPoint().Row),
@@ -1954,7 +1979,7 @@ func (c *ASTConverter) convert_type_with_initializer_list(node *sitter.Node, sou
 
 func (c *ASTConverter) convert_literal(node *sitter.Node, sourceCode []byte) ast.Expression {
 	basicLiteral := ast.BasicLit{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Value:          node.Content(sourceCode),
 	}
 
@@ -1981,7 +2006,7 @@ func (c *ASTConverter) convert_literal(node *sitter.Node, sourceCode []byte) ast
 
 func (c *ASTConverter) convert_as_literal(node *sitter.Node, source []byte) ast.Expression {
 	return &ast.BasicLit{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Kind:           ast.STRING,
 		Value:          node.Content(source),
 	}
@@ -1989,7 +2014,7 @@ func (c *ASTConverter) convert_as_literal(node *sitter.Node, source []byte) ast.
 
 func (c *ASTConverter) convert_initializer_list(node *sitter.Node, source []byte) ast.Expression {
 	initList := &ast.InitializerList{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -2095,7 +2120,7 @@ func (c *ASTConverter) convert_arg(node *sitter.Node, source []byte) ast.Express
 		return ast.Expression(c.convert_type(node.Child(0), source))
 	case "$vasplat":
 		return &ast.BasicLit{
-			NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+			NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 			Kind:           ast.STRING,
 			Value:          node.Content(source),
 		}
@@ -2130,7 +2155,7 @@ func (c *ASTConverter) convert_param_path(param_path *sitter.Node, source []byte
 
 	path = ast.Path{
 		// TODO: Does Path need a NodeAttributes field??
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), param_path),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), param_path),
 		PathType:       pathType,
 	}
 	if pathType == ast.PathTypeField {
@@ -2161,19 +2186,19 @@ func (c *ASTConverter) convert_flat_path(node *sitter.Node, source []byte) ast.E
 		switch path.PathType {
 		case ast.PathTypeIndexed:
 			return &ast.IndexAccessExpr{
-				NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+				NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 				Array:          baseExpr,
 				Index:          path.Path,
 			}
 		case ast.PathTypeField:
 			return &ast.FieldAccessExpr{
-				NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+				NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 				Object:         baseExpr,
 				Field:          &path,
 			}
 		case ast.PathTypeRange:
 			return &ast.RangeAccessExpr{
-				NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+				NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 				Array:          baseExpr,
 				RangeStart:     utils.StringToUint(path.PathStart),
 				RangeEnd:       utils.StringToUint(path.PathEnd),
@@ -2198,7 +2223,7 @@ func (c *ASTConverter) convert_range_expr(node *sitter.Node, source []byte) ast.
 	}
 
 	return &ast.RangeIndexExpr{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Start:          left,
 		End:            right,
 	}
@@ -2234,7 +2259,7 @@ func (c *ASTConverter) convert_paren_expr(node *sitter.Node, source []byte) ast.
 
 	next := child.NextSibling()
 	return &ast.ParenExpr{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		X:              c.convert_expression(next, source),
 	}
 }
@@ -2334,7 +2359,7 @@ func (c *ASTConverter) convert_error(node *sitter.Node, source []byte) ast.Node 
 
 			slices.Reverse(accumulator)
 			detectedIdent = &ast.UnknownNode{
-				NodeAttributes: ast.NewNodeAttributesBuilder().
+				NodeAttributes: ast_builders.NewNodeAttributesBuilder().
 					WithId(c.getNextID()).
 					WithRange(unknownRange).
 					Build(),
@@ -2344,7 +2369,7 @@ func (c *ASTConverter) convert_error(node *sitter.Node, source []byte) ast.Node 
 	}
 
 	return &ast.ErrorNode{
-		NodeAttributes: ast.NewAttrNodeFromSitterNode(c.getNextID(), node),
+		NodeAttributes: ast_builders.NewAttrNodeFromSitterNode(c.getNextID(), node),
 		Content:        node.Content(source),
 		DetectedIdent:  detectedIdent,
 	}

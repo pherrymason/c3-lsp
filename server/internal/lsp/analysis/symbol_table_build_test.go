@@ -229,6 +229,48 @@ func TestSymbolBuild_registers_def(t *testing.T) {
 	})
 }
 
+func TestSymbolBuild_registers_distincts(t *testing.T) {
+	t.Run("registers distincts", func(t *testing.T) {
+		source := `module foo;
+		distinct Kilo = int;
+		distinct MyKilo = inline Kilo*;`
+
+		astConverter := factory.NewASTConverter()
+		tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
+		result := BuildSymbolTable(tree, "")
+
+		modulesGroup := result.scopeTree["file.c3"]
+		scope := modulesGroup.GetModuleScope("foo")
+
+		assert.Equal(t, "Kilo", scope.Symbols[0].Identifier)
+		assert.Equal(t, ast.Token(ast.DISTINCT), scope.Symbols[0].Kind)
+		assert.Equal(t, lsp.NewRange(1, 2, 1, 22), scope.Symbols[0].Range)
+	})
+
+	t.Run("registers method to distinct", func(t *testing.T) {
+		source := `module foo;
+		distinct SuperInt = inline int;
+	
+		fn SuperInt SuperInt.addOne(self) {
+			return self + 1;
+		}`
+
+		astConverter := factory.NewASTConverter()
+		tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
+		result := BuildSymbolTable(tree, "")
+
+		modulesGroup := result.scopeTree["file.c3"]
+		scope := modulesGroup.GetModuleScope("foo")
+
+		assert.Equal(t, "SuperInt", scope.Symbols[0].Identifier)
+		assert.Equal(t, ast.Token(ast.DISTINCT), scope.Symbols[0].Kind)
+		assert.Equal(t, Relation{Child: scope.Symbols[1], Tag: Method}, scope.Symbols[0].Children[0], "method 1 is not registered as child of distinct symbol")
+
+		assert.Equal(t, "addOne", scope.Symbols[1].Identifier)
+		assert.Equal(t, ast.Token(ast.FUNCTION), scope.Symbols[1].Kind)
+	})
+}
+
 func TestSymbolBuild_registers_enums(t *testing.T) {
 	t.Run("registers enum", func(t *testing.T) {
 		source := `module foo;

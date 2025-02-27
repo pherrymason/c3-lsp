@@ -57,32 +57,25 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 		}
 	}
 
-	//scopeCtxt := getASTNodeContext(path)
 	scopeCtxt := getContextFromPosition(path, pos, content, ContextHintForGoTo)
 
 	if scopeCtxt.isSelExpr {
 		step := path[scopeCtxt.lowestSelExprIndex+1]
-		//log.Print("Prop:", step.propertyName)
 		// If cursor is at last part of a SelectorExpr, we need to solve the type of SelectorExpr.X
 		if step.propertyName == "Sel" {
-			//if selectorsChained > 1 {
-			// Even if we are resolving final part of a SelectorExpr, we are in the middle of a bigger chain of SelectorExpr. This means
-			//}
-
 			// We need to solve first SelectorExpr.X!
 			symbol, _ := solveSelAtSelectorExpr(path[scopeCtxt.lowestSelExprIndex].node.(*ast.SelectorExpr), pos, fileName, scopeCtxt, symbolTable, 0)
 
 			if symbol != nil {
 				return option.Some(symbol)
+			} else {
+				return option.None[*Symbol]()
 			}
 		} else {
 			// As cursor is at X, we can just search normally.
 		}
 	}
-	/*
-		if parentNodeIsSelectorExpr {
-			parentSelectorExpr = nil
-		}*/
+
 	// -------------------------------------------------
 	// Normal search
 	from := NewLocation(fileName, pos, scopeCtxt.moduleName)

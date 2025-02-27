@@ -17,7 +17,7 @@ type (
 
 	// TODO Not yet used
 	ImportSpec struct {
-		NodeAttributes
+		//NodeAttributes
 		Path string
 	}
 
@@ -32,11 +32,13 @@ type (
 	// or parametrized types (generics)
 	TypeSpec struct {
 		//NodeAttributes
-		Name            *Ident       // type name
+		Ident           *Ident       // type name
 		TypeParams      []Expression // Generic type parameters; or nil
 		Assign          token.Pos    // position of '=', if any
-		TypeDescription Expression   // ast node describing the type with detail: EnumType, bStructType, StructType
+		TypeDescription Expression   // ast node describing the type with detail: EnumType, bStructType, StructType, DefType (TODO), DistinctType (TODO)
 	}
+
+	// TODO Use TypeSpec instead! It covers everything for defs
 
 	DefSpec struct {
 		Name              *Ident
@@ -66,6 +68,7 @@ type (
 		Spec  Spec
 	}
 
+	// TODO: move to GenDecl
 	FaultDecl struct {
 		NodeAttributes
 		Name        *Ident

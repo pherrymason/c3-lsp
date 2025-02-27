@@ -3,7 +3,6 @@ package analysis
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
-	"github.com/pherrymason/c3-lsp/pkg/option"
 )
 
 // solveSelAtSelectorExpr resolves Sel Ident symbol.
@@ -60,15 +59,10 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 			// We need to go to parent FunctionDecl and see if `self` is a defined argument
 			if context.selfType != nil {
 				parentSymbolName = context.selfType.Name
-				explicitModule := option.None[string]()
-				if context.selfType.ModulePath != nil {
-					explicitModule = option.Some(context.selfType.ModulePath.Name)
-				}
-
 				from := NewLocation(fileName, context.selfType.StartPosition(), context.moduleName)
 				result := symbolTable.FindSymbolByPosition(
 					context.selfType.Name,
-					explicitModule,
+					context.selfType.Module(),
 					from,
 				)
 				parentSymbol = result.GetOrElse(nil)
@@ -76,10 +70,8 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 				// !!!!! we've found a self, but function is not flagged as method! Confusion triggered!!!
 			}
 		} else {
-			// TODO in some completion cases, we are more interested in the symbol of base.Identifier itself than in its type.
 			location := Location{FileName: fileName, Position: pos, Module: context.moduleName}
 			parentSymbol = symbolTable.findSymbolInLocation(base.Name, location)
-			//parentSymbol = symbolTable.SearchSymbolAndSolveType(base.Identifier, location)
 		}
 
 		if parentSymbol == nil {
@@ -88,15 +80,10 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 
 	case *ast.TypeInfo:
 		isType = true
-		explicitModule := option.None[string]()
-		if base.Identifier.ModulePath != nil {
-			explicitModule = option.Some(base.Identifier.ModulePath.Name)
-		}
-
 		from := NewLocation(fileName, base.Identifier.StartPosition(), context.moduleName)
 		result := symbolTable.FindSymbolByPosition(
 			base.Identifier.Name,
-			explicitModule,
+			base.Module(),
 			from,
 		)
 		parentSymbol = result.GetOrElse(nil)
@@ -120,12 +107,8 @@ func solveXAtSelectorExpr(selectorExpr *ast.SelectorExpr, pos lsp.Position, file
 			}
 		case *ast.Ident:
 			isType = true
-			explicitModule := option.None[string]()
-			if i.ModulePath != nil {
-				explicitModule = option.Some(i.ModulePath.Name)
-			}
 			from := NewLocation(fileName, pos, context.moduleName)
-			sym := symbolTable.FindSymbolByPosition(i.Name, explicitModule, from)
+			sym := symbolTable.FindSymbolByPosition(i.Name, i.Module(), from)
 			if sym.IsNone() {
 				return nil, nil, false
 			}
@@ -166,10 +149,25 @@ func resolveChildSymbol(parentSymbol *Symbol,
 
 	case ast.ENUM_VALUE:
 		// enum value can access methods, and associated values
+		enumSym := parentSymbol.TypeSymbol
+		for _, childRel := range enumSym.Children {
+			if childRel.Tag == Method && childRel.Child.Identifier == nextIdent {
+				return childRel.Child
+			}
+		}
+
 		enumGenDeclNode := parentSymbol.TypeSymbol.NodeDecl.(*ast.GenDecl)
 		symbol := resolveIdentInEnumAssocValues(enumGenDeclNode, nextIdent, moduleName, fileName)
 		if symbol != nil {
 			return symbol
+		}
+
+	case ast.FAULT_CONSTANT:
+		faultSym := parentSymbol.TypeSymbol
+		for _, childRel := range faultSym.Children {
+			if childRel.Tag == Method && childRel.Child.Identifier == nextIdent {
+				return childRel.Child
+			}
 		}
 
 	case ast.STRUCT:
@@ -210,9 +208,8 @@ func resolveChildSymbol(parentSymbol *Symbol,
 		fn := parentSymbol.NodeDecl.(*ast.FunctionDecl)
 		returnType := fn.Signature.ReturnType
 		from := NewLocation(fileName, returnType.Range.Start, parentSymbol.Module)
-		explicitModule := option.None[string]()
+		explicitModule := returnType.Module()
 		if returnType.Identifier.ModulePath != nil {
-			explicitModule = option.Some(returnType.Identifier.ModulePath.Name)
 			moduleName = NewModuleName(returnType.Identifier.ModulePath.Name)
 		}
 		returnTypeSymbol := symbolTable.FindSymbolByPosition(
@@ -231,6 +228,35 @@ func resolveChildSymbol(parentSymbol *Symbol,
 				solveType,
 				true,
 			)
+		}
+
+	case ast.DISTINCT:
+		for _, childRel := range parentSymbol.Children {
+			/*if childRel.Tag == Field && childRel.Child.Identifier == nextIdent {
+				return childRel.Child
+			} else*/if childRel.Tag == Method && childRel.Child.Identifier == nextIdent {
+				return childRel.Child
+			}
+		}
+
+		// Keep searching in the type of the distinct
+		decl := parentSymbol.NodeDecl.(*ast.GenDecl)
+		distinctType := decl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.DistinctType)
+		if distinctType.IsInline == false {
+			return nil
+		}
+		expr := distinctType.Value
+		switch e := expr.(type) {
+		case *ast.TypeInfo:
+			if e.BuiltIn {
+				return nil
+			}
+			explicitModule := e.Module()
+			from := NewLocation(fileName, e.Range.Start, parentSymbol.Module)
+			sym := symbolTable.FindSymbolByPosition(e.Identifier.Name, explicitModule, from)
+			if sym.IsSome() {
+				return resolveChildSymbol(sym.Get(), nextIdent, moduleName, fileName, symbolTable, solveType, true)
+			}
 		}
 	}
 
@@ -288,13 +314,9 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 					}
 				}
 				from := NewLocation(fileName, member.Range.Start, moduleName)
-				explicitModule := option.None[string]()
-				if t.Identifier.ModulePath != nil {
-					explicitModule = option.Some(t.Identifier.ModulePath.Name)
-				}
 				value := symbolTable.FindSymbolByPosition(
 					t.Identifier.Name,
-					explicitModule,
+					t.Module(),
 					from,
 				)
 				if value.IsSome() {
@@ -337,9 +359,8 @@ func resolveChildSymbolInStructFields(searchIdent string, structType *ast.Struct
 	// Not found, look inside each inlinedCandidates, maybe is a subproperty of them
 	for _, inlinedTypeIdent := range inlinedCandidates {
 		from := NewLocation(fileName, inlinedTypeIdent.StartPosition(), moduleName)
-		explicitModule := option.None[string]()
+		explicitModule := inlinedTypeIdent.Module()
 		if inlinedTypeIdent.ModulePath != nil {
-			explicitModule = option.Some(inlinedTypeIdent.ModulePath.Name)
 			moduleName = NewModuleName(inlinedTypeIdent.ModulePath.Name)
 		}
 
