@@ -237,15 +237,14 @@ func (p *Ident) String() string {
 type (
 	TypeInfo struct {
 		NodeAttributes
-		ResolveStatus int
-		Identifier    *Ident
-		Pointer       uint
-		Optional      bool
-		BuiltIn       bool
-		Static        bool
-		Reference     bool
-		TLocal        bool
-		Generics      []*TypeInfo
+		Identifier         *Ident
+		Pointer            uint
+		Optional           bool
+		IsBuiltIn          bool
+		Static             bool
+		Reference          bool
+		TLocal             bool
+		GenericsParameters []*TypeInfo
 	}
 
 	BaseType struct {
@@ -378,10 +377,10 @@ func (t *TypeInfo) String() string {
 	if t.Optional {
 		id += "!"
 	}
-	if len(t.Generics) > 0 {
+	if len(t.GenericsParameters) > 0 {
 		id += "(<"
 		list := []string{}
-		for _, gn := range t.Generics {
+		for _, gn := range t.GenericsParameters {
 			list = append(list, gn.String())
 		}
 		id += strings.Join(list, ", ") + ">)"

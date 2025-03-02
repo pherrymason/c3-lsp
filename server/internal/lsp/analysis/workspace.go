@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -11,14 +12,14 @@ import (
 type Workspace struct {
 	documents   *document.Storage
 	astParser   *factory.ASTConverter
-	symbolTable *SymbolTable
+	symbolTable *symbols.SymbolTable
 }
 
 func NewWorkspace() *Workspace {
 	return &Workspace{
 		documents:   document.NewStore(),
 		astParser:   factory.NewASTConverter(),
-		symbolTable: NewSymbolTable(),
+		symbolTable: symbols.NewSymbolTable(),
 	}
 }
 
@@ -30,7 +31,7 @@ func (w *Workspace) OpenDocument(uri protocol.DocumentUri, text string, version 
 
 	ast := w.astParser.ConvertToAST(cst.RootNode(), text, uri)
 	doc.Ast = ast
-	UpdateSymbolTable(w.symbolTable, doc.Ast, "")
+	symbols.UpdateSymbolTable(w.symbolTable, doc.Ast, "")
 
 	return doc
 }
@@ -60,5 +61,5 @@ func (w *Workspace) UpdateDocument(uri protocol.DocumentUri, protocolChanges []i
 	ast := w.astParser.ConvertToAST(doc.Cst.RootNode(), doc.Text, uri)
 	doc.Ast = ast
 
-	UpdateSymbolTable(w.symbolTable, doc.Ast, "")
+	symbols.UpdateSymbolTable(w.symbolTable, doc.Ast, "")
 }

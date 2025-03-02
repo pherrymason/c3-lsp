@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
@@ -11,7 +12,7 @@ import (
 	"strings"
 )
 
-func BuildSignatureHelp(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) *protocol.SignatureHelp {
+func BuildSignatureHelp(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *symbols.SymbolTable) *protocol.SignatureHelp {
 	// Search callExpr under cursor
 	visitor := &SignatureHelpVisitor{pos: pos}
 	walk.Walk(visitor, document.Ast, "")
@@ -28,10 +29,10 @@ func BuildSignatureHelp(document *document.Document, pos lsp.Position, storage *
 	symbolResult := symbolTable.FindSymbolByPosition(
 		ident.Name,
 		explicitIdentModule,
-		NewLocation(
+		symbols.NewLocation(
 			document.Uri,
 			visitor.callExpr.StartPosition(),
-			NewModuleName(visitor.module),
+			symbols.NewModuleName(visitor.module),
 		),
 	)
 

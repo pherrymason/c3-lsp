@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"strings"
@@ -23,7 +24,7 @@ type PositionContext struct {
 type astContext struct {
 	selfType   *ast.Ident
 	pathStep   []PathStep
-	moduleName ModuleName
+	moduleName symbols.ModuleName
 
 	identUnderCursor     string // single ident under cursor
 	fullIdentUnderCursor string // full ident under cursor. Difference with `identUnderCursor`is that this one includes the whole chain of selectors
@@ -40,7 +41,7 @@ func getASTNodeContext(path []PathStep) astContext {
 		pathStep:           path,
 		isSelExpr:          false,
 		lowestSelExprIndex: 0,
-		moduleName:         NewModuleName(""),
+		moduleName:         symbols.NewModuleName(""),
 	}
 
 	totalSteps := len(path)
@@ -50,7 +51,7 @@ func getASTNodeContext(path []PathStep) astContext {
 	for i := totalSteps - 1; i >= 0; i-- {
 		switch stepNode := path[i].node.(type) {
 		case *ast.Module:
-			ctxt.moduleName = NewModuleName(stepNode.Name)
+			ctxt.moduleName = symbols.NewModuleName(stepNode.Name)
 
 		case *ast.Ident:
 			ctxt.identUnderCursor = stepNode.Name

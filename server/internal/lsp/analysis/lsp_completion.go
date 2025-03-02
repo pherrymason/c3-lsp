@@ -3,6 +3,7 @@ package analysis
 import (
 	"cmp"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
@@ -14,7 +15,7 @@ import (
 	"strings"
 )
 
-func BuildCompletionList(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) []protocol.CompletionItem {
+func BuildCompletionList(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *symbols.SymbolTable) []protocol.CompletionItem {
 
 	_, path := FindNode(document.Ast, pos)
 	posCtxt := getContextFromPosition(path, pos, document.Text, ContextHintForCompletion)
@@ -25,10 +26,10 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 	editRange := getEditRange(document, pos)
 	if posCtxt.isSelExpr == false {
 		// Search between globally available symbols.
-		moduleScope := symbolTable.scopeTree[fileName].GetModuleScope(posCtxt.moduleName.String())
+		moduleScope := symbolTable.GetModuleScope(fileName, posCtxt.moduleName.String())
 
 		// get current scope
-		scope := FindClosestScope(moduleScope, pos)
+		scope := symbols.FindClosestScope(moduleScope, pos)
 		availableSymbols := symbolTable.GetSymbolsInScope(scope)
 
 		for _, symbol := range availableSymbols {
@@ -58,12 +59,12 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		}
 
 		//canReadMembers := canReadMembersOf(parentSymbol)
-		symbols := []*Symbol{}
+		symCollection := []*symbols.Symbol{}
 
 		parentSymbolKind := parentSymbol.Kind
 		collect := SymbolAll
 		if parentSymbolKind == ast.VAR || parentSymbolKind == ast.FIELD {
-			parentSymbol = symbolTable.SearchSymbolAndSolveType(parentSymbol.TypeDef.Name, option.None[string](), NewLocation(fileName, pos, posCtxt.moduleName))
+			parentSymbol = symbolTable.SearchSymbolAndSolveType(parentSymbol.TypeDef.Name, option.None[string](), symbols.NewLocation(fileName, pos, posCtxt.moduleName))
 			if parentSymbol.Kind == ast.ENUM || parentSymbol.Kind == ast.FAULT {
 				// Enum instantiated variables will only have access to methods. Not to other enum values
 				collect = SymbolMethod // | SymbolMember
@@ -71,10 +72,10 @@ func BuildCompletionList(document *document.Document, pos lsp.Position, storage 
 		}
 
 		// Get all available children symbols of parentSymbol
-		symbols = collectChildSymbols(parentSymbol, posCtxt, fileName, collect)
+		symCollection = collectChildSymbols(parentSymbol, posCtxt, fileName, collect)
 
 		// child symbols collected, filter them
-		for _, symbol := range symbols {
+		for _, symbol := range symCollection {
 			if posCtxt.identUnderCursor == "" || strings.HasPrefix(symbol.Identifier, posCtxt.identUnderCursor) {
 				items = append(items, protocol.CompletionItem{
 					Label: symbol.GetLabel(),
@@ -103,8 +104,8 @@ const (
 	SymbolMember = 1 << 2 // 0100
 )
 
-func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName string, symbolFilter int) []*Symbol {
-	symbols := []*Symbol{}
+func collectChildSymbols(parentSymbol *symbols.Symbol, astCtxt astContext, fileName string, symbolFilter int) []*symbols.Symbol {
+	symCollection := []*symbols.Symbol{}
 	filterMember := symbolFilter&SymbolAll != 0 || symbolFilter&SymbolMember != 0
 	filterMethod := symbolFilter&SymbolAll != 0 || symbolFilter&SymbolMethod != 0
 
@@ -112,25 +113,25 @@ func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName stri
 	switch parentSymbol.Kind {
 	case ast.ENUM, ast.FAULT:
 		for _, childRel := range parentSymbol.Children {
-			if childRel.Tag == Field && filterMember {
-				symbols = append(symbols, childRel.Child)
-			} else if childRel.Tag == Method && filterMethod {
-				symbols = append(symbols, childRel.Child)
+			if childRel.Tag == symbols.RelatedField && filterMember {
+				symCollection = append(symCollection, childRel.Symbol)
+			} else if childRel.Tag == symbols.RelatedMethod && filterMethod {
+				symCollection = append(symCollection, childRel.Symbol)
 			}
 		}
 		if parentSymbol.Kind == ast.ENUM && !filterMember {
-			symbols = append(symbols, collectEnumAssociatedValues(parentSymbol.NodeDecl.(*ast.GenDecl), fileName, parentSymbol.Module)...)
+			symCollection = append(symCollection, collectEnumAssociatedValues(parentSymbol.NodeDecl.(*ast.GenDecl), fileName, parentSymbol.Module)...)
 		}
 
 	case ast.ENUM_VALUE:
 		// Enum values can access associated values
 		enumGenDecl := parentSymbol.TypeSymbol.NodeDecl.(*ast.GenDecl)
-		symbols = append(symbols, collectEnumAssociatedValues(enumGenDecl, fileName, parentSymbol.Module)...)
+		symCollection = append(symCollection, collectEnumAssociatedValues(enumGenDecl, fileName, parentSymbol.Module)...)
 
 		if filterMethod {
 			for _, relatedSymbol := range parentSymbol.TypeSymbol.Children {
-				if relatedSymbol.Tag == Method {
-					symbols = append(symbols, relatedSymbol.Child)
+				if relatedSymbol.Tag == symbols.RelatedMethod {
+					symCollection = append(symCollection, relatedSymbol.Symbol)
 				}
 			}
 		}
@@ -138,8 +139,8 @@ func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName stri
 	case ast.FAULT_CONSTANT:
 		if filterMethod {
 			for _, relatedSymbol := range parentSymbol.TypeSymbol.Children {
-				if relatedSymbol.Tag == Method {
-					symbols = append(symbols, relatedSymbol.Child)
+				if relatedSymbol.Tag == symbols.RelatedMethod {
+					symCollection = append(symCollection, relatedSymbol.Symbol)
 				}
 			}
 		}
@@ -150,28 +151,26 @@ func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName stri
 		for _, member := range specType.Fields {
 			switch t := member.Type.(type) {
 			case *ast.TypeInfo:
-				if t.BuiltIn && filterMember {
-					symbols = append(symbols, &Symbol{Identifier: member.Names[0].Name,
-						Module:   astCtxt.moduleName,
-						URI:      fileName,
-						Range:    member.Range,
-						NodeDecl: member,
-						Kind:     ast.FIELD,
-						TypeDef: TypeDefinition{
-							t.Identifier.String(),
-							t.BuiltIn,
-							t,
-						}})
+				if t.IsBuiltIn && filterMember {
+					symCollection = append(symCollection, &symbols.Symbol{
+						Identifier: member.Names[0].Name,
+						Module:     astCtxt.moduleName,
+						URI:        fileName,
+						Range:      member.Range,
+						NodeDecl:   member,
+						Kind:       ast.FIELD,
+						TypeDef:    symbols.TypeDefinitionFromASTTypeInfo(t),
+					})
 				}
 			case *ast.StructType:
-				symbols = append(symbols, &Symbol{
+				symCollection = append(symCollection, &symbols.Symbol{
 					Identifier: member.Names[0].Name,
 					Module:     astCtxt.moduleName,
 					URI:        fileName,
 					Range:      member.Range,
 					NodeDecl:   member,
 					Kind:       ast.AnonymousStructField,
-					TypeDef: TypeDefinition{
+					TypeDef: symbols.TypeDefinition{
 						Name:      "",
 						IsBuiltIn: false,
 						NodeDecl:  member,
@@ -181,32 +180,32 @@ func collectChildSymbols(parentSymbol *Symbol, astCtxt astContext, fileName stri
 		}
 
 		for _, relatedSymbol := range parentSymbol.Children {
-			if relatedSymbol.Tag == Method && filterMethod {
-				symbols = append(symbols, relatedSymbol.Child)
+			if relatedSymbol.Tag == symbols.RelatedMethod && filterMethod {
+				symCollection = append(symCollection, relatedSymbol.Symbol)
 			}
 		}
 	}
-	return symbols
+	return symCollection
 }
 
-func collectEnumAssociatedValues(enumGenDecl *ast.GenDecl, fileName string, module ModuleName) []*Symbol {
-	symbols := []*Symbol{}
+func collectEnumAssociatedValues(enumGenDecl *ast.GenDecl, fileName string, module symbols.ModuleName) []*symbols.Symbol {
+	symCollection := []*symbols.Symbol{}
 	for _, assoc := range enumGenDecl.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType).AssociatedValues {
-		symbols = append(symbols, &Symbol{
+		symCollection = append(symCollection, &symbols.Symbol{
 			Identifier: assoc.Name.Name,
 			Module:     module,
 			URI:        fileName,
 			Range:      assoc.Range,
 			NodeDecl:   assoc,
 			Kind:       ast.FIELD,
-			TypeDef: TypeDefinition{
+			TypeDef: symbols.TypeDefinition{
 				Name:      assoc.Type.Identifier.Name,
-				IsBuiltIn: assoc.Type.BuiltIn,
+				IsBuiltIn: assoc.Type.IsBuiltIn,
 			},
 		})
 	}
 
-	return symbols
+	return symCollection
 }
 
 func getEditRange(document *document.Document, pos lsp.Position) protocol.Range {
@@ -240,7 +239,7 @@ func getEditRange(document *document.Document, pos lsp.Position) protocol.Range 
 	}
 }
 
-func getCompletionKind(symbol *Symbol) protocol.CompletionItemKind {
+func getCompletionKind(symbol *symbols.Symbol) protocol.CompletionItemKind {
 	switch symbol.Kind {
 	case ast.FUNCTION:
 		if symbol.NodeDecl.(*ast.FunctionDecl).ParentTypeId.IsSome() {
@@ -291,7 +290,7 @@ func getCompletableDocDocument(node ast.Node) *protocol.MarkupContent {
 	}
 }
 
-func getCompletionDetail(s *Symbol) *string {
+func getCompletionDetail(s *symbols.Symbol) *string {
 	var detail string
 	switch s.Kind {
 	case ast.FUNCTION:
@@ -354,7 +353,7 @@ func getCompletionDetail(s *Symbol) *string {
 // associated members, as well as methods.
 // If `false`, this indexable is a variable or similar, so its parent type is distinct
 // from the indexable itself, therefore only methods can be accessed.
-func canReadMembersOf(s *Symbol) bool {
+func canReadMembersOf(s *symbols.Symbol) bool {
 	switch s.Kind {
 	case ast.STRUCT, ast.ENUM, ast.FAULT:
 		return true

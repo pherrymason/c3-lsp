@@ -1,0 +1,353 @@
+package symbols
+
+import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
+	"github.com/pherrymason/c3-lsp/pkg/option"
+)
+
+// SymbolTable stores list of symbols defined in the project.
+// Each symbol has an "address". This address allows to now where the symbol
+/*
+// Ideas:
+// module.[global|scope(funName)].symbolName
+// this would cover:
+//  	module foo;
+//      int symbol;
+//      fn void foo(){ int symbol; }
+// This does not cover:
+//      module foo;
+//      fn void foo(){
+//     		int symbol; // #1
+//			{
+//				int symbol; // #2
+//			}
+//			{
+//				char symbol; // #3
+//				{
+//					float symbol; //#4
+//				}
+//			}
+//    	}
+//
+// Ideas:
+// #1: foo.foo.symbol    <-- declared in root scope
+// #2: foo.foo[1].symbol <-- First sub scope
+// #3: foo.foo[2].symbol <-- Second sub scope
+// #4: foo.foo[2][0].symbol <-- Second sub scope, First sub scope
+//
+// Idea 2. Not sure if this will allow to find them, but maybe this scope
+// location would be useful to have to disambiguate, better storing it
+// in a different column
+
+ 	symbol table
+ 	--------------
+	id: primary key
+	symbol_name: name of the symbol
+	module: module name where this is defined
+	path: full route to reach this symbol
+	scope_path: Example [2][0]. Helps determining what is the scope this is defined.
+*/
+type SymbolTable struct {
+	// Each position inside symbols is the ID of the symbol which can be referenced in other index tables.
+	scopeTree map[string]*ModulesList // scope trees for each file
+
+	moduleFileMap map[string][]FileModulePtr // List of files containing a given module
+}
+
+type FileModulePtr struct {
+	fileName string
+	module   ModuleName
+	scope    *Scope
+}
+
+type ModulesList struct {
+	modules map[string]*Scope
+}
+
+func (mg *ModulesList) GetModuleScope(moduleName string) *Scope {
+	scope, exists := mg.modules[moduleName]
+	if !exists {
+		return nil
+	}
+
+	return scope
+}
+
+func NewSymbolTable() *SymbolTable {
+	return &SymbolTable{
+		scopeTree:     make(map[string]*ModulesList),
+		moduleFileMap: make(map[string][]FileModulePtr),
+	}
+}
+
+func (s *SymbolTable) RegisterNewRootScope(file string, node *ast.Module) *Scope {
+	_, exists := s.scopeTree[file]
+	if !exists {
+		s.scopeTree[file] = &ModulesList{
+			modules: make(map[string]*Scope),
+		}
+	}
+
+	scope := &Scope{
+		Module:  option.Some(NewModuleName(node.Name)),
+		Range:   node.GetRange(),
+		Imports: []ModuleName{},
+	}
+	s.scopeTree[file].modules[node.Name] = scope
+
+	for _, imp := range node.Imports {
+		scope.Imports = append(scope.Imports, NewModuleName(imp.Path.Name))
+	}
+
+	// Register it in moduleFileMap
+	s.moduleFileMap[node.Name] = append(s.moduleFileMap[node.Name], FileModulePtr{
+		fileName: file,
+		module:   NewModuleName(node.Name),
+		scope:    scope,
+	})
+
+	return scope
+}
+
+func (s *SymbolTable) GetModuleScope(fileName string, moduleName string) *Scope {
+	return s.scopeTree[fileName].GetModuleScope(moduleName)
+}
+
+func (s *SymbolTable) GetSymbolsInScope(scope *Scope) []*Symbol {
+	symbols := []*Symbol{}
+	for {
+		symbols = append(symbols, scope.Symbols...)
+		if scope.Parent.IsNone() {
+			break
+		}
+		scope = scope.Parent.Get()
+	}
+
+	return symbols
+}
+
+func (s *SymbolTable) FindSymbolInLocation(name string, location Location) *Symbol {
+	moduleGroup := s.scopeTree[location.FileName]
+	scope := moduleGroup.GetModuleScope(location.Module.String())
+	scope = FindClosestScope(scope, location.Position)
+
+	return s.FindSymbolInScope(name, scope)
+}
+
+func (s *SymbolTable) FindSymbolInScope(name string, scope *Scope) *Symbol {
+	var symbolFound *Symbol
+	currentScope := scope
+	found := false
+	for {
+		for _, symbol := range currentScope.Symbols {
+			if symbol.Identifier != name {
+				continue
+			}
+
+			found = true
+			symbolFound = symbol
+			break
+		}
+
+		if !found && currentScope.Parent.IsSome() {
+			currentScope = currentScope.Parent.Get()
+		} else {
+			break
+		}
+	}
+
+	return symbolFound
+}
+
+// FindSymbolByPosition Searches a symbol with ident=identName taking into consideration what is accessible from a given position (`from`)
+// identName: identity to search
+// from: Information about identity position.
+func (s *SymbolTable) FindSymbolByPosition(identName string, explicitIdentModule option.Option[string], from Location) option.Option[*Symbol] {
+	type SymbolScope struct {
+		symbol     *Symbol
+		rangeScope lsp.Range
+	}
+
+	var symbolFound *Symbol
+
+	moduleScope := s.scopeTree[from.FileName].GetModuleScope(from.Module.String())
+
+	visitedFiles := make(map[string]bool)
+	toVisit := []FileModulePtr{
+		{
+			fileName: from.FileName,
+			module:   from.Module,
+			scope:    moduleScope,
+		},
+	}
+
+	iteration := 0
+	for len(toVisit) > 0 {
+		currentFile := toVisit[0].fileName
+		moduleScope = toVisit[0].scope
+		module := toVisit[0].module
+		toVisit = toVisit[1:]
+		skipSymbolSearch := false
+
+		visitedKey := currentFile + "+" + module.String()
+		if explicitIdentModule.IsSome() && explicitIdentModule.Get() != module.String() {
+			// Search is explicitly searching inside a given module, discard if not desired module
+			skipSymbolSearch = true
+		}
+
+		if visitedFiles[visitedKey] {
+			continue
+		}
+		visitedFiles[visitedKey] = true
+
+		// Search current scope
+		var scope *Scope
+		scope = moduleScope
+
+		if !skipSymbolSearch {
+			if iteration == 0 {
+				// other iterations, are searching in root scope of imported module, position is not relevant
+				scope = FindClosestScope(moduleScope, from.Position)
+			}
+			if scope == nil {
+				return option.None[*Symbol]()
+			}
+		}
+
+		// Search inside the scope and go up until find its declaration
+		if !skipSymbolSearch {
+			symbolFound = s.FindSymbolInScope(identName, scope)
+		}
+
+		if symbolFound == nil {
+			// Check if there are imported modules
+			toVisit, visitedFiles = findImportedFiles(s, scope, module, visitedFiles, toVisit)
+		}
+		iteration++
+	}
+
+	if symbolFound == nil {
+		return option.None[*Symbol]()
+	}
+	return option.Some(symbolFound)
+}
+
+func findImportedFiles(s *SymbolTable, scope *Scope, currentModule ModuleName, visited map[string]bool, toVisit []FileModulePtr) ([]FileModulePtr, map[string]bool) {
+	// look for implicit imports
+	for _, importedModule := range scope.RootScope().Imports {
+		for _, fileModule := range s.moduleFileMap[importedModule.String()] {
+			key := fileModule.fileName + "+" + fileModule.module.String()
+			if !visited[key] {
+				toVisit = append(toVisit, fileModule)
+			}
+		}
+	}
+
+	// Look for submodules, as they are also implicitly imported
+	for _, fileModuleCollection := range s.moduleFileMap {
+		for _, fileModule := range fileModuleCollection {
+			if fileModule.module.IsSubModuleOf(currentModule) {
+				key := fileModule.fileName + "+" + fileModule.module.String()
+				if !visited[key] {
+					toVisit = append(toVisit, fileModule)
+				}
+			}
+		}
+	}
+
+	return toVisit, visited
+}
+
+// SearchSymbolAndSolveType Runs two searches, one searching a symbol with name `name`, and then a second one to get the Type of that symbol.
+// Finds it based on a position and a fileName.
+// TODO Be able to specify module to which name belongs to. This will be needed to be able to find types imported from different modules
+func (s *SymbolTable) SearchSymbolAndSolveType(name string, explicitIdentModule option.Option[string], location Location) *Symbol {
+	// 1- Find the scope
+	moduleGroup := s.scopeTree[location.FileName]
+	scope := moduleGroup.GetModuleScope(location.Module.String())
+	scope = FindClosestScope(scope, location.Position)
+	// TODO If `module` is specified, check if scope belongs to that module, else, see if there are any imports to select the proper scope.
+
+	// 2- Try to find the symbol in the scope stack
+	//symbolFound := s.FindSymbolInScope(name, scope)
+	symbolFound := s.FindSymbolByPosition(name, explicitIdentModule, location)
+
+	if symbolFound.IsNone() {
+		// Search on imports
+		// TODO
+	}
+
+	if symbolFound.IsSome() {
+		return s.SolveSymbolType(symbolFound.Get())
+	}
+
+	return nil
+}
+
+// SolveSymbolType Tries to solve the type of a symbol.
+// Ignores symbol.TypeDef, and instead looks at the declaration node (NodeDecl).
+func (s *SymbolTable) SolveSymbolType(symbol *Symbol) *Symbol {
+	var typeName string
+	explicitModule := option.None[string]()
+
+	if symbol.Kind == ast.VAR {
+		typeName = symbol.TypeDef.Name
+		explicitModule = symbol.TypeDef.Module
+	} else {
+
+		switch n := symbol.NodeDecl.(type) {
+		case *ast.GenDecl:
+			switch spec := n.Spec.(type) {
+			case *ast.ValueSpec:
+				explicitModule = spec.Type.Module()
+				typeName = spec.Type.Identifier.Name
+
+			case *ast.DefSpec:
+				switch defValue := spec.Value.(type) {
+				case *ast.Ident:
+					typeName = defValue.Name
+					// Here, defValue.Name might be an alias to a type, or an alias to an instance.
+					// in case is an alias to an instance, we need to find the type of that instance.
+
+				case *ast.TypeInfo:
+					typeName = defValue.Identifier.Name
+				default:
+					panic("unsupported defValue")
+				}
+			case *ast.TypeSpec:
+				// It is already a type, we can return
+				return symbol
+			}
+		case *ast.FaultDecl:
+			typeName = n.Name.Name
+		case *ast.StructField:
+			explicitModule = n.Type.(*ast.TypeInfo).Module()
+			typeName = n.Type.(*ast.TypeInfo).Identifier.Name
+		case *ast.FunctionParameter:
+			explicitModule = n.Type.Identifier.Module()
+			typeName = n.Type.Identifier.Name
+		}
+	}
+
+	if typeName == "" {
+		return nil
+	}
+
+	// Second search, we need to search for symbol with typeName
+	location := Location{FileName: symbol.URI, Position: symbol.Range.Start, Module: symbol.Module}
+	symbolF := s.FindSymbolByPosition(typeName, explicitModule, location)
+	if symbolF.IsNone() {
+		return nil
+	}
+
+	sym := symbolF.Get()
+	if sym.Kind == ast.VAR {
+		// This is still a variable (might happen when checking an ast.DEF, we need to find the type of this variable
+		return s.SolveSymbolType(sym)
+	}
+
+	return sym
+}
+
+type SymbolID int

@@ -2,12 +2,13 @@ package analysis
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func GetDefinitionLocation(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) []protocol.Location {
+func GetDefinitionLocation(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *symbols.SymbolTable) []protocol.Location {
 
 	posContext := getPositionContext(document, pos)
 

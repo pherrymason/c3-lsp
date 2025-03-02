@@ -3,13 +3,14 @@ package analysis
 import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"strings"
 )
 
-func GetHoverInfo(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *SymbolTable) *protocol.Hover {
+func GetHoverInfo(document *document.Document, pos lsp.Position, storage *document.Storage, symbolTable *symbols.SymbolTable) *protocol.Hover {
 	symbolResult := FindSymbolAtPosition(pos, document.Uri, symbolTable, document.Ast, document.Text)
 	if symbolResult.IsNone() {
 		return nil
@@ -21,7 +22,7 @@ func GetHoverInfo(document *document.Document, pos lsp.Position, storage *docume
 	return &hover
 }
 
-func buildHover(symbol *Symbol) protocol.Hover {
+func buildHover(symbol *symbols.Symbol) protocol.Hover {
 	var description string
 	var sizeInfo string // TODO reimplement this
 	var extraLine string
@@ -66,7 +67,7 @@ func buildHover(symbol *Symbol) protocol.Hover {
 	}
 }
 
-func macroDescriptionString(symbol *Symbol, includeMacroName bool) string {
+func macroDescriptionString(symbol *symbols.Symbol, includeMacroName bool) string {
 	macro := symbol.NodeDecl.(*ast.MacroDecl)
 	typeMethod := ""
 	if macro.Signature.ParentTypeId.IsSome() {
@@ -119,7 +120,7 @@ func macroDescriptionString(symbol *Symbol, includeMacroName bool) string {
 	return description
 }
 
-func functionDescriptionString(symbol *Symbol) string {
+func functionDescriptionString(symbol *symbols.Symbol) string {
 	f := symbol.NodeDecl.(*ast.FunctionDecl)
 	args := []string{}
 	for _, arg := range f.Signature.Parameters {

@@ -1235,7 +1235,7 @@ func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeI
 						WithSitterRange(n).
 						Build()
 
-					typeInfo.BuiltIn = true
+					typeInfo.IsBuiltIn = true
 				case "type_ident":
 					typeInfo.Identifier = ast_builders.NewIdentifierBuilder().
 						WithId(c.getNextID()).
@@ -1249,7 +1249,7 @@ func (c *ASTConverter) convert_type(node *sitter.Node, source []byte) *ast.TypeI
 						gn := bn.Child(g)
 						if gn.Type() == "type" {
 							gType := c.convert_type(gn, source)
-							typeInfo.Generics = append(typeInfo.Generics, gType)
+							typeInfo.GenericsParameters = append(typeInfo.GenericsParameters, gType)
 						}
 					}
 

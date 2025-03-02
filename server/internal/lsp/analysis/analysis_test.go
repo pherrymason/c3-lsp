@@ -3,6 +3,7 @@ package analysis
 import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
@@ -14,13 +15,13 @@ import (
 
 type testServer struct {
 	documents   *document.Storage
-	symbolTable *SymbolTable
+	symbolTable *symbols.SymbolTable
 }
 
 func newTestServer() testServer {
 	return testServer{
 		documents:   document.NewStore(),
-		symbolTable: NewSymbolTable(),
+		symbolTable: symbols.NewSymbolTable(),
 	}
 }
 
@@ -34,7 +35,7 @@ func startTestServer(source string, uri string) (testServer, lsp.Position) {
 	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, uri)
 	doc := srv.documents.OpenDocument(uri, source, 1)
 	doc.Ast = tree
-	UpdateSymbolTable(srv.symbolTable, tree, uri)
+	symbols.UpdateSymbolTable(srv.symbolTable, tree, uri)
 
 	return srv, position
 }
@@ -103,7 +104,7 @@ func TestFindSymbol_ignores_language_keywords(t *testing.T) {
 			fileName := tt.source
 			source := "module foo;" + tt.source
 			tree := getTree(source, fileName)
-			symbolTable := BuildSymbolTable(tree, "")
+			symbolTable := symbols.BuildSymbolTable(tree, "")
 
 			cursorPosition := lsp.Position{Line: 0, Column: 12}
 			symbolOpt := FindSymbolAtPosition(cursorPosition, fileName, symbolTable, tree, source)

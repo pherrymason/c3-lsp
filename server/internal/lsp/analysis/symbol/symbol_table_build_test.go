@@ -1,19 +1,34 @@
-package analysis
+package symbols
 
 import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
+
+func getTree(source string, fileName string) *ast.File {
+	astConverter := factory.NewASTConverter()
+	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, fileName)
+
+	return tree
+}
+
+func buildSymbols(source string) *SymbolTable {
+	astConverter := factory.NewASTConverter()
+	name := "file.c3"
+	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, name)
+	return BuildSymbolTable(tree, name)
+}
 
 func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	source := `
 	module foo;
 	int cat = 1;
-	char dog = 2;
+	ext::Custom dog = 2;
 	enum Colors:int { RED, BLUE, GREEN }
 	struct Obj { int data; }
 	fault Err{OOPS,FIAL}
@@ -25,16 +40,18 @@ func TestSymbolBuild_registers_global_declarations(t *testing.T) {
 	macro Object* UserStruct.@method() {}
 	`
 
-	astConverter := factory.NewASTConverter()
-	tree := astConverter.ConvertToAST(factory.GetCST(source).RootNode(), source, "file.c3")
-
-	result := BuildSymbolTable(tree, "")
+	result := buildSymbols(source)
 
 	modulesGroup := result.scopeTree["file.c3"]
 	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 16, len(scope.Symbols))
 	assert.Equal(t, "cat", scope.Symbols[0].Identifier)
+	assert.Equal(t, "int", scope.Symbols[0].TypeDef.Name)
+	assert.Equal(t, true, scope.Symbols[0].TypeDef.IsBuiltIn)
 	assert.Equal(t, "dog", scope.Symbols[1].Identifier)
+	assert.Equal(t, "Custom", scope.Symbols[1].TypeDef.Name)
+	assert.Equal(t, "ext", scope.Symbols[1].TypeDef.Module.Get())
+	assert.Equal(t, false, scope.Symbols[1].TypeDef.IsBuiltIn)
 	assert.Equal(t, "Colors", scope.Symbols[2].Identifier)
 	assert.Equal(t, "RED", scope.Symbols[3].Identifier)
 	assert.Equal(t, "BLUE", scope.Symbols[4].Identifier)
@@ -73,8 +90,13 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 1, len(scope.Symbols))
 	assert.Equal(t, "main", scope.Symbols[0].Identifier)
+
 	scope = scope.Children[0]
 	assert.Equal(t, "cat", scope.Symbols[0].Identifier)
+	assert.Equal(t, ast.Token(ast.VAR), scope.Symbols[0].Kind)
+	assert.Equal(t, "int", scope.Symbols[0].TypeDef.Name)
+	assert.True(t, scope.Symbols[0].TypeDef.IsBuiltIn)
+	assert.Equal(t, option.None[string](), scope.Symbols[0].TypeDef.Module)
 
 	for _, symbol := range scope.Symbols {
 		assert.Equal(t, "file.c3", symbol.URI, fmt.Sprintf("Symbol %s does not have expected filepath: %s", symbol.Identifier, symbol.URI))
@@ -82,6 +104,22 @@ func TestSymbolBuild_registers_local_declarations(t *testing.T) {
 }
 
 func TestSymbolBuild_registers_structs(t *testing.T) {
+	t.Run("Registers struct and its members", func(t *testing.T) {
+		source := `module test;
+		struct Bar {
+			int a;
+		}`
+		result := buildSymbols(source)
+		scope := result.scopeTree["file.c3"].GetModuleScope("test")
+
+		assert.Equal(t, "Bar", scope.Symbols[0].Identifier)
+		assert.Equal(t, ast.Token(ast.STRUCT), scope.Symbols[0].Kind)
+		assert.Equal(t, 0, len(scope.Symbols[0].Children))
+
+		//assert.Equal(t, "a", scope.Symbols[0].Children[0].Symbol.Identifier)
+		//assert.Equal(t, "int", scope.Symbols[0].Children[0].Symbol.TypeDef.Name)
+	})
+
 	t.Run("Registers struct member with anonymous sub struct", func(t *testing.T) {
 		source := `module test;
 		struct Bar {
@@ -117,12 +155,12 @@ func TestSymbolBuild_registers_methods_in_the_right_struct(t *testing.T) {
 	scope := modulesGroup.GetModuleScope("foo")
 	assert.Equal(t, 3, len(scope.Symbols))
 	assert.Equal(t, "Obj", scope.Symbols[0].Identifier)
-	// Method 1
-	assert.Equal(t, Relation{Child: scope.Symbols[1], Tag: Method}, scope.Symbols[0].Children[0], "method 1 is not registered as child of struct symbol")
+	// RelatedMethod 1
+	assert.Equal(t, Relation{Symbol: scope.Symbols[1], Tag: RelatedMethod}, scope.Symbols[0].Children[0], "method 1 is not registered as child of struct symbol")
 	assert.Equal(t, "method", scope.Symbols[1].Identifier)
 
-	// Method 2
-	assert.Equal(t, Relation{Child: scope.Symbols[2], Tag: Method}, scope.Symbols[0].Children[1], "method 2 is not registered as child of struct symbol")
+	// RelatedMethod 2
+	assert.Equal(t, Relation{Symbol: scope.Symbols[2], Tag: RelatedMethod}, scope.Symbols[0].Children[1], "method 2 is not registered as child of struct symbol")
 	assert.Equal(t, "@foo", scope.Symbols[2].Identifier)
 }
 
@@ -264,7 +302,7 @@ func TestSymbolBuild_registers_distincts(t *testing.T) {
 
 		assert.Equal(t, "SuperInt", scope.Symbols[0].Identifier)
 		assert.Equal(t, ast.Token(ast.DISTINCT), scope.Symbols[0].Kind)
-		assert.Equal(t, Relation{Child: scope.Symbols[1], Tag: Method}, scope.Symbols[0].Children[0], "method 1 is not registered as child of distinct symbol")
+		assert.Equal(t, Relation{Symbol: scope.Symbols[1], Tag: RelatedMethod}, scope.Symbols[0].Children[0], "method 1 is not registered as child of distinct symbol")
 
 		assert.Equal(t, "addOne", scope.Symbols[1].Identifier)
 		assert.Equal(t, ast.Token(ast.FUNCTION), scope.Symbols[1].Kind)

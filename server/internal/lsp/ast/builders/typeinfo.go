@@ -33,7 +33,7 @@ func (b *TypeInfoBuilder) IsReference() *TypeInfoBuilder {
 	return b
 }
 func (b *TypeInfoBuilder) IsBuiltin() *TypeInfoBuilder {
-	b.typeInfo.BuiltIn = true
+	b.typeInfo.IsBuiltIn = true
 	return b
 }
 func (b *TypeInfoBuilder) IsStatic() *TypeInfoBuilder {
@@ -46,8 +46,8 @@ func (b *TypeInfoBuilder) IsPointer() *TypeInfoBuilder {
 }
 
 func (b *TypeInfoBuilder) WithGeneric(name string, startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.typeInfo.Generics = append(
-		b.typeInfo.Generics,
+	b.typeInfo.GenericsParameters = append(
+		b.typeInfo.GenericsParameters,
 		NewTypeInfoBuilder().
 			WithName(name).
 			WithNameStartEnd(startRow, startCol, endRow, endCol).

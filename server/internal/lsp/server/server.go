@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/pherrymason/c3-lsp/internal/lsp/analysis"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/factory"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"log"
@@ -31,7 +32,7 @@ type Server struct {
 	workspace    *analysis.Workspace
 	documents    *document.Storage
 	astConverter *factory.ASTConverter
-	symbolTable  *analysis.SymbolTable
+	symbolTable  *symbols.SymbolTable
 
 	state  *ps.ProjectState // To remove on 0.4 release
 	parser *p.Parser

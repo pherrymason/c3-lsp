@@ -1,6 +1,7 @@
-package analysis
+package symbols
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast/walk"
 )
@@ -67,7 +68,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 
 		for _, f := range n.Members {
 			_, m := v.currentScope.RegisterSymbol(f.Name.Name, f.GetRange(), f, v.currentModule, v.currentFilePath.URI, ast.FAULT_CONSTANT)
-			fault.AppendChild(m, Field)
+			fault.AppendChild(m, RelatedField)
 			m.TypeSymbol = fault
 		}
 
@@ -84,12 +85,12 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		if n.Signature.ParentTypeId.IsSome() {
 			// Should register method as children of parent type
 			// TODO this will fail if macro is defined before the struct
-			parentSymbol := v.table.findSymbolInScope(
+			parentSymbol := v.table.FindSymbolInScope(
 				n.Signature.ParentTypeId.Get().Name,
 				v.currentScope,
 			)
 			if parentSymbol != nil {
-				parentSymbol.AppendChild(symbol, Method)
+				parentSymbol.AppendChild(symbol, RelatedMethod)
 			}
 		}
 
@@ -100,7 +101,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 				typeName := param.Type.Identifier.String()
 				sym.TypeDef = TypeDefinition{
 					Name:      typeName, // TODO does this having module path break anything?
-					IsBuiltIn: param.Type.BuiltIn,
+					IsBuiltIn: param.Type.IsBuiltIn,
 					NodeDecl:  param.Type,
 				}
 			}
@@ -125,7 +126,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		if n.ParentTypeId.IsSome() {
 			// Should register method as children of parent type
 			// TODO this will fail if function is defined before the struct
-			parentSymbol = v.table.findSymbolInScope(
+			parentSymbol = v.table.FindSymbolInScope(
 				n.ParentTypeId.Get().Name,
 				v.currentScope,
 			)
@@ -143,7 +144,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 		)
 
 		if parentSymbol != nil {
-			parentSymbol.AppendChild(symbol, Method)
+			parentSymbol.AppendChild(symbol, RelatedMethod)
 		}
 
 		if n.Body != nil {
@@ -155,7 +156,7 @@ func (v *symbolTableGenerator) Enter(node ast.Node, propertyName string) walk.Vi
 				typeName := param.Type.Identifier.String()
 				sym.TypeDef = TypeDefinition{
 					Name:      typeName, // TODO does this having module path break anything?
-					IsBuiltIn: param.Type.BuiltIn,
+					IsBuiltIn: param.Type.IsBuiltIn,
 					NodeDecl:  param.Type,
 				}
 			}
@@ -176,21 +177,22 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 
 		typeExpression := n.Spec.(*ast.ValueSpec).Type
 		if typeExpression != nil {
-			typeName := typeExpression.String()
-			symbol.TypeDef = TypeDefinition{
-				Name:      typeName, // TODO does this having module path break anything?
-				IsBuiltIn: typeExpression.BuiltIn,
-				NodeDecl:  typeExpression,
-			}
+			symbol.TypeDef = TypeDefinitionFromASTTypeInfo(typeExpression)
 		}
 
 	case ast.ENUM:
-		_, enumSym := v.currentScope.RegisterSymbol(n.Spec.(*ast.TypeSpec).Ident.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.ENUM)
+		_, enumSym := v.currentScope.RegisterSymbol(
+			n.Spec.(*ast.TypeSpec).Ident.Name,
+			n.Range,
+			n,
+			v.currentModule,
+			v.currentFilePath.URI,
+			ast.ENUM)
 
 		enumType := n.Spec.(*ast.TypeSpec).TypeDescription.(*ast.EnumType)
 		for _, value := range enumType.Values {
 			_, enumFieldSym := v.currentScope.RegisterSymbol(value.Name.Name, value.Range, value, v.currentModule, v.currentFilePath.URI, ast.ENUM_VALUE)
-			enumSym.AppendChild(enumFieldSym, Field)
+			enumSym.AppendChild(enumFieldSym, RelatedField)
 			enumFieldSym.TypeDef = TypeDefinition{
 				Name:     enumSym.Identifier,
 				NodeDecl: n,
@@ -199,7 +201,7 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 		}
 
 	case ast.STRUCT:
-		v.currentScope.RegisterSymbol(n.Spec.(*ast.TypeSpec).Ident.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.STRUCT)
+		registerStruct(v, n, n.Spec.(*ast.TypeSpec).Ident.Name, n.Range, n.Spec.(*ast.TypeSpec).TypeDescription.(*ast.StructType).Fields)
 
 	case ast.DEF:
 		v.currentScope.RegisterSymbol(n.Spec.(*ast.DefSpec).Name.Name, n.Range, n, v.currentModule, v.currentFilePath.URI, ast.DEF)
@@ -215,6 +217,39 @@ func (v *symbolTableGenerator) registerGenDecl(n *ast.GenDecl) {
 		)
 	default:
 	}
+}
+
+func registerStruct(v *symbolTableGenerator, node ast.Node, identifier string, nodeRange lsp.Range, fields []*ast.StructField) *Symbol {
+	_, structSymbol := v.currentScope.RegisterSymbol(
+		identifier,
+		nodeRange,
+		node,
+		v.currentModule,
+		v.currentFilePath.URI,
+		ast.STRUCT)
+	/*
+		for _, field := range fields {
+			_, fieldSym := v.currentScope.RegisterPrivateSymbol(
+				field.Names[0].Name,
+				field.Range,
+				field,
+				v.currentModule,
+				v.currentFilePath.URI,
+				ast.FIELD,
+			)
+			structSymbol.AppendChild(fieldSym, RelatedField)
+
+			switch t := field.Type.(type) {
+			case *ast.TypeInfo:
+				fieldSym.TypeDef = TypeDefinitionFromASTTypeInfo(t)
+
+			case *ast.StructType:
+				fieldSym.TypeDef.IsAnonymous = true
+				fieldSym.TypeDef.Symbol = registerStruct(v, t, "", field.Range, t.Fields)
+			}
+		}
+	*/
+	return structSymbol
 }
 
 func (v *symbolTableGenerator) pushScope(n ast.Node) {

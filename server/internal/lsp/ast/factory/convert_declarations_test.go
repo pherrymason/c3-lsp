@@ -327,7 +327,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(3, 2, 3, 5),
 					Identifier:     ast_builders.NewIdentifierBuilder().WithName("int").WithStartEnd(3, 2, 3, 5).Build(),
-					BuiltIn:        true,
+					IsBuiltIn:      true,
 				},
 			}, structType.Fields[0])
 		assert.Equal(t,
@@ -342,7 +342,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 				Type: &ast.TypeInfo{
 					NodeAttributes: aWithPos(4, 2, 4, 6),
 					Identifier:     ast_builders.NewIdentifierBuilder().WithName("char").WithStartEnd(4, 2, 4, 6).Build(),
-					BuiltIn:        true,
+					IsBuiltIn:      true,
 				},
 			}, structType.Fields[1])
 		assert.Equal(t,
@@ -364,7 +364,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 							Build(),
 						Name: "Camera",
 					},
-					BuiltIn: false,
+					IsBuiltIn: false,
 				},
 			}, structType.Fields[2])
 	})
@@ -415,7 +415,7 @@ func TestConvertToAST_struct_decl(t *testing.T) {
 		assert.Equal(t, "a", subField.Names[0].Name)
 		assert.Equal(t, lsp.NewRange(3, 9, 3, 10), subField.Names[0].Range)
 		assert.Equal(t, "int", subField.Type.(*ast.TypeInfo).Identifier.Name)
-		assert.Equal(t, true, subField.Type.(*ast.TypeInfo).BuiltIn)
+		assert.Equal(t, true, subField.Type.(*ast.TypeInfo).IsBuiltIn)
 		assert.Equal(t, lsp.NewRange(3, 5, 3, 8), subField.Type.(*ast.TypeInfo).Range)
 	})
 
@@ -609,7 +609,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 
 		expectedType := &ast.TypeInfo{
 			NodeAttributes: aWithPos(2, 32, 2, 36),
-			BuiltIn:        true,
+			IsBuiltIn:      true,
 			Identifier: ast_builders.NewIdentifierBuilder().
 				WithName("uint").
 				WithStartEnd(2, 32, 2, 36).
@@ -629,7 +629,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 			},
 			Type: &ast.TypeInfo{
 				NodeAttributes: aWithPos(4, 2, 4, 8),
-				BuiltIn:        true,
+				IsBuiltIn:      true,
 				Identifier: ast_builders.NewIdentifierBuilder().
 					WithName("ushort").
 					WithStartEnd(4, 2, 4, 8).
@@ -664,7 +664,7 @@ func TestConvertToAST_bitstruct_decl(t *testing.T) {
 			},
 			Type: &ast.TypeInfo{
 				NodeAttributes: aWithPos(2, 2, 2, 8),
-				BuiltIn:        true,
+				IsBuiltIn:      true,
 				Identifier: ast_builders.NewIdentifierBuilder().
 					WithName("ushort").
 					WithStartEnd(2, 2, 2, 8).

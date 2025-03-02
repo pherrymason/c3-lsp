@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/stretchr/testify/assert"
@@ -9,16 +10,16 @@ import (
 )
 
 func TestBuildHover_Variable(t *testing.T) {
-	symbol := &Symbol{
+	symbol := &symbols.Symbol{
 		Identifier: "variable",
-		Module:     NewModuleName("app"),
+		Module:     symbols.NewModuleName("app"),
 		URI:        "file.c3",
 		NodeDecl: &ast.GenDecl{
 			Token: ast.VAR,
 			Spec:  &ast.ValueSpec{},
 		},
 		Kind: ast.VAR,
-		TypeDef: TypeDefinition{
+		TypeDef: symbols.TypeDefinition{
 			Name: "int",
 		},
 	}
@@ -42,9 +43,9 @@ func TestBuildHover_Function(t *testing.T) {
 
 func TestBuildHover_Macro(t *testing.T) {
 	t.Run("simple macro", func(t *testing.T) {
-		symbol := &Symbol{
+		symbol := &symbols.Symbol{
 			Identifier: "macro",
-			Module:     NewModuleName("app"),
+			Module:     symbols.NewModuleName("app"),
 			URI:        "file.c3",
 			Kind:       ast.MACRO,
 			NodeDecl: &ast.MacroDecl{
@@ -60,9 +61,9 @@ func TestBuildHover_Macro(t *testing.T) {
 	})
 
 	t.Run("macro method", func(t *testing.T) {
-		symbol := &Symbol{
+		symbol := &symbols.Symbol{
 			Identifier: "macro",
-			Module:     NewModuleName("app"),
+			Module:     symbols.NewModuleName("app"),
 			URI:        "file.c3",
 			Kind:       ast.MACRO,
 			NodeDecl: &ast.MacroDecl{
@@ -79,9 +80,9 @@ func TestBuildHover_Macro(t *testing.T) {
 	})
 
 	t.Run("macro with arguments", func(t *testing.T) {
-		symbol := &Symbol{
+		symbol := &symbols.Symbol{
 			Identifier: "macro",
-			Module:     NewModuleName("app"),
+			Module:     symbols.NewModuleName("app"),
 			URI:        "file.c3",
 			Kind:       ast.MACRO,
 			NodeDecl: &ast.MacroDecl{
@@ -105,9 +106,9 @@ func TestBuildHover_Macro(t *testing.T) {
 	})
 
 	t.Run("macro with arguments and trailing param block", func(t *testing.T) {
-		symbol := &Symbol{
+		symbol := &symbols.Symbol{
 			Identifier: "macro",
-			Module:     NewModuleName("app"),
+			Module:     symbols.NewModuleName("app"),
 			URI:        "file.c3",
 			Kind:       ast.MACRO,
 			NodeDecl: &ast.MacroDecl{
@@ -134,9 +135,9 @@ func TestBuildHover_Macro(t *testing.T) {
 	})
 
 	t.Run("macro with arguments and trailing param block with args", func(t *testing.T) {
-		symbol := &Symbol{
+		symbol := &symbols.Symbol{
 			Identifier: "macro",
-			Module:     NewModuleName("app"),
+			Module:     symbols.NewModuleName("app"),
 			URI:        "file.c3",
 			Kind:       ast.MACRO,
 			NodeDecl: &ast.MacroDecl{

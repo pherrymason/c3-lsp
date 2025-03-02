@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp"
+	"github.com/pherrymason/c3-lsp/internal/lsp/analysis/symbol"
 	"github.com/pherrymason/c3-lsp/internal/lsp/ast"
 	"github.com/pherrymason/c3-lsp/internal/lsp/document"
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -40,11 +41,11 @@ func getPositionContext(document *document.Document, pos lsp.Position) PositionC
 	return posContext
 }
 
-func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *SymbolTable, tree ast.Node, content string) option.Option[*Symbol] {
+func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *symbols.SymbolTable, tree ast.Node, content string) option.Option[*symbols.Symbol] {
 	nodeAtPosition, path := FindNode(tree, pos)
 
 	if nodeAtPosition == nil {
-		return option.None[*Symbol]()
+		return option.None[*symbols.Symbol]()
 	}
 
 	//var identName string
@@ -69,7 +70,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 			if symbol != nil {
 				return option.Some(symbol)
 			} else {
-				return option.None[*Symbol]()
+				return option.None[*symbols.Symbol]()
 			}
 		} else {
 			// As cursor is at X, we can just search normally.
@@ -78,7 +79,7 @@ func FindSymbolAtPosition(pos lsp.Position, fileName string, symbolTable *Symbol
 
 	// -------------------------------------------------
 	// Normal search
-	from := NewLocation(fileName, pos, scopeCtxt.moduleName)
+	from := symbols.NewLocation(fileName, pos, scopeCtxt.moduleName)
 	sym := symbolTable.FindSymbolByPosition(scopeCtxt.fullIdentUnderCursor, explicitIdentModule, from)
 
 	return sym
