@@ -48,7 +48,7 @@ func GetC3Version(c3Path option.Option[string]) option.Option[string] {
 func CheckC3ErrorsCommand(c3Options C3Opts, projectPath string) (bytes.Buffer, bytes.Buffer, error) {
 	binary := binaryPath(c3Options.Path)
 
-	args := []string{"build", "--test"}
+	args := []string{"build", "--lsp"}
 	if len(c3Options.CompileArgs) > 0 {
 		args = append(args, c3Options.CompileArgs...)
 	}

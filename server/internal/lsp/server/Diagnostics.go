@@ -27,7 +27,7 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 			return
 		}
 
-		log.Println("An error:", err)
+		log.Println("Diagnostics report:", err)
 		errorsInfo, diagnosticsDisabled := extractErrorDiagnostics(stdErr.String())
 
 		if diagnosticsDisabled {
@@ -35,7 +35,6 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 			s.clearOldDiagnostics(s.state, notify)
 			return
 		}
-
 		// Send empty diagnostics for those files that had previously an error, but not anymore.
 		// If this is not done, the IDE will keep displaying the errors.
 		for k := range s.state.GetDocumentDiagnostics() {
@@ -81,35 +80,35 @@ func extractErrorDiagnostics(output string) ([]ErrorInfo, bool) {
 
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
-		if strings.HasPrefix(line, "Error") {
-			// Procesa la línea de error
+		// > LSPERR|error|"/<path>>/test.c3"|13|47|"Expected ';'"
+		if strings.HasPrefix(line, "> LSPERR") {
 			parts := strings.Split(line, "|")
-			if parts[0] == "Error" {
-				if len(parts) != 5 {
+			if parts[1] == "error" {
+				if len(parts) != 6 {
 					// Disable future diagnostics, looks like c3c is an old version.
 					diagnosticsDisabled = true
 				} else {
-					line, err := strconv.Atoi(parts[2])
+					errorLine, err := strconv.Atoi(parts[3])
 					if err != nil {
 						continue
 					}
-					line -= 1
-					character, err := strconv.Atoi(parts[3])
+					errorLine -= 1
+					character, err := strconv.Atoi(parts[4])
 					if err != nil {
 						continue
 					}
 					character -= 1
 
 					errorsInfo = append(errorsInfo, ErrorInfo{
-						File: parts[1],
+						File: strings.Trim(parts[2], `"`),
 						Diagnostic: protocol.Diagnostic{
 							Range: protocol.Range{
-								Start: protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(character)},
-								End:   protocol.Position{Line: protocol.UInteger(line), Character: protocol.UInteger(99)},
+								Start: protocol.Position{Line: protocol.UInteger(errorLine), Character: protocol.UInteger(character)},
+								End:   protocol.Position{Line: protocol.UInteger(errorLine), Character: protocol.UInteger(99)},
 							},
 							Severity: cast.ToPtr(protocol.DiagnosticSeverityError),
-							Source:   cast.ToPtr("c3c build --test"),
-							Message:  parts[4],
+							Source:   cast.ToPtr("c3c build --lsp"),
+							Message:  parts[5],
 						},
 					})
 				}
