@@ -272,11 +272,7 @@ func TestParses_UnTypedEnums(t *testing.T) {
 func TestParse_fault(t *testing.T) {
 	docId := "doc"
 	source := `<* docs *>
-	fault IOResult
-	{
-	  IO_ERROR,
-	  PARSE_ERROR
-	};`
+	faultdef IO_ERROR, PARSE_ERROR;`
 
 	doc := document.NewDocument(docId, source)
 	parser := createParser()
@@ -285,45 +281,28 @@ func TestParse_fault(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("doc")
-		assert.NotNil(t, scope.Faults["IOResult"])
-		assert.Equal(t, "IOResult", scope.Faults["IOResult"].GetName())
-		assert.Equal(t, "", scope.Faults["IOResult"].GetType())
-		assert.Same(t, scope.Children()[0], scope.Faults["IOResult"])
+		fault := scope.Faults["IO_ERROR"]
+		assert.NotNil(t, fault)
+		assert.Equal(t, "IO_ERROR", fault.GetName())
+
+		fault = scope.Faults["PARSE_ERROR"]
+		assert.NotNil(t, fault)
+		assert.Equal(t, "PARSE_ERROR", fault.GetName())
 	})
 
 	t.Run("reads ranges for fault", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		found := symbols.Get("doc").Faults["IOResult"]
-		assert.Equal(t, idx.NewRange(1, 1, 5, 2), found.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(1, 7, 1, 15), found.GetIdRange(), "Wrong identifier range")
+		found := symbols.Get("doc").Faults["IO_ERROR"]
+		assert.Equal(t, idx.NewRange(1, 10, 1, 18), found.GetDocumentRange(), "Wrong document rage")
 	})
 
 	t.Run("finds doc comment", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		fault := symbols.Get("doc").Faults["IOResult"]
+		fault := symbols.Get("doc").Faults["IO_ERROR"]
 
 		assert.Equal(t, "docs", fault.GetDocComment().GetBody())
-	})
-
-	t.Run("finds defined fault constants", func(t *testing.T) {
-		symbols, _ := parser.ParseSymbols(&doc)
-
-		fault := symbols.Get("doc").Faults["IOResult"]
-		e := fault.GetConstant("IO_ERROR")
-		assert.Equal(t, "IO_ERROR", e.GetName())
-		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetIdRange())
-		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetDocumentRange())
-		assert.Equal(t, "IOResult", e.GetFaultName())
-		assert.Same(t, fault.Children()[0], e)
-
-		e = fault.GetConstant("PARSE_ERROR")
-		assert.Equal(t, "PARSE_ERROR", e.GetName())
-		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetIdRange())
-		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetDocumentRange())
-		assert.Equal(t, "IOResult", e.GetFaultName())
-		assert.Same(t, fault.Children()[1], e)
 	})
 }
 
