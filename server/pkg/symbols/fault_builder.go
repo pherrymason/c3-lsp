@@ -6,10 +6,9 @@ type FaultBuilder struct {
 	fault Fault
 }
 
-func NewFaultBuilder(name string, baseType string, module string, docId string) *FaultBuilder {
+func NewFaultBuilder(name string, module string, docId string) *FaultBuilder {
 	return &FaultBuilder{
 		fault: Fault{
-			baseType: baseType,
 			BaseIndexable: BaseIndexable{
 				name:         name,
 				moduleString: module,
@@ -45,8 +44,6 @@ func (eb *FaultBuilder) WithDocs(docs string) *FaultBuilder {
 }
 
 func (eb *FaultBuilder) WithConstant(constant *FaultConstant) *FaultBuilder {
-	eb.fault.constants = append(eb.fault.constants, constant)
-
 	return eb
 }
 
@@ -79,7 +76,7 @@ func (eb *FaultConstantBuilder) WithoutSourceCode() *FaultConstantBuilder {
 }
 
 func (eb *FaultConstantBuilder) WithFaultName(faultName string) *FaultConstantBuilder {
-	eb.faultConstant.faultName = faultName
+	//eb.faultConstant.faultName = faultName
 	return eb
 }
 
