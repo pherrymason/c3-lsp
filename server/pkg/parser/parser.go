@@ -22,7 +22,7 @@ const LocalVarDeclaration = `(func_definition
 const FunctionDefinitionQuery = `(func_definition) @function_def`
 const FunctionDeclarationQuery = `(func_declaration) @function_dec`
 const EnumDeclaration = `(enum_declaration) @enum_dec`
-const FaultDeclaration = `(fault_declaration) @fault_doc`
+const FaultDeclaration = `(faultdef_declaration) @fault_doc`
 const StructDeclaration = `(struct_declaration) @struct_dec`
 const BitstructDeclaration = `(bitstruct_declaration) @bitstruct_dec`
 const DefineDeclaration = `(define_declaration) @def_dec`
@@ -215,12 +215,14 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 					_const.SetDocComment(lastDocComment)
 				}
 
-			case "fault_declaration":
-				fault := p.nodeToFault(c.Node, moduleSymbol, &doc.URI, sourceCode)
-				moduleSymbol.AddFault(&fault)
+			case "faultdef_declaration":
+				faults := p.nodeToFault(c.Node, moduleSymbol, &doc.URI, sourceCode)
+				for _, fault := range faults {
+					if lastDocComment != nil {
+						fault.SetDocComment(lastDocComment)
+					}
 
-				if lastDocComment != nil {
-					fault.SetDocComment(lastDocComment)
+					moduleSymbol.AddFault(&fault)
 				}
 
 			case "interface_declaration":
