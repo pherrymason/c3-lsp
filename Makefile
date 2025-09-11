@@ -3,7 +3,7 @@
 ASSETS_DIR = assets
 TREE_SITTER_DIR = $(ASSETS_DIR)/tree-sitter-c3
 TREE_SITTER_GIT = git@github.com:c3lang/tree-sitter-c3.git
-TREE_SITTER_COMMIT = 10a78fbf8d3095369d32bc99840487396d899899
+TREE_SITTER_COMMIT = abb8a7f2e6d6edafad761203575934a57592f5eb
 C3C_DIR = $(ASSETS_DIR)/c3c
 C3C_GIT = git@github.com:c3lang/c3c.git
 
@@ -23,7 +23,7 @@ treesitter-playground:
 	cd $(TREE_SITTER_DIR) && tree-sitter build-wasm && tree-sitter playground
 
 build-parser:
-	cd $(TREE_SITTER_DIR) && git fetch --all && git checkout $(TREE_SITTER_COMMIT) && tree-sitter generate
+	cd $(TREE_SITTER_DIR) && git fetch --all && git checkout $(TREE_SITTER_COMMIT) && tree-sitter generate --abi=14
 	rm -rf ./server/internal/lsp/cst/tree_sitter
 	rm -f ./server/internal/lsp/cst/parser.c
 	cp -r $(TREE_SITTER_DIR)/src/tree_sitter ./server/internal/lsp/cst
@@ -87,3 +87,7 @@ build-vscode:
 
 build-vscode-dev:
 	cd client/vscode && npm run vscode:prepublish-dev
+
+
+check-downloads:
+	python bin/downloads.py
