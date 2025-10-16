@@ -4,38 +4,44 @@ package cst
 //TSLanguage *tree_sitter_c3();
 import "C"
 import (
+	"context"
+	"fmt"
 	"unsafe"
 
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func NewSitterParser() *sitter.Parser {
-	parser := sitter.NewParser()
-	parser.SetLanguage(GetLanguage())
+var Language *sitter.Language
 
-	return parser
+func init() {
+	languagePtr := unsafe.Pointer(C.tree_sitter_c3())
+	if languagePtr == nil {
+		panic("Couldnt get c3 tree sitter language")
+	}
+	Language = sitter.NewLanguage(languagePtr)
 }
 
-func GetLanguage() *sitter.Language {
-	ptr := unsafe.Pointer(C.tree_sitter_c3())
-	return sitter.NewLanguage(ptr)
+func NewSitterParser() *sitter.Parser {
+	parser := sitter.NewParser()
+	parser.SetLanguage(Language)
+
+	return parser
 }
 
 func GetParsedTreeFromString(source string) *sitter.Tree {
 	sourceCode := []byte(source)
 	parser := NewSitterParser()
-	n := parser.Parse(nil, sourceCode)
+	n, err := parser.ParseCtx(context.Background(), nil, sourceCode)
+	if err != nil {
+		panic(fmt.Errorf("failed parsing tree: %v", err))
+	}
 
 	return n
 }
 
-func RunQuery(query string, node *sitter.Node) *sitter.QueryCursor {
-	q, err := sitter.NewQuery([]byte(query), GetLanguage())
-	if err != nil {
-		panic(err)
-	}
+func RunQuery(query *sitter.Query, node *sitter.Node) *sitter.QueryCursor {
 	qc := sitter.NewQueryCursor()
-	qc.Exec(q, node)
+	qc.Exec(query, node)
 
 	return qc
 }

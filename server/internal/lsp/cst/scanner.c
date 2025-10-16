@@ -2,8 +2,8 @@
 
 enum TokenType {
   BLOCK_COMMENT_TEXT,
+  BLOCK_COMMENT_END_OR_EOF,
   DOC_COMMENT_TEXT,
-  DOC_COMMENT_CONTRACT_TEXT,
   REAL_LITERAL,
 };
 
@@ -13,7 +13,7 @@ void tree_sitter_c3_external_scanner_reset(void *p) {}
 unsigned tree_sitter_c3_external_scanner_serialize(void *p, char *buffer) { return 0; }
 void tree_sitter_c3_external_scanner_deserialize(void *p, const char *b, unsigned n) {}
 
-static bool scan_block_comment(TSLexer *lexer) {
+static bool scan_block_comment_text(TSLexer *lexer) {
   for (int stack = 0;;) {
     if (lexer->eof(lexer)) {
       lexer->mark_end(lexer);
@@ -42,6 +42,24 @@ static bool scan_block_comment(TSLexer *lexer) {
       lexer->advance(lexer, false);
     }
   }
+  return false;
+}
+
+static bool scan_block_comment_end_or_eof(TSLexer *lexer) {
+  if (lexer->eof(lexer)) {
+    lexer->mark_end(lexer);
+    return true;
+  }
+
+  if (lexer->lookahead == '*') {
+    lexer->advance(lexer, false);
+    if (lexer->lookahead == '/') {
+      lexer->advance(lexer, false);
+      lexer->mark_end(lexer);
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -81,36 +99,6 @@ static bool scan_doc_comment_text(TSLexer *lexer) {
   return false;
 }
 
-static bool scan_doc_comment_contract_text(TSLexer *lexer) {
-  // We stop at EOF, newline or '*>'
-  bool has_text = false;
-  while (true) {
-    if (lexer->eof(lexer)) {
-      lexer->mark_end(lexer);
-      return false;
-    }
-
-    int32_t c = lexer->lookahead;
-    if (c == '\n') {
-      return has_text;
-    } else if (c == '*') {
-      lexer->advance(lexer, false);
-      if (lexer->lookahead == '>') {
-        return has_text;
-      }
-    }
-
-    bool whitespace = is_whitespace(c);
-    bool skip = !has_text && whitespace;
-    lexer->advance(lexer, skip);
-    if (!is_whitespace(c)) {
-      lexer->mark_end(lexer);
-      has_text = true;
-    }
-  }
-  return false;
-}
-
 static bool is_digit(int32_t c) {
   return c >= '0' && c <= '9';
 }
@@ -120,7 +108,12 @@ static bool is_hex_digit(int32_t c) {
 }
 
 static bool scan_realtype(TSLexer *lexer) {
-  if (lexer->lookahead != 'f') {
+  if ((lexer->lookahead | 32) == 'd') {
+    lexer->advance(lexer, false);
+    return true;
+  }
+
+  if ((lexer->lookahead | 32) != 'f') {
     return false;
   }
 
@@ -129,15 +122,10 @@ static bool scan_realtype(TSLexer *lexer) {
 
   int32_t c1 = lexer->lookahead;
   lexer->advance(lexer, false);
-
-  if (c1 == '8') {
-    lexer->mark_end(lexer);
-    return true;
-  }
-
   int32_t c2 = lexer->lookahead;
   lexer->advance(lexer, false);
 
+  // NOTE f32/f64 suffixes are deprecated for C3 >= 0.7.2
   if ((c1 == '1' && c2 == '6') || (c1 == '3' && c2 == '2') || (c1 == '6' && c2 == '4')) {
     lexer->mark_end(lexer);
     return true;
@@ -199,22 +187,18 @@ static bool scan_real_literal(TSLexer *lexer) {
 
   bool is_hex = false;
   if (c == '0') {
-    if (lexer->lookahead == 'x' || lexer->lookahead == 'X') {
+    if ((lexer->lookahead | 32) == 'x') {
       lexer->advance(lexer, false);
       is_hex = true;
     }
   }
 
   if (is_hex) {
-    bool has_fraction = false;
-    bool has_precision = false;
-
     if (!scan_hexint(lexer)) {
       return false;
     }
 
     if (lexer->lookahead == '.') {
-      has_fraction = true;
       lexer->advance(lexer, false);
 
       if (lexer->lookahead == '.') {
@@ -224,20 +208,18 @@ static bool scan_real_literal(TSLexer *lexer) {
       scan_hexint(lexer);
     }
 
-    if (lexer->lookahead == 'p' || lexer->lookahead == 'P') {
-      has_precision = true;
-      lexer->advance(lexer, false);
-
-      if (lexer->lookahead == '+' || lexer->lookahead == '-') {
-        lexer->advance(lexer, false);
-      }
-
-      if (!scan_digits(lexer)) {
-        return false;
-      }
+    // Require a precision
+    if ((lexer->lookahead | 32) != 'p') {
+      return false;
     }
 
-    if (!has_fraction && !has_precision) {
+    lexer->advance(lexer, false);
+
+    if (lexer->lookahead == '+' || lexer->lookahead == '-') {
+      lexer->advance(lexer, false);
+    }
+
+    if (!scan_digits(lexer)) {
       return false;
     }
 
@@ -264,7 +246,7 @@ static bool scan_real_literal(TSLexer *lexer) {
       scan_int(lexer);
     }
 
-    if (lexer->lookahead == 'e' || lexer->lookahead == 'E') {
+    if ((lexer->lookahead | 32) == 'e') {
       has_exponent = true;
       lexer->advance(lexer, false);
 
@@ -288,14 +270,13 @@ static bool scan_real_literal(TSLexer *lexer) {
 
 bool tree_sitter_c3_external_scanner_scan(void *payload, TSLexer *lexer,
                                           const bool *valid_symbols) {
-  if (valid_symbols[BLOCK_COMMENT_TEXT] && scan_block_comment(lexer)) {
+  if (valid_symbols[BLOCK_COMMENT_TEXT] && scan_block_comment_text(lexer)) {
     lexer->result_symbol = BLOCK_COMMENT_TEXT;
     return true;
   }
 
-  // Before consuming whitespace because we need newlines
-  if (valid_symbols[DOC_COMMENT_CONTRACT_TEXT] && scan_doc_comment_contract_text(lexer)) {
-    lexer->result_symbol = DOC_COMMENT_CONTRACT_TEXT;
+  if (valid_symbols[BLOCK_COMMENT_END_OR_EOF] && scan_block_comment_end_or_eof(lexer)) {
+    lexer->result_symbol = BLOCK_COMMENT_END_OR_EOF;
     return true;
   }
 

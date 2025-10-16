@@ -57,7 +57,9 @@ func (p *Parser) nodeToDocComment(node *sitter.Node, sourceCode []byte) idx.DocC
 					// Right now, contracts can only have a single line, so we don't dedent.
 					// They can also be arbitrary expressions, so it's best to not modify them
 					// at the moment.
-					body = contractNode.Child(1).Content(sourceCode)
+					start := contractNode.Child(1).StartByte()
+					end := contractNode.Child(int(contractNode.ChildCount()) - 1).EndByte()
+					body = string(sourceCode[start:end])
 				}
 
 				contract := idx.NewDocCommentContract(name, body)

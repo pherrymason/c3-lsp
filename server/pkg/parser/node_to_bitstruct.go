@@ -61,13 +61,13 @@ func (p *Parser) nodeToBitStructMembers(node *sitter.Node, currentModule *idx.Mo
 		if bType == "bitstruct_member_declaration" {
 			var memberType idx.Type
 			var identity string
+			if bdefnodeType := bdefnode.ChildByFieldName("type"); bdefnodeType != nil {
+				memberType = p.typeNodeToType(bdefnodeType, currentModule, sourceCode)
+			}
 			for x := 0; x < int(bdefnode.ChildCount()); x++ {
 				xNode := bdefnode.Child(x)
 				//fmt.Println(xNode.Type())
 				switch xNode.Type() {
-				case "base_type":
-					// Note: here we consciously pass bdefnode because typeNodeToType expects a child node of base_type. If we send xNode it will not find it.
-					memberType = p.typeNodeToType(bdefnode, currentModule, sourceCode)
 				case "ident":
 					identity = xNode.Content(sourceCode)
 				}

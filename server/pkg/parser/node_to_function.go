@@ -53,7 +53,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 	if parameters.ChildCount() > 2 {
 		for i := uint32(0); i < parameters.ChildCount(); i++ {
 			argNode := parameters.Child(int(i))
-			if argNode.Type() != "parameter" {
+			if argNode.Type() != "param" {
 				continue
 			}
 
@@ -186,7 +186,7 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 			idRange = idx.NewRangeFromTreeSitterPositions(n.StartPoint(), n.EndPoint())
 
 		// = default
-		case "parameter_default":
+		case "param_default":
 			assigned := n.ChildByFieldName("right")
 			if assigned != nil {
 				paramDefault = option.Some(assigned.Content(sourceCode))
@@ -296,7 +296,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 				// Get body function signature
 				// If it's missing, it's just empty args
 				bodyParams := "()"
-				if argNode.ChildCount() >= 2 && argNode.Child(1).Type() == "fn_parameter_list" {
+				if argNode.ChildCount() >= 2 && argNode.Child(1).Type() == "func_param_list" {
 					// TODO: Maybe we should properly parse the parameters at some point
 					// For now, simple string manipulation suffices
 					bodyParams = argNode.Child(1).Content(sourceCode)
@@ -317,7 +317,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 				)
 
 				argument = &variable
-			} else if argNode.Type() == "parameter" {
+			} else if argNode.Type() == "param" {
 				argument = p.nodeToArgument(argNode, typeIdentifier, currentModule, docId, sourceCode, parameterIndex)
 			} else {
 				continue

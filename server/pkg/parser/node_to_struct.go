@@ -44,11 +44,11 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 		switch child.Type() {
 		case "union":
 			isUnion = true
-		case "interface_impl":
+		case "interface_impl_list":
 			// TODO
 			for x := 0; x < int(child.ChildCount()); x++ {
 				n := child.Child(x)
-				if n.Type() == "interface" {
+				if n.IsNamed() {
 					interfaces = append(interfaces, n.Content(sourceCode))
 				}
 			}
@@ -113,7 +113,7 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 		// Iterate through children of struct_member_declaration
 		for x := 0; x < int(memberNode.ChildCount()); x++ {
 			n := memberNode.Child(x)
-			//fmt.Println("child:", n.Type(), "::", memberNode.Content(sourceCode))
+			// fmt.Println("child:", n.Type(), "::", memberNode.Content(sourceCode))
 			switch n.Type() {
 			case "type":
 				fieldType = p.typeNodeToType(n, currentModule, sourceCode)

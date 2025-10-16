@@ -11,7 +11,7 @@ import (
 type Module struct {
 	Variables         map[string]*Variable
 	Enums             map[string]*Enum
-	Faults            map[string]*Fault
+	Faults            []*Fault
 	Structs           map[string]*Struct
 	Bitstructs        map[string]*Bitstruct
 	Defs              map[string]*Def
@@ -28,7 +28,7 @@ func NewModule(name string, docId string, idRange Range, docRange Range) *Module
 	return &Module{
 		Variables:         make(map[string]*Variable),
 		Enums:             make(map[string]*Enum),
-		Faults:            make(map[string]*Fault),
+		Faults:            []*Fault{},
 		Structs:           make(map[string]*Struct),
 		Bitstructs:        make(map[string]*Bitstruct),
 		Defs:              make(map[string]*Def),
@@ -70,7 +70,11 @@ func (m *Module) AddEnum(enum *Enum) *Module {
 }
 
 func (m *Module) AddFault(fault *Fault) *Module {
-	m.Faults[fault.name] = fault
+	//TODO: @0.7.7 Fault does not have a name anymore, but as a workaround all defined faults have name ""
+	if fault.baseType != "" {
+		panic("In C3 0.7.X faultdef do not have a name")
+	}
+	m.Faults = append(m.Faults, fault)
 	m.Insert(fault)
 
 	return m

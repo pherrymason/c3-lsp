@@ -90,7 +90,7 @@ func (t Type) String() string {
 	pointerStr := strings.Repeat("*", t.pointer)
 	optionalStr := ""
 	if t.optional {
-		optionalStr = "!"
+		optionalStr = "?"
 	}
 
 	collectionStr := ""

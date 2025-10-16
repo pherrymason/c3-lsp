@@ -30,7 +30,7 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 		n := node.Child(i)
 		//fmt.Println("Node type:", n.Type(), ":: ", n.Content(sourceCode))
 		switch n.Type() {
-		case "generic_parameters", "generic_module_parameters":
+		case "generic_param_list":
 			for g := 0; g < int(n.ChildCount()); g++ {
 				gn := n.Child(g)
 				//fmt.Println("G Node type:", gn.Type(), ":: ", gn.Content(sourceCode))

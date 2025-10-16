@@ -5,7 +5,7 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) []*idx.Variable {
+func (p *Parser) variableDeclarationNodeToVariable(declarationNode *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) []*idx.Variable {
 	var variables []*idx.Variable
 	//var typeNodeContent string
 	var vType idx.Type
@@ -38,72 +38,37 @@ func (p *Parser) globalVariableDeclarationNodeToVariable(declarationNode *sitter
 					declarationNode.EndPoint()),
 			)
 			variables = append(variables, &variable)
+		case "identifier_list":
+			for j := 0; j < int(n.ChildCount()); j++ {
+
+				bn := n.Child(j)
+				if bn.Type() != "ident" {
+					continue
+				}
+				variable := idx.NewVariable(
+					bn.Content(sourceCode),
+					vType,
+					//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
+					currentModule.GetModuleString(),
+					*docId,
+					idx.NewRangeFromTreeSitterPositions(
+						bn.StartPoint(),
+						bn.EndPoint(),
+					),
+					idx.NewRangeFromTreeSitterPositions(
+						declarationNode.StartPoint(),
+						declarationNode.EndPoint()),
+				)
+				variables = append(variables, &variable)
+			}
 		case ";":
 			if n.HasError() && len(variables) > 0 {
 				// Last variable is incomplete, remove it
 				variables = variables[:len(variables)-1]
 			}
 
-		case "multi_declaration":
-			sub := n.Child(1)
-			variable := idx.NewVariable(
-				sub.Content(sourceCode),
-				vType,
-				//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
-				currentModule.GetModuleString(),
-				*docId,
-				idx.NewRangeFromTreeSitterPositions(
-					sub.StartPoint(),
-					sub.EndPoint(),
-				),
-				idx.NewRangeFromTreeSitterPositions(
-					declarationNode.StartPoint(),
-					declarationNode.EndPoint()),
-			)
-			variables = append(variables, &variable)
 		}
 
-	}
-
-	return variables
-}
-
-func (p *Parser) localVariableDeclarationNodeToVariable(declarationNode *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) []*idx.Variable {
-	var variables []*idx.Variable
-	//var typeNodeContent string
-	var vType idx.Type
-
-	//fmt.Println(declarationNode.ChildCount())
-	//fmt.Println(declarationNode)
-	//fmt.Println(declarationNode.Content(sourceCode))
-
-	for i := uint32(0); i < declarationNode.ChildCount(); i++ {
-		n := declarationNode.Child(int(i))
-		switch n.Type() {
-		case "type":
-			//typeNodeContent = n.Content(sourceCode)
-			vType = p.typeNodeToType(n, currentModule, sourceCode)
-			break
-
-		case "local_decl_after_type":
-			identifier := n.ChildByFieldName("name")
-
-			variable := idx.NewVariable(
-				identifier.Content(sourceCode),
-				vType,
-				//idx.NewTypeFromString(typeNodeContent, moduleName), // <-- moduleName is potentially wrong
-				currentModule.GetModuleString(),
-				*docId,
-				idx.NewRangeFromTreeSitterPositions(
-					identifier.StartPoint(),
-					identifier.EndPoint(),
-				),
-				idx.NewRangeFromTreeSitterPositions(
-					declarationNode.StartPoint(),
-					declarationNode.EndPoint()),
-			)
-			variables = append(variables, &variable)
-		}
 	}
 
 	return variables

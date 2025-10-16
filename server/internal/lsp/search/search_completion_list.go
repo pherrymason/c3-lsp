@@ -177,7 +177,11 @@ func (s *Search) BuildMethodCompletions(
 	)
 	methods = state.SearchByFQN(query)
 	for _, idx := range methods {
-		fn, _ := idx.(*symbols.Function)
+		fn, success := idx.(*symbols.Function)
+		if !success {
+			s.logger.Warningf("unexpected: query returned non function symbol of type %T, skipping", idx)
+			continue
+		}
 		kind := idx.GetKind()
 		items = append(items, protocol.CompletionItem{
 			Label: fn.GetName(),
@@ -292,7 +296,7 @@ func (s *Search) BuildCompletionList(
 		methodsReadable := fromDistinct == NotFromDistinct || (fromDistinct == InlineDistinct && !membersReadable)
 
 		prevIndexable := prevIndexableOption.Get()
-		//fmt.Print(prevIndexable.GetName())
+		// fmt.Print(prevIndexable.GetName())
 
 		switch prevIndexable.(type) {
 

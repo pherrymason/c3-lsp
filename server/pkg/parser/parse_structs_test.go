@@ -194,7 +194,7 @@ struct Foo {
 
 func TestParse_struct_with_anonymous_bitstructs(t *testing.T) {
 	source := `module x;
-	def Register16 = UInt16;
+	alias Register16 = UInt16;
 	struct Registers {
 		bitstruct : Register16 @overlap {
 			Register16 bc : 0..15;
@@ -241,14 +241,17 @@ func TestParse_struct_with_anonymous_bitstructs(t *testing.T) {
 			assert.Fail(t, fmt.Sprintf("An unexpected member was found: %s", member.GetName()))
 			break
 		}
+		tc := cases[i]
+		t.Run(fmt.Sprintf("field_%s", tc.name), func(t *testing.T) {
+			assert.Same(t, found.Children()[i], member)
+			assert.Equal(t, tc.name, member.GetName())
+			assert.Equal(t, tc.fieldType, member.GetType().GetName())
+			if tc.bitRange.IsSome() {
+				bitRange := tc.bitRange.Get()
+				assert.Equal(t, bitRange, member.GetBitRange())
+			}
+		})
 
-		assert.Same(t, found.Children()[i], member)
-		assert.Equal(t, cases[i].name, member.GetName())
-		assert.Equal(t, cases[i].fieldType, member.GetType().GetName())
-		if cases[i].bitRange.IsSome() {
-			bitRange := cases[i].bitRange.Get()
-			assert.Equal(t, bitRange, member.GetBitRange())
-		}
 	}
 }
 

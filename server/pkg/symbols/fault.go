@@ -7,6 +7,7 @@ import (
 )
 
 type Fault struct {
+	// TODO: FaultDefs do not have a baseType anymore
 	baseType  string
 	constants []*FaultConstant
 	BaseIndexable
