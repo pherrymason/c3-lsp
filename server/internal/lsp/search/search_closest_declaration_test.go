@@ -62,17 +62,17 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 		{"int"}, {"iptr"}, {"isz"}, {"long"},
 		{"short"}, {"uint128"}, {"uint"}, {"ulong"},
 		{"uptr"}, {"ushort"}, {"usz"}, {"float128"},
-		{"any"}, {"anyfault"}, {"typeid"}, {"assert"},
+		{"any"}, {"fault"}, {"typeid"}, {"assert"},
 		{"asm"}, {"bitstruct"}, {"break"}, {"case"},
-		{"catch"}, {"const"}, {"continue"}, {"def"},
-		{"default"}, {"defer"}, {"distinct"}, {"do"},
+		{"catch"}, {"const"}, {"continue"}, {"alias"},
+		{"default"}, {"defer"}, {"typedef"}, {"do"},
 		{"else"}, {"enum"}, {"extern"}, {"false"},
-		{"fault"}, {"for"}, {"foreach"}, {"foreach_r"},
-		{"fn"}, {"tlocal"}, {"if"}, {"inline"},
-		{"import"}, {"macro"}, {"module"}, {"nextcase"},
-		{"null"}, {"return"}, {"static"}, {"struct"},
-		{"switch"}, {"true"}, {"try"}, {"union"},
-		{"var"}, {"while"},
+		{"for"}, {"foreach"}, {"foreach_r"}, {"fn"},
+		{"tlocal"}, {"if"}, {"inline"}, {"import"},
+		{"macro"}, {"module"}, {"nextcase"}, {"null"},
+		{"return"}, {"static"}, {"struct"}, {"switch"},
+		{"true"}, {"try"}, {"union"}, {"var"},
+		{"while"}, {"attrdef"},
 		{"$alignof"}, {"$assert"}, {"$case"}, {"$default"},
 		{"$defined"}, {"$echo"}, {"$embed"}, {"$exec"},
 		{"$else"}, {"$endfor"}, {"$endforeach"}, {"$endif"},
@@ -81,7 +81,7 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 		{"$include"}, {"$nameof"}, {"$offsetof"}, {"$qnameof"},
 		{"$sizeof"}, {"$stringify"}, {"$switch"}, {"$typefrom"},
 		{"$typeof"}, {"$vacount"}, {"$vatype"}, {"$vaconst"},
-		{"$varef"}, {"$vaarg"}, {"$vaexpr"}, {"$vasplat"},
+		{"$vaarg"}, {"$vaexpr"}, {"$vasplat"},
 	}
 	parser := createParser()
 	logger := &MockLogger{
@@ -462,25 +462,27 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 	t.Run("Find local fault definition in type declaration", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			`faultdef UNEXPECTED_ERROR, SOMETHING_HAPPENED;
 			fn void main() {
-				W|||indowError error = WindowError.SOMETHING_HAPPENED;
+				int? error = SOMETH|||ING_HAPPENED?;
 				error = UNEXPECTED_ERROR;
 			}`,
 		)
 
-		assert.False(t, symbolOption.IsNone(), "Fault not found")
+		if !assert.False(t, symbolOption.IsNone(), "Fault not found") {
+			return
+		}
 
-		fault := symbolOption.Get().(*idx.Fault)
-		assert.Equal(t, "WindowError", fault.GetName())
+		fault := symbolOption.Get().(*idx.FaultConstant)
+		assert.Equal(t, "SOMETHING_HAPPENED", fault.GetName())
 	})
 
 	t.Run("Find local fault variable definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			`faultdef UNEXPECTED_ERROR, SOMETHING_HAPPENED;
 			fn void main() {
-				WindowError error = WindowError.SOMETHING_HAPPENED;
-				e|||rror = UNEXPECTED_ERROR;
+				int? error = SOMETHING_HAPPENED?;
+				er|||ror = UNEXPECTED_ERROR;
 			}`,
 		)
 
@@ -492,10 +494,10 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 
 	t.Run("Should find implicit fault constant definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
+			`faultdef UNEXPECTED_ERROR, SOMETHING_HAPPENED;
 			fn void main() {
-				WindowError error = WindowError.SOMETHING_HAPPENED;
-				error = U|||NEXPECTED_ERROR;
+				int? error = SOMETHING_HAPPENED?;
+				error = UNEXPECTED_|||ERROR;
 			}`,
 		)
 
@@ -528,46 +530,12 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		assert.True(t, symbolOption.IsNone(), "Element found")
 	})
 
-	t.Run("Should find fault method definition on instance variable", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_ClosestDecl(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			fn bool WindowError.isBad(){}
-
-			fn void main() {
-				WindowError val = UNEXPECTED_ERROR;
-				val.is|||Bad();
-			}
-			`,
-		)
-
-		assert.False(t, symbolOption.IsNone(), "Method not found")
-		_, ok := symbolOption.Get().(*idx.Function)
-		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
-		assert.Equal(t, "WindowError.isBad", symbolOption.Get().GetName())
-	})
-
-	t.Run("Should find fault method definition on explicit fault constant", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_ClosestDecl(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			fn bool WindowError.isBad(){}
-
-			fn void main() {
-				WindowError.UNEXPECTED_ERROR.isB|||ad();
-			}
-			`,
-		)
-
-		assert.False(t, symbolOption.IsNone(), "Method not found")
-		_, ok := symbolOption.Get().(*idx.Function)
-		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
-		assert.Equal(t, "WindowError.isBad", symbolOption.Get().GetName())
-	})
 }
 
 func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 	t.Run("Find local definition definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
-			`def Kilo = int;
+			`alias Kilo = int;
 			K|||ilo value = 3;`,
 		)
 
@@ -576,10 +544,10 @@ func TestLanguage_findClosestSymbolDeclaration_def(t *testing.T) {
 	})
 }
 
-func TestLanguage_findClosestSymbolDeclaration_distinct(t *testing.T) {
-	t.Run("Find local distinct definition", func(t *testing.T) {
+func TestLanguage_findClosestSymbolDeclaration_typedef(t *testing.T) {
+	t.Run("Find local typedef definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
-			`distinct Kilo = int;
+			`typedef Kilo = int;
 			K|||ilo value = 3;`,
 		)
 
@@ -587,9 +555,9 @@ func TestLanguage_findClosestSymbolDeclaration_distinct(t *testing.T) {
 		assert.Equal(t, "Kilo", symbolOption.Get().GetName())
 	})
 
-	t.Run("Find local distinct inline definition", func(t *testing.T) {
+	t.Run("Find local typedef inline definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
-			`distinct Kilo = inline int;
+			`typedef Kilo = inline int;
 			K|||ilo value = 3;`,
 		)
 
@@ -597,9 +565,9 @@ func TestLanguage_findClosestSymbolDeclaration_distinct(t *testing.T) {
 		assert.Equal(t, "Kilo", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should find distinct method definition", func(t *testing.T) {
+	t.Run("Should find typedef method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
-			`distinct Kilo = int;
+			`typedef Kilo = int;
 			fn bool Kilo.isLarge(){ return true; }
 
 			fn void func(Kilo val) {
@@ -629,10 +597,10 @@ func TestLanguage_findClosestSymbolDeclaration_distinct(t *testing.T) {
 		assert.True(t, symbolOption.IsNone(), "Element found despite non-inline")
 	})
 
-	t.Run("Should find inline distinct base type method definition", func(t *testing.T) {
+	t.Run("Should find inline typedef base type method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 			fn bool Abc.isLarge(){ return false; }
 
 			fn void func(Kilo val) {
@@ -647,10 +615,10 @@ func TestLanguage_findClosestSymbolDeclaration_distinct(t *testing.T) {
 		assert.Equal(t, "Abc.isLarge", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should find inline distinct's own method definition", func(t *testing.T) {
+	t.Run("Should find inline typedef's own method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 			fn bool Abc.isLarge(){ return false; }
 			fn bool Kilo.isEvenLarger(){ return true; }
 
@@ -666,11 +634,11 @@ func TestLanguage_findClosestSymbolDeclaration_distinct(t *testing.T) {
 		assert.Equal(t, "Kilo.isEvenLarger", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should prioritize clashing inline distinct method name", func(t *testing.T) {
+	t.Run("Should prioritize clashing inline typedef method name", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
 			`struct Unrelated { int b; }
 			struct Abc { int a; }
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 			fn bool Unrelated.isLarge() { return false; }
 			fn bool Abc.isLarge(){ return false; }
 			fn bool Kilo.isLarge(){ return true; }

@@ -272,11 +272,8 @@ func TestParses_UnTypedEnums(t *testing.T) {
 func TestParse_fault(t *testing.T) {
 	docId := "doc"
 	source := `<* docs *>
-	fault IOResult
-	{
-	  IO_ERROR,
-	  PARSE_ERROR
-	};`
+	faultdef IO_ERROR, PARSE_ERROR;
+	`
 
 	doc := document.NewDocument(docId, source)
 	parser := createParser()
@@ -285,24 +282,30 @@ func TestParse_fault(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("doc")
-		assert.NotNil(t, scope.Faults["IOResult"])
-		assert.Equal(t, "IOResult", scope.Faults["IOResult"].GetName())
-		assert.Equal(t, "", scope.Faults["IOResult"].GetType())
-		assert.Same(t, scope.Children()[0], scope.Faults["IOResult"])
+		if scope == nil {
+			t.Fatalf("scope is nil")
+		}
+		if !assert.Equal(t, len(scope.Faults), 1) {
+			return
+		}
+		assert.NotNil(t, scope.Faults[0], "faults: %v", scope.Faults)
+		assert.Equal(t, "", scope.Faults[0].GetName())
+		assert.Equal(t, "", scope.Faults[0].GetType())
+		assert.Same(t, scope.Children()[0], scope.Faults[0])
 	})
 
 	t.Run("reads ranges for fault", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		found := symbols.Get("doc").Faults["IOResult"]
-		assert.Equal(t, idx.NewRange(1, 1, 5, 2), found.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(1, 7, 1, 15), found.GetIdRange(), "Wrong identifier range")
+		found := symbols.Get("doc").Faults[0]
+		assert.Equal(t, idx.NewRange(1, 1, 1, 32), found.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(0, 0, 0, 0), found.GetIdRange(), "Wrong identifier range")
 	})
 
 	t.Run("finds doc comment", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		fault := symbols.Get("doc").Faults["IOResult"]
+		fault := symbols.Get("doc").Faults[0]
 
 		assert.Equal(t, "docs", fault.GetDocComment().GetBody())
 	})
@@ -310,19 +313,19 @@ func TestParse_fault(t *testing.T) {
 	t.Run("finds defined fault constants", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		fault := symbols.Get("doc").Faults["IOResult"]
+		fault := symbols.Get("doc").Faults[0]
 		e := fault.GetConstant("IO_ERROR")
 		assert.Equal(t, "IO_ERROR", e.GetName())
-		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetIdRange())
-		assert.Equal(t, idx.NewRange(3, 3, 3, 11), e.GetDocumentRange())
-		assert.Equal(t, "IOResult", e.GetFaultName())
+		assert.Equal(t, idx.NewRange(1, 10, 1, 18), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(1, 10, 1, 18), e.GetDocumentRange())
+		assert.Equal(t, "", e.GetFaultName())
 		assert.Same(t, fault.Children()[0], e)
 
 		e = fault.GetConstant("PARSE_ERROR")
 		assert.Equal(t, "PARSE_ERROR", e.GetName())
-		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetIdRange())
-		assert.Equal(t, idx.NewRange(4, 3, 4, 14), e.GetDocumentRange())
-		assert.Equal(t, "IOResult", e.GetFaultName())
+		assert.Equal(t, idx.NewRange(1, 20, 1, 31), e.GetIdRange())
+		assert.Equal(t, idx.NewRange(1, 20, 1, 31), e.GetDocumentRange())
+		assert.Equal(t, "", e.GetFaultName())
 		assert.Same(t, fault.Children()[1], e)
 	})
 }
@@ -384,21 +387,21 @@ func TestParse_interface(t *testing.T) {
 func TestExtractSymbols_finds_definition(t *testing.T) {
 	source := `module mod;
 	<* docs *>
-	def Kilo = int;
-	def KiloPtr = Kilo*;
-	def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
-	def MyMap = HashMap(<String, Feature>);
-	def Camera = raylib::Camera;
+	alias Kilo = int;
+	alias KiloPtr = Kilo*;
+	alias MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
+	alias MyMap = HashMap{String, Feature};
+	alias Camera = raylib::Camera;
 
 	int global_var = 10;
 	const int MY_CONST = 5;
 	macro @ad(; @body) { @body(); }
 	fn void a() {}
 
-	def func = a(<String>);
-	def aliased_global = global_var;
-	def CONST_ALIAS = MY_CONST;
-	def @macro_alias = @a;
+	alias func = a{String};
+	alias aliased_global = global_var;
+	alias CONST_ALIAS = MY_CONST;
+	alias @macro_alias = @a;
 	`
 	// TODO: Missing def different definition examples. See parser.nodeToDef
 	mod := "mod"
@@ -412,8 +415,8 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithResolvesToType(
 			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
 		).
-		WithIdentifierRange(2, 5, 2, 9).
-		WithDocumentRange(2, 1, 2, 16).
+		WithIdentifierRange(2, 7, 2, 11).
+		WithDocumentRange(2, 1, 2, 18).
 		Build()
 	expectedDefKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
 	assert.Equal(t, expectedDefKilo, module.Defs["Kilo"])
@@ -423,16 +426,16 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithResolvesToType(
 			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
 		).
-		WithIdentifierRange(3, 5, 3, 12).
-		WithDocumentRange(3, 1, 3, 21).
+		WithIdentifierRange(3, 7, 3, 14).
+		WithDocumentRange(3, 1, 3, 23).
 		Build()
 	assert.Equal(t, expectedDefKiloPtr, module.Defs["KiloPtr"])
 	assert.Same(t, module.Children()[1], module.Defs["KiloPtr"])
 
 	expectedDefFunction := idx.NewDefBuilder("MyFunction", mod, doc.URI).
 		WithResolvesTo("fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)").
-		WithIdentifierRange(4, 5, 4, 15).
-		WithDocumentRange(4, 1, 4, 74).
+		WithIdentifierRange(4, 7, 4, 17).
+		WithDocumentRange(4, 1, 4, 76).
 		Build()
 
 	assert.Equal(t, expectedDefFunction, module.Defs["MyFunction"])
@@ -450,7 +453,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 					idx.NewType(false, "Feature", 0, false, false, option.None[int](), "mod"),
 				}, "mod"),
 		).
-		WithIdentifierRange(5, 5, 5, 10).
+		WithIdentifierRange(5, 7, 5, 12).
 		WithDocumentRange(5, 1, 5, 40).
 		Build()
 
@@ -461,16 +464,16 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithResolvesToType(
 			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
 		).
-		WithIdentifierRange(6, 5, 6, 11).
-		WithDocumentRange(6, 1, 6, 29).
+		WithIdentifierRange(6, 7, 6, 13).
+		WithDocumentRange(6, 1, 6, 31).
 		Build()
 
 	assert.Equal(t, expectedDefTypeWithModulePath, module.Defs["Camera"])
 	assert.Same(t, module.Children()[4], module.Defs["Camera"])
 
 	expectedDefTypeAliasingToFunc := idx.NewDefBuilder("func", mod, doc.URI).
-		WithResolvesTo("a(<String>)").
-		WithIdentifierRange(13, 5, 13, 9).
+		WithResolvesTo("a{String}").
+		WithIdentifierRange(13, 7, 13, 11).
 		WithDocumentRange(13, 1, 13, 24).
 		Build()
 
@@ -479,8 +482,8 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefTypeAliasingToGlobalVar := idx.NewDefBuilder("aliased_global", mod, doc.URI).
 		WithResolvesTo("global_var").
-		WithIdentifierRange(14, 5, 14, 19).
-		WithDocumentRange(14, 1, 14, 33).
+		WithIdentifierRange(14, 7, 14, 21).
+		WithDocumentRange(14, 1, 14, 35).
 		Build()
 
 	assert.Equal(t, expectedDefTypeAliasingToGlobalVar, module.Defs["aliased_global"])
@@ -488,8 +491,8 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefTypeAliasingToConst := idx.NewDefBuilder("CONST_ALIAS", mod, doc.URI).
 		WithResolvesTo("MY_CONST").
-		WithIdentifierRange(15, 5, 15, 16).
-		WithDocumentRange(15, 1, 15, 28).
+		WithIdentifierRange(15, 7, 15, 18).
+		WithDocumentRange(15, 1, 15, 30).
 		Build()
 
 	assert.Equal(t, expectedDefTypeAliasingToConst, module.Defs["CONST_ALIAS"])
@@ -497,8 +500,8 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 
 	expectedDefTypeAliasingToMacro := idx.NewDefBuilder("@macro_alias", mod, doc.URI).
 		WithResolvesTo("@a").
-		WithIdentifierRange(16, 5, 16, 17).
-		WithDocumentRange(16, 1, 16, 23).
+		WithIdentifierRange(16, 7, 16, 19).
+		WithDocumentRange(16, 1, 16, 25).
 		Build()
 
 	assert.Equal(t, expectedDefTypeAliasingToMacro, module.Defs["@macro_alias"])
@@ -508,10 +511,10 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 func TestExtractSymbols_finds_distinct(t *testing.T) {
 	source := `module mod;
 	<* docs *>
-	distinct Kilo = int;
-	distinct KiloPtr = Kilo*;
-	distinct MyMap = HashMap(<String, Feature>);
-	distinct Camera = raylib::Camera;
+	typedef Kilo = int;
+	typedef KiloPtr = Kilo*;
+	typedef MyMap = HashMap{String, Feature};
+	typedef Camera = raylib::Camera;
 	`
 	mod := "mod"
 	doc := document.NewDocument("x", source)
@@ -525,8 +528,8 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 		WithBaseType(
 			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
 		).
-		WithIdentifierRange(2, 10, 2, 14).
-		WithDocumentRange(2, 1, 2, 21).
+		WithIdentifierRange(2, 9, 2, 13).
+		WithDocumentRange(2, 1, 2, 20).
 		Build()
 	expectedDistinctKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
 	assert.Equal(t, expectedDistinctKilo, module.Distincts["Kilo"])
@@ -537,8 +540,8 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 		WithBaseType(
 			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
 		).
-		WithIdentifierRange(3, 10, 3, 17).
-		WithDocumentRange(3, 1, 3, 26).
+		WithIdentifierRange(3, 9, 3, 16).
+		WithDocumentRange(3, 1, 3, 25).
 		Build()
 	assert.Equal(t, expectedDistinctKiloPtr, module.Distincts["KiloPtr"])
 	assert.Same(t, module.Children()[1], module.Distincts["KiloPtr"])
@@ -556,8 +559,8 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 					idx.NewType(false, "Feature", 0, false, false, option.None[int](), "mod"),
 				}, "mod"),
 		).
-		WithIdentifierRange(4, 10, 4, 15).
-		WithDocumentRange(4, 1, 4, 45).
+		WithIdentifierRange(4, 9, 4, 14).
+		WithDocumentRange(4, 1, 4, 42).
 		Build()
 
 	assert.Equal(t, expectedDistinctTypeWithGenerics, module.Distincts["MyMap"])
@@ -568,8 +571,8 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 		WithBaseType(
 			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
 		).
-		WithIdentifierRange(5, 10, 5, 16).
-		WithDocumentRange(5, 1, 5, 34).
+		WithIdentifierRange(5, 9, 5, 15).
+		WithDocumentRange(5, 1, 5, 33).
 		Build()
 
 	assert.Equal(t, expectedDistinctTypeWithModulePath, module.Distincts["Camera"])
@@ -579,10 +582,10 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 	source := `module mod;
 	<* docs *>
-	distinct Kilo = inline int;
-	distinct KiloPtr = inline Kilo*;
-	distinct MyMap = inline HashMap(<String, Feature>);
-	distinct Camera = inline raylib::Camera;
+	typedef Kilo = inline int;
+	typedef KiloPtr = inline Kilo*;
+	typedef MyMap = inline HashMap{String, Feature};
+	typedef Camera = inline raylib::Camera;
 	`
 	mod := "mod"
 	doc := document.NewDocument("x", source)
@@ -596,8 +599,8 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 		WithBaseType(
 			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
 		).
-		WithIdentifierRange(2, 10, 2, 14).
-		WithDocumentRange(2, 1, 2, 28).
+		WithIdentifierRange(2, 9, 2, 13).
+		WithDocumentRange(2, 1, 2, 27).
 		Build()
 	expectedDistinctKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
 	assert.Equal(t, expectedDistinctKilo, module.Distincts["Kilo"])
@@ -608,8 +611,8 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 		WithBaseType(
 			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
 		).
-		WithIdentifierRange(3, 10, 3, 17).
-		WithDocumentRange(3, 1, 3, 33).
+		WithIdentifierRange(3, 9, 3, 16).
+		WithDocumentRange(3, 1, 3, 32).
 		Build()
 	assert.Equal(t, expectedDistinctKiloPtr, module.Distincts["KiloPtr"])
 	assert.Same(t, module.Children()[1], module.Distincts["KiloPtr"])
@@ -627,8 +630,8 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 					idx.NewType(false, "Feature", 0, false, false, option.None[int](), "mod"),
 				}, "mod"),
 		).
-		WithIdentifierRange(4, 10, 4, 15).
-		WithDocumentRange(4, 1, 4, 52).
+		WithIdentifierRange(4, 9, 4, 14).
+		WithDocumentRange(4, 1, 4, 49).
 		Build()
 
 	assert.Equal(t, expectedDistinctTypeWithGenerics, module.Distincts["MyMap"])
@@ -639,8 +642,8 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 		WithBaseType(
 			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
 		).
-		WithIdentifierRange(5, 10, 5, 16).
-		WithDocumentRange(5, 1, 5, 41).
+		WithIdentifierRange(5, 9, 5, 15).
+		WithDocumentRange(5, 1, 5, 40).
 		Build()
 
 	assert.Equal(t, expectedDistinctTypeWithModulePath, module.Distincts["Camera"])
@@ -649,7 +652,7 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 
 func TestExtractSymbols_finds_distinct_with_methods(t *testing.T) {
 	source := `module mod;
-	distinct SuperInt = inline int;
+	typedef SuperInt = inline int;
 
 	fn SuperInt SuperInt.addOne(self) {
 	    return self + 1;
@@ -834,8 +837,8 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 
 func TestExtractSymbols_module_with_generics(t *testing.T) {
 
-	//module std::atomic::types(<Type>);
-	source := `module foo_test(<Type1, Type2>);
+	//module std::atomic::types{Type};
+	source := `module foo_test{Type1, Type2};
 		struct Foo
 		{
 			Type1 a;
@@ -845,7 +848,7 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 			return foo.a + b;
 		}
 
-		module foo::another::deep(<Type>);
+		module foo::another::deep{Type};
 		int bar = 0;`
 
 	doc := document.NewDocument("docid", source)
@@ -857,17 +860,17 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 
 	// Generic parameter was found
 	generic, ok := module.GenericParameters["Type1"]
-	assert.True(t, ok)
+	assert.True(t, ok, "genericParams: %v", module.GenericParameters)
 	assert.Equal(t, "Type1", generic.GetName())
-	assert.Equal(t, idx.NewRange(0, 17, 0, 22), generic.GetIdRange())
-	assert.Equal(t, idx.NewRange(0, 17, 0, 22), generic.GetDocumentRange())
+	assert.Equal(t, idx.NewRange(0, 16, 0, 21), generic.GetIdRange())
+	assert.Equal(t, idx.NewRange(0, 16, 0, 21), generic.GetDocumentRange())
 
 	// Generic parameter was found
 	generic, ok = module.GenericParameters["Type2"]
 	assert.True(t, ok)
 	assert.Equal(t, "Type2", generic.GetName())
-	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetIdRange())
-	assert.Equal(t, idx.NewRange(0, 24, 0, 29), generic.GetDocumentRange())
+	assert.Equal(t, idx.NewRange(0, 23, 0, 28), generic.GetIdRange())
+	assert.Equal(t, idx.NewRange(0, 23, 0, 28), generic.GetDocumentRange())
 
 	// Usages of generic parameters are flagged as such
 	strukt := module.Structs["Foo"]

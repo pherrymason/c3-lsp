@@ -29,7 +29,7 @@ func TestExtractSymbols_Functions_Definitions(t *testing.T) {
 }
 
 func TestExtractSymbols_Functions_returns_optional_type(t *testing.T) {
-	source := `fn usz! test() {
+	source := `fn usz? test() {
 		return 1;
 	}`
 	docId := "docId"
@@ -39,10 +39,14 @@ func TestExtractSymbols_Functions_returns_optional_type(t *testing.T) {
 	t.Run("Finds function", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		fn := symbols.Get("docid").GetChildrenFunctionByName("test")
+		docModule := symbols.Get("docid")
+		if docModule == nil {
+			t.Fatalf("couldnt find docid")
+		}
+		fn := docModule.GetChildrenFunctionByName("test")
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "test", fn.Get().GetName(), "Function name")
-		assert.Equal(t, "usz!", fn.Get().GetReturnType().String(), "Return type")
+		assert.Equal(t, "usz?", fn.Get().GetReturnType().String(), "Return type")
 		assert.Equal(t, idx.NewRange(0, 8, 0, 12), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(0, 0, 2, 2), fn.Get().GetDocumentRange())
 	})
@@ -57,7 +61,11 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 	t.Run("Finds function", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		fn := symbols.Get("docid").GetChildrenFunctionByName("init_window")
+		docModule := symbols.Get("docid")
+		if docModule == nil {
+			t.Fatalf("couldnt find docid")
+		}
+		fn := docModule.GetChildrenFunctionByName("init_window")
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
@@ -82,8 +90,12 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		assert.Equal(t, "void", fn.Get().GetReturnType().GetName(), "Return type")
 		assert.Equal(t, idx.NewRange(3, 10, 3, 21), fn.Get().GetIdRange())
 		assert.Equal(t, idx.NewRange(3, 2, 3, 80), fn.Get().GetDocumentRange())
-		assert.Equal(t, "abc", fn.Get().GetDocComment().GetBody())
-		assert.Equal(t, "abc", fn.Get().GetDocComment().DisplayBodyWithContracts())
+		fnDoc := fn.Get().GetDocComment()
+		if fnDoc == nil {
+			t.Fatalf("function doc is nil")
+		}
+		assert.Equal(t, "abc", fnDoc.GetBody())
+		assert.Equal(t, "abc", fnDoc.DisplayBodyWithContracts())
 	})
 
 	t.Run("Resolves function with unnamed parameters correctly", func(t *testing.T) {
@@ -98,15 +110,24 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
 
-		arg0 := fn.Get().Variables["$arg#0"]
+		arg0, found := fn.Get().Variables["$arg#0"]
+		if !found {
+			t.Fatalf("couldnt find variable $arg#0")
+		}
 		assert.Equal(t, "$arg#0", arg0.GetName())
 		assert.Equal(t, "int", arg0.GetType().String())
 
-		arg1 := fn.Get().Variables["$arg#1"]
+		arg1, found := fn.Get().Variables["$arg#1"]
+		if !found {
+			t.Fatalf("couldnt find variable $arg#1")
+		}
 		assert.Equal(t, "$arg#1", arg1.GetName())
 		assert.Equal(t, "int", arg1.GetType().String())
 
-		arg2 := fn.Get().Variables["$arg#2"]
+		arg2, found := fn.Get().Variables["$arg#2"]
+		if !found {
+			t.Fatalf("couldnt find variable $arg#1")
+		}
 		assert.Equal(t, "$arg#2", arg2.GetName())
 		assert.Equal(t, "char*", arg2.GetType().String())
 	})
@@ -123,15 +144,24 @@ func TestExtractSymbols_Functions_Declaration(t *testing.T) {
 		assert.True(t, fn.IsSome(), "Function was not found")
 		assert.Equal(t, "init_window", fn.Get().GetName(), "Function name")
 
-		arg0 := fn.Get().Variables["width"]
+		arg0, found := fn.Get().Variables["width"]
+		if !found {
+			t.Fatalf("Couldnt find variable width")
+		}
 		assert.Equal(t, "width", arg0.GetName())
 		assert.Equal(t, "int", arg0.GetType().String())
 
-		arg1 := fn.Get().Variables["height"]
+		arg1, found := fn.Get().Variables["height"]
+		if !found {
+			t.Fatalf("Couldnt find variable height")
+		}
 		assert.Equal(t, "height", arg1.GetName())
 		assert.Equal(t, "int", arg1.GetType().String())
 
-		arg2 := fn.Get().Variables["$arg#2"]
+		arg2, found := fn.Get().Variables["$arg#2"]
+		if !found {
+			t.Fatalf("Couldnt find variable $arg#2")
+		}
 		assert.Equal(t, "$arg#2", arg2.GetName())
 		assert.Equal(t, "char*", arg2.GetType().String())
 	})
@@ -797,7 +827,7 @@ func TestExtractSymbols_flags_types_as_pending_to_be_resolved(t *testing.T) {
 		symbols, pendingToResolve := parser.ParseSymbols(&doc)
 
 		found := symbols.Get(docId).Variables["value"]
-		assert.NotNil(t, found)
+		assert.NotNil(t, found, "variables: %v", symbols.Get(docId).Variables)
 
 		assert.Equal(t, 0, len(pendingToResolve.GetTypesByModule(docId)), "Basic types should not be registered as pending to resolve.")
 	})

@@ -36,12 +36,12 @@ func SearchUnderCursor_AccessPath(body string, optionalState ...TestState) Searc
 
 func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 	t.Run("Should find method from std collection", func(t *testing.T) {
-		state := NewTestStateWithStdLibVersion("0.6.6")
+		state := NewTestStateWithStdLibVersion("0.7.7")
 		symbolOption := SearchUnderCursor_AccessPath(
 			`module core::actions;
 			import std::collections::map;
 
-			def ActionListMap = HashMap(<char*, ActionList>);
+			alias ActionListMap = HashMap{char*, ActionList};
 			struct ActionListManager{
 				ActionListMap actionLists;
 			}
@@ -54,18 +54,6 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		assert.False(t, symbolOption.IsNone(), "Element not found")
 		fun := symbolOption.Get().(*idx.Function)
 		assert.Equal(t, "HashMap.set", fun.GetName())
-	})
-
-	t.Run("Should find fault constant definition with path definition", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError error = WindowError.S|||OMETHING_HAPPENED;`,
-		)
-
-		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(*idx.FaultConstant)
-		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
-		assert.Equal(t, "SOMETHING_HAPPENED", symbolOption.Get().GetName())
 	})
 
 	t.Run("Should find local struct member variable definition", func(t *testing.T) {
@@ -128,13 +116,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
 		assert.Equal(t, "Cpu", variable.GetType())
 	})
 
-	t.Run("Should find same struct member declaration, when struct is behind a def and cursor is already in member declaration", func(t *testing.T) {
+	t.Run("Should find same struct member declaration, when struct is behind a alias and cursor is already in member declaration", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`
 			struct Camera3D {
 				int target;
 			}
-			def Camera = Camera3D;
+			alias Camera = Camera3D;
 
 			struct Widget {
 				int count;
@@ -450,7 +438,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 	t.Run("Should find enumerator on def-aliased enum", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
-			def AliasStatus = WindowStatus;
+			alias AliasStatus = WindowStatus;
 			WindowStatus stat = AliasStatus.O|||PEN;`,
 		)
 
@@ -468,7 +456,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 				MINIMIZED = 7
 			}
 			WindowStatus stat = WindowStatus.OPEN;
-			def alias_stat = stat;
+			alias alias_stat = stat;
 			int val = alias_stat.a|||ssoc;`,
 		)
 
@@ -483,7 +471,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }
 			WindowStatus stat = WindowStatus.OPEN;
-			def aliased_stat = stat;
+			alias aliased_stat = stat;
 			fn bool WindowStatus.isOpen() {}
 			fn void main() {
 				aliased_stat.is|||Open();
@@ -496,127 +484,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_enums(t *testing.
 	})
 }
 
-func TestProjectState_findClosestSymbolDeclaration_access_path_faults(t *testing.T) {
-	t.Run("Should find fault constant with path definition", func(t *testing.T) {
+func TestProjectState_findClosestSymbolDeclaration_access_path_typedef(t *testing.T) {
+	t.Run("Should find typedef method", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError err = WindowError.U|||NEXPECTED_ERROR;`,
-		)
-
-		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(*idx.FaultConstant)
-		assert.True(t, ok, fmt.Sprintf("The symbol is not a fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
-		assert.Equal(t, "UNEXPECTED_ERROR", symbolOption.Get().GetName())
-	})
-
-	t.Run("Should not find fault constant after explicit instance", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError err = WindowError.UNEXPECTED_ERROR.S|||OMETHING_HAPPENED;`,
-		)
-
-		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance")
-	})
-
-	t.Run("Should not find fault constant after instance variable", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError err = WindowError.UNEXPECTED_ERROR;
-			WindowError bad = err.S|||OMETHING_HAPPENED;`,
-		)
-
-		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance variable")
-	})
-
-	t.Run("Should not find fault constant after instance variable in struct member", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			struct MyStruct { WindowError f; }
-			MyStruct st = { WindowError.UNEXPECTED_ERROR };
-			WindowError bad = st.f.S|||OMETHING_HAPPENED;`,
-		)
-
-		assert.True(t, symbolOption.IsNone(), "Constant was wrongly found on instance variable")
-	})
-
-	t.Run("Should find fault method on instance variable", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			fn bool WindowError.isBad() {}
-			fn void main() {
-				WindowError val = WindowError.UNEXPECTED_ERROR;
-				val.is|||Bad();
-			}`,
-		)
-
-		fun := symbolOption.Get().(*idx.Function)
-		assert.Equal(t, "WindowError.isBad", fun.GetName())
-		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
-	})
-
-	t.Run("Should find fault method after instance variable in struct member", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			fn bool WindowError.isBad() {}
-			struct MyStruct { WindowError f; }
-			MyStruct st = { WindowError.UNEXPECTED_ERROR };
-			WindowError bad = st.f.i|||sBad();`,
-		)
-
-		fun := symbolOption.Get().(*idx.Function)
-		assert.Equal(t, "WindowError.isBad", fun.GetName())
-		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
-	})
-
-	t.Run("Should find fault method on explicit constant", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			fn bool WindowError.isBad() {}
-			fn void main() {
-				WindowError.UNEXPECTED_ERROR.is|||Bad();
-			}`,
-		)
-
-		fun := symbolOption.Get().(*idx.Function)
-		assert.Equal(t, "WindowError.isBad", fun.GetName())
-		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
-	})
-
-	t.Run("Should find fault constant on def-aliased fault", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError constant = WindowError.UNEXPECTED_ERROR;
-			def AliasedFault = WindowError;
-			WindowError value = AliasedFault.U|||NEXPECTED_ERROR;`,
-		)
-
-		assert.False(t, symbolOption.IsNone(), "Element not found")
-		_, ok := symbolOption.Get().(*idx.FaultConstant)
-		assert.True(t, ok, fmt.Sprintf("The symbol is not a fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
-		assert.Equal(t, "UNEXPECTED_ERROR", symbolOption.Get().GetName())
-	})
-
-	t.Run("Should find fault method on def-aliased global variable", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault WindowError { UNEXPECTED_ERROR, SOMETHING_HAPPENED }
-			WindowError constant = WindowError.UNEXPECTED_ERROR;
-			def ct_alias = constant;
-			fn bool WindowError.isBad() {}
-			fn void main() {
-				ct_alias.is|||Bad();
-			}`,
-		)
-
-		fun := symbolOption.Get().(*idx.Function)
-		assert.Equal(t, "WindowError.isBad", fun.GetName())
-		assert.Equal(t, "WindowError.isBad", fun.GetFullName())
-	})
-}
-
-func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testing.T) {
-	t.Run("Should find distinct method", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`distinct Kilo = int;
+			`typedef Kilo = int;
 			fn bool Kilo.isLarge(){ return true; }
 
 			fn void func(Kilo val) {
@@ -631,10 +502,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "Kilo.isLarge", fun.GetFullName())
 	})
 
-	t.Run("Should not find non-inline distinct base type method", func(t *testing.T) {
+	t.Run("Should not find non-inline typedef base type method", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = Abc;
+			typedef Kilo = Abc;
 			fn bool Abc.isLarge(){ return false; }
 
 			fn void func(Kilo val) {
@@ -646,10 +517,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element found despite non-inline")
 	})
 
-	t.Run("Should find inline distinct base type method definition", func(t *testing.T) {
+	t.Run("Should find inline typedef base type method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 			fn bool Abc.isLarge(){ return false; }
 
 			fn void func(Kilo val) {
@@ -663,11 +534,11 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "Abc.isLarge", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should not find inline distinct's base non-inline distinct's base type method definition", func(t *testing.T) {
+	t.Run("Should not find inline typedef's base non-inline typedef's base type method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = Abc;
-			distinct KiloKilo = inline Kilo;
+			typedef Kilo = Abc;
+			typedef KiloKilo = inline Kilo;
 			fn bool Abc.isLarge(){ return false; }
 
 			fn void func(KiloKilo val) {
@@ -679,13 +550,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should not find base type method definition with non-inline distinct in the chain", func(t *testing.T) {
+	t.Run("Should not find base type method definition with non-inline typedef in the chain", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
-			distinct KiloKilo = Kilo;  // <--- not inline should break the chain
-			distinct KiloKiloKilo = inline KiloKilo;
-			distinct KiloKiloKiloKilo = inline KiloKiloKilo;
+			typedef Kilo = inline Abc;
+			typedef KiloKilo = Kilo;  // <--- not inline should break the chain
+			typedef KiloKiloKilo = inline KiloKilo;
+			typedef KiloKiloKiloKilo = inline KiloKiloKilo;
 			fn bool Abc.isLarge(){ return false; }
 
 			fn void func(KiloKiloKiloKilo val) {
@@ -697,13 +568,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should not find base distinct method definition with non-inline distinct earlier in the chain", func(t *testing.T) {
+	t.Run("Should not find base typedef method definition with non-inline typedef earlier in the chain", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
-			distinct KiloKilo = Kilo;  // <--- not inline should break the chain
-			distinct KiloKiloKilo = inline KiloKilo;
-			distinct KiloKiloKiloKilo = inline KiloKiloKilo;
+			typedef Kilo = inline Abc;
+			typedef KiloKilo = Kilo;  // <--- not inline should break the chain
+			typedef KiloKiloKilo = inline KiloKilo;
+			typedef KiloKiloKiloKilo = inline KiloKiloKilo;
 			fn bool Kilo.isLarge(){ return false; }
 
 			fn void func(KiloKiloKiloKilo val) {
@@ -715,13 +586,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should find base distinct method definition alongside inline distinct chain", func(t *testing.T) {
+	t.Run("Should find base typedef method definition alongside inline typedef chain", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
-			distinct KiloKilo = inline Kilo;
-			distinct KiloKiloKilo = inline KiloKilo;
-			distinct KiloKiloKiloKilo = inline KiloKiloKilo;
+			typedef Kilo = inline Abc;
+			typedef KiloKilo = inline Kilo;
+			typedef KiloKiloKilo = inline KiloKilo;
+			typedef KiloKiloKiloKilo = inline KiloKiloKilo;
 			fn bool Kilo.isLarge(){ return false; }
 
 			fn void func(KiloKiloKiloKilo val) {
@@ -735,11 +606,11 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "Kilo.isLarge", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should find inline distinct's base inline distinct's base type method definition", func(t *testing.T) {
+	t.Run("Should find inline typedef's base inline typedef's base type method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
-			distinct KiloKilo = inline Kilo;
+			typedef Kilo = inline Abc;
+			typedef KiloKilo = inline Kilo;
 			fn bool Abc.isLarge(){ return false; }
 
 			fn void func(KiloKilo val) {
@@ -753,10 +624,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "Abc.isLarge", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should find inline distinct's own method definition", func(t *testing.T) {
+	t.Run("Should find inline typedef's own method definition", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 			fn bool Abc.isLarge(){ return false; }
 			fn bool Kilo.isEvenLarger(){ return true; }
 
@@ -771,11 +642,11 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "Kilo.isEvenLarger", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should prioritize clashing inline distinct method name", func(t *testing.T) {
+	t.Run("Should prioritize clashing inline typedef method name", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Unrelated { int b; }
 			struct Abc { int a; }
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 			fn bool Unrelated.isLarge() { return false; }
 			fn bool Abc.isLarge(){ return false; }
 			fn bool Kilo.isLarge(){ return true; }
@@ -791,10 +662,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "Kilo.isLarge", symbolOption.Get().GetName())
 	})
 
-	t.Run("Should find non-inline distinct struct member", func(t *testing.T) {
+	t.Run("Should find non-inline typedef struct member", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int data; }
-			distinct Kilo = Abc;
+			typedef Kilo = Abc;
 
 			fn int func(Kilo val) {
 				return val.da|||ta;
@@ -810,10 +681,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "int", variable.GetType().GetName())
 	})
 
-	t.Run("Should find inline distinct struct member", func(t *testing.T) {
+	t.Run("Should find inline typedef struct member", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int data; }
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 
 			fn int func(Kilo val) {
 				return val.da|||ta;
@@ -829,13 +700,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "int", variable.GetType().GetName())
 	})
 
-	t.Run("Should find non-inline distinct enum associated value", func(t *testing.T) {
+	t.Run("Should find non-inline typedef enum associated value", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum Abc : (int data) {
 				AAA = 5,
 				BBB = 6,
 			}
-			distinct Kilo = Abc;
+			typedef Kilo = Abc;
 
 			fn int func(Kilo val) {
 				return val.da|||ta;
@@ -850,13 +721,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "int", variable.GetType().GetName())
 	})
 
-	t.Run("Should find inline distinct enum associated value", func(t *testing.T) {
+	t.Run("Should find inline typedef enum associated value", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum Abc : (int data) {
 				AAA = 5,
 				BBB = 6,
 			}
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 
 			fn int func(Kilo val) {
 				return val.da|||ta;
@@ -871,13 +742,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.Equal(t, "int", variable.GetType().GetName())
 	})
 
-	t.Run("Should not find non-inline distinct enum constant", func(t *testing.T) {
+	t.Run("Should not find non-inline typedef enum constant", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum Abc : (int data) {
 				AAA = 5,
 				BBB = 6,
 			}
-			distinct Kilo = Abc;
+			typedef Kilo = Abc;
 
 			fn void func() {
 				Kilo.A|||AA;
@@ -888,13 +759,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should not find inline distinct enum constant", func(t *testing.T) {
+	t.Run("Should not find inline typedef enum constant", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum Abc : (int data) {
 				AAA = 5,
 				BBB = 6,
 			}
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 
 			fn void func() {
 				Kilo.A|||AA;
@@ -905,44 +776,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should not find non-inline distinct fault constant", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault Abc {
-				AAA,
-				BBB,
-			}
-			distinct Kilo = Abc;
-
-			fn void func() {
-				Kilo.A|||AA;
-			}
-			`,
-		)
-
-		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
-	})
-
-	t.Run("Should not find inline distinct fault constant", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault Abc {
-				AAA,
-				BBB,
-			}
-			distinct Kilo = inline Abc;
-
-			fn void func() {
-				Kilo.A|||AA;
-			}
-			`,
-		)
-
-		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
-	})
-
-	t.Run("Should not find non-inline distinct struct method on top-level type", func(t *testing.T) {
+	t.Run("Should not find non-inline typedef struct method on top-level type", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = Abc;
+			typedef Kilo = Abc;
 			fn Abc Abc.doer() {}
 
 			fn void func() {
@@ -954,10 +791,10 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should not find inline distinct struct method on top-level type", func(t *testing.T) {
+	t.Run("Should not find inline typedef struct method on top-level type", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`struct Abc { int a; }
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 			fn Abc Abc.doer() {}
 
 			fn void func() {
@@ -969,13 +806,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should not find non-inline distinct enum method on top-level type", func(t *testing.T) {
+	t.Run("Should not find non-inline typedef enum method on top-level type", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum Abc : (int data) {
 				AAA = 5,
 				BBB = 6,
 			}
-			distinct Kilo = Abc;
+			typedef Kilo = Abc;
 			fn Abc Abc.doer() {}
 
 			fn void func() {
@@ -987,13 +824,13 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should not find inline distinct enum method on top-level type", func(t *testing.T) {
+	t.Run("Should not find inline typedef enum method on top-level type", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_AccessPath(
 			`enum Abc : (int data) {
 				AAA = 5,
 				BBB = 6,
 			}
-			distinct Kilo = inline Abc;
+			typedef Kilo = inline Abc;
 			fn Abc Abc.doer() {}
 
 			fn void func() {
@@ -1005,60 +842,6 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_distinct(t *testi
 		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
 	})
 
-	t.Run("Should not find non-inline distinct fault method on top-level type", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault Abc {
-				AAA,
-				BBB,
-			}
-			distinct Kilo = Abc;
-			fn Abc Abc.doer() {}
-
-			fn void func() {
-				Kilo.d|||oer().doer();
-			}
-			`,
-		)
-
-		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
-	})
-
-	t.Run("Should not find inline distinct fault method on top-level type", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault Abc {
-				AAA,
-				BBB,
-			}
-			distinct Kilo = inline Abc;
-			fn Abc Abc.doer() {}
-
-			fn void func() {
-				Kilo.d|||oer().doer();
-			}
-			`,
-		)
-
-		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
-	})
-
-	t.Run("Should not find inline distinct's base distinct's method on top-level type", func(t *testing.T) {
-		symbolOption := SearchUnderCursor_AccessPath(
-			`fault Abc {
-				AAA,
-				BBB,
-			}
-			distinct Kilo = Abc;
-			distinct KiloKilo = inline Kilo;
-			fn Kilo Kilo.doer() {}
-
-			fn void func() {
-				KiloKilo.d|||oer().doer();
-			}
-			`,
-		)
-
-		assert.True(t, symbolOption.IsNone(), "Element wrongly found")
-	})
 }
 
 func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *testing.T) {
@@ -1072,7 +855,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *
 			import list;
 
 			struct Home {
-				List(<Room>) rooms;
+				List{Room} rooms;
 			}
 			struct Room {
 				String name;
@@ -1087,7 +870,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *
 
 		state.registerDoc(
 			"list.c3",
-			`module list(<Type>);
+			`module list{Type};
 			struct List (Printable)
 			{
 				usz size;

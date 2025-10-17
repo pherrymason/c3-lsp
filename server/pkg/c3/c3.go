@@ -1,22 +1,23 @@
 package c3
 
+// ref: https://c3-lang.org/implementation-details/grammar/#keywords
 var keywords = map[string]struct{}{
 	"void": {}, "bool": {}, "char": {}, "double": {},
 	"float": {}, "float16": {}, "int128": {}, "ichar": {},
 	"int": {}, "iptr": {}, "isz": {}, "long": {},
 	"short": {}, "uint128": {}, "uint": {}, "ulong": {},
 	"uptr": {}, "ushort": {}, "usz": {}, "float128": {},
-	"any": {}, "anyfault": {}, "typeid": {}, "assert": {},
+	"any": {}, "fault": {}, "typeid": {}, "assert": {},
 	"asm": {}, "bitstruct": {}, "break": {}, "case": {},
-	"catch": {}, "const": {}, "continue": {}, "def": {},
-	"default": {}, "defer": {}, "distinct": {}, "do": {},
+	"catch": {}, "const": {}, "continue": {}, "alias": {},
+	"default": {}, "defer": {}, "typedef": {}, "do": {},
 	"else": {}, "enum": {}, "extern": {}, "false": {},
-	"fault": {}, "for": {}, "foreach": {}, "foreach_r": {},
-	"fn": {}, "tlocal": {}, "if": {}, "inline": {},
-	"import": {}, "macro": {}, "module": {}, "nextcase": {},
-	"null": {}, "return": {}, "static": {}, "struct": {},
-	"switch": {}, "true": {}, "try": {}, "union": {},
-	"var": {}, "while": {},
+	"for": {}, "foreach": {}, "foreach_r": {}, "fn": {},
+	"tlocal": {}, "if": {}, "inline": {}, "import": {},
+	"macro": {}, "module": {}, "nextcase": {}, "null": {},
+	"return": {}, "static": {}, "struct": {}, "switch": {},
+	"true": {}, "try": {}, "union": {}, "var": {},
+	"while": {}, "attrdef": {},
 
 	"$alignof": {}, "$assert": {}, "$case": {}, "$default": {},
 	"$defined": {}, "$echo": {}, "$embed": {}, "$exec": {},
@@ -26,7 +27,7 @@ var keywords = map[string]struct{}{
 	"$include": {}, "$nameof": {}, "$offsetof": {}, "$qnameof": {},
 	"$sizeof": {}, "$stringify": {}, "$switch": {}, "$typefrom": {},
 	"$typeof": {}, "$vacount": {}, "$vatype": {}, "$vaconst": {},
-	"$varef": {}, "$vaarg": {}, "$vaexpr": {}, "$vasplat": {},
+	"$vaarg": {}, "$vaexpr": {}, "$vasplat": {},
 }
 
 func Keywords() map[string]struct{} {

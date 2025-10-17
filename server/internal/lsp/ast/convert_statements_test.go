@@ -1,3 +1,6 @@
+//go:build ignore
+
+// NOTE: skipping tests because this package is unused
 package ast
 
 import (

@@ -19,43 +19,44 @@ func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module
 	parsedType := symbols.Type{}
 
 	tailChild := node.Child(int(node.ChildCount()) - 1)
-	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "!"
+	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "?"
 
 	//fmt.Println(node.Type(), node.Content(sourceCode), node.ChildCount())
 	isCollection := false
 	collectionSize := option.None[int]()
 	pointerCount := 0
+
+	if node.Type() == "base_type_name" {
+		baseTypeLanguage = true
+		baseType = node.Content(sourceCode)
+	}
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
-		//fmt.Println(n.Type(), n.Content(sourceCode))
+		// fmt.Println(node.Type()+"---"+n.Type(), n.Content(sourceCode))
 		switch n.Type() {
-		case "base_type":
-			for b := 0; b < int(n.ChildCount()); b++ {
-				bn := n.Child(b)
-				//fmt.Println("---"+bn.Type(), bn.Content(sourceCode))
-				switch bn.Type() {
-				case "base_type_name":
-					baseTypeLanguage = true
-					baseType = bn.Content(sourceCode)
-				case "type_ident":
-					baseType = bn.Content(sourceCode)
-				case "generic_arguments":
-					//baseType += bn.Content(sourceCode)
-					for g := 0; g < int(bn.ChildCount()); g++ {
-						gn := bn.Child(g)
-						if gn.Type() == "type" {
-							gType := p.typeNodeToType(gn, currentModule, sourceCode)
-							generic_arguments = append(generic_arguments, gType)
-						}
-					}
+		case "base_type_name":
+			baseTypeLanguage = true
+			baseType = n.Content(sourceCode)
+		case "type_ident":
+			baseType = n.Content(sourceCode)
 
-				case "module_type_ident":
-					//fmt.Println(bn)
-					modulePath = strings.Trim(bn.Child(0).Content(sourceCode), ":")
-					baseType = bn.Child(1).Content(sourceCode)
-				}
-
+		case "generic_type_ident":
+			if n.ChildCount() >= 1 {
+				parse_path_type_ident(n.Child(0), sourceCode, &modulePath, &baseType)
 			}
+			if n.ChildCount() >= 2 {
+				genericArgList := n.Child(1)
+				for g := 0; g < int(genericArgList.ChildCount()); g++ {
+					gn := genericArgList.Child(g)
+					if gn.Type() == "type" {
+						gType := p.typeNodeToType(gn, currentModule, sourceCode)
+						generic_arguments = append(generic_arguments, gType)
+					}
+				}
+			}
+
+		case "path_type_ident":
+			parse_path_type_ident(n, sourceCode, &modulePath, &baseType)
 
 		case "type_suffix":
 			suffix := n.Content(sourceCode)
@@ -95,4 +96,13 @@ func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module
 	}
 
 	return parsedType
+}
+
+func parse_path_type_ident(n *sitter.Node, sourceCode []byte, modulePath, baseType *string) {
+	if n.ChildCount() == 2 {
+		*modulePath = strings.Trim(n.Child(0).Content(sourceCode), ":")
+		*baseType = n.Child(1).Content(sourceCode)
+	} else if n.ChildCount() > 0 {
+		*baseType = n.Child(0).Content(sourceCode)
+	}
 }

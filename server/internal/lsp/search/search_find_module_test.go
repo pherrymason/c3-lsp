@@ -200,7 +200,7 @@ func TestProjectState_findClosestSymbolDeclaration_in_same_or_submodules(t *test
 			`struct Camera3D {
 			int target;
 		}
-		def Camera = Camera3D;`)
+		alias Camera = Camera3D;`)
 		state.registerDoc(
 			"structs.c3",
 			`module structs;
@@ -237,7 +237,7 @@ func TestProjectState_findClosestSymbolDeclaration_should_find_types_referenced_
 		state.registerDoc(
 			"external.c3",
 			`module external;
-			def Color = int;`,
+			alias Color = int;`,
 		)
 		state.registerDoc(
 			"main.c3",
@@ -272,7 +272,7 @@ func TestProjectState_findClosestSymbolDeclaration_should_find_types_referenced_
 		state.registerDoc(
 			"external.c3",
 			`module external;
-			def Color = int;`,
+			alias Color = int;`,
 		)
 		position := buildPosition(4, 11) // Cursor at Color c|olor;
 		doc := state.GetDoc("main.c3")
@@ -470,7 +470,7 @@ func TestResolve_generic_module_parameters(t *testing.T) {
 
 	state.registerDoc(
 		"module.c3",
-		`module foo_test(<Type1, Type2>);
+		`module foo_test{Type1, Type2};
 		struct Foo
 		{
 			Type1 a;
@@ -492,8 +492,8 @@ func TestResolve_generic_module_parameters(t *testing.T) {
 
 	genericParameter := symbolOption.Get()
 	assert.Equal(t, "Type2", genericParameter.GetName())
-	assert.Equal(t, idx.NewRange(0, 24, 0, 29), genericParameter.GetIdRange())
-	assert.Equal(t, idx.NewRange(0, 24, 0, 29), genericParameter.GetDocumentRange())
+	assert.Equal(t, idx.NewRange(0, 23, 0, 28), genericParameter.GetIdRange())
+	assert.Equal(t, idx.NewRange(0, 23, 0, 28), genericParameter.GetDocumentRange())
 }
 
 func TestProjectState_findClosestSymbolDeclaration_should_find_right_module_when_partial_name_of_module_is_used(t *testing.T) {

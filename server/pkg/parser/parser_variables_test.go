@@ -82,7 +82,14 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		line := uint(5)
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		found := symbols.Get("x").Variables["foo"]
+		symbol := symbols.Get("x")
+		if !assert.NotNil(t, symbol, "Symbol x not found") {
+			return
+		}
+		found := symbol.Variables["foo"]
+		if !assert.NotNil(t, found, "Variable foo not found") {
+			return
+		}
 		assert.Equal(t, "foo", found.GetName(), "First Variable name")
 		assert.Equal(t, "int", found.GetType().String(), "First Variable type")
 		assert.Equal(t, true, found.GetType().IsBaseTypeLanguage(), "Variable Type should be base type")
@@ -107,6 +114,9 @@ func TestExtractSymbols_find_variables(t *testing.T) {
 		assert.True(t, function.IsSome())
 
 		variable := function.Get().Variables["value"]
+		if !assert.NotNil(t, variable, "Couldnt find variable 'value' inside function") {
+			return
+		}
 		assert.Equal(t, "value", variable.GetName(), "variable name")
 		assert.Equal(t, "int", variable.GetType().String(), "variable type")
 		assert.Equal(t, true, variable.GetType().IsBaseTypeLanguage(), "Variable Type should be base type")

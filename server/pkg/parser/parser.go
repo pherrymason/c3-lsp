@@ -4,35 +4,12 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/cst"
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
+	"github.com/pherrymason/c3-lsp/pkg/parser/queries"
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/symbols_table"
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/tliron/commonlog"
 )
-
-const DocCommentQuery = `(doc_comment) @doc_comment`
-const VarDeclarationQuery = `(var_declaration
-		name: (identifier) @variable_name
-	)`
-const GlobalVarDeclaration = `(global_declaration) @global_decl`
-const ConstantDeclaration = `(const_declaration) @const_decl`
-const LocalVarDeclaration = `(func_definition
-	body: (macro_func_body (compound_stmt (declaration_stmt) @local) )
- )`
-const FunctionDefinitionQuery = `(func_definition) @function_def`
-const FunctionDeclarationQuery = `(func_declaration) @function_dec`
-const EnumDeclaration = `(enum_declaration) @enum_dec`
-const FaultDeclaration = `(fault_declaration) @fault_doc`
-const StructDeclaration = `(struct_declaration) @struct_dec`
-const BitstructDeclaration = `(bitstruct_declaration) @bitstruct_dec`
-const DefineDeclaration = `(define_declaration) @def_dec`
-const DistinctDeclaration = `(distinct_declaration) @distinct_dec`
-const InterfaceDeclaration = `(interface_declaration) @interface_dec`
-const MacroDeclaration = `(macro_declaration) @macro_dec`
-const ModuleDeclaration = `(module) @module_dec`
-const ImportDeclaration = `(import_declaration) @import_dec`
-
-const ModuleQuery = `(source_file ` + ModuleDeclaration + `)`
 
 type Parser struct {
 	logger commonlog.Logger
@@ -55,25 +32,6 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 	pendingToResolve := symbols_table.NewPendingToResolve()
 	//fmt.Println(doc.URI, doc.ContextSyntaxTree.RootNode())
 
-	query := `[
-(source_file ` + DocCommentQuery + `)
-(source_file ` + ModuleDeclaration + `)
-(source_file ` + ImportDeclaration + `)
-(source_file ` + GlobalVarDeclaration + `)
-(source_file ` + LocalVarDeclaration + `)
-(source_file ` + ConstantDeclaration + `)
-(source_file ` + FunctionDefinitionQuery + `)
-(source_file ` + FunctionDeclarationQuery + `)
-(source_file ` + DefineDeclaration + `)
-(source_file ` + DistinctDeclaration + `)
-(source_file ` + StructDeclaration + `)
-(source_file ` + BitstructDeclaration + `)
-(source_file ` + EnumDeclaration + `)
-(source_file ` + FaultDeclaration + `)
-(source_file ` + InterfaceDeclaration + `)
-(source_file ` + MacroDeclaration + `)
-]`
-
 	/*
 		q, err := sitter.NewQuery([]byte(query), cst.GetLanguage())
 		if err != nil {
@@ -81,7 +39,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 		}
 		qc := sitter.NewQueryCursor()
 		qc.Exec(q, doc.ContextSyntaxTree.RootNode())*/
-	qc := cst.RunQuery(query, doc.ContextSyntaxTree.RootNode())
+	qc := cst.RunQuery(queries.SymbolsQuery, doc.ContextSyntaxTree.RootNode())
 	sourceCode := []byte(doc.SourceCode.Text)
 	//fmt.Println(doc.URI, " ", doc.ContextSyntaxTree.RootNode())
 	//fmt.Println(doc.ContextSyntaxTree.RootNode().Content(sourceCode))
@@ -102,7 +60,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 		for _, c := range m.Captures {
 			nodeType := c.Node.Type()
 			nodeEndPoint := idx.NewPositionFromTreeSitterPoint(c.Node.EndPoint())
-			if nodeType != "module" && nodeType != "doc_comment" {
+			if nodeType != "module_declaration" && nodeType != "doc_comment" {
 				moduleSymbol = parsedModules.GetOrInitModule(
 					lastModuleName,
 					&doc.URI,
@@ -114,7 +72,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 			switch nodeType {
 			case "doc_comment":
 				lastDocComment = cast.ToPtr(p.nodeToDocComment(c.Node, sourceCode))
-			case "module":
+			case "module_declaration":
 				anonymousModuleName = false
 				module, _, _ := p.nodeToModule(doc, c.Node, sourceCode)
 				lastModuleName = module.GetName()
@@ -138,8 +96,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				imports := p.nodeToImport(doc, c.Node, sourceCode)
 				moduleSymbol.AddImports(imports)
 
-			case "global_declaration":
-				variables := p.globalVariableDeclarationNodeToVariable(c.Node, moduleSymbol, &doc.URI, sourceCode)
+			case "declaration":
+				variables := p.variableDeclarationNodeToVariable(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddVariables(variables)
 				pendingToResolve.AddVariableType(variables, moduleSymbol)
 
@@ -189,7 +147,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 					bitstruct.SetDocComment(lastDocComment)
 				}
 
-			case "define_declaration":
+			// TODO: @0.7.7 rename internal methods/structs from Def -> Alias
+			case "alias_declaration":
 				def := p.nodeToDef(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddDef(&def)
 				pendingToResolve.AddDefType(&def, moduleSymbol)
@@ -198,7 +157,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 					def.SetDocComment(lastDocComment)
 				}
 
-			case "distinct_declaration":
+			// TODO: @0.7.7 rename internal methods/structs from Distinct  -> TypeDef
+			case "typedef_declaration":
 				distinct := p.nodeToDistinct(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddDistinct(&distinct)
 				pendingToResolve.AddDistinctType(&distinct, moduleSymbol)
@@ -215,7 +175,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 					_const.SetDocComment(lastDocComment)
 				}
 
-			case "fault_declaration":
+			// TODO: @0.7.7 rename internal methods/structs from Fault -> FaultDef
+			case "faultdef_declaration":
 				fault := p.nodeToFault(c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddFault(&fault)
 
@@ -275,8 +236,7 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 }
 
 func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, currentModule *idx.Module, docId *string, sourceCode []byte) []*idx.Variable {
-	query := LocalVarDeclaration
-	qc := cst.RunQuery(query, node)
+	qc := cst.RunQuery(queries.LocalVarDeclQuery, node)
 
 	var variables []*idx.Variable
 	found := make(map[string]bool)
@@ -289,11 +249,14 @@ func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, 
 		// Apply predicates filtering
 		m = qc.FilterPredicates(m, sourceCode)
 		for _, c := range m.Captures {
+			if c.Node.Type() != "declaration" {
+				continue
+			}
 			content := c.Node.Content(sourceCode)
 
 			if _, exists := found[content]; !exists {
 				found[content] = true
-				funcVariables := p.localVariableDeclarationNodeToVariable(c.Node, currentModule, docId, sourceCode)
+				funcVariables := p.variableDeclarationNodeToVariable(c.Node, currentModule, docId, sourceCode)
 
 				variables = append(variables, funcVariables...)
 			}

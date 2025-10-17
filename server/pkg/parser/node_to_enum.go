@@ -79,7 +79,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 				// Try to get enum_param_list
 				for p := 0; p < int(paramList.ChildCount()); p++ {
 					paramNode := paramList.Child(p)
-					if paramNode.Type() == "enum_param_declaration" {
+					if paramNode.Type() == "enum_param" {
 						paramTypeNode := paramNode.ChildByFieldName("type")
 						paramNameNode := paramNode.ChildByFieldName("name")
 						if paramTypeNode == nil || paramNameNode == nil {

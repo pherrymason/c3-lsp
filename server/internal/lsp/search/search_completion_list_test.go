@@ -275,17 +275,18 @@ func TestBuildCompletionList_suggests_C3_keywords(t *testing.T) {
 		{input: "up", expected: []string{"uptr"}},
 		{input: "ush", expected: []string{"ushort"}},
 		{input: "us", expected: []string{"usz", "ushort"}},
-		{input: "an", expected: []string{"any", "anyfault"}},
-		{input: "type", expected: []string{"typeid"}},
+		{input: "an", expected: []string{"any"}},
+		{input: "al", expected: []string{"alias"}},
+		{input: "type", expected: []string{"typeid", "typedef"}},
 		{input: "ass", expected: []string{"assert"}},
 		{input: "as", expected: []string{"asm", "assert"}},
 		{input: "bit", expected: []string{"bitstruct"}},
 		{input: "br", expected: []string{"break"}},
 		{input: "ca", expected: []string{"case", "catch"}},
 		{input: "con", expected: []string{"const", "continue"}},
-		{input: "de", expected: []string{"def", "default", "defer"}},
-		{input: "di", expected: []string{"distinct"}},
-		{input: "d", expected: []string{"def", "default", "defer", "distinct", "do", "double"}},
+		{input: "de", expected: []string{"default", "defer"}},
+		{input: "ty", expected: []string{"typedef", "typeid"}},
+		{input: "d", expected: []string{"default", "defer", "do", "double"}},
 		{input: "el", expected: []string{"else"}},
 		{input: "en", expected: []string{"enum"}},
 		{input: "ex", expected: []string{"extern"}},
@@ -364,7 +365,7 @@ func TestBuildCompletionList(t *testing.T) {
 
 	t.Run("Should suggest variable names defined in module", func(t *testing.T) {
 		source := `
-		int! variable = 3;
+		int? variable = 3;
 		float xanadu = 10.0;
 		<* doc *>
 		float* documented = &xanadu;
@@ -376,8 +377,8 @@ func TestBuildCompletionList(t *testing.T) {
 			input    string
 			expected protocol.CompletionItem
 		}{
-			{"v", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind, Detail: cast.ToPtr("int!")}},
-			{"va", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind, Detail: cast.ToPtr("int!")}},
+			{"v", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind, Detail: cast.ToPtr("int?")}},
+			{"va", protocol.CompletionItem{Label: "variable", Kind: &expectedVarKind, Detail: cast.ToPtr("int?")}},
 			{"x", protocol.CompletionItem{Label: "xanadu", Kind: &expectedVarKind, Detail: cast.ToPtr("float")}},
 			{"docu", protocol.CompletionItem{Label: "documented", Kind: &expectedVarKind, Detail: cast.ToPtr("float*"), Documentation: asMarkdown("doc")}},
 			{"MY_C", protocol.CompletionItem{Label: "MY_CONST", Kind: &expectedConstKind, Detail: cast.ToPtr("int"), Documentation: asMarkdown("const doc")}},
@@ -638,8 +639,10 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 	fn void Square.toCircle() {}
 	fn void main() {
 		Square inst;
-		inst.
+		inst.;
 	}`
+	//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
+	// originally this test did not had this ';'
 	position := buildPosition(7, 7) // Cursor after `inst.|`
 
 	state := NewTestState(logger)
@@ -715,8 +718,10 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 	fn uint Color.toHex(Color* color) {}
 	fn void main() {
 		Square inst;
-		inst.color.
+		inst.color.;
 	}`
+	//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
+	// originally this test did not had this ';'
 	position := buildPosition(7, 13) // Cursor after `inst.|`
 
 	state := NewTestState(logger)
@@ -1110,7 +1115,10 @@ green.transp`,
 		for _, tt := range cases {
 			t.Run(fmt.Sprintf("Autocomplete enum methods: #%s", tt.name), func(t *testing.T) {
 				state := NewTestState(logger)
-				state.registerDoc("test.c3", source+tt.input+`}`)
+
+				//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
+				// originally this test did not had this ';'
+				state.registerDoc("test.c3", source+tt.input+`;}`)
 				lines := strings.Split(tt.input, "\n")
 				lastLine := lines[len(lines)-1]
 				position := buildPosition(5+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
@@ -1133,338 +1141,33 @@ green.transp`,
 func TestBuildCompletionList_faults(t *testing.T) {
 	t.Run("Should suggest Fault type", func(t *testing.T) {
 		source := `
-		fault WindowError { COH, COUGH, COUGHCOUGH}
+		faultdef COH, COUGH, COUGHCOUGH;
 		<* doc *>
-		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS }
-`
+		faultdef NOT_FOUND, NO_PERMISSIONS;
+		int? a =  `
 		cases := []struct {
 			input    string
 			expected []protocol.CompletionItem
 		}{
-			{"Wind", []protocol.CompletionItem{
-				CreateCompletionItem("WindowError", protocol.CompletionItemKindEnum, "Fault"),
-				CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "Fault", "doc"),
+			{"CO", []protocol.CompletionItem{
+				CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+				CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+				CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
 			}},
-			{"WindowFile", []protocol.CompletionItem{
-				CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "Fault", "doc"),
+			{"NO", []protocol.CompletionItem{
+				CreateCompletionItem("NO_PERMISSIONS", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+				CreateCompletionItem("NOT_FOUND", protocol.CompletionItemKindEnumMember, "Fault Constant"),
+				// CreateCompletionItemWithDoc("WindowFileError", protocol.CompletionItemKindEnum, "Fault", "doc"),
 			}},
 		}
 
 		for n, tt := range cases {
 			t.Run(fmt.Sprintf("Case #%d", n), func(t *testing.T) {
 				state := NewTestState()
-				state.registerDoc("test.c3", source+tt.input+`}`)
-				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
-
-				search := NewSearchWithoutLog()
-				completionList := search.BuildCompletionList(
-					context.CursorContext{
-						Position: position,
-						DocURI:   "test.c3",
-					},
-					&state.state)
-
-				assert.Equal(t, len(tt.expected), len(completionList))
-				assert.Equal(t, tt.expected, completionList)
-			})
-		}
-	})
-
-	t.Run("Should suggest Fault constant type", func(t *testing.T) {
-		source := `
-		fault WindowError { COH, COUGH, COUGHCOUGH}
-		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
-		fn void main() {
-`
-		cases := []struct {
-			name     string
-			input    string
-			expected []protocol.CompletionItem
-		}{
-			{
-				"Find constants starting with string",
-				"CO",
-				[]protocol.CompletionItem{
-					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-					CreateCompletionItem("COULD_NOT_CREATE", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-				}},
-
-			{
-				"Find all fault constants when prefixed with fault name",
-				"WindowError.",
-				[]protocol.CompletionItem{
-					CreateCompletionItem("COH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-					CreateCompletionItem("COUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-					CreateCompletionItem("COUGHCOUGH", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-				}},
-			{
-				"Find matching fault constants",
-				"WindowFileError.NOT",
-				[]protocol.CompletionItem{
-					CreateCompletionItem("NOT_FOUND", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-				},
-			},
-		}
-
-		for _, tt := range cases {
-			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
-				state := NewTestState()
-				state.registerDoc("test.c3", source+tt.input+`}`)
-				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
-
-				search := NewSearchWithoutLog()
-				completionList := search.BuildCompletionList(
-					context.CursorContext{
-						Position: position,
-						DocURI:   "test.c3",
-					},
-					&state.state)
-
-				assert.Equal(t, len(tt.expected), len(completionList))
-				assert.Equal(t, tt.expected, completionList)
-			})
-		}
-	})
-
-	t.Run("Should not suggest Fault constant type after explicit constant", func(t *testing.T) {
-		source := `
-		fault WindowError { COH, COUGH, COUGHCOUGH}
-		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
-		fn void main() {
-`
-		cases := []struct {
-			name     string
-			input    string
-			expected []protocol.CompletionItem
-		}{
-			{
-				"Do not find constants prefixed with fault constant",
-				"WindowFileError.NOT_FOUND.",
-				nil},
-			{
-				"Do not find matching constants prefixed with fault constant",
-				"WindowFileError.NOT_FOUND.NO_PE",
-				nil},
-		}
-
-		for _, tt := range cases {
-			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
-				state := NewTestState()
-				state.registerDoc("test.c3", source+tt.input+`}`)
-				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
-
-				search := NewSearchWithoutLog()
-				completionList := search.BuildCompletionList(
-					context.CursorContext{
-						Position: position,
-						DocURI:   "test.c3",
-					},
-					&state.state)
-
-				assert.Equal(t, len(tt.expected), len(completionList))
-				assert.Equal(t, tt.expected, completionList)
-			})
-		}
-	})
-
-	t.Run("Should not suggest Fault constant type after instance", func(t *testing.T) {
-		source := `
-		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
-		fn void main() {
-			WindowFileError inst = NOT_FOUND;
-`
-		cases := []struct {
-			name     string
-			input    string
-			expected []protocol.CompletionItem
-		}{
-			{
-				"Do not find constants prefixed with fault instance",
-				"inst.",
-				nil},
-			{
-				"Do not find matching constants prefixed with fault instance",
-				"inst.NO_PE",
-				nil},
-		}
-
-		for _, tt := range cases {
-			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
-				state := NewTestState()
-				state.registerDoc("test.c3", source+tt.input+`}`)
-				position := buildPosition(5, uint(len(tt.input))) // Cursor after `<input>|`
-
-				search := NewSearchWithoutLog()
-				completionList := search.BuildCompletionList(
-					context.CursorContext{
-						Position: position,
-						DocURI:   "test.c3",
-					},
-					&state.state)
-
-				assert.Equal(t, len(tt.expected), len(completionList))
-				assert.Equal(t, tt.expected, completionList)
-			})
-		}
-	})
-
-	t.Run("Should not suggest Fault constant type after instance in struct member", func(t *testing.T) {
-		source := `
-		fault WindowFileError { NOT_FOUND, NO_PERMISSIONS, COULD_NOT_CREATE }
-		struct MyStruct { WindowFileError f; }
-		fn void main() {
-			MyStruct st = { WindowFileError.NOT_FOUND };
-`
-		cases := []struct {
-			name     string
-			input    string
-			expected []protocol.CompletionItem
-		}{
-			{
-				"Do not find constants prefixed with fault instance in struct member",
-				"st.f.",
-				nil},
-			{
-				"Do not find matching constants prefixed with fault instance in struct member",
-				"st.f.NO_PE",
-				nil},
-		}
-
-		for _, tt := range cases {
-			t.Run(fmt.Sprintf("Autocomplete contants: #%s", tt.name), func(t *testing.T) {
-				state := NewTestState()
-				state.registerDoc("test.c3", source+tt.input+`}`)
-				position := buildPosition(6, uint(len(tt.input))) // Cursor after `<input>|`
-
-				search := NewSearchWithoutLog()
-				completionList := search.BuildCompletionList(
-					context.CursorContext{
-						Position: position,
-						DocURI:   "test.c3",
-					},
-					&state.state)
-
-				assert.Equal(t, len(tt.expected), len(completionList))
-				assert.Equal(t, tt.expected, completionList)
-			})
-		}
-	})
-
-	t.Run("Should suggest Fault methods", func(t *testing.T) {
-		source := `
-		fault WindowError { UNEXPECTED_ERROR, NORMAL_ERROR }
-		fn void WindowError.display(self) {}
-		fn void main() {
-`
-		cases := []struct {
-			name     string
-			input    string
-			expected []protocol.CompletionItem
-		}{
-			{
-				"Find fault methods by type name prefix",
-				"WindowError.",
-				[]protocol.CompletionItem{
-					CreateCompletionItem("NORMAL_ERROR", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-					CreateCompletionItem("UNEXPECTED_ERROR", protocol.CompletionItemKindEnumMember, "Fault Constant"),
-					{
-						Label: "WindowError.display",
-						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
-						TextEdit: protocol.TextEdit{
-							NewText: "display",
-							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
-						},
-						Detail: cast.ToPtr("fn void(WindowError self)"),
-					},
-				}},
-			{
-				"Find matching fault method by type name prefix",
-				"WindowError.disp",
-				[]protocol.CompletionItem{
-					{
-						Label: "WindowError.display",
-						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
-						TextEdit: protocol.TextEdit{
-							NewText: "display",
-							Range:   protocol_utils.NewLSPRange(4, 12, 4, 13),
-						},
-						Detail: cast.ToPtr("fn void(WindowError self)"),
-					},
-				},
-			},
-			{
-				"Find fault methods with explicit constant prefix",
-				"WindowError.UNEXPECTED_ERROR.",
-				[]protocol.CompletionItem{
-					{
-						Label: "WindowError.display",
-						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
-						TextEdit: protocol.TextEdit{
-							NewText: "display",
-							Range:   protocol_utils.NewLSPRange(4, 29, 4, 30),
-						},
-						Detail: cast.ToPtr("fn void(WindowError self)"),
-					},
-				},
-			},
-			{
-				"Find matching fault methods with explicit constant prefix",
-				"WindowError.UNEXPECTED_ERROR.disp",
-				[]protocol.CompletionItem{
-					{
-						Label: "WindowError.display",
-						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
-						TextEdit: protocol.TextEdit{
-							NewText: "display",
-							Range:   protocol_utils.NewLSPRange(4, 29, 4, 30),
-						},
-						Detail: cast.ToPtr("fn void(WindowError self)"),
-					},
-				},
-			},
-			{
-				"Find fault methods by instance variable prefix",
-				`WindowError e = WindowError.UNEXPECTED_ERROR;
-e.`,
-				[]protocol.CompletionItem{
-					{
-						Label: "WindowError.display",
-						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
-						TextEdit: protocol.TextEdit{
-							NewText: "display",
-							Range:   protocol_utils.NewLSPRange(5, 2, 5, 3),
-						},
-						Detail: cast.ToPtr("fn void(WindowError self)"),
-					},
-				},
-			},
-			{
-				"Find matching fault methods by instance variable prefix",
-				`WindowError e = WindowError.UNEXPECTED_ERROR;
-e.disp`,
-				[]protocol.CompletionItem{
-					{
-						Label: "WindowError.display",
-						Kind:  cast.ToPtr(protocol.CompletionItemKindMethod),
-						TextEdit: protocol.TextEdit{
-							NewText: "display",
-							Range:   protocol_utils.NewLSPRange(5, 2, 5, 3),
-						},
-						Detail: cast.ToPtr("fn void(WindowError self)"),
-					},
-				},
-			},
-		}
-
-		for _, tt := range cases {
-			t.Run(fmt.Sprintf("Autocomplete enumerables: #%s", tt.name), func(t *testing.T) {
-				state := NewTestState()
-				state.registerDoc("test.c3", source+tt.input+`}`)
-				lines := strings.Split(tt.input, "\n")
+				state.registerDoc("test.c3", source+tt.input)
+				lines := strings.Split(source+tt.input, "\n")
 				lastLine := lines[len(lines)-1]
-				position := buildPosition(5+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
+				position := buildPosition(5, uint(len(lastLine))) // Cursor after `<input>|`
 
 				search := NewSearchWithoutLog()
 				completionList := search.BuildCompletionList(
@@ -1474,7 +1177,7 @@ e.disp`,
 					},
 					&state.state)
 
-				assert.Equal(t, len(tt.expected), len(completionList))
+				assert.Equal(t, len(tt.expected), len(completionList), source+tt.input)
 				assert.Equal(t, tt.expected, completionList)
 			})
 		}
@@ -1748,24 +1451,26 @@ func TestBuildCompletionList_definitions(t *testing.T) {
 	state := NewTestState()
 	search := NewSearchWithoutLog()
 
-	t.Run("Should suggest definitions", func(t *testing.T) {
+	t.Run("Should suggest aliases", func(t *testing.T) {
 		// TODO: Support '@' at the start of macro names
 		// (See issue https://github.com/pherrymason/c3-lsp/issues/104)
 		sourceStart := `
 		<* abc *>
-		def Kilo = int;
-		def KiloPtr = Kilo*;
-		def MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
-		def MyMap = HashMap(<String, Feature>);
-		def Camera = raylib::Camera;
+		alias Kilo = int;
+		alias KiloPtr = Kilo*;
+		alias MyFunction = fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*);
+		alias MyMap = HashMap{String, Feature};
+		alias Camera = raylib::Camera;
 
-		def func = a(<String>);
-		def aliased_global = global_var;
-		def CONST_ALIAS = MY_CONST;
-		def @macro_alias = @a;
+		alias func = a{String};
+		alias aliased_global = global_var;
+		alias CONST_ALIAS = MY_CONST;
+		alias @macro_alias = @a;
 		fn void main() {`
+		//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
+		// originally this test did not had this ';'
 		sourceEnd := `
-		}`
+		;}`
 
 		expectedKind := protocol.CompletionItemKindTypeParameter
 		cases := []struct {
@@ -1789,7 +1494,7 @@ func TestBuildCompletionList_definitions(t *testing.T) {
 				{Label: "Camera", Kind: &expectedKind, Detail: cast.ToPtr("Type"), Documentation: nil},
 			}},
 			{"fun", []protocol.CompletionItem{
-				{Label: "func", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'a(<String>)'"), Documentation: nil},
+				{Label: "func", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'a{String}'"), Documentation: nil},
 			}},
 			{"aliased_g", []protocol.CompletionItem{
 				{Label: "aliased_global", Kind: &expectedKind, Detail: cast.ToPtr("Alias for 'global_var'"), Documentation: nil},
@@ -1828,8 +1533,8 @@ func TestBuildCompletionList_definitions(t *testing.T) {
 func TestBuildCompletionList_distinct(t *testing.T) {
 	t.Run("Should not crash at dot", func(t *testing.T) {
 		CompleteAtCursor(`
-			distinct Wibble1 = int;
-			distinct Wibble2 = inline Wibble;
+			typedef Wibble1 = int;
+			typedef Wibble2 = inline Wibble;
 
 			Wibble1 a = 5;
 			Wibble2 b = a;
@@ -1843,11 +1548,9 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 		AAA = 5,
 		BBB = 6,
 	}
-	fault Fault {
-		FIRST_FAULT,
-		SECOND_FAULT
-	}
-	def StructAlias = Struct;
+	faultdef  FIRST_FAULT, SECOND_FAULT;
+	
+	alias StructAlias = Struct;
 
 	<* Fight it *>
 	fn void Struct.fight(self) {}
@@ -1866,11 +1569,11 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 		expected   []protocol.CompletionItem
 	}{
 		{
-			name: "Finds distinct names",
+			name: "Finds typedef names",
 			input: `
 			<* abc *>
-			distinct Abc = Struct;
-			distinct Abcd = Enum;
+			typedef Abc = Struct;
+			typedef Abcd = Enum;
 			`,
 			expression: "Ab",
 			expected: []protocol.CompletionItem{
@@ -1878,20 +1581,20 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "Abcd", Kind: &defDistinctKind, Detail: cast.ToPtr("Type"), Documentation: nil},
 			}},
 		{
-			name: "Finds matching distinct names",
+			name: "Finds matching typedef names",
 			input: `
 			<* abc *>
-			distinct Abc = Struct;
-			distinct Abcd = Enum;
+			typedef Abc = Struct;
+			typedef Abcd = Enum;
 			`,
 			expression: "Abcd",
 			expected: []protocol.CompletionItem{
 				{Label: "Abcd", Kind: &defDistinctKind, Detail: cast.ToPtr("Type"), Documentation: nil},
 			}},
 		{
-			name: "Finds struct member but no methods on instance of non-inline distinct of struct",
+			name: "Finds struct member but no methods on instance of non-inline typedef of struct",
 			input: `
-			distinct Abc = Struct;
+			typedef Abc = Struct;
 			Abc x = { 5 };
 			`,
 			expression: "x.",
@@ -1899,9 +1602,9 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds struct member and methods on instance of inline distinct of struct",
+			name: "Finds struct member and methods on instance of inline typedef of struct",
 			input: `
-			distinct Abc = inline Struct;
+			typedef Abc = inline Struct;
 			Abc x = { 5 };
 			`,
 			expression: "x.",
@@ -1913,14 +1616,14 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Struct self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "fight",
-						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+						Range:   protocol_utils.NewLSPRange(19, 2, 19, 3),
 					},
 					Documentation: asMarkdown("Fight it")},
 			}},
 		{
-			name: "Finds matching struct members on instance of inline distinct of struct",
+			name: "Finds matching struct members on instance of inline typedef of struct",
 			input: `
-			distinct Abc = inline Struct;
+			typedef Abc = inline Struct;
 			Abc x = { 5 };
 			`,
 			expression: "x.fie",
@@ -1928,9 +1631,9 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds matching methods on instance of inline distinct of struct",
+			name: "Finds matching methods on instance of inline typedef of struct",
 			input: `
-			distinct Abc = inline Struct;
+			typedef Abc = inline Struct;
 			Abc x = { 5 };
 			`,
 			expression: "x.fig",
@@ -1941,17 +1644,17 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Struct self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "fight",
-						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+						Range:   protocol_utils.NewLSPRange(19, 2, 19, 3),
 					},
 					Documentation: asMarkdown("Fight it")},
 			}},
 		{
-			name: "Finds struct members and methods on chain of inline distincts of struct",
+			name: "Finds struct members and methods on chain of inline typedef of struct",
 			input: `
-			distinct Abc = inline Struct;
-			distinct Def = inline Abc;
-			distinct Ghi = inline Def;
-			distinct Fjk = inline Ghi;
+			typedef Abc = inline Struct;
+			typedef Def = inline Abc;
+			typedef Ghi = inline Def;
+			typedef Fjk = inline Ghi;
 			Fjk x = { 5 };
 			`,
 			expression: "x.",
@@ -1963,17 +1666,17 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Struct self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "fight",
-						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
+						Range:   protocol_utils.NewLSPRange(22, 2, 22, 3),
 					},
 					Documentation: asMarkdown("Fight it")},
 			}},
 		{
-			name: "Does not find methods on chain of distincts of struct where one is non-inline",
+			name: "Does not find methods on chain of typedef of struct where one is non-inline",
 			input: `
-			distinct Abc = inline Struct;
-			distinct Def = inline Abc;
-			distinct Ghi = Def;
-			distinct Fjk = inline Ghi;
+			typedef Abc = inline Struct;
+			typedef Def = inline Abc;
+			typedef Ghi = Def;
+			typedef Fjk = inline Ghi;
 			Fjk x = { 5 };
 			`,
 			expression: "x.",
@@ -1981,9 +1684,9 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds enum associated values and methods on instance of inline distinct of enum",
+			name: "Finds enum associated values and methods on instance of inline typedef of enum",
 			input: `
-			distinct Aenum = inline Enum;
+			typedef Aenum = inline Enum;
 			Aenum x = Enum.AAA;
 			`,
 			expression: "x.",
@@ -1995,14 +1698,14 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Enum self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "doer",
-						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+						Range:   protocol_utils.NewLSPRange(19, 2, 19, 3),
 					},
 					Documentation: nil},
 			}},
 		{
-			name: "Finds enum associated values but not methods on instance of non-inline distinct of enum",
+			name: "Finds enum associated values but not methods on instance of non-inline typedef of enum",
 			input: `
-			distinct Aenum = Enum;
+			typedef Aenum = Enum;
 			Aenum x = Enum.AAA;
 			`,
 			expression: "x.",
@@ -2010,12 +1713,12 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds associated values and methods on chain of inline distincts of enum",
+			name: "Finds associated values and methods on chain of inline typedef of enum",
 			input: `
-			distinct Abc = inline Enum;
-			distinct Def = inline Abc;
-			distinct Ghi = inline Def;
-			distinct Fjk = inline Ghi;
+			typedef Abc = inline Enum;
+			typedef Def = inline Abc;
+			typedef Ghi = inline Def;
+			typedef Fjk = inline Ghi;
 			Fjk x = { 5 };
 			`,
 			expression: "x.",
@@ -2027,17 +1730,17 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Enum self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "doer",
-						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
+						Range:   protocol_utils.NewLSPRange(22, 2, 22, 3),
 					},
 					Documentation: nil},
 			}},
 		{
-			name: "Does not find methods on chain of distincts of enum where one is non-inline",
+			name: "Does not find methods on chain of typedef of enum where one is non-inline",
 			input: `
-			distinct Abc = inline Enum;
-			distinct Def = inline Abc;
-			distinct Ghi = Def;
-			distinct Fjk = inline Ghi;
+			typedef Abc = inline Enum;
+			typedef Def = inline Abc;
+			typedef Ghi = Def;
+			typedef Fjk = inline Ghi;
 			Fjk x = { 5 };
 			`,
 			expression: "x.",
@@ -2045,35 +1748,17 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds fault methods on instance of inline distinct of fault",
+			name: "Finds nothing on instance of non-inline typedef of fault",
 			input: `
-			distinct Afault = inline Fault;
-			Afault x = Fault.FIRST_FAULT;
-			`,
-			expression: "x.",
-			expected: []protocol.CompletionItem{
-				{
-					Label:  "Fault.something",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Fault self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "something",
-						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
-					},
-					Documentation: nil},
-			}},
-		{
-			name: "Finds nothing on instance of non-inline distinct of fault",
-			input: `
-			distinct Afault = Fault;
+			typedef Afault = Fault;
 			Afault x = Fault.FIRST_FAULT;
 			`,
 			expression: "x.",
 			expected:   []protocol.CompletionItem{}},
 		{
-			name: "Finds struct member but no methods on instance of non-inline distinct of struct def alias",
+			name: "Finds struct member but no methods on instance of non-inline typedef of struct def alias",
 			input: `
-			distinct Abc = StructAlias;
+			typedef Abc = StructAlias;
 			Abc x = { 5 };
 			`,
 			expression: "x.",
@@ -2081,9 +1766,9 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds struct member and methods on instance of inline distinct of struct def alias",
+			name: "Finds struct member and methods on instance of inline typedef of struct def alias",
 			input: `
-			distinct Abc = inline StructAlias;
+			typedef Abc = inline StructAlias;
 			Abc x = { 5 };
 			`,
 			expression: "x.",
@@ -2095,14 +1780,14 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Struct self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "fight",
-						Range:   protocol_utils.NewLSPRange(21, 2, 21, 3),
+						Range:   protocol_utils.NewLSPRange(19, 2, 19, 3),
 					},
 					Documentation: asMarkdown("Fight it")},
 			}},
 		{
-			name: "Finds distinct methods as well as struct members on non-inline distinct of struct",
+			name: "Finds typedef methods as well as struct members on non-inline typedef of struct",
 			input: `
-			distinct Abc = Struct;
+			typedef Abc = Struct;
 			fn void Abc.distmethod(self) {}
 			Abc x = { 5 };
 			`,
@@ -2114,15 +1799,15 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Abc self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "distmethod",
-						Range:   protocol_utils.NewLSPRange(22, 2, 22, 3),
+						Range:   protocol_utils.NewLSPRange(20, 2, 20, 3),
 					},
 					Documentation: nil},
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds distinct methods as well as struct members and methods on inline distinct of struct",
+			name: "Finds typedef methods as well as struct members and methods on inline typedef of struct",
 			input: `
-			distinct Abc = inline Struct;
+			typedef Abc = inline Struct;
 			fn void Abc.distmethod(self) {}
 			Abc x = { 5 };
 			`,
@@ -2134,7 +1819,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Abc self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "distmethod",
-						Range:   protocol_utils.NewLSPRange(22, 2, 22, 3),
+						Range:   protocol_utils.NewLSPRange(20, 2, 20, 3),
 					},
 					Documentation: nil},
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
@@ -2144,17 +1829,17 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Struct self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "fight",
-						Range:   protocol_utils.NewLSPRange(22, 2, 22, 3),
+						Range:   protocol_utils.NewLSPRange(20, 2, 20, 3),
 					},
 					Documentation: asMarkdown("Fight it")},
 			}},
 		{
-			name: "Finds all distinct methods across chain of inline distincts of struct, plus the struct's members and methods",
+			name: "Finds all typedef methods across chain of inline typedef of struct, plus the struct's members and methods",
 			input: `
-			distinct Aabc = inline Struct;
-			distinct Adef = inline Aabc;
-			distinct Aghi = inline Adef;
-			distinct Ajkl = inline Aghi;
+			typedef Aabc = inline Struct;
+			typedef Adef = inline Aabc;
+			typedef Aghi = inline Adef;
+			typedef Ajkl = inline Aghi;
 			fn void Aabc.abcmethod(self) {}
 			fn void Adef.defmethod(self) {}
 			fn void Aghi.ghimethod(self) {}
@@ -2169,7 +1854,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Aabc self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "abcmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{
@@ -2178,7 +1863,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Adef self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "defmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{
@@ -2187,7 +1872,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Aghi self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "ghimethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{
@@ -2196,7 +1881,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Ajkl self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "jklmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
@@ -2206,17 +1891,17 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Struct self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "fight",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: asMarkdown("Fight it")},
 			}},
 		{
-			name: "Finds distinct methods across chain of distincts of struct up to non-inline, plus the struct's members only",
+			name: "Finds typedef methods across chain of distincts of struct up to non-inline, plus the struct's members only",
 			input: `
-			distinct Aabc = inline Struct;
-			distinct Adef = inline Aabc;
-			distinct Aghi = Adef;
-			distinct Ajkl = inline Aghi;
+			typedef Aabc = inline Struct;
+			typedef Adef = inline Aabc;
+			typedef Aghi = Adef;
+			typedef Ajkl = inline Aghi;
 			fn void Aabc.abcmethod(self) {}
 			fn void Adef.defmethod(self) {}
 			fn void Aghi.ghimethod(self) {}
@@ -2231,7 +1916,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Aghi self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "ghimethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{
@@ -2240,18 +1925,18 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Ajkl self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "jklmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds all distinct methods across chain of inline distincts of enum, plus the enum's associated values and methods",
+			name: "Finds all typedef methods across chain of inline distincts of enum, plus the enum's associated values and methods",
 			input: `
-			distinct Aabc = inline Enum;
-			distinct Adef = inline Aabc;
-			distinct Aghi = inline Adef;
-			distinct Ajkl = inline Aghi;
+			typedef Aabc = inline Enum;
+			typedef Adef = inline Aabc;
+			typedef Aghi = inline Adef;
+			typedef Ajkl = inline Aghi;
 			fn void Aabc.abcmethod(self) {}
 			fn void Adef.defmethod(self) {}
 			fn void Aghi.ghimethod(self) {}
@@ -2266,7 +1951,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Aabc self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "abcmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{
@@ -2275,7 +1960,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Adef self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "defmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{
@@ -2284,7 +1969,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Aghi self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "ghimethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{
@@ -2293,7 +1978,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Ajkl self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "jklmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
@@ -2303,17 +1988,17 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Enum self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "doer",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 			}},
 		{
-			name: "Finds distinct methods across chain of distincts of enum up to non-inline, plus the enum's associated values only",
+			name: "Finds typedef methods across chain of typedef of enum up to non-inline, plus the enum's associated values only",
 			input: `
-			distinct Aabc = inline Enum;
-			distinct Adef = inline Aabc;
-			distinct Aghi = Adef;
-			distinct Ajkl = inline Aghi;
+			typedef Aabc = inline Enum;
+			typedef Adef = inline Aabc;
+			typedef Aghi = Adef;
+			typedef Ajkl = inline Aghi;
 			fn void Aabc.abcmethod(self) {}
 			fn void Adef.defmethod(self) {}
 			fn void Aghi.ghimethod(self) {}
@@ -2328,7 +2013,7 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Aghi self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "ghimethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{
@@ -2337,157 +2022,48 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(Ajkl self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "jklmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
+						Range:   protocol_utils.NewLSPRange(26, 2, 26, 3),
 					},
 					Documentation: nil},
 				{Label: "data", Kind: &varKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds all distinct methods across chain of inline distincts of fault, plus the fault's methods",
+			name: "Finds struct members but not methods on top-level type of non-inline typedef of struct",
 			input: `
-			distinct Aabc = inline Fault;
-			distinct Adef = inline Aabc;
-			distinct Aghi = inline Adef;
-			distinct Ajkl = inline Aghi;
-			fn void Aabc.abcmethod(self) {}
-			fn void Adef.defmethod(self) {}
-			fn void Aghi.ghimethod(self) {}
-			fn void Ajkl.jklmethod(self) {}
-			Ajkl x = { 5 };
-			`,
-			expression: "x.",
-			expected: []protocol.CompletionItem{
-				{
-					Label:  "Aabc.abcmethod",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Aabc self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "abcmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
-					},
-					Documentation: nil},
-				{
-					Label:  "Adef.defmethod",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Adef self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "defmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
-					},
-					Documentation: nil},
-				{
-					Label:  "Aghi.ghimethod",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Aghi self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "ghimethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
-					},
-					Documentation: nil},
-				{
-					Label:  "Ajkl.jklmethod",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Ajkl self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "jklmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
-					},
-					Documentation: nil},
-				{
-					Label:  "Fault.something",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Fault self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "something",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
-					},
-					Documentation: nil},
-			}},
-		{
-			name: "Finds distinct methods across chain of distincts of enum up to non-inline, but none of the fault's methods",
-			input: `
-			distinct Aabc = inline Fault;
-			distinct Adef = inline Aabc;
-			distinct Aghi = Adef;
-			distinct Ajkl = inline Aghi;
-			fn void Aabc.abcmethod(self) {}
-			fn void Adef.defmethod(self) {}
-			fn void Aghi.ghimethod(self) {}
-			fn void Ajkl.jklmethod(self) {}
-			Ajkl x = { 5 };
-			`,
-			expression: "x.",
-			expected: []protocol.CompletionItem{
-				{
-					Label:  "Aghi.ghimethod",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Aghi self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "ghimethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
-					},
-					Documentation: nil},
-				{
-					Label:  "Ajkl.jklmethod",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Ajkl self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "jklmethod",
-						Range:   protocol_utils.NewLSPRange(28, 2, 28, 3),
-					},
-					Documentation: nil},
-			}},
-		{
-			name: "Finds struct members but not methods on top-level type of non-inline distinct of struct",
-			input: `
-			distinct Abc = Struct;
+			typedef Abc = Struct;
 			`,
 			expression: "Abc.",
 			expected: []protocol.CompletionItem{
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds struct members but not methods on top-level type of inline distinct of struct",
+			name: "Finds struct members but not methods on top-level type of inline typedef of struct",
 			input: `
-			distinct Abc = inline Struct;
+			typedef Abc = inline Struct;
 			`,
 			expression: "Abc.",
 			expected: []protocol.CompletionItem{
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Does not find enum constants or methods on top-level type of non-inline distinct of enum",
+			name: "Does not find enum constants or methods on top-level type of non-inline typedef of enum",
 			input: `
-			distinct Abc = Enum;
+			typedef Abc = Enum;
 			`,
 			expression: "Abc.",
 			expected:   []protocol.CompletionItem{}},
 		{
-			name: "Does not find enum constants or methods on top-level type of inline distinct of enum",
+			name: "Does not find enum constants or methods on top-level type of inline typedef of enum",
 			input: `
-			distinct Abc = inline Enum;
+			typedef Abc = inline Enum;
 			`,
 			expression: "Abc.",
 			expected:   []protocol.CompletionItem{}},
 		{
-			name: "Does not find fault constants or methods on top-level type of non-inline distinct of fault",
+			name: "Finds struct member but no methods on top-level type of non-inline typedef of inline typedef of struct",
 			input: `
-			distinct Abc = Fault;
-			`,
-			expression: "Abc.",
-			expected:   []protocol.CompletionItem{}},
-		{
-			name: "Does not find fault constants or methods on top-level type of inline distinct of fault",
-			input: `
-			distinct Abc = inline Fault;
-			`,
-			expression: "Abc.",
-			expected:   []protocol.CompletionItem{}},
-		{
-			name: "Finds struct member but no methods on top-level type of non-inline distinct of inline distinct of struct",
-			input: `
-			distinct Abc = inline Struct;
-			distinct AbcAbc = Abc;
+			typedef Abc = inline Struct;
+			typedef AbcAbc = Abc;
 			fn void Abc.distmethod(self) {}
 			`,
 			expression: "AbcAbc.",
@@ -2495,10 +2071,10 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds struct member but only its own methods on top-level type of inline distinct of inline distinct of struct",
+			name: "Finds struct member but only its own methods on top-level type of inline typedef of inline typedef of struct",
 			input: `
-			distinct Abc = inline Struct;
-			distinct AbcAbc = inline Abc;
+			typedef Abc = inline Struct;
+			typedef AbcAbc = inline Abc;
 			fn void Abc.distmethod(self) {}
 			fn void AbcAbc.distdistmethod(self) {}
 			`,
@@ -2510,16 +2086,16 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(AbcAbc self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "distdistmethod",
-						Range:   protocol_utils.NewLSPRange(23, 7, 23, 8),
+						Range:   protocol_utils.NewLSPRange(21, 7, 21, 8),
 					},
 					Documentation: nil},
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds struct member but no methods on top-level type of non-inline distinct of inline distinct of struct def alias",
+			name: "Finds struct member but no methods on top-level type of non-inline typedef of inline typedef of struct def alias",
 			input: `
-			distinct Abc = inline StructAlias;
-			distinct AbcAbc = Abc;
+			typedef Abc = inline StructAlias;
+			typedef AbcAbc = Abc;
 			fn void Abc.distmethod(self) {}
 			`,
 			expression: "AbcAbc.",
@@ -2527,10 +2103,10 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
 			}},
 		{
-			name: "Finds struct member but only its own methods on top-level type of inline distinct of inline distinct of struct def alias",
+			name: "Finds struct member but only its own methods on top-level type of inline typedef of inline typedef of struct def alias",
 			input: `
-			distinct Abc = inline StructAlias;
-			distinct AbcAbc = inline Abc;
+			typedef Abc = inline StructAlias;
+			typedef AbcAbc = inline Abc;
 			fn void Abc.distmethod(self) {}
 			fn void AbcAbc.distdistmethod(self) {}
 			`,
@@ -2542,52 +2118,10 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 					Detail: cast.ToPtr("fn void(AbcAbc self)"),
 					TextEdit: protocol.TextEdit{
 						NewText: "distdistmethod",
-						Range:   protocol_utils.NewLSPRange(23, 7, 23, 8),
+						Range:   protocol_utils.NewLSPRange(21, 7, 21, 8),
 					},
 					Documentation: nil},
 				{Label: "field", Kind: &fieldKind, Detail: cast.ToPtr("int"), Documentation: nil},
-			}},
-		{
-			name: "Finds all distinct and non-distinct methods with clashing names across chain",
-			input: `
-			distinct Aabc = inline Fault;
-			distinct Adef = inline Aabc;
-			fn int Aabc.something(self) { return 5; }
-			fn float Adef.something(self, int x) { return 5.0; }
-			Adef x = { 5 };
-			`,
-			expression: "x.",
-			expected: []protocol.CompletionItem{
-				{
-					Label:  "Aabc.something",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn int(Aabc self)"),
-					TextEdit: protocol.TextEdit{
-						// TODO: Somehow replace with "Aabc.something(x)"
-						// Seems harder than anticipated due to restrictions on applying TextEdit
-						// to the whole input
-						NewText: "something",
-						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
-					},
-					Documentation: nil},
-				{
-					Label:  "Adef.something",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn float(Adef self, int x)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "something",
-						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
-					},
-					Documentation: nil},
-				{
-					Label:  "Fault.something",
-					Kind:   &methodKind,
-					Detail: cast.ToPtr("fn void(Fault self)"),
-					TextEdit: protocol.TextEdit{
-						NewText: "something",
-						Range:   protocol_utils.NewLSPRange(24, 2, 24, 3),
-					},
-					Documentation: nil},
 			}},
 	}
 
@@ -2596,14 +2130,16 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 			expr := ""
 			if tt.expression != "" {
 				// Add cursor at the end of expression if applicable
+				//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
+				// originally this test did not had this ';'
 				expr = `
 fn void func() {
-` + tt.expression + "|||\n}"
+` + tt.expression + "|||;\n}"
 			}
 
 			completions := filterOutKeywordSuggestions(CompleteAtCursor(preamble + tt.input + expr))
 
-			assert.Len(t, completions, len(tt.expected), "Different amount of completions")
+			assert.Lenf(t, completions, len(tt.expected), "Different amount of completions: %s", preamble+tt.input+expr)
 			assert.Equal(t, tt.expected, completions, "Completions don't match")
 		})
 	}

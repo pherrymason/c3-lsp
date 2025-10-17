@@ -31,39 +31,26 @@ func (p *Parser) nodeToFault(node *sitter.Node, currentModule *idx.Module, docId
 	module := currentModule.GetModuleString()
 	var constants []*idx.FaultConstant
 
-	nameNode := node.ChildByFieldName("name")
-	name := ""
 	idRange := idx.NewRange(0, 0, 0, 0)
-	if nameNode != nil {
-		name = nameNode.Content(sourceCode)
-		idRange = idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint())
-	}
-
 	for i := 0; i < int(node.ChildCount()); i++ {
-		n := node.Child(i)
-		switch n.Type() {
-		case "fault_body":
-			for i := 0; i < int(n.ChildCount()); i++ {
-				constantNode := n.Child(i)
+		constantNode := node.Child(i)
 
-				if constantNode.Type() == "const_ident" {
-					constants = append(constants,
-						idx.NewFaultConstant(
-							constantNode.Content(sourceCode),
-							name,
-							module,
-							*docId,
-							idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
-							idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
-						),
-					)
-				}
-			}
+		if constantNode.Type() == "const_ident" {
+			constants = append(constants,
+				idx.NewFaultConstant(
+					constantNode.Content(sourceCode),
+					"",
+					module,
+					*docId,
+					idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
+					idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
+				),
+			)
 		}
 	}
 
 	fault := idx.NewFault(
-		name,
+		"",
 		baseType,
 		constants,
 		module,

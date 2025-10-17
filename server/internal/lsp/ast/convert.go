@@ -33,7 +33,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 	for i := 0; i < int(cstNode.ChildCount()); i++ {
 		node := cstNode.Child(i)
 		parsedModules := len(prg.Modules)
-		if parsedModules == 0 && node.Type() != "module" {
+		if parsedModules == 0 && node.Type() != "module_declaration" {
 			anonymousModule = true
 			prg.Modules = append(prg.Modules,
 				Module{
@@ -50,7 +50,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 		}
 
 		switch node.Type() {
-		case "module":
+		case "module_declaration":
 			if anonymousModule {
 				anonymousModule = false
 				lastMod.ASTNodeBase.EndPos = Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
@@ -73,13 +73,13 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 		case "bitstruct_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_bitstruct_declaration(node, source))
 
-		case "fault_declaration":
+		case "faultdef_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_fault_declaration(node, source))
 
 		case "const_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_const_declaration(node, source))
 
-		case "define_declaration":
+		case "alias_declaration":
 			lastMod.Declarations = append(lastMod.Declarations, convert_def_declaration(node, source))
 
 		case "func_definition", "func_declaration":
@@ -111,7 +111,7 @@ func convert_module(node *sitter.Node, source []byte) Module {
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
 		switch child.Type() {
-		case "generic_parameters", "generic_module_parameters":
+		case "generic_param_list":
 			for g := 0; g < int(child.ChildCount()); g++ {
 				gn := child.Child(g)
 				if gn.Type() == "type_ident" {
@@ -159,6 +159,10 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
 	}
+	if node.ChildCount() == 0 && node.Child(0).Type() == "declaration" {
+		return variable
+	}
+	node = node.Child(0)
 
 	for i := uint32(0); i < node.ChildCount(); i++ {
 		n := node.Child(int(i))
@@ -180,7 +184,7 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 
 		case ";":
 
-		case "multi_declaration":
+		case "identifier_list":
 			for j := 0; j < int(n.ChildCount()); j++ {
 				sub := n.Child(j)
 				if sub.Type() == "ident" {
@@ -228,7 +232,7 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 				param_list := n.Child(2)
 				for p := 0; p < int(param_list.ChildCount()); p++ {
 					paramNode := param_list.Child(p)
-					if paramNode.Type() == "enum_param_declaration" {
+					if paramNode.Type() == "enum_param" {
 						enumDecl.Properties = append(
 							enumDecl.Properties,
 							EnumProperty{
@@ -266,7 +270,7 @@ func convert_enum_declaration(node *sitter.Node, sourceCode []byte) EnumDecl {
 					} else if args.Type() == "initializer_list" {
 						for a := 0; a < int(args.ChildCount()); a++ {
 							arg := args.Child(a)
-							if arg.Type() == "arg" {
+							if arg.Type() == "initializer_element" {
 								if !is_literal(arg.Child(0)) {
 									// Exit early to ensure correspondence between
 									// index of each value and index of each predefined
@@ -320,10 +324,10 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 		switch child.Type() {
 		case "union":
 			structDecl.StructType = StructTypeUnion
-		case "interface_impl":
+		case "interface_impl_list":
 			for x := 0; x < int(child.ChildCount()); x++ {
 				n := child.Child(x)
-				if n.Type() == "interface" {
+				if n.IsNamed() {
 					structDecl.Implements = append(structDecl.Implements, n.Content(sourceCode))
 				}
 			}
@@ -928,7 +932,7 @@ func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
 		pointerCount := 0*/
 
 	tailChild := node.Child(int(node.ChildCount()) - 1)
-	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "!"
+	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "?"
 
 	typeInfo := TypeInfo{
 		Optional: isOptional,
@@ -937,49 +941,48 @@ func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
 			Build(),
 	}
 
+	typeInfo.ASTNodeBase = NewBaseNodeBuilder().
+		WithSitterPosRange(node.StartPoint(), node.EndPoint()).
+		Build()
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
-		//fmt.Println(n.Type(), n.Content(sourceCode))
+		// fmt.Println(n.Type(), n.Content(sourceCode))
 		switch n.Type() {
-		case "base_type":
-			typeInfo.ASTNodeBase = NewBaseNodeBuilder().
-				WithSitterPosRange(n.StartPoint(), n.EndPoint()).
+		case "base_type_name":
+			typeInfo.Identifier = NewIdentifierBuilder().
+				WithName(n.Content(sourceCode)).
+				WithSitterPos(n).
 				Build()
-
-			for b := 0; b < int(n.ChildCount()); b++ {
-				bn := n.Child(b)
-				fmt.Println("---"+bn.Type(), bn.Content(sourceCode))
-
-				switch bn.Type() {
-				case "base_type_name":
-					typeInfo.Identifier = NewIdentifierBuilder().
-						WithName(bn.Content(sourceCode)).
-						WithSitterPos(bn).
-						Build()
-					typeInfo.BuiltIn = true
-				case "type_ident":
-					typeInfo.Identifier = NewIdentifierBuilder().
-						WithName(bn.Content(sourceCode)).
-						WithSitterPos(bn).
-						Build()
-				case "generic_arguments":
-					for g := 0; g < int(bn.ChildCount()); g++ {
-						gn := bn.Child(g)
-						if gn.Type() == "type" {
-							gType := typeNodeToType(gn, sourceCode)
-							typeInfo.Generics = append(typeInfo.Generics, gType)
-						}
-					}
-
-				case "module_type_ident":
-					//fmt.Println(bn)
-					typeInfo.Identifier = NewIdentifierBuilder().
-						WithPath(strings.Trim(bn.Child(0).Content(sourceCode), ":")).
-						WithName(bn.Child(1).Content(sourceCode)).
-						WithSitterPos(bn).
-						Build()
+			typeInfo.BuiltIn = true
+		case "type_ident":
+			typeInfo.Identifier = NewIdentifierBuilder().
+				WithName(n.Content(sourceCode)).
+				WithSitterPos(n).
+				Build()
+		case "generic_arguments":
+			for g := 0; g < int(n.ChildCount()); g++ {
+				gn := n.Child(g)
+				if gn.Type() == "type" {
+					gType := typeNodeToType(gn, sourceCode)
+					typeInfo.Generics = append(typeInfo.Generics, gType)
 				}
 			}
+
+		case "path_type_ident":
+			var path, name string
+			if n.ChildCount() == 2 {
+				path = strings.Trim(n.Child(0).Content(sourceCode), ":")
+				name = n.Child(1).Content(sourceCode)
+			} else {
+				name = n.Child(0).Content(sourceCode)
+			}
+
+			//fmt.Println(n)
+			typeInfo.Identifier = NewIdentifierBuilder().
+				WithPath(path).
+				WithName(name).
+				WithSitterPos(n).
+				Build()
 
 		case "type_suffix":
 			suffix := n.Content(sourceCode)
@@ -988,6 +991,7 @@ func typeNodeToType(node *sitter.Node, sourceCode []byte) TypeInfo {
 				typeInfo.Pointer = 1
 			}
 		}
+
 	}
 
 	// Is baseType a module generic argument? Flag it.

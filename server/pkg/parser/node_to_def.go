@@ -6,36 +6,40 @@ import (
 )
 
 /*
-define_ident: $ => seq(
+alias_declaration: $ => seq(
 
+	'alias',
 	choice(
-	  seq($.ident, '=', $.define_path_ident),
-	  seq($.const_ident, '=', $.path_const_ident),
-	  seq($.at_ident, '=', $.define_path_at_ident),
+	  // Variable/function/macro/method/module
+	  seq(
+	    field('name', $._func_macro_ident),
+	    optional($.attributes),
+	    choice(
+	      seq('=', 'module', $.path_ident),
+	      $._assign_right_expr,
+	    )
+	  ),
+	  // Constant
+	  seq(
+	    field('name', $.const_ident),
+	    optional($.attributes),
+	    $._assign_right_expr,
+	  ),
+	  // Type/function
+	  seq(
+	    field('name', $.type_ident),
+	    optional($.attributes),
+	    '=',
+	    choice($._type_expr, $.func_signature)
+	  ),
 	),
-	optional($.generic_arguments),
+	';'
 
 ),
-
-define_declaration: $ => seq(
-
-	  'def',
-	  choice(
-	    $.define_ident,				// TODO
-	    $.define_attribute,			// TODO
-	    seq(
-	      $.type_ident,
-	      optional($.attributes),	// TODO
-	      '=',
-	      $.typedef_type,
-	    ),
-	  ),
-	  optional($.attributes),		// TODO
-	  ';'
-	),
 */
 func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Def {
 	//fmt.Println(node)
+	// TODO: attributes
 	defBuilder := idx.NewDefBuilder("", currentModule.GetModuleString(), *docId).
 		WithDocumentRange(
 			uint(node.StartPoint().Row),
@@ -43,47 +47,28 @@ func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *
 			uint(node.EndPoint().Row),
 			uint(node.EndPoint().Column),
 		)
-
-	for i := 0; i < int(node.ChildCount()); i++ {
-		n := node.Child(i)
-		switch n.Type() {
-		case "type_ident":
-			defBuilder.WithName(n.Content(sourceCode)).
-				WithIdentifierRange(
-					uint(n.StartPoint().Row),
-					uint(n.StartPoint().Column),
-					uint(n.EndPoint().Row),
-					uint(n.EndPoint().Column),
-				)
-
-		case "define_ident":
-			nameNode := n.Child(0)
-			resolvesTo := n.Child(2).Content(sourceCode)
-
-			if n.ChildCount() >= 4 {
-				// Also include applied generic arguments
-				resolvesTo += n.Child(3).Content(sourceCode)
-			}
-
-			defBuilder.WithName(nameNode.Content(sourceCode)).
-				WithIdentifierRange(
-					uint(nameNode.StartPoint().Row),
-					uint(nameNode.StartPoint().Column),
-					uint(nameNode.EndPoint().Row),
-					uint(nameNode.EndPoint().Column),
-				).
-				WithResolvesTo(resolvesTo)
-
-		case "typedef_type":
-			var _type idx.Type
-			if n.Child(0).Type() == "type" {
-				// Might contain module path
-				_type = p.typeNodeToType(n.Child(0), currentModule, sourceCode)
-				defBuilder.WithResolvesToType(_type)
-			} else if n.Child(0).Type() == "func_typedef" {
-				defBuilder.WithResolvesTo(n.Content(sourceCode))
-			}
+	if nameNode := node.ChildByFieldName("name"); nameNode != nil {
+		defBuilder.WithName(nameNode.Content(sourceCode)).
+			WithIdentifierRange(
+				uint(nameNode.StartPoint().Row),
+				uint(nameNode.StartPoint().Column),
+				uint(nameNode.EndPoint().Row),
+				uint(nameNode.EndPoint().Column),
+			)
+	}
+	var bodyNode = &sitter.Node{}
+	for i := 0; i < int(node.ChildCount()-1); i++ {
+		if node.Child(i).Type() == "=" {
+			bodyNode = node.Child(i + 1)
+			break
 		}
+	}
+	if bodyNode.Type() == "type" {
+		// Might contain module path
+		type_ := p.typeNodeToType(bodyNode, currentModule, sourceCode)
+		defBuilder.WithResolvesToType(type_)
+	} else {
+		defBuilder.WithResolvesTo(bodyNode.Content(sourceCode))
 	}
 
 	return *defBuilder.Build()

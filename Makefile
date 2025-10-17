@@ -1,9 +1,13 @@
 .PHONY: *
 
 ASSETS_DIR = assets
+
+# NOTE: go-tree-sitter only supports 14
+TREE_SITTER_GENERATE_ABI = 14
 TREE_SITTER_DIR = $(ASSETS_DIR)/tree-sitter-c3
 TREE_SITTER_GIT = git@github.com:c3lang/tree-sitter-c3.git
-TREE_SITTER_COMMIT = 10a78fbf8d3095369d32bc99840487396d899899
+TREE_SITTER_COMMIT = 057a75df0c866034d8edce989f701ee2cb0481d8
+
 C3C_DIR = $(ASSETS_DIR)/c3c
 C3C_GIT = git@github.com:c3lang/c3c.git
 
@@ -20,10 +24,10 @@ clone-c3c:
 	[ ! -d $(C3C_DIR) ] && git clone $(C3C_GIT) $(C3C_DIR) || true
 
 treesitter-playground:
-	cd $(TREE_SITTER_DIR) && tree-sitter build-wasm && tree-sitter playground
+	cd $(TREE_SITTER_DIR) && tree-sitter build --wasm && tree-sitter playground
 
 build-parser:
-	cd $(TREE_SITTER_DIR) && git fetch --all && git checkout $(TREE_SITTER_COMMIT) && tree-sitter generate
+	cd $(TREE_SITTER_DIR) && git fetch --all && git checkout $(TREE_SITTER_COMMIT) && tree-sitter generate --abi=$(TREE_SITTER_GENERATE_ABI)
 	rm -rf ./server/internal/lsp/cst/tree_sitter
 	rm -f ./server/internal/lsp/cst/parser.c
 	cp -r $(TREE_SITTER_DIR)/src/tree_sitter ./server/internal/lsp/cst
