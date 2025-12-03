@@ -22,18 +22,23 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		out, stdErr, err := c3c.CheckC3ErrorsCommand(s.options.C3, state.GetProjectRootURI())
 		log.Println("output:", out.String())
 		log.Println("output:", stdErr.String())
-		if err == nil {
-			s.clearOldDiagnostics(s.state, notify)
-			return
-		}
 
-		log.Println("Diagnostics report:", err)
 		errorsInfo, diagnosticsDisabled := extractErrorDiagnostics(stdErr.String())
 
 		if diagnosticsDisabled {
 			s.options.Diagnostics.Enabled = false
 			s.clearOldDiagnostics(s.state, notify)
 			return
+		}
+
+		if len(errorsInfo) == 0 && err == nil {
+			// No diagnostics to report, clear existing ones.
+			s.clearOldDiagnostics(s.state, notify)
+			return
+		}
+
+		if err != nil {
+			log.Println("Diagnostics report:", err)
 		}
 		// Send empty diagnostics for those files that had previously an error, but not anymore.
 		// If this is not done, the IDE will keep displaying the errors.
@@ -81,40 +86,51 @@ func extractErrorDiagnostics(output string) ([]ErrorInfo, bool) {
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		// > LSPERR|error|"/<path>>/test.c3"|13|47|"Expected ';'"
-		if strings.HasPrefix(line, "> LSPERR") {
-			parts := strings.Split(line, "|")
-			if parts[1] == "error" {
-				if len(parts) != 6 {
-					// Disable future diagnostics, looks like c3c is an old version.
-					diagnosticsDisabled = true
-				} else {
-					errorLine, err := strconv.Atoi(parts[3])
-					if err != nil {
-						continue
-					}
-					errorLine -= 1
-					character, err := strconv.Atoi(parts[4])
-					if err != nil {
-						continue
-					}
-					character -= 1
-
-					errorsInfo = append(errorsInfo, ErrorInfo{
-						File: strings.Trim(parts[2], `"`),
-						Diagnostic: protocol.Diagnostic{
-							Range: protocol.Range{
-								Start: protocol.Position{Line: protocol.UInteger(errorLine), Character: protocol.UInteger(character)},
-								End:   protocol.Position{Line: protocol.UInteger(errorLine), Character: protocol.UInteger(99)},
-							},
-							Severity: cast.ToPtr(protocol.DiagnosticSeverityError),
-							Source:   cast.ToPtr("c3c build --lsp"),
-							Message:  parts[5],
-						},
-					})
-				}
-			}
-			break
+		if !strings.HasPrefix(line, "> LSP") {
+			continue
 		}
+
+		parts := strings.SplitN(line, "|", 6)
+		if len(parts) < 6 {
+			// Disable future diagnostics, looks like c3c is an old version.
+			diagnosticsDisabled = true
+			continue
+		}
+
+		var severity protocol.DiagnosticSeverity
+		switch parts[1] {
+		case "error":
+			severity = protocol.DiagnosticSeverityError
+		case "warning":
+			severity = protocol.DiagnosticSeverityWarning
+		default:
+			continue
+		}
+
+		errorLine, err := strconv.Atoi(parts[3])
+		if err != nil || errorLine <= 0 {
+			continue
+		}
+		errorLine--
+		character, err := strconv.Atoi(parts[4])
+		if err != nil || character <= 0 {
+			continue
+		}
+		character--
+
+		message := strings.Trim(parts[5], `"`)
+		errorsInfo = append(errorsInfo, ErrorInfo{
+			File: strings.Trim(parts[2], `"`),
+			Diagnostic: protocol.Diagnostic{
+				Range: protocol.Range{
+					Start: protocol.Position{Line: protocol.UInteger(errorLine), Character: protocol.UInteger(character)},
+					End:   protocol.Position{Line: protocol.UInteger(errorLine), Character: protocol.UInteger(character + 1)},
+				},
+				Severity: cast.ToPtr(severity),
+				Source:   cast.ToPtr("c3c build --lsp"),
+				Message:  message,
+			},
+		})
 	}
 
 	return errorsInfo, diagnosticsDisabled
