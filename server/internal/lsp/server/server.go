@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"log"
+	"os"
 	"time"
 
 	"github.com/bep/debounce"
@@ -17,7 +17,6 @@ import (
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	glspserv "github.com/tliron/glsp/server"
-	"golang.org/x/mod/semver"
 )
 
 type Server struct {
@@ -54,24 +53,29 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 
 	commonlog.Configure(2, logpath) // This increases logging verbosity (optional)
 
-	logger := commonlog.GetLogger(fmt.Sprintf("%s.parser", appName))
+	logger := commonlog.GetLogger(appName)
+	logger.Infof(fmt.Sprintf("%s version %s", appName, version))
+
+	if executable, err := os.Executable(); err == nil {
+		logger.Infof(fmt.Sprintf("Server executable: %s", executable))
+	}
 
 	if opts.SendCrashReports {
-		logger.Debug("Sending crash reports")
+		logger.Debug("Crash reports enabled")
 	} else {
-		logger.Debug("No crash reports")
+		logger.Debug("Crash reports disabled")
 	}
 
 	if opts.C3.Version.IsSome() {
-		logger.Debug(fmt.Sprintf("C3 Language version specified: %s", opts.C3.Version.Get()))
+		logger.Infof(fmt.Sprintf("C3 Language version specified: %s", opts.C3.Version.Get()))
 	}
 
 	handler := protocol.Handler{}
 	glspServer := glspserv.NewServer(&handler, appName, true)
 
-	requestedLanguageVersion := checkRequestedLanguageVersion(opts.C3.Version)
+	requestedLanguageVersion := checkRequestedLanguageVersion(logger, opts.C3.Version)
 
-	state := l.NewProjectState(logger, option.Some(requestedLanguageVersion.Number), opts.Debug)
+	state := l.NewProjectState(logger, option.Some(requestedLanguageVersion), opts.Debug)
 	parser := p.NewParser(logger)
 	search := search.NewSearch(logger, opts.Debug)
 
@@ -159,26 +163,22 @@ func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
 	return nil
 }
 
-func checkRequestedLanguageVersion(version option.Option[string]) project_state.Version {
-	supportedVersions := project_state.SupportedVersions()
-
+func checkRequestedLanguageVersion(logger commonlog.Logger, version option.Option[string]) string {
+	// Default to supported version if not specified
 	if version.IsNone() {
-		return supportedVersions[len(supportedVersions)-1]
+		logger.Infof("Using default C3 version: %s", project_state.SupportedC3Version)
+		return project_state.SupportedC3Version
 	}
 
-	for _, sVersion := range supportedVersions {
-		if sVersion.Number == "dummy" {
-			continue
-		}
+	requestedVersion := version.Get()
 
-		compare := semver.Compare("v"+sVersion.Number, "v"+version.Get())
-		if compare == 0 {
-			return sVersion
-		}
+	// Warn if requested version doesn't match officially supported version
+	if requestedVersion != project_state.SupportedC3Version {
+		logger.Warningf("Requested C3 version %s differs from officially supported version %s",
+			requestedVersion, project_state.SupportedC3Version)
+		logger.Warningf("The LSP will attempt to load stdlib for version %s", requestedVersion)
+		logger.Warning("Correct behavior is not guaranteed for unsupported versions.")
 	}
 
-	selectedVersion := supportedVersions[len(supportedVersions)-1]
-	log.Printf("Specified c3 language version %s not supported. Default to %s", version.Get(), selectedVersion.Number)
-
-	return selectedVersion
+	return requestedVersion
 }

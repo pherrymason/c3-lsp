@@ -21,7 +21,7 @@ func TestRefreshDocumentIdentifiers_should_clear_cached_stuff_test(t *testing.T)
 		fn void main() {}
 		`)
 	s.RefreshDocumentIdentifiers(&doc, &p)
-	result := s.indexByFQN.SearchByFQN("app::something_app.main")
+	result := s.fqnIndex.Search("app::something_app.main")
 	assert.Equal(t, 1, len(result))
 
 	// Force a modification
@@ -32,9 +32,9 @@ func TestRefreshDocumentIdentifiers_should_clear_cached_stuff_test(t *testing.T)
 		`)
 	s.RefreshDocumentIdentifiers(&doc, &p)
 
-	result = s.indexByFQN.SearchByFQN("app::something_app.main")
+	result = s.fqnIndex.Search("app::something_app.main")
 	assert.Equal(t, 0, len(result))
 
-	result = s.indexByFQN.SearchByFQN("app::something_new.main")
+	result = s.fqnIndex.Search("app::something_new.main")
 	assert.Equal(t, 1, len(result))
 }

@@ -49,7 +49,7 @@ func NewModule(name string, docId string, idRange Range, docRange Range) *Module
 }
 
 func (m *Module) AddVariable(variable *Variable) *Module {
-	m.Variables[variable.name] = variable
+	m.Variables[variable.Name] = variable
 	m.Insert(variable)
 
 	return m
@@ -57,13 +57,13 @@ func (m *Module) AddVariable(variable *Variable) *Module {
 
 func (m *Module) AddVariables(variables []*Variable) {
 	for _, variable := range variables {
-		m.Variables[variable.name] = variable
+		m.Variables[variable.Name] = variable
 		m.Insert(variable)
 	}
 }
 
 func (m *Module) AddEnum(enum *Enum) *Module {
-	m.Enums[enum.name] = enum
+	m.Enums[enum.Name] = enum
 	m.Insert(enum)
 
 	return m
@@ -88,21 +88,21 @@ func (m *Module) AddFunction(fun *Function) *Module {
 }
 
 func (m *Module) AddInterface(_interface *Interface) *Module {
-	m.Interfaces[_interface.name] = _interface
+	m.Interfaces[_interface.Name] = _interface
 	m.Insert(_interface)
 
 	return m
 }
 
 func (m *Module) AddStruct(s *Struct) *Module {
-	m.Structs[s.name] = s
+	m.Structs[s.Name] = s
 	m.Insert(s)
 
 	return m
 }
 
 func (m *Module) AddBitstruct(b *Bitstruct) *Module {
-	m.Bitstructs[b.name] = b
+	m.Bitstructs[b.Name] = b
 	m.Insert(b)
 
 	return m
@@ -127,16 +127,16 @@ func (m *Module) AddImports(imports []string) {
 }
 
 func (m *Module) ChangeModule(module string) {
-	m.name = module
-	m.module = NewModulePathFromString(module)
+	m.Name = module
+	m.Module = NewModulePathFromString(module)
 }
 
 func (m *Module) SetStartPosition(position Position) {
-	m.docRange.Start = position
+	m.DocRange.Start = position
 }
 
 func (m *Module) SetEndPosition(position Position) {
-	m.docRange.End = position
+	m.DocRange.End = position
 }
 
 func (m *Module) SetGenericParameters(generics map[string]*GenericParameter) *Module {
@@ -149,7 +149,7 @@ func (m *Module) SetGenericParameters(generics map[string]*GenericParameter) *Mo
 }
 
 func (m *Module) GetHoverInfo() string {
-	return m.name
+	return m.Name
 }
 
 func (m *Module) GetCompletionDetail() string {

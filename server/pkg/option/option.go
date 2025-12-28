@@ -50,6 +50,13 @@ func (s Option[T]) String() string {
 	}
 }
 
+func (o Option[T]) MarshalJSON() ([]byte, error) {
+	if o.isFull {
+		return json.Marshal(o.value)
+	}
+	return []byte("null"), nil
+}
+
 func (o *Option[T]) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" {
 		*o = None[T]()

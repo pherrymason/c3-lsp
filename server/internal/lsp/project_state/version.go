@@ -1,46 +1,28 @@
 package project_state
 
 import (
-	"fmt"
-
 	"github.com/pherrymason/c3-lsp/internal/lsp/stdlib"
-	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols_table"
-	"golang.org/x/mod/semver"
+	"github.com/tliron/commonlog"
 )
 
-type stdLibFunc func() symbols_table.UnitModules
+// SupportedC3Version: The C3 language version supported by the LSP.
+const SupportedC3Version = "0.7.0"
 
-type Version struct {
-	Number        string
-	stdLibSymbols stdLibFunc
-}
+// LoadStdLib loads the standard library symbols for the given version.
+// It will attempt to load the stdlib cache for the specified version or build it if not found.
+func LoadStdLib(logger commonlog.Logger, version string, c3cLibPath string) symbols_table.UnitModules {
+	// Get detected c3c binary version if available
+	detectedVersion := stdlib.GetDetectedC3Version()
 
-func SupportedVersions() []Version {
-	return []Version{
-		{
-			Number:        "dummy",
-			stdLibSymbols: stdlib.Load_vdummy_stdlib,
-		},
-		{
-			Number:        "0.7.7",
-			stdLibSymbols: stdlib.Load_v077_stdlib,
-		},
-	}
-}
-
-func GetVersion(number option.Option[string]) Version {
-	versions := SupportedVersions()
-	if number.IsNone() {
-		return versions[len(versions)-1]
+	// Warn if user's version doesn't match the detected binary version
+	if detectedVersion != "" && detectedVersion != version {
+		logger.Warningf("Requested C3 version %s does not match detected c3c binary version %s", version, detectedVersion)
+		logger.Warning("This may cause inconsistencies. Consider updating your configuration.")
 	}
 
-	requestedVersion := number.Get()
-	for _, version := range versions {
-		if semver.Compare("v"+requestedVersion, "v"+version.Number) == 0 {
-			return version
-		}
-	}
-
-	panic(fmt.Sprintf("Requested C3 language version \"%s\" not supported", requestedVersion))
+	// Attempt to load stdlib for the requested version
+	// This will try to load from cache, or build it if c3c path is configured
+	logger.Infof("Loading stdlib for C3 version %s...", version)
+	return stdlib.LoadStdlib(logger, version, c3cLibPath)
 }

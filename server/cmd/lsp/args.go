@@ -20,7 +20,6 @@ func cmdLineArguments() (server.ServerOpts, bool, bool) {
 	var debug = flag.Bool("debug", false, "Enables debug mode")
 
 	// C3 Options
-	flag.String("lang-version", "0.6.2", "Specify C3 language version. Deprecated.")
 	var c3cPath = flag.String("c3c-path", "", "Path where c3c is located.")
 	var stdlibPath = flag.String("stdlib-path", "", "Path to stdlib sources. Allows stdlib inspections.")
 

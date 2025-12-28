@@ -40,12 +40,12 @@ func (e *Fault) RegisterConstant(name string, value string, posRange Range) {
 	constant := &FaultConstant{
 		faultName: e.GetName(),
 		BaseIndexable: BaseIndexable{
-			name:         name,
-			moduleString: e.moduleString,
-			module:       e.module,
-			documentURI:  e.documentURI,
-			idRange:      posRange,
-			docRange:     posRange,
+			Name:         name,
+			ModuleString: e.ModuleString,
+			Module:       e.Module,
+			DocumentURI:  e.DocumentURI,
+			IdRange:      posRange,
+			DocRange:     posRange,
 		},
 	}
 	e.constants = append(e.constants, constant)
@@ -61,7 +61,7 @@ func (e *Fault) AddConstants(constants []*FaultConstant) {
 
 func (e Fault) HasConstant(identifier string) bool {
 	for _, constant := range e.constants {
-		if constant.name == identifier {
+		if constant.Name == identifier {
 			return true
 		}
 	}
@@ -71,7 +71,7 @@ func (e Fault) HasConstant(identifier string) bool {
 
 func (e Fault) GetConstant(identifier string) *FaultConstant {
 	for _, constant := range e.constants {
-		if constant.name == identifier {
+		if constant.Name == identifier {
 			return constant
 		}
 	}
@@ -84,7 +84,7 @@ func (e Fault) GetConstants() []*FaultConstant {
 }
 
 func (e Fault) GetHoverInfo() string {
-	return e.name
+	return e.Name
 }
 
 func (e Fault) GetCompletionDetail() string {
@@ -105,7 +105,7 @@ func (e *FaultConstant) GetFaultFQN() string {
 }
 
 func (e FaultConstant) GetHoverInfo() string {
-	return e.name
+	return e.Name
 }
 
 func (e FaultConstant) GetCompletionDetail() string {

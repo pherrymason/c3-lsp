@@ -40,7 +40,7 @@ func (b Bitstruct) Members() []*StructMember {
 }
 
 func (b Bitstruct) GetHoverInfo() string {
-	return b.name
+	return b.Name
 }
 
 func (b Bitstruct) GetCompletionDetail() string {

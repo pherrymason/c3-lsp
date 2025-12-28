@@ -59,15 +59,15 @@
           "default": 2000,
           "markdownDescription": "Delay calculation of code diagnostics after modifications in source. In milliseconds, default 2000 ms."
         },
-        "c3lspclient.lsp.c3.version": {
-          "type": "string",
-          "default": null,
-          "markdownDescription": "Specify C3 language version. If omited, LSP will use the last version it supports."
-        },
         "c3lspclient.lsp.c3.path": {
           "type": "string",
           "default": null,
           "markdownDescription": "Path to C3C binary. Use it if not defined already in your PATH environment variable or if you want to use a different one."
+        },
+        "c3lspclient.lsp.c3.stdlibPath": {
+          "type": "string",
+          "default": null,
+          "markdownDescription": "Path to C3 standard library sources. Allows stdlib inspections."
         }
       }
     }

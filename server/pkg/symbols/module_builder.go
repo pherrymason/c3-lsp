@@ -15,12 +15,12 @@ func NewModuleBuilder(moduleName string, docId string) *ModuleBuilder {
 }
 
 func (mb *ModuleBuilder) WithoutSourceCode() *ModuleBuilder {
-	mb.module.BaseIndexable.hasSourceCode = false
+	mb.module.BaseIndexable.HasSourceCode_ = false
 	return mb
 }
 
 func (mb *ModuleBuilder) WithDocs(docComment DocComment) *ModuleBuilder {
-	mb.module.BaseIndexable.docComment = &docComment
+	mb.module.BaseIndexable.DocComment = &docComment
 	return mb
 }
 

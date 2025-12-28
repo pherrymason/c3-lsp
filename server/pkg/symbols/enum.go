@@ -32,14 +32,14 @@ func (e Enum) GetType() string {
 }
 
 func (e *Enum) RegisterEnumerator(name string, value string, posRange Range) {
-	enumerator := NewEnumerator(name, value, []Variable{}, e.GetName(), "", posRange, e.documentURI)
+	enumerator := NewEnumerator(name, value, []Variable{}, e.GetName(), "", posRange, e.DocumentURI)
 	e.enumerators = append(e.enumerators, enumerator)
 	e.Insert(enumerator)
 }
 
 func (e *Enum) AddEnumerators(enumerators []*Enumerator) {
 	e.enumerators = enumerators
-	e.children = []Indexable{}
+	e.Children_ = []Indexable{}
 	for _, en := range enumerators {
 		e.Insert(en)
 	}
@@ -47,7 +47,7 @@ func (e *Enum) AddEnumerators(enumerators []*Enumerator) {
 
 func (e *Enum) HasEnumerator(identifier string) bool {
 	for _, enumerator := range e.enumerators {
-		if enumerator.name == identifier {
+		if enumerator.Name == identifier {
 			return true
 		}
 	}
@@ -65,7 +65,7 @@ func (e *Enum) GetAssociatedValues() []Variable {
 
 func (e *Enum) GetEnumerator(identifier string) *Enumerator {
 	for _, enumerator := range e.enumerators {
-		if enumerator.name == identifier {
+		if enumerator.Name == identifier {
 			return enumerator
 		}
 	}
@@ -78,7 +78,7 @@ func (e *Enum) GetEnumerators() []*Enumerator {
 }
 
 func (e Enum) GetHoverInfo() string {
-	return e.name
+	return e.Name
 }
 
 func (e Enum) GetCompletionDetail() string {

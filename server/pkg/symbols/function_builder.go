@@ -46,22 +46,22 @@ func (fb *FunctionBuilder) WithArgument(variable *Variable) *FunctionBuilder {
 }
 
 func (fb *FunctionBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FunctionBuilder {
-	fb.function.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	fb.function.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return fb
 }
 
 func (fb *FunctionBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FunctionBuilder {
-	fb.function.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	fb.function.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return fb
 }
 
 func (fb *FunctionBuilder) WithDocs(docComment DocComment) *FunctionBuilder {
-	fb.function.BaseIndexable.docComment = &docComment
+	fb.function.BaseIndexable.DocComment = &docComment
 	return fb
 }
 
 func (fb *FunctionBuilder) WithoutSourceCode() *FunctionBuilder {
-	fb.function.BaseIndexable.hasSourceCode = false
+	fb.function.BaseIndexable.HasSourceCode_ = false
 	return fb
 }
 func (fb *FunctionBuilder) Build() *Function {

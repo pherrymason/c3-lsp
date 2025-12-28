@@ -22,12 +22,12 @@ module.exports = {
         args.push('--log-path='+config.get('log.path'));
     }
 
-    if (config.get('c3.version')) {
-        args.push('--lang-version='+config.get('c3.version'));
-    }
-
     if (config.get('c3.path')) {
         args.push('--c3c-path='+config.get('c3.path'));
+    }
+
+    if (config.get('c3.stdlibPath')) {
+        args.push('--stdlib-path='+config.get('c3.stdlibPath'));
     }
 
     if (config.get('diagnosticsDelay')) {

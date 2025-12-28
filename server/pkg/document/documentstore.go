@@ -59,11 +59,21 @@ func (s *DocumentStore) Get(pathOrURI string) (*Document, bool) {
 
 	if err != nil {
 		//s.logger.Errorf("Could not normalize path: %s", err)
-		return nil, false
+		// If normalization fails, try with the path as-is (fallback for tests)
+		path = pathOrURI
 	}
 
 	d, ok := s.documents[path]
 	return d, ok
+}
+
+func (s *DocumentStore) Set(doc *Document) {
+	path, err := s.normalizePath(doc.URI)
+	if err != nil {
+		// If normalization fails, use the URI as-is (fallback for tests)
+		path = doc.URI
+	}
+	s.documents[path] = doc
 }
 
 func (s *DocumentStore) Delete(docId string) {

@@ -73,7 +73,7 @@ func newFunctionType(fType FunctionType, typeIdentifier string, name string, ret
 }
 
 func (f Function) Id() string {
-	return f.documentURI + f.module.GetName()
+	return f.DocumentURI + f.Module.GetName()
 }
 
 func (f Function) FunctionType() FunctionType {
@@ -82,14 +82,14 @@ func (f Function) FunctionType() FunctionType {
 
 func (f Function) GetName() string {
 	if f.typeIdentifier == "" {
-		return f.name
+		return f.Name
 	}
 
-	return f.typeIdentifier + "." + f.name
+	return f.typeIdentifier + "." + f.Name
 }
 
 func (f Function) GetMethodName() string {
-	return f.name
+	return f.Name
 }
 
 func (f Function) GetFullName() string {
@@ -97,11 +97,11 @@ func (f Function) GetFullName() string {
 		return f.GetName()
 	}
 
-	return f.typeIdentifier + "." + f.name
+	return f.typeIdentifier + "." + f.Name
 }
 
 func (f Function) GetFQN() string {
-	return fmt.Sprintf("%s::%s", f.module.GetName(), f.GetName())
+	return fmt.Sprintf("%s::%s", f.Module.GetName(), f.GetName())
 }
 
 func (f Function) GetTypeIdentifier() string {
@@ -166,7 +166,7 @@ func (f *Function) DisplaySignature(includeName bool) string {
 	args := ""
 	for _, arg := range f.argumentIds {
 		variable := f.Variables[arg]
-		if f.fType == Macro && strings.HasPrefix(variable.name, "@") {
+		if f.fType == Macro && strings.HasPrefix(variable.Name, "@") {
 			// Trailing @body in a macro
 			// TODO: Maybe store this information properly, without needing string
 			// manipulation at some point
@@ -177,15 +177,15 @@ func (f *Function) DisplaySignature(includeName bool) string {
 				bodyParams = ""
 			}
 
-			args += fmt.Sprintf("; %s%s", variable.name, bodyParams)
+			args += fmt.Sprintf("; %s%s", variable.Name, bodyParams)
 		} else {
 			comma := ""
 			if args != "" {
 				comma = ", "
 			}
 
-			argName := variable.name
-			if variable.idRange == (Range{}) && strings.HasPrefix(argName, "$arg#") {
+			argName := variable.Name
+			if variable.IdRange == (Range{}) && strings.HasPrefix(argName, "$arg#") {
 				// Originally, it had an empty name,
 				// and '$arg#' is not syntactically valid so this check is unambiguous
 				argName = ""
@@ -235,26 +235,26 @@ func (f *Function) DisplaySignature(includeName bool) string {
 
 func (f *Function) AddVariables(variables []*Variable) {
 	for _, variable := range variables {
-		f.Variables[variable.name] = variable
+		f.Variables[variable.Name] = variable
 		f.Insert(variable)
 	}
 }
 
 func (f *Function) AddVariable(variable *Variable) {
-	f.Variables[variable.name] = variable
+	f.Variables[variable.Name] = variable
 	f.Insert(variable)
 }
 
 func (f *Function) SetDocRange(docRange Range) {
-	f.docRange = docRange
+	f.DocRange = docRange
 }
 
 func (f *Function) SetStartPosition(position Position) {
-	f.docRange.Start = position
+	f.DocRange.Start = position
 }
 
 func (f *Function) SetEndPosition(position Position) {
-	f.docRange.End = position
+	f.DocRange.End = position
 }
 
 func (f Function) GetHoverInfo() string {

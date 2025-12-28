@@ -53,28 +53,28 @@ type Typeable interface {
 type IndexableCollection []Indexable
 
 type BaseIndexable struct {
-	name          string
-	moduleString  string
-	module        ModulePath
-	documentURI   string
-	hasSourceCode bool
-	idRange       Range
-	docRange      Range
-	Kind          protocol.CompletionItemKind
-	docComment    *DocComment
-	attributes    []string
+	Name           string                      `json:"name"`
+	ModuleString   string                      `json:"module"`
+	Module         ModulePath                  `json:"-"` // Skip - will be reconstructed from moduleString
+	DocumentURI    string                      `json:"documentURI"`
+	HasSourceCode_ bool                        `json:"hasSourceCode"`
+	IdRange        Range                       `json:"idRange"`
+	DocRange       Range                       `json:"docRange"`
+	Kind           protocol.CompletionItemKind `json:"kind"`
+	DocComment     *DocComment                 `json:"docComment,omitempty"`
+	Attributes     []string                    `json:"attributes,omitempty"`
 
-	children      []Indexable
-	childrenNames []string
-	nestedScopes  []Indexable
+	Children_      []Indexable `json:"-"` // Skip - reconstructed on load
+	ChildrenNames_ []string    `json:"-"` // Skip - reconstructed on load
+	NestedScopes_  []Indexable `json:"-"` // Skip - reconstructed on load
 }
 
 func (b *BaseIndexable) GetName() string {
-	return b.name
+	return b.Name
 }
 
 func (b *BaseIndexable) GetFQN() string {
-	return fmt.Sprintf("%s::%s", b.module.GetName(), b.GetName())
+	return fmt.Sprintf("%s::%s", b.Module.GetName(), b.GetName())
 }
 
 func (b *BaseIndexable) GetKind() protocol.CompletionItemKind {
@@ -82,11 +82,11 @@ func (b *BaseIndexable) GetKind() protocol.CompletionItemKind {
 }
 
 func (b *BaseIndexable) GetModuleString() string {
-	return b.moduleString
+	return b.ModuleString
 }
 
 func (b *BaseIndexable) GetModule() ModulePath {
-	return b.module
+	return b.Module
 }
 
 func (b *BaseIndexable) IsSubModuleOf(module ModulePath) bool {
@@ -94,27 +94,27 @@ func (b *BaseIndexable) IsSubModuleOf(module ModulePath) bool {
 		return false
 	}
 
-	return b.module.IsSubModuleOf(module)
+	return b.Module.IsSubModuleOf(module)
 }
 
 func (b *BaseIndexable) GetDocumentURI() string {
-	return b.documentURI
+	return b.DocumentURI
 }
 
 func (b *BaseIndexable) GetDocumentRange() Range {
-	return b.docRange
+	return b.DocRange
 }
 
 func (b *BaseIndexable) GetIdRange() Range {
-	return b.idRange
+	return b.IdRange
 }
 
 func (b *BaseIndexable) HasSourceCode() bool {
-	return b.hasSourceCode
+	return b.HasSourceCode_
 }
 
 func (b *BaseIndexable) IsPrivate() bool {
-	for _, attr := range b.attributes {
+	for _, attr := range b.Attributes {
 		if attr == "@private" {
 			return true
 		}
@@ -123,48 +123,48 @@ func (b *BaseIndexable) IsPrivate() bool {
 }
 
 func (b *BaseIndexable) SetDocumentURI(docId string) {
-	b.documentURI = docId
+	b.DocumentURI = docId
 }
 
 func (b *BaseIndexable) GetDocComment() *DocComment {
-	return b.docComment
+	return b.DocComment
 }
 
 func (b *BaseIndexable) GetAttributes() []string {
-	return b.attributes
+	return b.Attributes
 }
 
 func (b *BaseIndexable) SetAttributes(attributes []string) {
-	b.attributes = attributes
+	b.Attributes = attributes
 }
 
 func (b *BaseIndexable) Children() []Indexable {
-	return b.children
+	return b.Children_
 }
 
 func (b *BaseIndexable) ChildrenNames() []string {
-	return b.childrenNames
+	return b.ChildrenNames_
 }
 
 func (b *BaseIndexable) NestedScopes() []Indexable {
-	return b.nestedScopes
+	return b.NestedScopes_
 }
 
 func (b *BaseIndexable) ChildrenWithoutScopes() []Indexable {
-	return b.children
+	return b.Children_
 }
 
 func (b *BaseIndexable) Insert(child Indexable) {
-	b.children = append(b.children, child)
-	b.childrenNames = append(b.childrenNames, child.GetName())
+	b.Children_ = append(b.Children_, child)
+	b.ChildrenNames_ = append(b.ChildrenNames_, child.GetName())
 }
 
 func (b *BaseIndexable) InsertNestedScope(symbol Indexable) {
-	b.nestedScopes = append(b.nestedScopes, symbol)
+	b.NestedScopes_ = append(b.NestedScopes_, symbol)
 }
 
 func (b *BaseIndexable) SetDocComment(docComment *DocComment) {
-	b.docComment = docComment
+	b.DocComment = docComment
 }
 
 func (b *BaseIndexable) formatSource(source string) string {
@@ -173,15 +173,15 @@ func (b *BaseIndexable) formatSource(source string) string {
 
 func NewBaseIndexable(name string, module string, docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
 	return BaseIndexable{
-		name:          name,
-		module:        NewModulePathFromString(module),
-		moduleString:  module,
-		documentURI:   docId,
-		idRange:       idRange,
-		docRange:      docRange,
-		Kind:          kind,
-		hasSourceCode: true,
-		docComment:    nil,
-		attributes:    []string{},
+		Name:           name,
+		Module:         NewModulePathFromString(module),
+		ModuleString:   module,
+		DocumentURI:    docId,
+		IdRange:        idRange,
+		DocRange:       docRange,
+		Kind:           kind,
+		HasSourceCode_: true,
+		DocComment:     nil,
+		Attributes:     []string{},
 	}
 }
