@@ -17,6 +17,93 @@ func createParser() Parser {
 	return NewParser(logger)
 }
 
+// Helper functions for auto-calculating ranges in tests
+
+// findRange searches for the first occurrence of text in source and returns its range.
+// Returns the range where the text appears.
+func findRange(source string, text string) idx.Range {
+	return findNthRange(source, text, 1)
+}
+
+// findNthRange searches for the nth occurrence of text in source (1-indexed).
+// Returns idx.Range{} if not found or n is invalid.
+func findNthRange(source string, text string, n int) idx.Range {
+	if n < 1 {
+		return idx.Range{}
+	}
+
+	lines := splitLines(source)
+	occurrences := 0
+
+	for lineIdx, line := range lines {
+		col := 0
+		for {
+			foundIdx := findInString(line[col:], text)
+			if foundIdx == -1 {
+				break
+			}
+			occurrences++
+			if occurrences == n {
+				startCol := col + foundIdx
+				endCol := startCol + len(text)
+				return idx.NewRange(uint(lineIdx), uint(startCol), uint(lineIdx), uint(endCol))
+			}
+			col += foundIdx + 1
+		}
+	}
+
+	return idx.Range{}
+}
+
+// findRangeAfter searches for text that appears after a context string.
+// Useful when the same text appears multiple times.
+func findRangeAfter(source string, text string, afterContext string) idx.Range {
+	contextIdx := findInString(source, afterContext)
+	if contextIdx == -1 {
+		return idx.Range{}
+	}
+
+	afterSource := source[contextIdx+len(afterContext):]
+	textIdx := findInString(afterSource, text)
+	if textIdx == -1 {
+		return idx.Range{}
+	}
+
+	// Calculate position in original source
+	beforeText := source[:contextIdx+len(afterContext)+textIdx]
+	lines := splitLines(beforeText)
+	line := uint(len(lines) - 1)
+	col := uint(len(lines[len(lines)-1]))
+
+	return idx.NewRange(line, col, line, col+uint(len(text)))
+}
+
+func splitLines(s string) []string {
+	lines := []string{}
+	current := ""
+	for _, ch := range s {
+		if ch == '\n' {
+			lines = append(lines, current)
+			current = ""
+		} else {
+			current += string(ch)
+		}
+	}
+	if current != "" || len(s) > 0 {
+		lines = append(lines, current)
+	}
+	return lines
+}
+
+func findInString(s string, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
+}
+
 func TestParses_empty_document(t *testing.T) {
 	doc := document.NewDocument("empty", "")
 	parser := createParser()
@@ -54,8 +141,8 @@ func TestParses_TypedEnums(t *testing.T) {
 		scope := symbols.Get("doc")
 		enum := scope.Enums["Colors"]
 
-		assert.Equal(t, idx.NewRange(2, 1, 2, 37), enum.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(2, 6, 2, 12), enum.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, findRange(source, "enum Colors:int { RED, BLUE, GREEN }"), enum.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, findRange(source, "Colors"), enum.GetIdRange(), "Wrong identifier range")
 	})
 
 	t.Run("finds doc comment", func(t *testing.T) {
@@ -71,21 +158,22 @@ func TestParses_TypedEnums(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		enum := symbols.Get("doc").Enums["Colors"]
+
 		e := enum.GetEnumerator("RED")
 		assert.Equal(t, "RED", e.GetName())
-		assert.Equal(t, idx.NewRange(2, 19, 2, 22), e.GetIdRange())
+		assert.Equal(t, findRange(source, "RED"), e.GetIdRange())
 		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[0], e)
 
 		e = enum.GetEnumerator("BLUE")
 		assert.Equal(t, "BLUE", e.GetName())
-		assert.Equal(t, idx.NewRange(2, 24, 2, 28), e.GetIdRange())
+		assert.Equal(t, findRange(source, "BLUE"), e.GetIdRange())
 		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[1], e)
 
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
-		assert.Equal(t, idx.NewRange(2, 30, 2, 35), e.GetIdRange())
+		assert.Equal(t, findRange(source, "GREEN"), e.GetIdRange())
 		assert.Equal(t, "Colors", e.GetEnumName())
 		assert.Same(t, enum.Children()[2], e)
 	})
@@ -238,8 +326,8 @@ func TestParses_UnTypedEnums(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		enum := symbols.Get("doc").Enums["Colors"]
-		assert.Equal(t, idx.NewRange(3, 1, 3, 33), enum.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(3, 6, 3, 12), enum.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, findRange(source, "enum Colors { RED, BLUE, GREEN };"), enum.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, findRange(source, "Colors"), enum.GetIdRange(), "Wrong identifier range")
 	})
 
 	t.Run("finds doc comment", func(t *testing.T) {
@@ -257,15 +345,15 @@ func TestParses_UnTypedEnums(t *testing.T) {
 		enum := symbols.Get("doc").Enums["Colors"]
 		e := enum.GetEnumerator("RED")
 		assert.Equal(t, "RED", e.GetName())
-		assert.Equal(t, idx.NewRange(3, 15, 3, 18), e.GetIdRange())
+		assert.Equal(t, findRange(source, "RED"), e.GetIdRange())
 
 		e = enum.GetEnumerator("BLUE")
 		assert.Equal(t, "BLUE", e.GetName())
-		assert.Equal(t, idx.NewRange(3, 20, 3, 24), e.GetIdRange())
+		assert.Equal(t, findRange(source, "BLUE"), e.GetIdRange())
 
 		e = enum.GetEnumerator("GREEN")
 		assert.Equal(t, "GREEN", e.GetName())
-		assert.Equal(t, idx.NewRange(3, 26, 3, 31), e.GetIdRange())
+		assert.Equal(t, findRange(source, "GREEN"), e.GetIdRange())
 	})
 }
 
@@ -298,7 +386,7 @@ func TestParse_fault(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("doc").Faults[0]
-		assert.Equal(t, idx.NewRange(1, 1, 1, 32), found.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, findRange(source, "faultdef IO_ERROR, PARSE_ERROR;"), found.GetDocumentRange(), "Wrong document rage")
 		assert.Equal(t, idx.NewRange(0, 0, 0, 0), found.GetIdRange(), "Wrong identifier range")
 	})
 
@@ -316,15 +404,17 @@ func TestParse_fault(t *testing.T) {
 		fault := symbols.Get("doc").Faults[0]
 		e := fault.GetConstant("IO_ERROR")
 		assert.Equal(t, "IO_ERROR", e.GetName())
-		assert.Equal(t, idx.NewRange(1, 10, 1, 18), e.GetIdRange())
-		assert.Equal(t, idx.NewRange(1, 10, 1, 18), e.GetDocumentRange())
+		ioErrorRange := findRange(source, "IO_ERROR")
+		assert.Equal(t, ioErrorRange, e.GetIdRange())
+		assert.Equal(t, ioErrorRange, e.GetDocumentRange())
 		assert.Equal(t, "", e.GetFaultName())
 		assert.Same(t, fault.Children()[0], e)
 
 		e = fault.GetConstant("PARSE_ERROR")
 		assert.Equal(t, "PARSE_ERROR", e.GetName())
-		assert.Equal(t, idx.NewRange(1, 20, 1, 31), e.GetIdRange())
-		assert.Equal(t, idx.NewRange(1, 20, 1, 31), e.GetDocumentRange())
+		parseErrorRange := findRange(source, "PARSE_ERROR")
+		assert.Equal(t, parseErrorRange, e.GetIdRange())
+		assert.Equal(t, parseErrorRange, e.GetDocumentRange())
 		assert.Equal(t, "", e.GetFaultName())
 		assert.Same(t, fault.Children()[1], e)
 	})
@@ -360,8 +450,8 @@ func TestParse_interface(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("doc").Interfaces["MyName"]
-		assert.Equal(t, idx.NewRange(1, 1, 4, 2), found.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(1, 11, 1, 17), found.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, findRange(source, "interface MyName\n\t{\n\t\tfn String method();\n\t};"), found.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, findRange(source, "MyName"), found.GetIdRange(), "Wrong identifier range")
 	})
 
 	t.Run("finds doc comment", func(t *testing.T) {
@@ -379,7 +469,7 @@ func TestParse_interface(t *testing.T) {
 		m := _interface.GetMethod("method")
 		assert.Equal(t, "method", m.GetName())
 		assert.Equal(t, "String", m.GetReturnType().GetName())
-		assert.Equal(t, idx.NewRange(3, 12, 3, 18), m.GetIdRange())
+		assert.Equal(t, findRange(source, "method"), m.GetIdRange())
 		assert.Equal(t, module.Children()[0], _interface)
 	})
 }
@@ -797,13 +887,13 @@ func TestExtractSymbols_find_module(t *testing.T) {
 		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
 		assert.Equal(t, "foo", module.GetName(), "module name is wrong")
 		assert.Equal(t, "docs foo", module.GetDocComment().GetBody(), "module doc comment is wrong")
-		assert.Equal(t, idx.NewRange(2, 1, 3, 15), module.GetDocumentRange(), "Wrong range for foo module")
+		assert.Equal(t, findRange(source, "module foo;\n\tint value = 1;"), module.GetDocumentRange(), "Wrong range for foo module")
 
 		module = symbols.Get("foo2")
 		assert.Equal(t, "foo2", module.GetModuleString(), "module name is wrong")
 		assert.Equal(t, "foo2", module.GetName(), "module name is wrong")
 		assert.Equal(t, "docs foo2", module.GetDocComment().GetBody(), "module doc comment is wrong")
-		assert.Equal(t, idx.NewRange(6, 1, 7, 15), module.GetDocumentRange(), "Wrong range for foo2 module")
+		assert.Equal(t, findRange(source, "module foo2;\n\tint value = 2;"), module.GetDocumentRange(), "Wrong range for foo2 module")
 	})
 
 	t.Run("finds named module with attributes", func(t *testing.T) {
@@ -862,15 +952,17 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 	generic, ok := module.GenericParameters["Type1"]
 	assert.True(t, ok, "genericParams: %v", module.GenericParameters)
 	assert.Equal(t, "Type1", generic.GetName())
-	assert.Equal(t, idx.NewRange(0, 16, 0, 21), generic.GetIdRange())
-	assert.Equal(t, idx.NewRange(0, 16, 0, 21), generic.GetDocumentRange())
+	type1Range := findRange(source, "Type1")
+	assert.Equal(t, type1Range, generic.GetIdRange())
+	assert.Equal(t, type1Range, generic.GetDocumentRange())
 
 	// Generic parameter was found
 	generic, ok = module.GenericParameters["Type2"]
 	assert.True(t, ok)
 	assert.Equal(t, "Type2", generic.GetName())
-	assert.Equal(t, idx.NewRange(0, 23, 0, 28), generic.GetIdRange())
-	assert.Equal(t, idx.NewRange(0, 23, 0, 28), generic.GetDocumentRange())
+	type2Range := findRange(source, "Type2")
+	assert.Equal(t, type2Range, generic.GetIdRange())
+	assert.Equal(t, type2Range, generic.GetDocumentRange())
 
 	// Usages of generic parameters are flagged as such
 	strukt := module.Structs["Foo"]

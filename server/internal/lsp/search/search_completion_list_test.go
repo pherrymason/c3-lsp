@@ -639,10 +639,9 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 	fn void Square.toCircle() {}
 	fn void main() {
 		Square inst;
-		inst.;
+		inst.x;
 	}`
-	//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
-	// originally this test did not had this ';'
+	// cursor is positioned after the dot, before 'x' to trigger completion
 	position := buildPosition(7, 7) // Cursor after `inst.|`
 
 	state := NewTestState(logger)
@@ -718,11 +717,10 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 	fn uint Color.toHex(Color* color) {}
 	fn void main() {
 		Square inst;
-		inst.color.;
+		inst.color.x;
 	}`
-	//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
-	// originally this test did not had this ';'
-	position := buildPosition(7, 13) // Cursor after `inst.|`
+	// cursor is positioned after the second dot, before 'x' to trigger completion
+	position := buildPosition(7, 13) // Cursor after `inst.color.|`
 
 	state := NewTestState(logger)
 	state.registerDoc("test.c3", source)
@@ -1116,9 +1114,12 @@ green.transp`,
 			t.Run(fmt.Sprintf("Autocomplete enum methods: #%s", tt.name), func(t *testing.T) {
 				state := NewTestState(logger)
 
-				//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
-				// originally this test did not had this ';'
-				state.registerDoc("test.c3", source+tt.input+`;}`)
+				// If input ends with '.', append 'x;}' to make valid syntax, otherwise just ';}'
+				suffix := `;}`
+				if strings.HasSuffix(tt.input, ".") {
+					suffix = `x;}`
+				}
+				state.registerDoc("test.c3", source+tt.input+suffix)
 				lines := strings.Split(tt.input, "\n")
 				lastLine := lines[len(lines)-1]
 				position := buildPosition(5+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
@@ -2130,11 +2131,15 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 			expr := ""
 			if tt.expression != "" {
 				// Add cursor at the end of expression if applicable
-				//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
-				// originally this test did not had this ';'
+				// If expression ends with '.', use '|||x;' for valid syntax after cursor removal
+				// Otherwise use '|||;' since the expression already ends with an identifier
+				suffix := "|||;\n}"
+				if strings.HasSuffix(tt.expression, ".") {
+					suffix = "|||x;\n}"
+				}
 				expr = `
 fn void func() {
-` + tt.expression + "|||;\n}"
+` + tt.expression + suffix
 			}
 
 			completions := filterOutKeywordSuggestions(CompleteAtCursor(preamble + tt.input + expr))
