@@ -76,8 +76,17 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 			index = limits.start - 1
 		} else {
 			if !baseFound {
-				wb.WithText(symbol, posRange)
-				baseFound = true
+				if symbol == "." || symbol == ":" || symbol == "(" || symbol == ")" {
+					// Access operators and parentheses: set as base symbol
+					// (needed for autocompletion when cursor is on '.' or ':')
+					wb.WithText(symbol, posRange)
+					baseFound = true
+				} else {
+					// Non-symbol, non-operator characters (like ';', ' ', '='):
+					// skip backwards to find the actual symbol
+					index--
+					continue
+				}
 			}
 
 			if symbol == "." {

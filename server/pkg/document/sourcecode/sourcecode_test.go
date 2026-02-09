@@ -283,3 +283,57 @@ func Test_SourceCode_SymbolInPosition_should_resolve_full_module_paths(t *testin
 	assert.Equal(t, "std", result.resolvedModulePath[0])
 	assert.Equal(t, "io", result.resolvedModulePath[1])
 }
+
+func Test_SourceCode_SymbolInPosition_cursor_after_symbol(t *testing.T) {
+	unitModule := symbols_table.UnitModules{}
+
+	t.Run("cursor on semicolon after simple symbol", func(t *testing.T) {
+		// "int emu;" with cursor on ';' (position 7)
+		sc := NewSourceCode("int emu;")
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 7), &unitModule)
+
+		assert.Equal(t, "emu", result.Text())
+	})
+
+	t.Run("cursor on semicolon after access path", func(t *testing.T) {
+		// "p.x;" with cursor on ';' (position 3)
+		sc := NewSourceCode("p.x;")
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 3), &unitModule)
+
+		assert.Equal(t, "x", result.Text())
+		if assert.Equal(t, 1, len(result.parentAccessPath)) {
+			assert.Equal(t, "p", result.parentAccessPath[0].Text())
+		}
+	})
+
+	t.Run("cursor on space after symbol", func(t *testing.T) {
+		// "int emu = 3;" with cursor on ' ' after 'emu' (position 7)
+		sc := NewSourceCode("int emu = 3;")
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 7), &unitModule)
+
+		assert.Equal(t, "emu", result.Text())
+	})
+
+	t.Run("cursor on semicolon after deep access path", func(t *testing.T) {
+		// "a.b.c;" with cursor on ';' (position 5)
+		sc := NewSourceCode("a.b.c;")
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 5), &unitModule)
+
+		assert.Equal(t, "c", result.Text())
+		if assert.Equal(t, 2, len(result.parentAccessPath)) {
+			assert.Equal(t, "a", result.parentAccessPath[0].Text())
+			assert.Equal(t, "b", result.parentAccessPath[1].Text())
+		}
+	})
+
+	t.Run("cursor on equals after access path", func(t *testing.T) {
+		// "p.x = 5;" with cursor on ' ' after 'x' (position 3)
+		sc := NewSourceCode("p.x = 5;")
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 3), &unitModule)
+
+		assert.Equal(t, "x", result.Text())
+		if assert.Equal(t, 1, len(result.parentAccessPath)) {
+			assert.Equal(t, "p", result.parentAccessPath[0].Text())
+		}
+	})
+}
