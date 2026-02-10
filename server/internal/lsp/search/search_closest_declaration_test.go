@@ -99,9 +99,9 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.source, func(t *testing.T) {
 			logger.tracker = make(map[string][]string)
-			doc := document.NewDocument("y", "module foo;"+tt.source)
+			doc := document.NewDocument("y", "module foo;\n"+tt.source)
 			state.RefreshDocumentIdentifiers(&doc, &parser)
-			position := buildPosition(1, 12) // Cursor at BA|R_WEIGHT
+			position := buildPosition(2, 1) // Cursor at keyword on second line
 			symbol := search.FindSymbolDeclarationInWorkspace(doc.URI, position, &state)
 
 			assert.True(t, symbol.IsNone(), fmt.Sprintf("\"%s\" Symbol should not be found", tt.source))

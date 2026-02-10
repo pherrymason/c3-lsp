@@ -107,3 +107,90 @@ func createParser() p.Parser {
 	logger := &commonlog.MockLogger{}
 	return p.NewParser(logger)
 }
+
+// Helper functions for auto-calculating ranges in tests
+
+// findRange searches for the first occurrence of text in source and returns its range.
+// Returns the range where the text appears (0-indexed line numbers).
+func findRange(source string, text string) symbols.Range {
+	return findNthRange(source, text, 1)
+}
+
+// findNthRange searches for the nth occurrence of text in source (1-indexed).
+// Returns symbols.Range{} if not found or n is invalid.
+func findNthRange(source string, text string, n int) symbols.Range {
+	if n < 1 {
+		return symbols.Range{}
+	}
+	
+	lines := splitLines(source)
+	occurrences := 0
+	
+	for lineIdx, line := range lines {
+		col := 0
+		for {
+			foundIdx := findInString(line[col:], text)
+			if foundIdx == -1 {
+				break
+			}
+			occurrences++
+			if occurrences == n {
+				startCol := col + foundIdx
+				endCol := startCol + len(text)
+				return symbols.NewRange(uint(lineIdx), uint(startCol), uint(lineIdx), uint(endCol))
+			}
+			col += foundIdx + 1
+		}
+	}
+	
+	return symbols.Range{}
+}
+
+// findRangeAfter searches for text that appears after a context string.
+// Useful when the same text appears multiple times.
+func findRangeAfter(source string, text string, afterContext string) symbols.Range {
+	contextIdx := findInString(source, afterContext)
+	if contextIdx == -1 {
+		return symbols.Range{}
+	}
+	
+	afterSource := source[contextIdx+len(afterContext):]
+	textIdx := findInString(afterSource, text)
+	if textIdx == -1 {
+		return symbols.Range{}
+	}
+	
+	// Calculate position in original source
+	beforeText := source[:contextIdx+len(afterContext)+textIdx]
+	lines := splitLines(beforeText)
+	line := uint(len(lines) - 1)
+	col := uint(len(lines[len(lines)-1]))
+	
+	return symbols.NewRange(line, col, line, col+uint(len(text)))
+}
+
+func splitLines(s string) []string {
+	lines := []string{}
+	current := ""
+	for _, ch := range s {
+		if ch == '\n' {
+			lines = append(lines, current)
+			current = ""
+		} else {
+			current += string(ch)
+		}
+	}
+	if current != "" || len(s) > 0 {
+		lines = append(lines, current)
+	}
+	return lines
+}
+
+func findInString(s string, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
+}
