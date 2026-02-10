@@ -9,8 +9,10 @@ import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search"
+	"github.com/pherrymason/c3-lsp/internal/lsp/search_v2"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	p "github.com/pherrymason/c3-lsp/pkg/parser"
+	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/tliron/commonlog"
 	_ "github.com/tliron/commonlog/simple"
@@ -26,7 +28,7 @@ type Server struct {
 
 	state  *l.ProjectState
 	parser *p.Parser
-	search search.Search
+	search search.SearchInterface
 
 	diagnosticDebounced func(func())
 }
@@ -77,7 +79,17 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 
 	state := l.NewProjectState(logger, option.Some(requestedLanguageVersion), opts.Debug)
 	parser := p.NewParser(logger)
-	search := search.NewSearch(logger, opts.Debug)
+
+	// Instantiate search implementation based on feature flag
+	var searchImpl search.SearchInterface
+	if utils.IsFeatureEnabled("USE_SEARCH_V2") {
+		logger.Info("Using SearchV2 implementation (new architecture)")
+		searchImpl = search_v2.NewSearchV2(logger, opts.Debug)
+	} else {
+		logger.Info("Using original Search implementation")
+		searchV1 := search.NewSearch(logger, opts.Debug)
+		searchImpl = &searchV1
+	}
 
 	server := &Server{
 		server:  glspServer,
@@ -86,7 +98,7 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 
 		state:  &state,
 		parser: &parser,
-		search: search,
+		search: searchImpl,
 
 		diagnosticDebounced: debounce.New(opts.Diagnostics.Delay * time.Millisecond),
 	}

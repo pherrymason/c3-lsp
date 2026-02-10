@@ -24,7 +24,7 @@ func NewSourceCode(text string) SourceCode {
 	return SourceCode{Text: text}
 }
 
-var symbolPattern = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+var symbolPattern = regexp.MustCompile(`^[\$a-zA-Z0-9_]+$`)
 
 // Tries to find the symbol under cursor position
 func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules *symbols_table.UnitModules) Word {

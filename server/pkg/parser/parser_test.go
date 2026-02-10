@@ -326,7 +326,7 @@ func TestParses_UnTypedEnums(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		enum := symbols.Get("doc").Enums["Colors"]
-		assert.Equal(t, findRange(source, "enum Colors { RED, BLUE, GREEN };"), enum.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, findRange(source, "enum Colors { RED, BLUE, GREEN }"), enum.GetDocumentRange(), "Wrong document rage")
 		assert.Equal(t, findRange(source, "Colors"), enum.GetIdRange(), "Wrong identifier range")
 	})
 
@@ -450,7 +450,7 @@ func TestParse_interface(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		found := symbols.Get("doc").Interfaces["MyName"]
-		assert.Equal(t, findRange(source, "interface MyName\n\t{\n\t\tfn String method();\n\t};"), found.GetDocumentRange(), "Wrong document rage")
+		assert.Equal(t, idx.NewRange(1, 1, 4, 2), found.GetDocumentRange(), "Wrong document rage")
 		assert.Equal(t, findRange(source, "MyName"), found.GetIdRange(), "Wrong identifier range")
 	})
 
@@ -887,13 +887,13 @@ func TestExtractSymbols_find_module(t *testing.T) {
 		assert.Equal(t, "foo", module.GetModuleString(), "module name is wrong")
 		assert.Equal(t, "foo", module.GetName(), "module name is wrong")
 		assert.Equal(t, "docs foo", module.GetDocComment().GetBody(), "module doc comment is wrong")
-		assert.Equal(t, findRange(source, "module foo;\n\tint value = 1;"), module.GetDocumentRange(), "Wrong range for foo module")
+		assert.Equal(t, idx.NewRange(2, 1, 3, 14), module.GetDocumentRange(), "Wrong range for foo module")
 
 		module = symbols.Get("foo2")
 		assert.Equal(t, "foo2", module.GetModuleString(), "module name is wrong")
 		assert.Equal(t, "foo2", module.GetName(), "module name is wrong")
 		assert.Equal(t, "docs foo2", module.GetDocComment().GetBody(), "module doc comment is wrong")
-		assert.Equal(t, findRange(source, "module foo2;\n\tint value = 2;"), module.GetDocumentRange(), "Wrong range for foo2 module")
+		assert.Equal(t, idx.NewRange(6, 1, 7, 15), module.GetDocumentRange(), "Wrong range for foo2 module")
 	})
 
 	t.Run("finds named module with attributes", func(t *testing.T) {
