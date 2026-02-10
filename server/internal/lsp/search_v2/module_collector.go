@@ -83,7 +83,8 @@ func (c *ModuleCollector) getModulesFromDoc(docId string) []ModuleScope {
 	}
 
 	scopes := []ModuleScope{}
-	for _, mod := range unitModules.Modules() {
+	for _, modId := range unitModules.ModuleIds() {
+		mod := unitModules.Get(modId)
 		scopes = append(scopes, ModuleScope{
 			Module:   mod,
 			DocId:    docId,
@@ -102,7 +103,8 @@ func (c *ModuleCollector) getSameModuleInOtherDocs(modulePath symbols.ModulePath
 			continue
 		}
 
-		for _, mod := range unitModules.Modules() {
+		for _, modId := range unitModules.ModuleIds() {
+			mod := unitModules.Get(modId)
 			if mod.GetModule().GetName() == modulePath.GetName() {
 				scopes = append(scopes, ModuleScope{
 					Module:   mod,
@@ -124,7 +126,8 @@ func (c *ModuleCollector) getImportsForModule(modulePath symbols.ModulePath, doc
 	}
 
 	imports := []string{}
-	for _, mod := range unitModules.Modules() {
+	for _, modId := range unitModules.ModuleIds() {
+		mod := unitModules.Get(modId)
 		if mod.GetModule().GetName() == modulePath.GetName() {
 			imports = append(imports, mod.Imports...)
 		}
@@ -139,7 +142,8 @@ func (c *ModuleCollector) getModulesFromImport(importPath string) []ModuleScope 
 	importModulePath := symbols.NewModulePathFromString(importPath)
 
 	for docId, unitModules := range c.state.GetAllUnitModules() {
-		for _, mod := range unitModules.Modules() {
+		for _, modId := range unitModules.ModuleIds() {
+			mod := unitModules.Get(modId)
 			if mod.GetModule().IsImplicitlyImported(importModulePath) {
 				scopes = append(scopes, ModuleScope{
 					Module:   mod,

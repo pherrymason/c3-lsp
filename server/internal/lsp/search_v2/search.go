@@ -108,7 +108,8 @@ func (s *SearchV2) tryFindAsModuleName(
 ) *symbols.Module {
 
 	for _, unitModules := range projState.GetAllUnitModules() {
-		for _, module := range unitModules.Modules() {
+		for _, modId := range unitModules.ModuleIds() {
+			module := unitModules.Get(modId)
 			if module.GetName() == symbolName {
 				// Check if this module was traversed during search
 				if _, ok := traversedModules[symbolName]; ok {
