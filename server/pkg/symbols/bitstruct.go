@@ -39,6 +39,10 @@ func (b Bitstruct) Members() []*StructMember {
 	return b.members
 }
 
+func (b Bitstruct) GetInterfaces() []string {
+	return b.implements
+}
+
 func (b Bitstruct) GetHoverInfo() string {
 	return b.Name
 }

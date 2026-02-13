@@ -30,6 +30,8 @@ type Server struct {
 	parser *p.Parser
 	search search.SearchInterface
 
+	clientCapabilities protocol.ClientCapabilities
+
 	diagnosticDebounced func(func())
 }
 
@@ -125,6 +127,11 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 	handler.SetTrace = setTrace
 
 	handler.Initialize = func(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
+		if params.Trace != nil {
+			protocol.SetTraceValue(*params.Trace)
+			notifyLogTrace(context, fmt.Sprintf("Initial trace set to %s", protocol.GetTraceValue()), nil)
+		}
+
 		capabilities := handler.CreateServerCapabilities()
 		return server.Initialize(
 			appName,
@@ -142,9 +149,11 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 	handler.TextDocumentHover = server.TextDocumentHover
 	handler.TextDocumentDeclaration = server.TextDocumentDeclaration
 	handler.TextDocumentDefinition = server.TextDocumentDefinition
+	handler.TextDocumentImplementation = server.TextDocumentImplementation
 	handler.TextDocumentCompletion = server.TextDocumentCompletion
 	handler.TextDocumentSignatureHelp = server.TextDocumentSignatureHelp
 	handler.WorkspaceDidChangeWatchedFiles = server.WorkspaceDidChangeWatchedFiles
+	handler.WorkspaceDidChangeConfiguration = server.WorkspaceDidChangeConfiguration
 	handler.WorkspaceDidDeleteFiles = server.WorkspaceDidDeleteFiles
 	handler.WorkspaceDidRenameFiles = server.WorkspaceDidRenameFiles
 
@@ -171,8 +180,26 @@ func shutdown(context *glsp.Context) error {
 }
 
 func setTrace(context *glsp.Context, params *protocol.SetTraceParams) error {
+	previous := protocol.GetTraceValue()
 	protocol.SetTraceValue(params.Value)
+
+	verbose := fmt.Sprintf("Previous trace value: %s", previous)
+	notifyLogTrace(context, fmt.Sprintf("Trace set to %s", protocol.GetTraceValue()), &verbose)
+
 	return nil
+}
+
+func notifyLogTrace(context *glsp.Context, message string, verbose *string) {
+	if context == nil || protocol.GetTraceValue() == protocol.TraceValueOff {
+		return
+	}
+
+	params := protocol.LogTraceParams{Message: message}
+	if verbose != nil && protocol.GetTraceValue() == protocol.TraceValueVerbose {
+		params.Verbose = verbose
+	}
+
+	go context.Notify(protocol.MethodLogTrace, params)
 }
 
 func checkRequestedLanguageVersion(logger commonlog.Logger, version option.Option[string]) string {

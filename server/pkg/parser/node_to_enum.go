@@ -51,7 +51,7 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 	var associatedParameters []idx.Variable
 
 	module := currentModule.GetModuleString()
-	enumRange := idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint())
+	enumRange := idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), node.EndPoint())
 
 	nameNode := node.ChildByFieldName("name")
 	name := ""

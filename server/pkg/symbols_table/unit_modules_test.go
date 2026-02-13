@@ -104,3 +104,15 @@ func TestParserModules_HasImplicitLoadableModules_should_return_true_when_there_
 
 	assert.True(t, pm.HasImplicitLoadableModules(module))
 }
+
+func TestRegisterModule_UsesSymbolNameWhenModulePathMissing(t *testing.T) {
+	docID := "doc"
+	pm := NewParsedModules(&docID)
+	mod := symbols.NewModuleBuilder("std::io", docID).Build()
+	mod.Module = symbols.ModulePath{}
+
+	pm.RegisterModule(mod)
+
+	assert.NotNil(t, pm.Get("std::io"))
+	assert.Equal(t, "std::io", pm.Get("std::io").GetModule().GetName())
+}

@@ -39,7 +39,8 @@ func TestFindSimpleSymbol_Keywords(t *testing.T) {
 		"void", "bool", "char", "double",
 		"float", "int", "short", "long",
 		"if", "else", "for", "while",
-		"return", "struct", "enum", "fn",
+		"return", "struct", "enum", "cenum", "fn",
+		"$feature", "$kindof",
 	}
 
 	for _, keyword := range keywords {

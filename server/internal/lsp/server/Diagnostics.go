@@ -28,6 +28,10 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 		if diagnosticsDisabled {
 			s.options.Diagnostics.Enabled = false
 			s.clearOldDiagnostics(s.state, notify)
+			notify(protocol.ServerWindowShowMessage, protocol.ShowMessageParams{
+				Type:    protocol.MessageTypeWarning,
+				Message: "C3-LSP disabled diagnostics: compiler does not support --lsp diagnostics format",
+			})
 			return
 		}
 
@@ -41,6 +45,10 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 				strings.Contains(stderrOutput, "No such file or directory") ||
 				strings.Contains(stderrOutput, "project.json") {
 				log.Println("Project configuration error detected. Please check your project.json file and ensure all referenced directories exist.")
+				notify(protocol.ServerWindowShowMessage, protocol.ShowMessageParams{
+					Type:    protocol.MessageTypeError,
+					Message: "C3 project configuration error: please check project.json and referenced directories",
+				})
 			}
 
 			// Clear old diagnostics since we can't generate new ones

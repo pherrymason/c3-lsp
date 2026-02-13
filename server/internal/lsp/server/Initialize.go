@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/pherrymason/c3-lsp/pkg/cast"
@@ -13,6 +14,7 @@ import (
 
 // Support "Hover"
 func (s *Server) Initialize(serverName string, serverVersion string, capabilities protocol.ServerCapabilities, context *glsp.Context, params *protocol.InitializeParams) (any, error) {
+	s.clientCapabilities = params.Capabilities
 	//capabilities := handler.CreateServerCapabilities()
 
 	change := protocol.TextDocumentSyncKindIncremental
@@ -22,6 +24,8 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 		Save:      cast.ToPtr(true),
 	}
 	capabilities.DeclarationProvider = true
+	capabilities.DefinitionProvider = true
+	capabilities.ImplementationProvider = true
 	capabilities.CompletionProvider = &protocol.CompletionOptions{
 		TriggerCharacters: []string{".", ":"},
 	}
@@ -52,6 +56,8 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 		s.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
 		path, _ := fs.UriToPath(*params.RootURI)
 		s.loadServerConfigurationForWorkspace(path)
+		s.loadClientRuntimeConfiguration(context, params.RootURI)
+		s.notifyWindowLogMessage(context, protocol.MessageTypeInfo, fmt.Sprintf("C3-LSP loaded workspace: %s", path))
 		s.indexWorkspace()
 		s.RunDiagnostics(s.state, context.Notify, false)
 	}
@@ -59,6 +65,7 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 	// Disable diagnostics only if the client does not support publishDiagnostics at all.
 	if params.Capabilities.TextDocument == nil || params.Capabilities.TextDocument.PublishDiagnostics == nil {
 		s.options.Diagnostics.Enabled = false
+		s.notifyWindowShowMessage(context, protocol.MessageTypeWarning, "C3-LSP diagnostics disabled: client does not support publishDiagnostics")
 	}
 
 	return protocol.InitializeResult{

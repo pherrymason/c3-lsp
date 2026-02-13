@@ -69,7 +69,13 @@ func (ps *UnitModules) UpdateOrInitModule(module *idx.Module, rootNode *sitter.N
 }
 
 func (ps *UnitModules) RegisterModule(symbol *idx.Module) {
-	ps.modules.Set(symbol.GetModule().GetName(), symbol)
+	moduleName := symbol.GetModule().GetName()
+	if moduleName == "" {
+		moduleName = symbol.GetName()
+		symbol.ChangeModule(moduleName)
+	}
+
+	ps.modules.Set(moduleName, symbol)
 }
 
 func (ps *UnitModules) Get(moduleName string) *idx.Module {

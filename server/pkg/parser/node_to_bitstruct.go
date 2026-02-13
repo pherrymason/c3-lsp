@@ -45,7 +45,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, currentModule *idx.Module, d
 		currentModule.GetModuleString(),
 		*docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
+		idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), node.EndPoint()),
 	)
 
 	return _struct
