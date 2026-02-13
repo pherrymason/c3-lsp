@@ -83,6 +83,13 @@ func (p *Parser) nodeToImport(doc *document.Document, node *sitter.Node, sourceC
 		n := node.Child(i)
 
 		switch n.Type() {
+		case "import_path":
+			for p := 0; p < int(n.ChildCount()); p++ {
+				pn := n.Child(p)
+				if pn.Type() == "path_ident" {
+					imports = append(imports, pn.Content(sourceCode))
+				}
+			}
 		case "path_ident":
 			temp_mod := ""
 			for m := 0; m < int(n.ChildCount()); m++ {

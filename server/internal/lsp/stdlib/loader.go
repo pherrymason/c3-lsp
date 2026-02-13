@@ -19,6 +19,8 @@ import (
 var c3cLibPath string
 var detectedC3Version string
 
+const StdlibCacheFormatVersion = 4
+
 // SetC3CLibPath sets the global C3C library path and detects the installed version
 func SetC3CLibPath(logger commonlog.Logger, path string) {
 	c3cLibPath = path
@@ -64,9 +66,10 @@ func detectVersionFromPath(logger commonlog.Logger, libPath string) string {
 
 // StdlibCache represents the cached stdlib index
 type StdlibCache struct {
-	Version string            `json:"version"`
-	DocId   string            `json:"doc_id"`
-	Modules []*symbols.Module `json:"modules"`
+	FormatVersion int               `json:"format_version"`
+	Version       string            `json:"version"`
+	DocId         string            `json:"doc_id"`
+	Modules       []*symbols.Module `json:"modules"`
 }
 
 // GetStdlibCachePath returns the path where stdlib cache files are stored
@@ -133,12 +136,18 @@ func LoadStdlibFromCache(logger commonlog.Logger, version string) (*symbols_tabl
 		return nil, fmt.Errorf("cache version mismatch: expected %s, got %s", version, cache.Version)
 	}
 
+	if cache.FormatVersion != StdlibCacheFormatVersion {
+		logger.Warningf("Stdlib cache format mismatch: expected %d, got %d", StdlibCacheFormatVersion, cache.FormatVersion)
+		return nil, fmt.Errorf("cache format mismatch: expected %d, got %d", StdlibCacheFormatVersion, cache.FormatVersion)
+	}
+
 	logger.Infof("Successfully loaded stdlib cache for version %s (%d modules)", version, len(cache.Modules))
 
 	// Reconstruct UnitModules from cache
 	docId := cache.DocId
 	modules := symbols_table.NewParsedModules(&docId)
 	for _, mod := range cache.Modules {
+		rehydrateModule(mod)
 		modules.RegisterModule(mod)
 	}
 
@@ -155,9 +164,10 @@ func SaveStdlibToCache(logger commonlog.Logger, version string, modules *symbols
 	logger.Debugf("Saving stdlib cache to: %s", cacheFile)
 
 	cache := StdlibCache{
-		Version: version,
-		DocId:   modules.DocId(),
-		Modules: modules.Modules(),
+		FormatVersion: StdlibCacheFormatVersion,
+		Version:       version,
+		DocId:         modules.DocId(),
+		Modules:       modules.Modules(),
 	}
 
 	data, err := json.Marshal(cache)
@@ -201,7 +211,7 @@ func BuildStdlibIndex(c3cLibPath string, version string) (*symbols_table.UnitMod
 
 		// Merge modules into parsedModules
 		for _, mod := range modules.Modules() {
-			parsedModules.RegisterModule(mod)
+			mergeOrRegisterModule(&parsedModules, mod)
 		}
 
 		// Note: pendingTypes handling might need adjustment based on your needs
@@ -209,6 +219,86 @@ func BuildStdlibIndex(c3cLibPath string, version string) (*symbols_table.UnitMod
 	}
 
 	return &parsedModules, nil
+}
+
+func mergeOrRegisterModule(parsedModules *symbols_table.UnitModules, mod *symbols.Module) {
+	existing := parsedModules.Get(mod.GetName())
+	if existing == nil {
+		parsedModules.RegisterModule(mod)
+		return
+	}
+
+	for _, variable := range mod.Variables {
+		existing.AddVariable(variable)
+	}
+	for _, enum := range mod.Enums {
+		existing.AddEnum(enum)
+	}
+	for _, fault := range mod.Faults {
+		existing.AddFault(fault)
+	}
+	for _, strukt := range mod.Structs {
+		existing.AddStruct(strukt)
+	}
+	for _, bitstruct := range mod.Bitstructs {
+		existing.AddBitstruct(bitstruct)
+	}
+	for _, def := range mod.Defs {
+		existing.AddDef(def)
+	}
+	for _, distinct := range mod.Distincts {
+		existing.AddDistinct(distinct)
+	}
+	for _, fun := range mod.ChildrenFunctions {
+		existing.AddFunction(fun)
+	}
+	for _, iface := range mod.Interfaces {
+		existing.AddInterface(iface)
+	}
+
+	existing.AddImports(mod.Imports)
+}
+
+func rehydrateModule(mod *symbols.Module) {
+	mod.ChangeModule(mod.GetName())
+	mod.SetGenericParameters(mod.GenericParameters)
+
+	for _, variable := range mod.Variables {
+		variable.Module = symbols.NewModulePathFromString(variable.GetModuleString())
+		mod.AddVariable(variable)
+	}
+	for _, enum := range mod.Enums {
+		enum.Module = symbols.NewModulePathFromString(enum.GetModuleString())
+		mod.AddEnum(enum)
+	}
+	for _, fault := range mod.Faults {
+		fault.Module = symbols.NewModulePathFromString(fault.GetModuleString())
+		mod.AddFault(fault)
+	}
+	for _, strukt := range mod.Structs {
+		strukt.Module = symbols.NewModulePathFromString(strukt.GetModuleString())
+		mod.AddStruct(strukt)
+	}
+	for _, bitstruct := range mod.Bitstructs {
+		bitstruct.Module = symbols.NewModulePathFromString(bitstruct.GetModuleString())
+		mod.AddBitstruct(bitstruct)
+	}
+	for _, def := range mod.Defs {
+		def.Module = symbols.NewModulePathFromString(def.GetModuleString())
+		mod.AddDef(def)
+	}
+	for _, distinct := range mod.Distincts {
+		distinct.Module = symbols.NewModulePathFromString(distinct.GetModuleString())
+		mod.AddDistinct(distinct)
+	}
+	for _, fun := range mod.ChildrenFunctions {
+		fun.Module = symbols.NewModulePathFromString(fun.GetModuleString())
+		mod.AddFunction(fun)
+	}
+	for _, iface := range mod.Interfaces {
+		iface.Module = symbols.NewModulePathFromString(iface.GetModuleString())
+		mod.AddInterface(iface)
+	}
 }
 
 // LoadOrBuildStdlib attempts to load stdlib from cache, or builds it if not found

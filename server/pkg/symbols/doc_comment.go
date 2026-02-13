@@ -1,20 +1,20 @@
 package symbols
 
 type DocCommentContract struct {
-	name string
-	body string
+	Name string `json:"name"`
+	Body string `json:"body"`
 }
 
 type DocComment struct {
-	body      string
-	contracts []*DocCommentContract
+	Body      string                `json:"body"`
+	Contracts []*DocCommentContract `json:"contracts"`
 }
 
 // Creates a doc comment with the given body.
 func NewDocComment(body string) DocComment {
 	return DocComment{
-		body:      body,
-		contracts: []*DocCommentContract{},
+		Body:      body,
+		Contracts: []*DocCommentContract{},
 	}
 }
 
@@ -22,47 +22,47 @@ func NewDocComment(body string) DocComment {
 // It is expected that the name begins with '@'.
 func NewDocCommentContract(name string, body string) DocCommentContract {
 	return DocCommentContract{
-		name,
-		body,
+		Name: name,
+		Body: body,
 	}
 }
 
 // Add contracts to the given doc comment.
 func (d *DocComment) AddContracts(contracts []*DocCommentContract) {
-	d.contracts = append(d.contracts, contracts...)
+	d.Contracts = append(d.Contracts, contracts...)
 }
 
 func (d *DocComment) HasContracts() bool {
-	return len(d.contracts) > 0
+	return len(d.Contracts) > 0
 }
 
 func (d *DocComment) GetContracts() []*DocCommentContract {
-	return d.contracts
+	return d.Contracts
 }
 
 func (d *DocComment) GetBody() string {
-	return d.body
+	return d.Body
 }
 
 func (c *DocCommentContract) GetName() string {
-	return c.name
+	return c.Name
 }
 
 func (c *DocCommentContract) GetBody() string {
-	return c.body
+	return c.Body
 }
 
 // Return a string displaying the body and contracts as markdown.
 func (d *DocComment) DisplayBodyWithContracts() string {
-	out := d.body
+	out := d.Body
 
-	for _, c := range d.contracts {
+	for _, c := range d.Contracts {
 		if out != "" {
 			out += "\n\n"
 		}
-		out += "**" + c.name + "**"
-		if c.body != "" {
-			out += " " + c.body
+		out += "**" + c.Name + "**"
+		if c.Body != "" {
+			out += " " + c.Body
 		}
 	}
 
@@ -81,7 +81,7 @@ func NewDocCommentBuilder(body string) *DocCommentBuilder {
 
 func (b *DocCommentBuilder) WithContract(name string, body string) *DocCommentBuilder {
 	contract := NewDocCommentContract(name, body)
-	b.docComment.contracts = append(b.docComment.contracts, &contract)
+	b.docComment.Contracts = append(b.docComment.Contracts, &contract)
 	return b
 }
 

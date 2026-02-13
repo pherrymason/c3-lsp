@@ -18,6 +18,13 @@ type SearchInterface interface {
 		state *project_state.ProjectState,
 	) option.Option[symbols.Indexable]
 
+	// FindImplementationsInWorkspace searches for concrete implementations of the symbol at the given position
+	FindImplementationsInWorkspace(
+		docId string,
+		position symbols.Position,
+		state *project_state.ProjectState,
+	) []symbols.Indexable
+
 	// BuildCompletionList generates completion suggestions for the given cursor context
 	BuildCompletionList(
 		ctx context.CursorContext,

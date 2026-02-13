@@ -28,6 +28,20 @@ func (p *Parser) nodeToInterface(node *sitter.Node, currentModule *idx.Module, d
 					if err == nil {
 						methods = append(methods, &fun)
 					}
+					continue
+				}
+
+				if m.Type() == "interface_func_declaration" {
+					for j := 0; j < int(m.ChildCount()); j++ {
+						inner := m.Child(j)
+						if inner.Type() != "func_declaration" {
+							continue
+						}
+						fun, err := p.nodeToFunction(inner, currentModule, docId, sourceCode)
+						if err == nil {
+							methods = append(methods, &fun)
+						}
+					}
 				}
 			}
 		}
@@ -39,7 +53,7 @@ func (p *Parser) nodeToInterface(node *sitter.Node, currentModule *idx.Module, d
 		currentModule.GetModuleString(),
 		*docId,
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-		idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
+		idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), node.EndPoint()),
 	)
 
 	_interface.AddMethods(methods)
