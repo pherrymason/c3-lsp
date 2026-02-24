@@ -27,6 +27,7 @@ import (
 */
 func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Function, error) {
 	var typeIdentifier string
+	attributes := parseNodeAttributes(node, sourceCode)
 	funcHeader := firstChildOfType(node, "func_header")
 
 	if funcHeader == nil {
@@ -109,6 +110,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 	variables = append(variables, arguments...)
 
 	symbol.AddVariables(variables)
+	symbol.SetAttributes(attributes)
 
 	return symbol, nil
 }
@@ -256,6 +258,8 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 		return idx.Function{}, errors.New("invalid macro declaration")
 	}
 
+	attributes := parseNodeAttributes(node, sourceCode)
+
 	var nameNode *sitter.Node
 	macroHeader := firstChildOfType(node, "macro_header")
 
@@ -382,7 +386,27 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 		symbol.AddVariables(variables)
 	}
 
+	symbol.SetAttributes(attributes)
+
 	return symbol, nil
+}
+
+func parseNodeAttributes(node *sitter.Node, sourceCode []byte) []string {
+	attributes := []string{}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() != "attributes" {
+			continue
+		}
+
+		for j := 0; j < int(child.ChildCount()); j++ {
+			attributeNode := child.Child(j)
+			attributes = append(attributes, attributeNode.Content(sourceCode))
+		}
+	}
+
+	return attributes
 }
 
 func firstChildOfType(node *sitter.Node, wantedType string) *sitter.Node {

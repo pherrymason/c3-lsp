@@ -26,6 +26,7 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 	capabilities.DeclarationProvider = true
 	capabilities.DefinitionProvider = true
 	capabilities.ImplementationProvider = true
+	capabilities.RenameProvider = protocol.RenameOptions{PrepareProvider: cast.ToPtr(true)}
 	capabilities.CompletionProvider = &protocol.CompletionOptions{
 		TriggerCharacters: []string{".", ":"},
 	}

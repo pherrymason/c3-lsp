@@ -1,5 +1,23 @@
 # C3LSP Release Notes
 
+## Unreleased
+
+- Completion: fixed `Ctrl+Space` on empty lines so in-scope suggestions are shown instead of being filtered by previous-line symbols.
+- Completion: improved empty-invoke ordering with scope-aware ranking (`SortText`) so local symbols rank above modules and language keywords, with `$...` keywords ranked last.
+- Completion UI metadata: enriched completion rows with `labelDetails.description` (kind hints) and signature markdown for callable/type items to improve editor-side highlighting.
+- Completion UI metadata: aligned `labelDetails` mapping with Zed Rust expectations (`description` carries signature detail, `detail` carries kind hint) for better list rendering.
+- Completion: imported module path suggestions now hide non-public symbols (`@private`, `@local`) outside valid visibility contexts.
+- Completion: `@local` symbols are scoped by module declaration section; locals from `module X` part 1 no longer leak into `module X` part 2.
+- Completion accept: improved callable and struct insertion snippets, including context-aware declaration/value struct snippets and robust replacement ranges.
+- Completion accept: method completion insertion now strips type qualifiers (`Type.method`) so instance calls insert correctly as `obj.method()`.
+- Completion: improved chain completion context detection for `Ctrl+Space` around dot access (`obj.|`, `obj|.`, and next-line after `obj.`), including safer symbol-at-cursor fallback.
+- Completion: improved stdlib chain completion on incomplete lines by adding a type-inference fallback for unresolved `obj.` contexts (e.g. `List{int} l; l.` / `HashMap ... v; v.`).
+- Navigation: added `textDocument/implementation` support for interfaces and interface methods (find implementors and method implementations across workspace/stdlib).
+- Configuration: added runtime settings refresh via `workspace/didChangeConfiguration` + `workspace/configuration` (supports `C3`/`c3` and `Diagnostics`/`diagnostics` sections).
+- Stdlib indexing: improved cache robustness with cache-format versioning plus module rehydration/merge to preserve symbol relationships after reload.
+- Server capabilities: initialize now advertises implementation support and emits workspace/diagnostics status messages to the client window/log channels.
+- Rename: added module rename support via LSP `textDocument/prepareRename` and `textDocument/rename`, updating module declarations/imports/qualified usages.
+
 ## 0.4.0
 
 - Support <* and *> comments (https://github.com/pherrymason/c3-lsp/pull/99) Credit to @PgBiel
@@ -121,4 +139,3 @@
   - TextDocumentDefinition
   - TextDocumentHover
   - TextDocumentCompletion
-

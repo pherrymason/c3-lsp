@@ -150,6 +150,8 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 	handler.TextDocumentDeclaration = server.TextDocumentDeclaration
 	handler.TextDocumentDefinition = server.TextDocumentDefinition
 	handler.TextDocumentImplementation = server.TextDocumentImplementation
+	handler.TextDocumentPrepareRename = server.TextDocumentPrepareRename
+	handler.TextDocumentRename = server.TextDocumentRename
 	handler.TextDocumentCompletion = server.TextDocumentCompletion
 	handler.TextDocumentSignatureHelp = server.TextDocumentSignatureHelp
 	handler.WorkspaceDidChangeWatchedFiles = server.WorkspaceDidChangeWatchedFiles

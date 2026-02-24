@@ -87,10 +87,12 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 				)
 
 				start := startPointSkippingDocComment(c.Node)
-				moduleSymbol.
-					SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
-
-				moduleSymbol.SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
+				startPosition := idx.NewPositionFromTreeSitterPoint(start)
+				currentStart := moduleSymbol.GetDocumentRange().Start
+				if startPosition.Line < currentStart.Line ||
+					(startPosition.Line == currentStart.Line && startPosition.Character < currentStart.Character) {
+					moduleSymbol.SetStartPosition(startPosition)
+				}
 				moduleSymbol.ChangeModule(lastModuleName)
 
 				if lastDocComment != nil {

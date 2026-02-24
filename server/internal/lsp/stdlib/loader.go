@@ -331,15 +331,21 @@ func LoadStdlib(logger commonlog.Logger, version string, c3cLibPath string) symb
 	// Check if we have a detected C3 version
 	detectedVersion := GetDetectedC3Version()
 
-	// Try to build from sources if we have c3c path configured
+	// Prefer building from sources when a stdlib path is configured.
+	// Cached stdlib entries can miss method metadata required for chained
+	// completion (e.g. HashMap member/method completions after `v.`).
+	// Building from source guarantees complete symbol information.
 	if c3cLibPath != "" {
-		// Try to load from cache or build from sources
-		logger.Infof("Attempting to load or build stdlib index for version %s...", version)
-		modules, err := LoadOrBuildStdlib(logger, c3cLibPath, version)
+		logger.Infof("Building stdlib index from sources for version %s...", version)
+		modules, err := BuildStdlibIndex(c3cLibPath, version)
 		if err == nil {
-			return modules
+			if saveErr := SaveStdlibToCache(logger, version, modules); saveErr != nil {
+				logger.Warningf("Failed to save stdlib cache: %v", saveErr)
+			}
+			return *modules
 		}
-		logger.Warningf("Failed to load/build stdlib for version %s: %v", version, err)
+		logger.Warningf("Failed to build stdlib from sources for version %s: %v", version, err)
+		logger.Warning("Falling back to stdlib cache load.")
 	}
 
 	// Try to load from cache only (user may have manually created it)

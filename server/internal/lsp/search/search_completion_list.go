@@ -3,6 +3,7 @@ package search
 import (
 	"cmp"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -16,9 +17,376 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
+	"github.com/pherrymason/c3-lsp/pkg/symbols_table"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
+
+type completionScopeContext struct {
+	currentModule       *symbols.Module
+	currentFunction     *symbols.Function
+	importedModuleNames map[string]struct{}
+}
+
+func buildCompletionScopeContext(state *l.ProjectState, doc *document.Document, cursorPosition symbols.Position) completionScopeContext {
+	ctx := completionScopeContext{importedModuleNames: map[string]struct{}{}}
+	if doc == nil {
+		return ctx
+	}
+
+	unitModules := state.GetUnitModulesByDoc(doc.URI)
+	for _, module := range unitModules.Modules() {
+		if !module.GetDocumentRange().HasPosition(cursorPosition) {
+			continue
+		}
+
+		ctx.currentModule = module
+		for _, imported := range module.Imports {
+			ctx.importedModuleNames[imported] = struct{}{}
+		}
+
+		for _, function := range module.ChildrenFunctions {
+			if function.GetDocumentRange().HasPosition(cursorPosition) {
+				ctx.currentFunction = function
+				break
+			}
+		}
+		break
+	}
+
+	return ctx
+}
+
+func importedModuleItems(state *l.ProjectState, scopeCtx completionScopeContext, prefix string) []protocol.CompletionItem {
+	if scopeCtx.currentModule == nil || len(scopeCtx.importedModuleNames) == 0 {
+		return []protocol.CompletionItem{}
+	}
+
+	items := []protocol.CompletionItem{}
+	for imported := range scopeCtx.importedModuleNames {
+		if prefix != "" && !strings.HasPrefix(imported, prefix) {
+			continue
+		}
+
+		moduleItem := protocol.CompletionItem{
+			Label:  imported,
+			Kind:   cast.ToPtr(protocol.CompletionItemKindModule),
+			Detail: cast.ToPtr("Module"),
+		}
+
+		for _, parsedModulesByDoc := range state.GetAllUnitModules() {
+			for _, module := range parsedModulesByDoc.Modules() {
+				if module.GetName() == imported {
+					moduleItem.Documentation = GetCompletableDocComment(module)
+					moduleItem.Detail = GetCompletionDetail(module)
+					break
+				}
+			}
+		}
+
+		items = append(items, moduleItem)
+	}
+
+	return items
+}
+
+func completionScopeRank(item protocol.CompletionItem, scopeCtx completionScopeContext, hasExplicitModulePath bool) int {
+	if item.Kind != nil && *item.Kind == protocol.CompletionItemKindKeyword {
+		if strings.HasPrefix(item.Label, "$") {
+			return 99
+		}
+		return 90
+	}
+
+	if item.Kind != nil && *item.Kind == protocol.CompletionItemKindModule {
+		if hasExplicitModulePath {
+			return 5
+		}
+		if _, ok := scopeCtx.importedModuleNames[item.Label]; ok {
+			return 15
+		}
+		return 40
+	}
+
+	if hasExplicitModulePath {
+		return 25
+	}
+
+	if scopeCtx.currentModule == nil {
+		return 45
+	}
+
+	if scopeCtx.currentFunction != nil && item.Kind != nil && *item.Kind == protocol.CompletionItemKindVariable {
+		for _, variable := range scopeCtx.currentFunction.Variables {
+			if variable.GetName() != item.Label {
+				continue
+			}
+			if detail := GetCompletionDetail(variable); detail != nil && item.Detail != nil && *detail == *item.Detail {
+				return 0
+			}
+		}
+	}
+
+	return 20
+}
+
+func completionSortText(item protocol.CompletionItem, scopeCtx completionScopeContext, hasExplicitModulePath bool) string {
+	rank := completionScopeRank(item, scopeCtx, hasExplicitModulePath)
+	return fmt.Sprintf("%02d_%s", rank, strings.ToLower(item.Label))
+}
+
+func lineHasOnlyWhitespaceBeforeCursor(text string, cursorPosition symbols.Position) bool {
+	cursorIndex := cursorPosition.IndexIn(text)
+	if cursorIndex < 0 || cursorIndex > len(text) {
+		return false
+	}
+
+	lineStart := cursorIndex
+	for lineStart > 0 && text[lineStart-1] != '\n' {
+		lineStart--
+	}
+
+	for i := lineStart; i < cursorIndex; i++ {
+		if text[i] != ' ' && text[i] != '\t' && text[i] != '\r' {
+			return false
+		}
+	}
+
+	return true
+}
+
+func hasCompletionContextAtCursor(symbolInPosition sourcecode.Word, cursorPosition symbols.Position, text string) bool {
+	if symbolInPosition.Text() == "" {
+		return false
+	}
+
+	rangeAtCursor := symbolInPosition.FullTextRange()
+
+	if symbolInPosition.IsSeparator() &&
+		rangeAtCursor.End.Line+1 == cursorPosition.Line &&
+		lineHasOnlyWhitespaceBeforeCursor(text, cursorPosition) {
+		return true
+	}
+
+	if rangeAtCursor.Start.Line != cursorPosition.Line || rangeAtCursor.End.Line != cursorPosition.Line {
+		return false
+	}
+
+	if cursorPosition.Character+1 < rangeAtCursor.Start.Character {
+		return false
+	}
+
+	if cursorPosition.Character > rangeAtCursor.End.Character+2 {
+		return false
+	}
+
+	if symbolInPosition.IsSeparator() || symbolInPosition.HasAccessPath() || symbolInPosition.HasModulePath() {
+		return true
+	}
+
+	return true
+}
+
+func completionPrefix(symbolInPosition sourcecode.Word, hasContextAtCursor bool) string {
+	if !hasContextAtCursor || symbolInPosition.IsSeparator() {
+		return ""
+	}
+
+	return symbolInPosition.Text()
+}
+
+func nearestVariablePositionInScope(doc *document.Document, state *l.ProjectState, cursorPosition symbols.Position, variableName string) option.Option[symbols.Position] {
+	if variableName == "" {
+		return option.None[symbols.Position]()
+	}
+
+	unitModules := state.GetUnitModulesByDoc(doc.URI)
+	if unitModules == nil {
+		return option.None[symbols.Position]()
+	}
+
+	currentModuleName := unitModules.FindContextModuleInCursorPosition(cursorPosition)
+	if currentModuleName == "" {
+		return option.None[symbols.Position]()
+	}
+
+	currentModule := unitModules.Get(currentModuleName)
+	if currentModule == nil {
+		return option.None[symbols.Position]()
+	}
+
+	best := option.None[symbols.Position]()
+	for _, fun := range currentModule.ChildrenFunctions {
+		for _, variable := range fun.Variables {
+			if variable.GetName() != variableName {
+				continue
+			}
+
+			pos := variable.GetIdRange().Start
+			if pos.Line > cursorPosition.Line {
+				continue
+			}
+
+			if best.IsNone() || pos.Line > best.Get().Line || (pos.Line == best.Get().Line && pos.Character > best.Get().Character) {
+				best = option.Some(pos)
+			}
+		}
+	}
+
+	return best
+}
+
+func nearestVariablePositionByText(doc *document.Document, cursorPosition symbols.Position, variableName string) option.Option[symbols.Position] {
+	if variableName == "" {
+		return option.None[symbols.Position]()
+	}
+
+	lines := strings.Split(doc.SourceCode.Text, "\n")
+	if len(lines) == 0 {
+		return option.None[symbols.Position]()
+	}
+
+	lineLimit := int(cursorPosition.Line)
+	if lineLimit >= len(lines) {
+		lineLimit = len(lines) - 1
+	}
+
+	namePattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(variableName) + `\b`)
+
+	for line := lineLimit; line >= 0; line-- {
+		content := lines[line]
+		matches := namePattern.FindAllStringIndex(content, -1)
+		for _, match := range matches {
+			next := match[1]
+			for next < len(content) && (content[next] == ' ' || content[next] == '\t') {
+				next++
+			}
+
+			if next < len(content) {
+				switch content[next] {
+				case ';', '=', ',', ')':
+					return option.Some(symbols.NewPosition(uint(line), uint(match[0])))
+				}
+			}
+		}
+	}
+
+	return option.None[symbols.Position]()
+}
+
+func inferVariableTypeNameFromText(doc *document.Document, cursorPosition symbols.Position, variableName string) option.Option[string] {
+	if variableName == "" {
+		return option.None[string]()
+	}
+
+	lines := strings.Split(doc.SourceCode.Text, "\n")
+	if len(lines) == 0 {
+		return option.None[string]()
+	}
+
+	lineLimit := int(cursorPosition.Line)
+	if lineLimit >= len(lines) {
+		lineLimit = len(lines) - 1
+	}
+
+	namePattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(variableName) + `\b`)
+	baseTypePattern := regexp.MustCompile(`([A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)?)\s*(?:\{|\[|\*|$)`)
+
+	for line := lineLimit; line >= 0; line-- {
+		content := lines[line]
+		matches := namePattern.FindAllStringIndex(content, -1)
+		for _, match := range matches {
+			next := match[1]
+			for next < len(content) && (content[next] == ' ' || content[next] == '\t') {
+				next++
+			}
+
+			if next >= len(content) || (content[next] != ';' && content[next] != '=') {
+				continue
+			}
+
+			prefix := strings.TrimSpace(content[:match[0]])
+			if prefix == "" {
+				continue
+			}
+
+			baseMatches := baseTypePattern.FindAllStringSubmatch(prefix, -1)
+			if len(baseMatches) == 0 {
+				continue
+			}
+
+			base := baseMatches[len(baseMatches)-1][1]
+			if base != "" {
+				return option.Some(base)
+			}
+		}
+	}
+
+	return option.None[string]()
+}
+
+func completionSymbolAtCursor(doc *document.Document, state *l.ProjectState, cursorPosition symbols.Position) sourcecode.Word {
+	unitModules := state.GetUnitModulesByDoc(doc.URI)
+	atCursor, atCursorOk := symbolInPositionSafe(doc, unitModules, cursorPosition)
+	rewound, rewoundOk := symbolInPositionSafe(doc, unitModules, cursorPosition.RewindCharacter())
+
+	if !atCursorOk {
+		return rewound
+	}
+
+	if !rewoundOk {
+		return atCursor
+	}
+
+	isChainLike := func(w sourcecode.Word) bool {
+		return w.IsSeparator() || w.HasAccessPath() || w.HasModulePath()
+	}
+
+	isIdentifierLike := func(w sourcecode.Word) bool {
+		if w.Text() == "" {
+			return false
+		}
+
+		return utils.IsAZ09_(rune(w.Text()[0]))
+	}
+
+	if rewound.IsSeparator() &&
+		rewound.HasAccessPath() &&
+		atCursor.HasAccessPath() &&
+		cursorPosition.Line == atCursor.TextRange().Start.Line &&
+		cursorPosition.Character == atCursor.TextRange().Start.Character {
+		return rewound
+	}
+
+	if isChainLike(atCursor) {
+		return atCursor
+	}
+
+	if isChainLike(rewound) {
+		return rewound
+	}
+
+	if isIdentifierLike(atCursor) {
+		return atCursor
+	}
+
+	if isIdentifierLike(rewound) {
+		return rewound
+	}
+
+	return rewound
+}
+
+func symbolInPositionSafe(doc *document.Document, unitModules *symbols_table.UnitModules, cursorPosition symbols.Position) (word sourcecode.Word, ok bool) {
+	defer func() {
+		if recover() != nil {
+			ok = false
+		}
+	}()
+
+	word = doc.SourceCode.SymbolInPosition(cursorPosition, unitModules)
+	return word, true
+}
 
 func isCompletingAModulePath(doc *document.Document, cursorPosition symbols.Position) (bool, string) {
 	// Cursor is just right after last char, let's rewind one place
@@ -151,12 +519,27 @@ func GetCompletionDetail(s symbols.Indexable) *string {
 	}
 }
 
+func completionItemKey(item protocol.CompletionItem) string {
+	kind := ""
+	if item.Kind != nil {
+		kind = fmt.Sprintf("%d", *item.Kind)
+	}
+
+	detail := ""
+	if item.Detail != nil {
+		detail = *item.Detail
+	}
+
+	return item.Label + "|" + kind + "|" + detail
+}
+
 // Search for a type's methods.
 func (s *Search) BuildMethodCompletions(
 	state *l.ProjectState,
 	parentTypeFQN string,
 	filterMembers bool,
 	symbolToSearch sourcecode.Word,
+	docText string,
 ) []protocol.CompletionItem {
 	var items []protocol.CompletionItem
 
@@ -169,11 +552,25 @@ func (s *Search) BuildMethodCompletions(
 		query = parentTypeFQN + "." + symbolToSearch.Text() + "*"
 	}
 
+	replaceStart := symbolToSearch.PrevAccessPath().TextRange().End
+	replaceStart.Character += 1
+	replaceEnd := replaceStart
+	replaceEnd.Character += 1
+	if symbolToSearch.IsSeparator() {
+		replaceStart = symbolToSearch.TextRange().End
+		replaceEnd = symbolToSearch.TextRange().End
+
+		nextIndex := replaceStart.IndexIn(docText)
+		if nextIndex >= 0 && nextIndex < len(docText) && utils.IsAZ09_(rune(docText[nextIndex])) {
+			replaceEnd.Character += 1
+		}
+	}
+
 	replacementRange := protocol_utils.NewLSPRange(
-		uint32(symbolToSearch.PrevAccessPath().TextRange().Start.Line),
-		uint32(symbolToSearch.PrevAccessPath().TextRange().End.Character+1),
-		uint32(symbolToSearch.PrevAccessPath().TextRange().Start.Line),
-		uint32(symbolToSearch.PrevAccessPath().TextRange().End.Character+2),
+		uint32(replaceStart.Line),
+		uint32(replaceStart.Character),
+		uint32(replaceEnd.Line),
+		uint32(replaceEnd.Character),
 	)
 	methods = state.SearchByFQN(query)
 	for _, idx := range methods {
@@ -222,15 +619,28 @@ func (s *Search) BuildCompletionList(
 	*/
 
 	doc := state.GetDocument(ctx.DocURI)
-	symbolInPosition := doc.SourceCode.SymbolInPosition(
-		ctx.Position.RewindCharacter(),
-		state.GetUnitModulesByDoc(doc.URI),
-	)
+	symbolInPosition := completionSymbolAtCursor(doc, state, ctx.Position)
+	scopeCtx := buildCompletionScopeContext(state, doc, ctx.Position)
+	hasContextAtCursor := hasCompletionContextAtCursor(symbolInPosition, ctx.Position, doc.SourceCode.Text)
+	prefix := completionPrefix(symbolInPosition, hasContextAtCursor)
+
+	if prefix == "" {
+		filterMembers = false
+	}
 
 	// Check if it might be a C3 language keyword
 	keywordKind := protocol.CompletionItemKindKeyword
 	for keyword := range c3.Keywords() {
-		if strings.HasPrefix(keyword, symbolInPosition.Text()) {
+		shouldIncludeKeyword := false
+		if prefix != "" {
+			shouldIncludeKeyword = strings.HasPrefix(keyword, prefix)
+		} else if !hasContextAtCursor {
+			// Empty/blank invocation context (for example Ctrl+Space in an empty line)
+			// should still offer keyword suggestions.
+			shouldIncludeKeyword = true
+		}
+
+		if shouldIncludeKeyword {
 			items = append(items, protocol.CompletionItem{
 				Label: keyword,
 				Kind:  &keywordKind,
@@ -238,7 +648,7 @@ func (s *Search) BuildCompletionList(
 		}
 	}
 
-	if symbolInPosition.IsSeparator() {
+	if symbolInPosition.IsSeparator() || !hasContextAtCursor {
 		// Probably, theres no symbol at cursor!
 		filterMembers = false
 	}
@@ -246,6 +656,11 @@ func (s *Search) BuildCompletionList(
 
 	// Check if module path is being written/exists
 	isCompletingModulePath, possibleModulePath := isCompletingAModulePath(doc, ctx.Position)
+	if !hasContextAtCursor {
+		isCompletingModulePath = false
+	} else if symbolInPosition.IsSeparator() && symbolInPosition.HasAccessPath() {
+		isCompletingModulePath = false
+	}
 
 	hasExplicitModulePath := option.None[symbols.ModulePath]()
 	if isCompletingModulePath {
@@ -253,7 +668,7 @@ func (s *Search) BuildCompletionList(
 	}
 
 	//isCompletingAChain, prevPosition := isCompletingAChain(doc, position)
-	isCompletingAChain := symbolInPosition.HasAccessPath()
+	isCompletingAChain := symbolInPosition.HasAccessPath() && hasContextAtCursor
 
 	// There are two cases (TBC):
 	// User writing a symbol:
@@ -285,6 +700,25 @@ func (s *Search) BuildCompletionList(
 		)
 
 		items = append(items, initialItems...)
+
+		if prevIndexableOption.IsNone() {
+			inferredType := inferVariableTypeNameFromText(doc, ctx.Position, symbolInPosition.PrevAccessPath().Text())
+			if inferredType.IsSome() {
+				fallbackParams := sp.NewSearchParamsBuilder().
+					WithText(inferredType.Get(), symbolInPosition.PrevAccessPath().TextRange()).
+					WithDocId(doc.URI).
+					WithContextModuleName(searchParams.ModuleInCursor()).
+					WithScopeMode(sp.InModuleRoot).
+					Build()
+
+				fallbackParent := s.findClosestSymbolDeclaration(fallbackParams, state, FindDebugger{depth: 0, enabled: true})
+				if fallbackParent.IsSome() {
+					prevIndexableOption = option.Some(fallbackParent.Get())
+					membersReadable = false
+					fromDistinct = NotFromDistinct
+				}
+			}
+		}
 
 		if prevIndexableOption.IsNone() {
 			return items
@@ -326,7 +760,7 @@ func (s *Search) BuildCompletionList(
 			// If this struct was the base type of a non-inline distinct variable,
 			// do not suggest its methods, as they cannot be accessed
 			if methodsReadable {
-				items = append(items, s.BuildMethodCompletions(state, strukt.GetFQN(), filterMembers, symbolInPosition)...)
+				items = append(items, s.BuildMethodCompletions(state, strukt.GetFQN(), filterMembers, symbolInPosition, doc.SourceCode.Text)...)
 			}
 
 		case *symbols.Enumerator:
@@ -349,7 +783,7 @@ func (s *Search) BuildCompletionList(
 
 			// Add parent enum's methods, but only if this doesn't come from a non-inline distinct.
 			if methodsReadable && enumerator.GetModuleString() != "" && enumerator.GetEnumName() != "" {
-				items = append(items, s.BuildMethodCompletions(state, enumerator.GetEnumFQN(), filterMembers, symbolInPosition)...)
+				items = append(items, s.BuildMethodCompletions(state, enumerator.GetEnumFQN(), filterMembers, symbolInPosition, doc.SourceCode.Text)...)
 			}
 
 		case *symbols.FaultConstant:
@@ -357,7 +791,7 @@ func (s *Search) BuildCompletionList(
 
 			// Add parent fault's methods
 			if methodsReadable && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
-				items = append(items, s.BuildMethodCompletions(state, constant.GetFaultFQN(), filterMembers, symbolInPosition)...)
+				items = append(items, s.BuildMethodCompletions(state, constant.GetFaultFQN(), filterMembers, symbolInPosition, doc.SourceCode.Text)...)
 			}
 
 		case *symbols.Enum:
@@ -400,7 +834,7 @@ func (s *Search) BuildCompletionList(
 			}
 
 			if methodsReadable {
-				items = append(items, s.BuildMethodCompletions(state, enum.GetFQN(), filterMembers, symbolInPosition)...)
+				items = append(items, s.BuildMethodCompletions(state, enum.GetFQN(), filterMembers, symbolInPosition, doc.SourceCode.Text)...)
 			}
 
 		case *symbols.Fault:
@@ -426,7 +860,7 @@ func (s *Search) BuildCompletionList(
 			}
 
 			if methodsReadable {
-				items = append(items, s.BuildMethodCompletions(state, fault.GetFQN(), filterMembers, symbolInPosition)...)
+				items = append(items, s.BuildMethodCompletions(state, fault.GetFQN(), filterMembers, symbolInPosition, doc.SourceCode.Text)...)
 			}
 		}
 	} else {
@@ -440,12 +874,12 @@ func (s *Search) BuildCompletionList(
 		scopeSymbols := s.findSymbolsInScope(params, state)
 
 		for _, storedIdentifier := range scopeSymbols {
-			hasPrefix := strings.HasPrefix(storedIdentifier.GetName(), symbolInPosition.Text())
+			hasPrefix := strings.HasPrefix(storedIdentifier.GetName(), prefix)
 			if filterMembers && !hasPrefix {
 				continue
 			}
 
-			if storedIdentifier.GetKind() == protocol.CompletionItemKindModule {
+			if storedIdentifier.GetKind() == protocol.CompletionItemKindModule && hasContextAtCursor {
 				/*fullSymbolAtCursor, _ := doc.SymbolBeforeCursor(
 					symbols.Position{
 						Line:      uint(position.Line),
@@ -473,13 +907,47 @@ func (s *Search) BuildCompletionList(
 				})
 			}
 		}
+
+		if !hasContextAtCursor && hasExplicitModulePath.IsNone() {
+			items = append(items, importedModuleItems(state, scopeCtx, prefix)...)
+		}
 	}
 
-	slices.SortFunc(items, func(a, b protocol.CompletionItem) int {
-		return cmp.Compare(strings.ToLower(a.Label), strings.ToLower(b.Label))
-	})
+	uniqueItems := make([]protocol.CompletionItem, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		key := completionItemKey(item)
+		if _, ok := seen[key]; ok {
+			continue
+		}
 
-	return items
+		seen[key] = struct{}{}
+		uniqueItems = append(uniqueItems, item)
+	}
+
+	if !isCompletingAChain && !hasContextAtCursor {
+		hasExplicitModulePathBool := hasExplicitModulePath.IsSome()
+		for i := range uniqueItems {
+			sortText := completionSortText(uniqueItems[i], scopeCtx, hasExplicitModulePathBool)
+			uniqueItems[i].SortText = &sortText
+		}
+
+		slices.SortFunc(uniqueItems, func(a, b protocol.CompletionItem) int {
+			arank := completionScopeRank(a, scopeCtx, hasExplicitModulePathBool)
+			brank := completionScopeRank(b, scopeCtx, hasExplicitModulePathBool)
+			if arank != brank {
+				return cmp.Compare(arank, brank)
+			}
+
+			return cmp.Compare(strings.ToLower(a.Label), strings.ToLower(b.Label))
+		})
+	} else {
+		slices.SortFunc(uniqueItems, func(a, b protocol.CompletionItem) int {
+			return cmp.Compare(strings.ToLower(a.Label), strings.ToLower(b.Label))
+		})
+	}
+
+	return uniqueItems
 }
 
 // Returns whether members can be read from the found symbol, the 'fromDistinct' status, the list of
@@ -524,11 +992,15 @@ func (s *Search) findParentTypeWithCompletions(
 		// If this distinct was the base type of a non-inline distinct, keep the
 		// status of non-inline distinct, since we can no longer access methods
 		if isDistinct && fromDistinct != NonInlineDistinct {
+			docText := ""
+			if doc := state.GetDocument(searchParams.DocId().Get()); doc.URI != "" {
+				docText = doc.SourceCode.Text
+			}
 			// Complete distinct-exclusive methods, but only if this is the original
 			// base type, an instance of it, or an instance of an inline distinct
 			// pointing to it.
 			if methodsReadable {
-				items = append(items, s.BuildMethodCompletions(state, distinct.GetFQN(), filterMembers, symbolInPosition)...)
+				items = append(items, s.BuildMethodCompletions(state, distinct.GetFQN(), filterMembers, symbolInPosition, docText)...)
 			}
 
 			if distinct.IsInline() {
