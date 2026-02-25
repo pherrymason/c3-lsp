@@ -125,9 +125,18 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 		Build()
 		*/
 		//searchResult := l.findSymbolDeclarationInModule(searchParams, searchParams.LimitToModule().Get(), debugger.goIn())
-		searchResult := self.strictFindSymbolDeclarationInModule(searchParams, searchParams.LimitToModule().Get(), state, debugger.goIn())
+		moduleToSearch := searchParams.LimitToModule().Get()
+		searchResult := self.strictFindSymbolDeclarationInModule(searchParams, moduleToSearch, state, debugger.goIn())
 		if searchResult.IsSome() {
 			return searchResult
+		}
+
+		resolvedModule := self.resolveShortModulePath(moduleToSearch, searchParams, state)
+		if resolvedModule.IsSome() && resolvedModule.Get().GetName() != moduleToSearch.GetName() {
+			searchResult = self.strictFindSymbolDeclarationInModule(searchParams, resolvedModule.Get(), state, debugger.goIn())
+			if searchResult.IsSome() {
+				return searchResult
+			}
 		}
 
 		return searchResult
@@ -410,6 +419,82 @@ func (l Search) findModuleNameInTraversedModules(searchParams search_params.Sear
 	}
 
 	return matches
+}
+
+func (s Search) resolveShortModulePath(moduleToSearch symbols.ModulePath, searchParams search_params.SearchParams, state *project_state.ProjectState) option.Option[symbols.ModulePath] {
+	shortName := moduleToSearch.GetName()
+	if shortName == "" || strings.Contains(shortName, "::") {
+		return option.None[symbols.ModulePath]()
+	}
+
+	imports := map[string]bool{}
+	docIdOpt := searchParams.DocId()
+	if docIdOpt.IsSome() {
+		docId := docIdOpt.Get()
+		if modulesByDoc := state.GetUnitModulesByDoc(docId); modulesByDoc != nil {
+			contextModule := searchParams.ModulePathInCursor().GetName()
+			for _, mod := range modulesByDoc.Modules() {
+				if mod.GetName() != contextModule {
+					continue
+				}
+				for _, imp := range mod.Imports {
+					imports[imp] = true
+				}
+			}
+		}
+	}
+
+	type candidate struct {
+		path  symbols.ModulePath
+		score int
+	}
+
+	best := option.None[candidate]()
+	for _, modulesByDoc := range state.GetAllUnitModules() {
+		for _, module := range modulesByDoc.Modules() {
+			name := module.GetName()
+
+			score := -1
+			switch {
+			case name == shortName:
+				score = 1000
+			case strings.HasSuffix(name, "::"+shortName):
+				score = 100
+			default:
+				continue
+			}
+
+			if name == "std::core::"+shortName {
+				score += 500
+			}
+
+			if imports[name] {
+				score += 300
+			}
+			for imp := range imports {
+				if strings.HasPrefix(name, imp+"::") {
+					score += 200
+				}
+			}
+
+			cand := candidate{path: symbols.NewModulePathFromString(name), score: score}
+			if best.IsNone() {
+				best = option.Some(cand)
+				continue
+			}
+
+			current := best.Get()
+			if cand.score > current.score || (cand.score == current.score && cand.path.GetName() < current.path.GetName()) {
+				best = option.Some(cand)
+			}
+		}
+	}
+
+	if best.IsNone() {
+		return option.None[symbols.ModulePath]()
+	}
+
+	return option.Some(best.Get().path)
 }
 
 func (s *Search) implicitImportedParsedModules(

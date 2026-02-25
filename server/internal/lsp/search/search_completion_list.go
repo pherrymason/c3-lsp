@@ -500,12 +500,27 @@ func extractExplicitModulePath(possibleModulePath string) option.Option[symbols.
 // Returns: nil | MarkupContent
 func GetCompletableDocComment(s symbols.Indexable) any {
 	docComment := s.GetDocComment()
-	if docComment == nil || docComment.GetBody() == "" {
+	content := ""
+	if docComment != nil {
+		content = docComment.GetBody()
+	}
+
+	if module, ok := s.(*symbols.Module); ok {
+		constraints := symbols.ModuleGenericConstraintMarkdown(module)
+		if constraints != "" {
+			if content != "" {
+				content += "\n\n"
+			}
+			content += constraints
+		}
+	}
+
+	if content == "" {
 		return nil
 	} else {
 		return protocol.MarkupContent{
 			Kind:  protocol.MarkupKindMarkdown,
-			Value: docComment.GetBody(),
+			Value: content,
 		}
 	}
 }
@@ -874,6 +889,10 @@ func (s *Search) BuildCompletionList(
 		scopeSymbols := s.findSymbolsInScope(params, state)
 
 		for _, storedIdentifier := range scopeSymbols {
+			if storedIdentifier.GetKind() == protocol.CompletionItemKindMethod {
+				continue
+			}
+
 			hasPrefix := strings.HasPrefix(storedIdentifier.GetName(), prefix)
 			if filterMembers && !hasPrefix {
 				continue

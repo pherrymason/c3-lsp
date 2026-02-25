@@ -629,6 +629,30 @@ func TestBuildCompletionList_struct_type(t *testing.T) {
 	}
 }
 
+func TestBuildCompletionList_does_not_suggest_methods_in_root_symbol_completion(t *testing.T) {
+	completionList := CompleteAtCursor(`
+	struct Tile {
+		int side;
+	}
+
+	fn void Tile.print_tile(&self) {}
+
+	fn void main() {
+		Ti|||
+	}
+	`)
+
+	filtered := filterOutKeywordSuggestions(completionList)
+
+	assert.True(t, slices.ContainsFunc(filtered, func(item protocol.CompletionItem) bool {
+		return item.Label == "Tile" && item.Kind != nil && *item.Kind == protocol.CompletionItemKindStruct
+	}))
+
+	assert.False(t, slices.ContainsFunc(filtered, func(item protocol.CompletionItem) bool {
+		return item.Label == "Tile.print_tile"
+	}))
+}
+
 func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")

@@ -459,6 +459,49 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 	})
 }
 
+func TestLanguage_findClosestSymbolDeclaration_macros(t *testing.T) {
+	t.Run("Find module macro declaration with at-sign usage", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`module runtime;
+			macro @start_benchmark() {}
+
+			module app;
+			import runtime;
+			fn void main() {
+				runtime::@start_b|||enchmark();
+			}`,
+		)
+
+		assert.True(t, symbolOption.IsSome(), "Element not found")
+		fun, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, "Element found should be a Function")
+		assert.Equal(t, "@start_benchmark", fun.GetMethodName())
+		assert.Equal(t, "runtime", fun.GetModuleString())
+	})
+
+	t.Run("Find module macro declaration when cursor is exactly on at-sign", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`module runtime;
+			macro @start_benchmark() {}
+
+			module app;
+			import runtime;
+			fn void main() {
+				runtime::|||@start_benchmark();
+			}`,
+		)
+
+		assert.True(t, symbolOption.IsSome(), "Element not found")
+		if symbolOption.IsSome() {
+			fun, ok := symbolOption.Get().(*idx.Function)
+			assert.True(t, ok, "Element found should be a Function")
+			assert.Equal(t, "@start_benchmark", fun.GetMethodName())
+			assert.Equal(t, "runtime", fun.GetModuleString())
+		}
+	})
+
+}
+
 func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 	t.Run("Find local fault definition in type declaration", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(

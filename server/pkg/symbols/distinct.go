@@ -2,7 +2,6 @@ package symbols
 
 import (
 	"fmt"
-	"strings"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -42,13 +41,6 @@ func (d *Distinct) SetInline(inline bool) {
 
 func (d Distinct) GetHoverInfo() string {
 	baseType := d.baseType.String()
-	if len(d.baseType.genericArguments) > 0 {
-		genericNames := []string{}
-		for _, generic := range d.baseType.genericArguments {
-			genericNames = append(genericNames, generic.String())
-		}
-		baseType += "(<" + strings.Join(genericNames, ", ") + ">)"
-	}
 
 	inline := ""
 	if d.inline {

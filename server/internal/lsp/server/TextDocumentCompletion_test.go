@@ -179,6 +179,18 @@ func TestStructCompletionContext(t *testing.T) {
 	if actual := structCompletionContext(bodyCallArg, len("fn void main() {\n\texample::do_thing("), len("fn void main() {\n\texample::do_thing(example::Thing")); actual != structCompletionValue {
 		t.Fatalf("unexpected function call argument context: got %d", actual)
 	}
+
+	if actual := structCompletionContext("HashMap { Tile", len("HashMap { "), len("HashMap { Tile")); actual != structCompletionNone {
+		t.Fatalf("unexpected generic key type context: got %d", actual)
+	}
+
+	if actual := structCompletionContext("HashMap { int, Tile", len("HashMap { int, "), len("HashMap { int, Tile")); actual != structCompletionNone {
+		t.Fatalf("unexpected generic value type context: got %d", actual)
+	}
+
+	if actual := structCompletionContext("HashMap{String, List{Tile", len("HashMap{String, List{"), len("HashMap{String, List{Tile")); actual != structCompletionNone {
+		t.Fatalf("unexpected nested generic type context: got %d", actual)
+	}
 }
 
 func TestCompletedStructTypeName(t *testing.T) {

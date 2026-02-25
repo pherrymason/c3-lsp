@@ -12,6 +12,14 @@
 - Completion accept: method completion insertion now strips type qualifiers (`Type.method`) so instance calls insert correctly as `obj.method()`.
 - Completion: improved chain completion context detection for `Ctrl+Space` around dot access (`obj.|`, `obj|.`, and next-line after `obj.`), including safer symbol-at-cursor fallback.
 - Completion: improved stdlib chain completion on incomplete lines by adding a type-inference fallback for unresolved `obj.` contexts (e.g. `List{int} l; l.` / `HashMap ... v; v.`).
+- Navigation: go-to-definition/declaration now resolves `@`-prefixed macro symbols when clicked from usages that omit/strip `@` in token extraction.
+- Navigation: improved short module-path resolution for qualified calls (e.g. `types::...`, `runtime::...`) by adding fallback matching to indexed modules with `std::core::*` precedence when ambiguous.
+- Hover: generic type rendering now includes concrete type arguments in signatures/details (e.g. `HashMap{String, Feature}`, `List{int}`) for variables, members, defs, distincts, function signatures, and type-identifier hover on generic instantiations (e.g. hovering `List` in `List{int}`).
+- Hover/Completion docs: module generics now surface inferred per-parameter constraints from module `@require` contracts (e.g. `Key` constrained in `std::collections::map<Key, Value>`), with unconstrained parameters explicitly shown.
+- Hover: module symbols now include declared generic parameters in the signature line (e.g. `std::collections::map <Key, Value>`).
+- Hover/Completion docs: generic module constraints now render in the existing contract style (`@require ...`) and avoid duplicate display on direct module hover.
+- Completion accept: struct-construction snippet expansion is now suppressed in generic type-argument contexts (e.g. `HashMap{Tile, int}`), preventing invalid replacements like `Tile t = {...}` where only a type is expected.
+- Completion list: root symbol completion no longer suggests type methods (e.g. `Tile.print_tile`) outside member-access contexts; methods are now suggested only for valid receiver chains like `tile.`.
 - Navigation: added `textDocument/implementation` support for interfaces and interface methods (find implementors and method implementations across workspace/stdlib).
 - Configuration: added runtime settings refresh via `workspace/didChangeConfiguration` + `workspace/configuration` (supports `C3`/`c3` and `Diagnostics`/`diagnostics` sections).
 - Stdlib indexing: improved cache robustness with cache-format versioning plus module rehydration/merge to preserve symbol relationships after reload.

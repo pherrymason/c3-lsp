@@ -947,6 +947,8 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 
 	module := symbols.Get("foo_test")
 	assert.Equal(t, "foo_test", module.GetName())
+	assert.Equal(t, "foo_test <Type1, Type2>", module.GetHoverInfo())
+	assert.Equal(t, "Module<Type1, Type2>", module.GetCompletionDetail())
 
 	// Generic parameter was found
 	generic, ok := module.GenericParameters["Type1"]

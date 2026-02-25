@@ -2,7 +2,10 @@ package server
 
 import (
 	"fmt"
+	"strings"
+	"unicode"
 
+	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
@@ -19,6 +22,7 @@ func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hover
 	}
 
 	foundSymbol := foundSymbolOption.Get()
+	doc := h.state.GetDocument(docId)
 
 	// expected behaviour:
 	// hovering on variables: display variable type + any description
@@ -38,10 +42,27 @@ func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hover
 		extraLine += "\n\nIn module **[" + foundSymbol.GetModuleString() + "]**"
 	}
 
+	moduleGenericConstraints := ""
+	if !isModule {
+		if module := findModuleByName(h.state, foundSymbol.GetModuleString()); module != nil {
+			constraints := symbols.ModuleGenericConstraintMarkdown(module)
+			if constraints != "" {
+				moduleGenericConstraints = "\n\n" + constraints
+			}
+		}
+	}
+
 	sizeInfo := ""
 	if utils.IsFeatureEnabled("SIZE_ON_HOVER") {
 		if hasSize(foundSymbol) {
 			sizeInfo = "// size = " + calculateSize(foundSymbol) + ", align = " + calculateAlignment(foundSymbol) + "\n"
+		}
+	}
+
+	hoverInfo := foundSymbol.GetHoverInfo()
+	if doc != nil {
+		if genericSuffix, ok := genericTypeSuffixAtPosition(doc.SourceCode.Text, pos); ok {
+			hoverInfo = appendGenericSuffixToHoverInfo(foundSymbol, hoverInfo, genericSuffix)
 		}
 	}
 
@@ -50,13 +71,30 @@ func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hover
 			Kind: protocol.MarkupKindMarkdown,
 			Value: "```c3" + "\n" +
 				sizeInfo +
-				foundSymbol.GetHoverInfo() + "\n```" +
+				hoverInfo + "\n```" +
 				extraLine +
-				docComment,
+				docComment +
+				moduleGenericConstraints,
 		},
 	}
 
 	return &hover, nil
+}
+
+func findModuleByName(state *project_state.ProjectState, moduleName string) *symbols.Module {
+	if state == nil || moduleName == "" {
+		return nil
+	}
+
+	for _, parsedModules := range state.GetAllUnitModules() {
+		for _, module := range parsedModules.Modules() {
+			if module.GetName() == moduleName {
+				return module
+			}
+		}
+	}
+
+	return nil
 }
 
 const (
@@ -168,4 +206,68 @@ func getLanguageTypeSize(typeName string) uint {
 	}
 
 	return size
+}
+
+func appendGenericSuffixToHoverInfo(foundSymbol symbols.Indexable, hoverInfo string, genericSuffix string) string {
+	if genericSuffix == "" {
+		return hoverInfo
+	}
+
+	switch foundSymbol.(type) {
+	case *symbols.Struct, *symbols.Interface:
+		if !strings.Contains(hoverInfo, genericSuffix) {
+			return hoverInfo + genericSuffix
+		}
+	}
+
+	return hoverInfo
+}
+
+func genericTypeSuffixAtPosition(source string, position symbols.Position) (string, bool) {
+	index := position.IndexIn(source)
+	if index < 0 || index >= len(source) {
+		return "", false
+	}
+
+	if !isTypeIdentByte(source[index]) {
+		if index > 0 && isTypeIdentByte(source[index-1]) {
+			index--
+		} else {
+			return "", false
+		}
+	}
+
+	end := index
+	for end+1 < len(source) && isTypeIdentByte(source[end+1]) {
+		end++
+	}
+
+	i := end + 1
+	for i < len(source) && unicode.IsSpace(rune(source[i])) {
+		i++
+	}
+
+	if i >= len(source) || source[i] != '{' {
+		return "", false
+	}
+
+	start := i
+	depth := 0
+	for ; i < len(source); i++ {
+		switch source[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return source[start : i+1], true
+			}
+		}
+	}
+
+	return "", false
+}
+
+func isTypeIdentByte(b byte) bool {
+	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
 }

@@ -535,6 +535,68 @@ func nearestUnclosedDelimiter(text string, index int) (rune, int) {
 	return 0, -1
 }
 
+func nearestUnclosedCurly(text string, index int) int {
+	curlyDepth := 0
+
+	if index > len(text) {
+		index = len(text)
+	}
+
+	for i := index - 1; i >= 0; i-- {
+		r := rune(text[i])
+		switch r {
+		case '}':
+			curlyDepth++
+		case '{':
+			if curlyDepth > 0 {
+				curlyDepth--
+			} else {
+				return i
+			}
+		}
+	}
+
+	return -1
+}
+
+func previousNonSpaceIndex(text string, index int) int {
+	if index > len(text) {
+		index = len(text)
+	}
+
+	for i := index - 1; i >= 0; i-- {
+		if !unicode.IsSpace(rune(text[i])) {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func isTypeArgumentContext(text string, index int) bool {
+	openCurly := nearestUnclosedCurly(text, index)
+	if openCurly < 0 {
+		return false
+	}
+
+	prevIdx := previousNonSpaceIndex(text, openCurly)
+	if prevIdx < 0 {
+		return false
+	}
+
+	prev := rune(text[prevIdx])
+	if !(unicode.IsLetter(prev) || unicode.IsDigit(prev) || prev == '_' || prev == ':' || prev == ']' || prev == '}' || prev == '*') {
+		return false
+	}
+
+	keyword := previousWord(text, openCurly)
+	if isBlockHeaderKeyword(keyword) {
+		return false
+	}
+
+	return true
+}
+
 func previousWord(text string, index int) string {
 	if index > len(text) {
 		index = len(text)
@@ -571,6 +633,15 @@ func isControlHeaderKeyword(keyword string) bool {
 	}
 }
 
+func isBlockHeaderKeyword(keyword string) bool {
+	switch keyword {
+	case "fn", "macro", "if", "else", "for", "foreach", "foreach_r", "while", "switch", "case", "catch", "do", "struct", "union", "enum", "interface", "faultdef":
+		return true
+	default:
+		return false
+	}
+}
+
 func isFunctionOrMacroSignatureContext(text string, openParenIndex int) bool {
 	if openParenIndex < 0 || openParenIndex > len(text) {
 		return false
@@ -585,6 +656,10 @@ func isFunctionOrMacroSignatureContext(text string, openParenIndex int) bool {
 func structCompletionContext(text string, symbolStartIndex int, cursorIndex int) structCompletionMode {
 	if symbolStartIndex < 0 {
 		symbolStartIndex = 0
+	}
+
+	if isTypeArgumentContext(text, symbolStartIndex) {
+		return structCompletionNone
 	}
 
 	delimiter, delimiterIndex := nearestUnclosedDelimiter(text, cursorIndex)
