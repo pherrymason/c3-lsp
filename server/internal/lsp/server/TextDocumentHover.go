@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode"
 
+	ctx "github.com/pherrymason/c3-lsp/internal/lsp/context"
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
@@ -14,6 +15,11 @@ import (
 
 // Support "Hover"
 func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+	cursorContext := ctx.BuildFromDocumentPosition(params.Position, params.TextDocument.URI, h.state)
+	if cursorContext.IsLiteral {
+		return nil, nil
+	}
+
 	pos := symbols.NewPositionFromLSPPosition(params.Position)
 	docId := utils.NormalizePath(params.TextDocument.URI)
 	foundSymbolOption := h.search.FindSymbolDeclarationInWorkspace(docId, pos, h.state)

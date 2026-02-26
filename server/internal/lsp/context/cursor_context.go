@@ -41,6 +41,13 @@ func BuildFromDocumentPosition(
 		return context
 	}
 
+	for p := node; p != nil; p = p.Parent() {
+		if isLiteralNodeType(p.Type()) {
+			context.IsLiteral = true
+			break
+		}
+	}
+
 	//s := fmt.Sprintf("Node found. Type: %s. Content: %s", node.Type(), node.Content([]byte(doc.SourceCode.Text)))
 	//fmt.Printf(s)
 
@@ -69,4 +76,13 @@ func BuildFromDocumentPosition(
 	}
 
 	return context
+}
+
+func isLiteralNodeType(nodeType string) bool {
+	switch nodeType {
+	case "integer_literal", "real_literal", "char_literal", "string_literal", "raw_string_literal", "string_expr", "bytes_expr", "string_content":
+		return true
+	default:
+		return false
+	}
 }

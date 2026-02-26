@@ -95,3 +95,41 @@ func TestTextDocumentHover_includes_generic_arguments_for_hovered_type_identifie
 		t.Fatalf("expected hover to include generic type arguments, got: %s", content.Value)
 	}
 }
+
+func TestTextDocumentHover_returns_nil_inside_string_literal(t *testing.T) {
+	logger := commonlog.MockLogger{}
+	state := project_state.NewProjectState(logger, option.Some("dummy"), false)
+	prs := parser.NewParser(logger)
+	searchImpl := search.NewSearch(logger, false)
+
+	srv := &Server{
+		state:  &state,
+		parser: &prs,
+		search: &searchImpl,
+	}
+
+	source := `module app;
+alias s = int;
+fn void main() {
+	io::printfn("%s", 1);
+}`
+
+	doc := document.NewDocumentFromDocURI("file:///tmp/hover_literal_test.c3", source, 1)
+	state.RefreshDocumentIdentifiers(doc, &prs)
+
+	hover, err := srv.TextDocumentHover(nil, &protocol.HoverParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: "file:///tmp/hover_literal_test.c3"},
+			Position: protocol.Position{
+				Line:      3,
+				Character: 15,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected hover error: %v", err)
+	}
+	if hover != nil {
+		t.Fatalf("expected nil hover inside string literal, got: %#v", hover)
+	}
+}

@@ -20,6 +20,8 @@
 - Hover/Completion docs: generic module constraints now render in the existing contract style (`@require ...`) and avoid duplicate display on direct module hover.
 - Completion accept: struct-construction snippet expansion is now suppressed in generic type-argument contexts (e.g. `HashMap{Tile, int}`), preventing invalid replacements like `Tile t = {...}` where only a type is expected.
 - Completion list: root symbol completion no longer suggests type methods (e.g. `Tile.print_tile`) outside member-access contexts; methods are now suggested only for valid receiver chains like `tile.`.
+- Navigation: go-to-definition/declaration now ignores literal contexts (e.g. `%s` inside string literals), preventing incorrect jumps to unrelated one-letter symbols like `alias s`.
+- Hover: hover lookup now ignores literal contexts (e.g. `%s` inside string literals), preventing unrelated symbol docs from appearing for format-specifier characters.
 - Navigation: added `textDocument/implementation` support for interfaces and interface methods (find implementors and method implementations across workspace/stdlib).
 - Configuration: added runtime settings refresh via `workspace/didChangeConfiguration` + `workspace/configuration` (supports `C3`/`c3` and `Diagnostics`/`diagnostics` sections).
 - Stdlib indexing: improved cache robustness with cache-format versioning plus module rehydration/merge to preserve symbol relationships after reload.
