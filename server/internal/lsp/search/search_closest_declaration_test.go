@@ -112,6 +112,31 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
+	t.Run("Find imported module function when cursor is after symbol", func(t *testing.T) {
+		state := NewTestState()
+		search := NewSearchWithoutLog()
+
+		state.registerDoc(
+			"stress.c3",
+			`module blem::http::stress;
+			fn void run_fiber_backend_repro(uint workers = 2) {}`,
+		)
+
+		cursorlessBody, position := parseBodyWithCursor(
+			`module app;
+			import blem::http::stress;
+			fn void main() {
+				stress::run_fiber_backend_repro|||();
+			}`,
+		)
+
+		state.registerDoc("app.c3", cursorlessBody)
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+		assert.True(t, symbolOption.IsSome(), "Symbol not found")
+		assert.Equal(t, "run_fiber_backend_repro", symbolOption.Get().GetName())
+	})
+
 	t.Run("Find global variable definition, with cursor in usage", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
 			`int number = 0;

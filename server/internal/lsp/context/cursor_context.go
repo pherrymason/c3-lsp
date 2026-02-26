@@ -27,8 +27,15 @@ func BuildFromDocumentPosition(
 	}
 
 	doc := state.GetDocument(docURI)
+	if doc == nil || doc.ContextSyntaxTree == nil {
+		return context
+	}
+
 	tree := doc.ContextSyntaxTree
 	root := tree.RootNode()
+	if root == nil {
+		return context
+	}
 
 	// Search sitter.Node where cursor is currently
 	node := root.NamedDescendantForPointRange(

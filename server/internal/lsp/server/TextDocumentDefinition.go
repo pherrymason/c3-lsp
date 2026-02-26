@@ -12,6 +12,8 @@ import (
 
 // Returns: Location | []Location | []LocationLink | nil
 func (h *Server) TextDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
+	h.ensureDocumentIndexed(params.TextDocument.URI)
+
 	cursorContext := ctx.BuildFromDocumentPosition(params.Position, params.TextDocument.URI, h.state)
 	if cursorContext.IsLiteral {
 		return nil, nil

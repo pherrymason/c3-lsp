@@ -7,10 +7,29 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/cast"
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
+
+func initializeWorkspaceURI(params *protocol.InitializeParams) *protocol.DocumentUri {
+	if params.RootURI != nil {
+		return params.RootURI
+	}
+
+	if len(params.WorkspaceFolders) > 0 {
+		uri := params.WorkspaceFolders[0].URI
+		return &uri
+	}
+
+	if params.RootPath != nil {
+		uri := protocol.DocumentUri(fs.ConvertPathToURI(*params.RootPath, option.None[string]()))
+		return &uri
+	}
+
+	return nil
+}
 
 // Support "Hover"
 func (s *Server) Initialize(serverName string, serverVersion string, capabilities protocol.ServerCapabilities, context *glsp.Context, params *protocol.InitializeParams) (any, error) {
@@ -25,6 +44,7 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 	}
 	capabilities.DeclarationProvider = true
 	capabilities.DefinitionProvider = true
+	capabilities.TypeDefinitionProvider = true
 	capabilities.ImplementationProvider = true
 	capabilities.RenameProvider = protocol.RenameOptions{PrepareProvider: cast.ToPtr(true)}
 	capabilities.CompletionProvider = &protocol.CompletionOptions{
@@ -53,14 +73,25 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 		},
 	}
 
-	if params.RootURI != nil {
-		s.state.SetProjectRootURI(utils.NormalizePath(*params.RootURI))
-		path, _ := fs.UriToPath(*params.RootURI)
-		s.loadServerConfigurationForWorkspace(path)
-		s.loadClientRuntimeConfiguration(context, params.RootURI)
+	workspaceURI := initializeWorkspaceURI(params)
+	if workspaceURI != nil {
+		s.state.SetProjectRootURI(utils.NormalizePath(*workspaceURI))
+		path, _ := fs.UriToPath(*workspaceURI)
+		s.configureProjectForRoot(path)
+		s.loadClientRuntimeConfiguration(context, workspaceURI)
 		s.notifyWindowLogMessage(context, protocol.MessageTypeInfo, fmt.Sprintf("C3-LSP loaded workspace: %s", path))
-		s.indexWorkspace()
-		s.RunDiagnostics(s.state, context.Notify, false)
+		if isBuildableProjectRoot(path) {
+			s.indexWorkspaceAt(path)
+			s.RunDiagnostics(s.state, context.Notify, false, nil)
+		} else {
+			s.notifyWindowLogMessage(context, protocol.MessageTypeInfo, "C3-LSP detected aggregate workspace root; deferring indexing to opened C3 project files")
+		}
+
+		if !isBuildableProjectRoot(path) {
+			s.notifyWindowLogMessage(context, protocol.MessageTypeInfo, "C3-LSP skipped initial diagnostics: workspace root is not a C3 project root")
+		}
+
+		s.indexedRoots[fs.GetCanonicalPath(path)] = true
 	}
 
 	// Disable diagnostics only if the client does not support publishDiagnostics at all.
@@ -80,6 +111,14 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 
 func (h *Server) indexWorkspace() {
 	path := h.state.GetProjectRootURI()
+	h.indexWorkspaceAt(path)
+}
+
+func (h *Server) indexWorkspaceAt(path string) {
+	if path == "" {
+		return
+	}
+
 	files, _ := fs.ScanForC3(fs.GetCanonicalPath(path))
 
 	for _, filePath := range files {

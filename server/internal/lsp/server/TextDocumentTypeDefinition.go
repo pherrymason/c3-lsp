@@ -10,8 +10,8 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-// Support "Go to declaration"
-func (h *Server) TextDocumentDeclaration(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
+// Returns: Location | []Location | []LocationLink | nil
+func (h *Server) TextDocumentTypeDefinition(context *glsp.Context, params *protocol.TypeDefinitionParams) (any, error) {
 	h.ensureDocumentIndexed(params.TextDocument.URI)
 
 	cursorContext := ctx.BuildFromDocumentPosition(params.Position, params.TextDocument.URI, h.state)

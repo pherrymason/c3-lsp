@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bep/debounce"
+	"github.com/pherrymason/c3-lsp/internal/c3c"
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search"
@@ -33,6 +34,9 @@ type Server struct {
 	clientCapabilities protocol.ClientCapabilities
 
 	diagnosticDebounced func(func())
+	workspaceC3Options  c3c.C3Opts
+	activeConfigRoot    string
+	indexedRoots        map[string]bool
 }
 
 // ServerOpts holds the options to create a new Server.
@@ -103,6 +107,8 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 		search: searchImpl,
 
 		diagnosticDebounced: debounce.New(opts.Diagnostics.Delay * time.Millisecond),
+		workspaceC3Options:  cloneC3Opts(opts.C3),
+		indexedRoots:        make(map[string]bool),
 	}
 
 	handler.Initialized = func(context *glsp.Context, params *protocol.InitializedParams) error {
@@ -149,6 +155,7 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 	handler.TextDocumentHover = server.TextDocumentHover
 	handler.TextDocumentDeclaration = server.TextDocumentDeclaration
 	handler.TextDocumentDefinition = server.TextDocumentDefinition
+	handler.TextDocumentTypeDefinition = server.TextDocumentTypeDefinition
 	handler.TextDocumentImplementation = server.TextDocumentImplementation
 	handler.TextDocumentPrepareRename = server.TextDocumentPrepareRename
 	handler.TextDocumentRename = server.TextDocumentRename
@@ -169,6 +176,15 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 	}
 
 	return server
+}
+
+func cloneC3Opts(input c3c.C3Opts) c3c.C3Opts {
+	clone := input
+	if input.CompileArgs != nil {
+		clone.CompileArgs = append([]string(nil), input.CompileArgs...)
+	}
+
+	return clone
 }
 
 // Run starts the Language Server in stdio mode.

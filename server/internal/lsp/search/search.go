@@ -50,22 +50,76 @@ func (self Search) FindSymbolDeclarationInWorkspace(
 ) option.Option[symbols.Indexable] {
 
 	doc := state.GetDocument(docId)
+	if doc == nil {
+		return option.None[symbols.Indexable]()
+	}
+
+	unitModules := state.GetUnitModulesByDoc(doc.URI)
+	if unitModules == nil {
+		return option.None[symbols.Indexable]()
+	}
+
 	searchParams := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
-		*state.GetUnitModulesByDoc(doc.URI),
+		*unitModules,
 		position,
 	)
-
 	searchResult := self.findClosestSymbolDeclaration(searchParams, state, FindDebugger{enabled: self.debugEnabled, depth: 0})
+	if searchResult.IsSome() {
+		return searchResult.result
+	}
 
-	return searchResult.result
+	if !shouldRetryLookupAtPreviousPosition(searchParams.Symbol()) {
+		return option.None[symbols.Indexable]()
+	}
+
+	previousPositions := []symbols.Position{}
+	if position.Character > 0 {
+		previousPositions = append(previousPositions, symbols.NewPosition(position.Line, position.Character-1))
+	}
+	if position.Character > 1 {
+		previousPositions = append(previousPositions, symbols.NewPosition(position.Line, position.Character-2))
+	}
+
+	for _, lookupPosition := range previousPositions {
+		retryParams := search_params.BuildSearchBySymbolUnderCursor(doc, *unitModules, lookupPosition)
+		retryResult := self.findClosestSymbolDeclaration(retryParams, state, FindDebugger{enabled: self.debugEnabled, depth: 0})
+		if retryResult.IsSome() {
+			return retryResult.result
+		}
+	}
+
+	return option.None[symbols.Indexable]()
+}
+
+func shouldRetryLookupAtPreviousPosition(symbol string) bool {
+	if symbol == "" || c3.IsLanguageKeyword(symbol) {
+		return false
+	}
+
+	for _, r := range symbol {
+		if !utils.IsAZ09_(r) && r != '@' && r != '$' {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *Search) FindHoverInformation(docURI string, params *protocol.HoverParams, state *project_state.ProjectState) option.Option[protocol.Hover] {
 	doc := state.GetDocument(docURI)
+	if doc == nil {
+		return option.None[protocol.Hover]()
+	}
+
+	unitModules := state.GetUnitModulesByDoc(doc.URI)
+	if unitModules == nil {
+		return option.None[protocol.Hover]()
+	}
+
 	search := search_params.BuildSearchBySymbolUnderCursor(
 		doc,
-		*state.GetUnitModulesByDoc(doc.URI),
+		*unitModules,
 		symbols.NewPositionFromLSPPosition(params.Position),
 	)
 

@@ -15,6 +15,8 @@ import (
 
 // Support "Hover"
 func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+	h.ensureDocumentIndexed(params.TextDocument.URI)
+
 	cursorContext := ctx.BuildFromDocumentPosition(params.Position, params.TextDocument.URI, h.state)
 	if cursorContext.IsLiteral {
 		return nil, nil

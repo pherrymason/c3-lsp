@@ -13,13 +13,20 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool) {
+func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.NotifyFunc, delay bool, triggerURI *protocol.DocumentUri) {
 	if !s.options.Diagnostics.Enabled {
 		return
 	}
 
 	runDiagnostics := func() {
-		out, stdErr, err := c3c.CheckC3ErrorsCommand(s.options.C3, state.GetProjectRootURI())
+		projectRoot := s.resolveProjectRootForURI(triggerURI)
+		if projectRoot == "" {
+			return
+		}
+
+		s.configureProjectForRoot(projectRoot)
+
+		out, stdErr, err := c3c.CheckC3ErrorsCommand(s.options.C3, projectRoot)
 		log.Println("output:", out.String())
 		log.Println("output:", stdErr.String())
 

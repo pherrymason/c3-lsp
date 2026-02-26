@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Workspace/navigation: improved aggregate-folder support (e.g. opening `/Users/.../c3`) by resolving the nearest project root per active document, deferring heavy root-wide indexing on non-project roots, and indexing subprojects on demand for go-to-definition/hover.
+- Diagnostics/configuration: diagnostics now run from the active file's nearest project root (with per-project config reload), instead of always using the opened workspace root.
+- Navigation compatibility: added `textDocument/typeDefinition` support and more robust document-loading guards for editors that send different navigation requests or delayed open/index events.
+- Zed compatibility: relaxed C3 document detection in `didOpen` (case-insensitive language id + C3 extension fallback) to avoid missed indexing when clients report `C3`/nonstandard ids.
+- Navigation: go-to-definition/declaration now retries symbol resolution one or two characters to the left when the cursor lands on trailing call punctuation (e.g. `name|(`), fixing missed jumps such as `stress::run_fiber_backend_repro(...)`.
 - Completion: fixed `Ctrl+Space` on empty lines so in-scope suggestions are shown instead of being filtered by previous-line symbols.
 - Completion: improved empty-invoke ordering with scope-aware ranking (`SortText`) so local symbols rank above modules and language keywords, with `$...` keywords ranked last.
 - Completion UI metadata: enriched completion rows with `labelDetails.description` (kind hints) and signature markdown for callable/type items to improve editor-side highlighting.

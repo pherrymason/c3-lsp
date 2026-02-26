@@ -40,15 +40,21 @@ type runtimeSettingsLower struct {
 func (s *Server) WorkspaceDidChangeConfiguration(context *glsp.Context, params *protocol.DidChangeConfigurationParams) error {
 	if !s.applyRuntimeSettings(params.Settings) {
 		s.server.Log.Infof("workspace/didChangeConfiguration received, reloading c3lsp.json")
-		if root := s.state.GetProjectRootURI(); root != "" {
-			s.loadServerConfigurationForWorkspace(root)
-		}
 	} else {
 		s.server.Log.Infof("workspace/didChangeConfiguration applied runtime settings")
 	}
 
-	s.indexWorkspace()
-	s.RunDiagnostics(s.state, context.Notify, false)
+	if root := s.state.GetProjectRootURI(); root != "" {
+		s.activeConfigRoot = ""
+		s.configureProjectForRoot(root)
+	}
+
+	if isBuildableProjectRoot(s.state.GetProjectRootURI()) {
+		s.indexWorkspace()
+		s.RunDiagnostics(s.state, context.Notify, false, nil)
+	} else {
+		s.server.Log.Infof("workspace/didChangeConfiguration skipped full workspace indexing: aggregate root")
+	}
 
 	return nil
 }
@@ -94,14 +100,17 @@ func (s *Server) applyRuntimeSettings(settings any) bool {
 
 	if runtime.C3.Path != nil {
 		s.options.C3.Path = option.Some(*runtime.C3.Path)
+		s.workspaceC3Options.Path = option.Some(*runtime.C3.Path)
 		applied = true
 	}
 	if runtime.C3.StdlibPath != nil {
 		s.options.C3.StdlibPath = option.Some(*runtime.C3.StdlibPath)
+		s.workspaceC3Options.StdlibPath = option.Some(*runtime.C3.StdlibPath)
 		applied = true
 	}
 	if len(runtime.C3.CompileArgs) > 0 {
-		s.options.C3.CompileArgs = runtime.C3.CompileArgs
+		s.options.C3.CompileArgs = append([]string(nil), runtime.C3.CompileArgs...)
+		s.workspaceC3Options.CompileArgs = append([]string(nil), runtime.C3.CompileArgs...)
 		applied = true
 	}
 
@@ -109,6 +118,7 @@ func (s *Server) applyRuntimeSettings(settings any) bool {
 	if runtime.C3.Version != nil {
 		version = option.Some(*runtime.C3.Version)
 		s.options.C3.Version = version
+		s.workspaceC3Options.Version = version
 		applied = true
 	}
 
