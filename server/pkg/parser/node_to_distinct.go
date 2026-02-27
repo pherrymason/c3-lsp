@@ -19,11 +19,12 @@ distinct_declaration: $ => seq(
 	),
 */
 func (p *Parser) nodeToDistinct(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Distinct {
+	start := startPointSkippingDocComment(node)
 
 	distinctBuilder := idx.NewDistinctBuilder("", currentModule.GetModuleString(), *docId).
 		WithDocumentRange(
-			uint(node.StartPoint().Row),
-			uint(node.StartPoint().Column),
+			uint(start.Row),
+			uint(start.Column),
 			uint(node.EndPoint().Row),
 			uint(node.EndPoint().Column),
 		)

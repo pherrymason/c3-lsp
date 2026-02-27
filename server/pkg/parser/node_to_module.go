@@ -24,6 +24,7 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 	moduleName := node.ChildByFieldName("path").Content(sourceCode)
 
 	generic_parameters := make(map[string]*symbols.GenericParameter)
+	genericOrder := []string{}
 	attributes := []string{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -36,6 +37,7 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 				//fmt.Println("G Node type:", gn.Type(), ":: ", gn.Content(sourceCode))
 				if gn.Type() == "type_ident" {
 					genericName := gn.Content(sourceCode)
+					genericOrder = append(genericOrder, genericName)
 					param := symbols.NewGenericParameter(
 						genericName,
 						moduleName,
@@ -64,6 +66,7 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 	)
 	module.SetAttributes(attributes)
 	module.SetGenericParameters(generic_parameters)
+	module.SetGenericParameterOrder(genericOrder)
 
 	return module, moduleName, generic_parameters
 }
@@ -83,6 +86,13 @@ func (p *Parser) nodeToImport(doc *document.Document, node *sitter.Node, sourceC
 		n := node.Child(i)
 
 		switch n.Type() {
+		case "import_path":
+			for p := 0; p < int(n.ChildCount()); p++ {
+				pn := n.Child(p)
+				if pn.Type() == "path_ident" {
+					imports = append(imports, pn.Content(sourceCode))
+				}
+			}
 		case "path_ident":
 			temp_mod := ""
 			for m := 0; m < int(n.ChildCount()); m++ {

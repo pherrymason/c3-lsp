@@ -568,3 +568,92 @@ func TestProjectState_findClosestSymbolDeclaration_should_find_right_module_when
 	mod := symbolOption.Get().(*idx.Module)
 	assert.Equal(t, "mystd::io", mod.GetName())
 }
+
+func TestProjectState_findClosestSymbolDeclaration_resolves_short_module_paths_with_std_core_precedence(t *testing.T) {
+	search := NewSearchWithoutLog()
+	state := NewTestState()
+
+	state.registerDoc(
+		"std_core_types.c3",
+		`module std::core::types;
+		macro bool implements_copy($Type) @const {
+			return true;
+		}`,
+	)
+
+	state.registerDoc(
+		"std_atomic_types.c3",
+		`module std::atomic::types;
+		macro bool implements_copy($Type) @const {
+			return false;
+		}`,
+	)
+
+	state.registerDoc(
+		"app.c3",
+		`module app;
+		fn void main() {
+			const bool COPY_KEYS = types::implements_copy(int);
+		}`,
+	)
+
+	position := buildPosition(3, 43) // Cursor at types::implements_c|opy(int)
+	doc := state.GetDoc("app.c3")
+	searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
+
+	symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+	if !assert.True(t, symbolOption.IsSome(), "Symbol not found") {
+		return
+	}
+
+	symbol := symbolOption.Get()
+	fun, ok := symbol.(*idx.Function)
+	if !assert.True(t, ok, "Expected function/macro symbol") {
+		return
+	}
+
+	assert.Equal(t, "implements_copy", fun.GetMethodName())
+	assert.Equal(t, "std::core::types", fun.GetModuleString())
+	assert.Equal(t, "std_core_types.c3", fun.GetDocumentURI())
+}
+
+func TestProjectState_findClosestSymbolDeclaration_resolves_runtime_short_module_path_with_std_core_precedence(t *testing.T) {
+	state := NewTestState()
+
+	state.registerDoc(
+		"std_core_runtime.c3",
+		`module std::core::runtime;
+		fn void start_benchmark() {
+		}`,
+	)
+
+	state.registerDoc(
+		"custom_runtime.c3",
+		`module custom::runtime;
+		fn void start_benchmark() {
+		}`,
+	)
+
+	symbolOption := SearchUnderCursor_ClosestDecl(
+		`module app;
+		fn void main() {
+			runtime::start_b|||enchmark();
+		}`,
+		state,
+	)
+
+	if !assert.True(t, symbolOption.IsSome(), "Symbol not found") {
+		return
+	}
+
+	symbol := symbolOption.Get()
+	fun, ok := symbol.(*idx.Function)
+	if !assert.True(t, ok, "Expected function/macro symbol") {
+		return
+	}
+
+	assert.Equal(t, "start_benchmark", fun.GetMethodName())
+	assert.Equal(t, "std::core::runtime", fun.GetModuleString())
+	assert.Equal(t, "std_core_runtime.c3", fun.GetDocumentURI())
+}

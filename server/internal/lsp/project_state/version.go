@@ -7,7 +7,7 @@ import (
 )
 
 // SupportedC3Version: The C3 language version supported by the LSP.
-const SupportedC3Version = "0.7.0"
+const SupportedC3Version = "0.7.10"
 
 // LoadStdLib loads the standard library symbols for the given version.
 // It will attempt to load the stdlib cache for the specified version or build it if not found.

@@ -21,6 +21,9 @@ func (d *Document) SymbolInPositionDeprecated(position symbols.Position) (source
 // Retrieves text from previous space until cursor position.
 func (d *Document) SymbolBeforeCursor(position symbols.Position) (sourcecode.Word, error) {
 	index := uint(position.IndexIn(d.SourceCode.Text))
+	if len(d.SourceCode.Text) == 0 || index >= uint(len(d.SourceCode.Text)) {
+		return sourcecode.Word{}, errors.New("No symbol at position")
+	}
 
 	currentChar := rune(d.SourceCode.Text[index])
 	if currentChar == rune(' ') || currentChar == rune('.') {
@@ -86,18 +89,27 @@ const SymbolUntilSeparator = 1 // Get symbol until previous ./:
 
 // Retrieves symbol
 func (d *Document) symbolInIndexDeprecated(index int) (sourcecode.Word, error) {
+	if len(d.SourceCode.Text) == 0 || index < 0 || index >= len(d.SourceCode.Text) {
+		return sourcecode.Word{}, errors.New("No symbol at position")
+	}
+
 	var start, end int
 	var err error
 	start, end, err = d.getWordIndexLimits(index)
 
 	if err != nil {
-		// Why is this logic here??
-		// This causes problems, index+1 might be out of bounds!
+		end := index + 1
+		if end > len(d.SourceCode.Text) {
+			end = len(d.SourceCode.Text)
+		}
+		if end < index {
+			end = index
+		}
 		posRange := symbols.Range{
 			Start: d.indexToPosition(index),
-			End:   d.indexToPosition(index + 1),
+			End:   d.indexToPosition(end),
 		}
-		return sourcecode.NewWord(d.SourceCode.Text[index:index+1], posRange), err
+		return sourcecode.NewWord(d.SourceCode.Text[index:end], posRange), err
 	}
 
 	posRange := symbols.Range{
@@ -139,6 +151,10 @@ func (d *Document) indexToPosition(index int) symbols.Position {
 // Returns start and end index of symbol present in index.
 // If no symbol is found in index, error will be returned
 func (d *Document) getWordIndexLimits(index int) (int, int, error) {
+	if index < 0 || index >= len(d.SourceCode.Text) {
+		return 0, 0, errors.New("No symbol at position")
+	}
+
 	if !utils.IsAZ09_(rune(d.SourceCode.Text[index])) {
 		return 0, 0, errors.New("No symbol at position")
 	}
@@ -163,15 +179,12 @@ func (d *Document) getWordIndexLimits(index int) (int, int, error) {
 		}
 	}
 
-	if symbolStart > len(d.SourceCode.Text) {
-		panic("start limit greater than content")
-		//return 0, 0, errors.New("wordStart out of bounds")
-	} else if symbolEnd > len(d.SourceCode.Text) {
-		panic("end limit greater than content")
-		//return 0, 0, errors.New("wordEnd out of bounds")
+	if symbolStart < 0 || symbolStart >= len(d.SourceCode.Text) {
+		return 0, 0, errors.New("wordStart out of bounds")
+	} else if symbolEnd < 0 || symbolEnd >= len(d.SourceCode.Text) {
+		return 0, 0, errors.New("wordEnd out of bounds")
 	} else if symbolStart > symbolEnd {
-		panic("start limit greater than end limit")
-		//return 0, 0, errors.New("wordStart > wordEnd!")
+		return 0, 0, errors.New("wordStart > wordEnd")
 	}
 
 	return symbolStart, symbolEnd, nil
@@ -180,6 +193,10 @@ func (d *Document) getWordIndexLimits(index int) (int, int, error) {
 // Returns start and end index of symbol present at index.
 // It will search backwards until a space is found
 func (d *Document) getFullSymbolRangeIndexesAtIndex(index int) (int, int, error) {
+	if index < 0 || index >= len(d.SourceCode.Text) {
+		return 0, 0, errors.New("No symbol at position")
+	}
+
 	if !utils.IsAZ09_(rune(d.SourceCode.Text[index])) {
 		return 0, 0, errors.New("No symbol at position")
 	}

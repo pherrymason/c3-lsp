@@ -6,6 +6,8 @@ import "C"
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 	"unsafe"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -29,14 +31,48 @@ func NewSitterParser() *sitter.Parser {
 }
 
 func GetParsedTreeFromString(source string) *sitter.Tree {
-	sourceCode := []byte(source)
+	sourceCode := []byte(normalizeLegacyConstdef(source))
 	parser := NewSitterParser()
 	n, err := parser.ParseCtx(context.Background(), nil, sourceCode)
 	if err != nil {
-		panic(fmt.Errorf("failed parsing tree: %v", err))
+		log.Printf("failed parsing tree, falling back to empty tree: %v", err)
+		n, err = parser.ParseCtx(context.Background(), nil, []byte(""))
+		if err != nil {
+			panic(fmt.Errorf("failed parsing fallback empty tree: %v", err))
+		}
 	}
 
 	return n
+}
+
+func normalizeLegacyConstdef(source string) string {
+	const keyword = "constdef"
+	if !strings.Contains(source, keyword) {
+		return source
+	}
+
+	out := []byte(source)
+	for i := 0; i+len(keyword) <= len(out); i++ {
+		if string(out[i:i+len(keyword)]) != keyword {
+			continue
+		}
+
+		beforeIsIdent := i > 0 && isIdentChar(out[i-1])
+		afterIdx := i + len(keyword)
+		afterIsIdent := afterIdx < len(out) && isIdentChar(out[afterIdx])
+		if beforeIsIdent || afterIsIdent {
+			continue
+		}
+
+		copy(out[i:i+len(keyword)], []byte("cenum   "))
+		i += len(keyword) - 1
+	}
+
+	return string(out)
+}
+
+func isIdentChar(b byte) bool {
+	return (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9') || b == '_'
 }
 
 func RunQuery(query *sitter.Query, node *sitter.Node) *sitter.QueryCursor {

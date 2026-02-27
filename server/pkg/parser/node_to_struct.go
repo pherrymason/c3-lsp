@@ -71,7 +71,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 			currentModule.GetModuleString(),
 			*docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-			idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
+			idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), node.EndPoint()),
 		)
 	} else {
 		_struct = idx.NewStruct(
@@ -81,7 +81,7 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 			currentModule.GetModuleString(),
 			*docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
-			idx.NewRangeFromTreeSitterPositions(node.StartPoint(), node.EndPoint()),
+			idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), node.EndPoint()),
 		)
 	}
 

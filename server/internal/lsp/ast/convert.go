@@ -159,14 +159,13 @@ func convert_global_declaration(node *sitter.Node, source []byte) VariableDecl {
 			WithSitterPosRange(node.StartPoint(), node.EndPoint()).
 			Build(),
 	}
-	if node.ChildCount() == 0 && node.Child(0).Type() == "declaration" {
+	if node.ChildCount() == 0 || node.Child(0).Type() != "declaration" {
 		return variable
 	}
 	node = node.Child(0)
 
 	for i := uint32(0); i < node.ChildCount(); i++ {
 		n := node.Child(int(i))
-		fmt.Println(i, ":", n.Type(), ":: ", n.Content(source), ":: has errors: ", n.HasError())
 		switch n.Type() {
 		case "type":
 			variable.Type = typeNodeToType(n, source)
@@ -917,7 +916,7 @@ func convert_literal(node *sitter.Node, sourceCode []byte) Expression {
 	case "true":
 		literal = BoolLiteral{Value: true}
 	default:
-		panic(fmt.Sprintf("Literal type not supported: %s\n", node.Type()))
+		literal = Literal{Value: node.Content(sourceCode)}
 	}
 
 	return literal

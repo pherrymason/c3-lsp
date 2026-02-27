@@ -51,8 +51,7 @@ func (self Position) IndexIn(content string) int {
 		if next := strings.Index(content_, "\n"); next != -1 {
 			index += next + 1
 		} else {
-			panic("Position.Line is past content")
-			return 0
+			return len(content)
 		}
 	}
 
@@ -66,10 +65,8 @@ func (self Position) IndexIn(content string) int {
 	for count := 1; count <= chr; count++ {
 
 		if len(remains) <= 0 {
-			// char goes past content
-			// this a error
-			panic("Position.Character is past content")
-			return 0
+			// Per LSP behavior, clamp to the end of line/content.
+			return byteOffset
 		}
 
 		r, w := utf8.DecodeRuneInString(remains)

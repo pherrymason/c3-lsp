@@ -87,6 +87,15 @@ func (t *Type) IsPointer() bool {
 }
 
 func (t Type) String() string {
+	genericStr := ""
+	if len(t.genericArguments) > 0 {
+		genericNames := []string{}
+		for _, generic := range t.genericArguments {
+			genericNames = append(genericNames, generic.String())
+		}
+		genericStr = "{" + strings.Join(genericNames, ", ") + "}"
+	}
+
 	pointerStr := strings.Repeat("*", t.pointer)
 	optionalStr := ""
 	if t.optional {
@@ -102,7 +111,7 @@ func (t Type) String() string {
 		collectionStr += "]"
 	}
 
-	return fmt.Sprintf("%s%s%s%s", t.name, pointerStr, collectionStr, optionalStr)
+	return fmt.Sprintf("%s%s%s%s%s", t.name, genericStr, pointerStr, collectionStr, optionalStr)
 }
 
 func NewTypeFromString(_type string, modulePath string) Type {

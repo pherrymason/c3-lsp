@@ -24,7 +24,11 @@ func NewSourceCode(text string) SourceCode {
 	return SourceCode{Text: text}
 }
 
-var symbolPattern = regexp.MustCompile(`^[\$a-zA-Z0-9_]+$`)
+var symbolPattern = regexp.MustCompile(`^[\$@a-zA-Z0-9_]+$`)
+
+func isSymbolRune(r rune) bool {
+	return utils.IsAZ09_(r) || r == '@'
+}
 
 // Tries to find the symbol under cursor position
 func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules *symbols_table.UnitModules) Word {
@@ -47,7 +51,7 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 
 		limitsOpt := s.getWordIndexLimits(index, true)
 		if limitsOpt.IsNone() {
-			panic("error")
+			break
 		}
 
 		limits := limitsOpt.Get()
@@ -170,11 +174,15 @@ func tryToResolveFullModulePaths(wb *WordBuilder, unitModules *symbols_table.Uni
 // Returns start and end index of symbol present in index.
 // If no symbol is found in index, error will be returned
 func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Option[symbolLimits] {
+	if index < 0 {
+		return option.None[symbolLimits]()
+	}
+
 	if index >= len(s.Text) {
 		return option.None[symbolLimits]()
 	}
 
-	if !utils.IsAZ09_(rune(s.Text[index])) {
+	if !isSymbolRune(rune(s.Text[index])) {
 		if returnAnyway {
 			return option.Some(symbolLimits{index, index})
 		} else {
@@ -185,7 +193,7 @@ func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Opti
 	symbolStart := 0
 	for i := index; i >= 0; i-- {
 		r := rune(s.Text[i])
-		if !utils.IsAZ09_(r) {
+		if !isSymbolRune(r) {
 			// First invalid character found, that means previous iteration contained first character of symbol
 			symbolStart = i + 1
 			break
@@ -195,22 +203,19 @@ func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Opti
 	symbolEnd := len(s.Text) - 1
 	for i := index; i < len(s.Text); i++ {
 		r := rune(s.Text[i])
-		if !utils.IsAZ09_(r) {
+		if !isSymbolRune(r) {
 			// First invalid character found, that means previous iteration contained last character of symbol
 			symbolEnd = i - 1
 			break
 		}
 	}
 
-	if symbolStart > len(s.Text) {
-		panic("start limit greater than content")
-		//return 0, 0, errors.New("wordStart out of bounds")
-	} else if symbolEnd > len(s.Text) {
-		panic("end limit greater than content")
-		//return 0, 0, errors.New("wordEnd out of bounds")
+	if symbolStart < 0 || symbolStart >= len(s.Text) {
+		return option.None[symbolLimits]()
+	} else if symbolEnd < 0 || symbolEnd >= len(s.Text) {
+		return option.None[symbolLimits]()
 	} else if symbolStart > symbolEnd {
-		panic("start limit greater than end limit")
-		//return 0, 0, errors.New("wordStart > wordEnd!")
+		return option.None[symbolLimits]()
 	}
 
 	return option.Some(symbolLimits{symbolStart, symbolEnd})

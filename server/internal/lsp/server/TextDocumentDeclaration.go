@@ -1,6 +1,7 @@
 package server
 
 import (
+	ctx "github.com/pherrymason/c3-lsp/internal/lsp/context"
 	_prot "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
@@ -11,6 +12,13 @@ import (
 
 // Support "Go to declaration"
 func (h *Server) TextDocumentDeclaration(context *glsp.Context, params *protocol.DeclarationParams) (any, error) {
+	h.ensureDocumentIndexed(params.TextDocument.URI)
+
+	cursorContext := ctx.BuildFromDocumentPosition(params.Position, params.TextDocument.URI, h.state)
+	if cursorContext.IsLiteral {
+		return nil, nil
+	}
+
 	identifierOption := h.search.FindSymbolDeclarationInWorkspace(
 		utils.NormalizePath(params.TextDocument.URI),
 		symbols.NewPositionFromLSPPosition(params.Position),

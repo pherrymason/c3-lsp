@@ -26,6 +26,7 @@ func Test_SourceCode_SymbolInPosition_finds_symbol(t *testing.T) {
 		{"mod::hola.adios.w", "w", []string{"hola", "adios"}, []string{"mod"}},
 		{"mod::hola.adios.", ".", []string{"hola", "adios"}, []string{"mod"}},
 		{"mod::mod2::hola.adios.", ".", []string{"hola", "adios"}, []string{"mod", "mod2"}},
+		{"runtime::@start_benchmark", "@start_benchmark", []string{}, []string{"runtime"}},
 	}
 
 	for _, tt := range cases {
@@ -52,6 +53,19 @@ func Test_SourceCode_SymbolInPosition_finds_symbol(t *testing.T) {
 			assert.Equal(t, tt.expModulePath, list)
 		})
 	}
+}
+
+func Test_SourceCode_SymbolInPosition_finds_macro_symbol_when_cursor_is_on_at_sign(t *testing.T) {
+	unitModule := symbols_table.UnitModules{}
+	text := `runtime::@start_benchmark();`
+	sc := NewSourceCode(text)
+
+	result := sc.SymbolInPosition(symbols.NewPosition(0, 9), &unitModule)
+
+	assert.Equal(t, "@start_benchmark", result.Text())
+	assert.Equal(t, symbols.NewRange(0, 9, 0, 25), result.TextRange())
+	assert.Equal(t, 1, len(result.ModulePath()))
+	assert.Equal(t, "runtime", result.ModulePath()[0].Text())
 }
 
 func Test_SourceCode_SymbolInPosition_finds_simple_symbol_trap_with_parenthesis(t *testing.T) {
@@ -252,6 +266,16 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_with_module_path(t *testing.T
 			assert.Equal(t, tt.expectedModuleRanges[1], result.modulePath[1].textRange)
 		})
 	}
+}
+
+func Test_SourceCode_SymbolInPosition_out_of_bounds_cursor_does_not_panic(t *testing.T) {
+	unitModule := symbols_table.UnitModules{}
+	sc := NewSourceCode("int value;")
+
+	assert.NotPanics(t, func() {
+		result := sc.SymbolInPosition(symbols.NewPosition(99, 99), &unitModule)
+		assert.Equal(t, "", result.Text())
+	})
 }
 
 func Test_SourceCode_SymbolInPosition_should_resolve_full_module_paths(t *testing.T) {

@@ -27,7 +27,8 @@ import (
 */
 func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Function, error) {
 	var typeIdentifier string
-	funcHeader := node.Child(1)
+	attributes := parseNodeAttributes(node, sourceCode)
+	funcHeader := firstChildOfType(node, "func_header")
 
 	if funcHeader == nil {
 		return idx.Function{}, errors.New("child node not found")
@@ -47,7 +48,10 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 
 	var argumentIds []string
 	var arguments []*idx.Variable
-	parameters := node.Child(2)
+	parameters := firstChildOfType(node, "func_param_list")
+	if parameters == nil {
+		return idx.Function{}, errors.New("func parameters not found")
+	}
 	parameterIndex := 0
 
 	if parameters.ChildCount() > 2 {
@@ -80,7 +84,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 			*docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
-			idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
+			idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node),
 				node.EndPoint()),
 			protocol.CompletionItemKindFunction,
 		)
@@ -93,7 +97,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 			*docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
-			idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
+			idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node),
 				node.EndPoint()),
 		)
 	}
@@ -106,6 +110,7 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 	variables = append(variables, arguments...)
 
 	symbol.AddVariables(variables)
+	symbol.SetAttributes(attributes)
 
 	return symbol, nil
 }
@@ -249,8 +254,14 @@ func (p *Parser) nodeToArgument(argNode *sitter.Node, methodIdentifier string, c
 	    ),
 */
 func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Function, error) {
+	if hasImmediateErrorNode(node) {
+		return idx.Function{}, errors.New("invalid macro declaration")
+	}
+
+	attributes := parseNodeAttributes(node, sourceCode)
+
 	var nameNode *sitter.Node
-	macroHeader := node.Child(1)
+	macroHeader := firstChildOfType(node, "macro_header")
 
 	if macroHeader == nil {
 		return idx.Function{}, errors.New("child node not found")
@@ -273,13 +284,19 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 
 		returnTypeNode := macroHeader.ChildByFieldName("return_type")
 		if returnTypeNode != nil {
+			if returnTypeNode.Type() == "func_signature" {
+				return idx.Function{}, errors.New("invalid macro return type")
+			}
 			returnType = cast.ToPtr(p.typeNodeToType(returnTypeNode, currentModule, sourceCode))
 		}
 	}
 
 	var argumentIds []string
 	arguments := []*idx.Variable{}
-	parameters := node.Child(2)
+	parameters := firstChildOfType(node, "macro_param_list")
+	if parameters == nil {
+		return idx.Function{}, errors.New("macro parameters not found")
+	}
 	parameterIndex := 0
 
 	if parameters.ChildCount() > 2 {
@@ -345,7 +362,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 			*docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
-			idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
+			idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node),
 				node.EndPoint()),
 			protocol.CompletionItemKindFunction,
 		)
@@ -358,7 +375,7 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 			*docId,
 			idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(),
 				nameNode.EndPoint()),
-			idx.NewRangeFromTreeSitterPositions(node.StartPoint(),
+			idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node),
 				node.EndPoint()),
 		)
 	}
@@ -369,5 +386,46 @@ func (p *Parser) nodeToMacro(node *sitter.Node, currentModule *idx.Module, docId
 		symbol.AddVariables(variables)
 	}
 
+	symbol.SetAttributes(attributes)
+
 	return symbol, nil
+}
+
+func parseNodeAttributes(node *sitter.Node, sourceCode []byte) []string {
+	attributes := []string{}
+
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() != "attributes" {
+			continue
+		}
+
+		for j := 0; j < int(child.ChildCount()); j++ {
+			attributeNode := child.Child(j)
+			attributes = append(attributes, attributeNode.Content(sourceCode))
+		}
+	}
+
+	return attributes
+}
+
+func firstChildOfType(node *sitter.Node, wantedType string) *sitter.Node {
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == wantedType {
+			return child
+		}
+	}
+
+	return nil
+}
+
+func hasImmediateErrorNode(node *sitter.Node) bool {
+	for i := 0; i < int(node.ChildCount()); i++ {
+		if node.Child(i).Type() == "ERROR" {
+			return true
+		}
+	}
+
+	return false
 }

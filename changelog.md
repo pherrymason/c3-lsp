@@ -1,5 +1,44 @@
 # C3LSP Release Notes
 
+## Unreleased
+
+- Stability/Zed: hardened request handling with per-request panic recovery for hover/definition/declaration/typeDefinition/implementation/completion/signatureHelp/rename, so single bad requests no longer kill the LSP process.
+- Stability/Hover: fixed multiple nil-deref paths when hovering symbols (including typed-nil search results and unresolved distinct base types like `Thread`), returning safe empty hover/error responses instead of crashing.
+- Stability/position parsing: replaced several out-of-bounds panics in document/source parsing and cursor-position math with safe bounds checks/clamping and fallback returns.
+- Stability/path parsing: `NormalizePath` now falls back to canonical raw paths when URI parsing fails, instead of panicking.
+- Grammar compatibility: added support for the new C3 `constdef` keyword (keywords/completion/tests) while keeping parser compatibility by normalizing `constdef` during CST parsing for the current vendored tree-sitter runtime.
+
+- Workspace/navigation: improved aggregate-folder support (e.g. opening `/Users/.../c3`) by resolving the nearest project root per active document, deferring heavy root-wide indexing on non-project roots, and indexing subprojects on demand for go-to-definition/hover.
+- Diagnostics/configuration: diagnostics now run from the active file's nearest project root (with per-project config reload), instead of always using the opened workspace root.
+- Navigation compatibility: added `textDocument/typeDefinition` support and more robust document-loading guards for editors that send different navigation requests or delayed open/index events.
+- Zed compatibility: relaxed C3 document detection in `didOpen` (case-insensitive language id + C3 extension fallback) to avoid missed indexing when clients report `C3`/nonstandard ids.
+- Navigation: go-to-definition/declaration now retries symbol resolution one or two characters to the left when the cursor lands on trailing call punctuation (e.g. `name|(`), fixing missed jumps such as `stress::run_fiber_backend_repro(...)`.
+- Completion: fixed `Ctrl+Space` on empty lines so in-scope suggestions are shown instead of being filtered by previous-line symbols.
+- Completion: improved empty-invoke ordering with scope-aware ranking (`SortText`) so local symbols rank above modules and language keywords, with `$...` keywords ranked last.
+- Completion UI metadata: enriched completion rows with `labelDetails.description` (kind hints) and signature markdown for callable/type items to improve editor-side highlighting.
+- Completion UI metadata: aligned `labelDetails` mapping with Zed Rust expectations (`description` carries signature detail, `detail` carries kind hint) for better list rendering.
+- Completion: imported module path suggestions now hide non-public symbols (`@private`, `@local`) outside valid visibility contexts.
+- Completion: `@local` symbols are scoped by module declaration section; locals from `module X` part 1 no longer leak into `module X` part 2.
+- Completion accept: improved callable and struct insertion snippets, including context-aware declaration/value struct snippets and robust replacement ranges.
+- Completion accept: method completion insertion now strips type qualifiers (`Type.method`) so instance calls insert correctly as `obj.method()`.
+- Completion: improved chain completion context detection for `Ctrl+Space` around dot access (`obj.|`, `obj|.`, and next-line after `obj.`), including safer symbol-at-cursor fallback.
+- Completion: improved stdlib chain completion on incomplete lines by adding a type-inference fallback for unresolved `obj.` contexts (e.g. `List{int} l; l.` / `HashMap ... v; v.`).
+- Navigation: go-to-definition/declaration now resolves `@`-prefixed macro symbols when clicked from usages that omit/strip `@` in token extraction.
+- Navigation: improved short module-path resolution for qualified calls (e.g. `types::...`, `runtime::...`) by adding fallback matching to indexed modules with `std::core::*` precedence when ambiguous.
+- Hover: generic type rendering now includes concrete type arguments in signatures/details (e.g. `HashMap{String, Feature}`, `List{int}`) for variables, members, defs, distincts, function signatures, and type-identifier hover on generic instantiations (e.g. hovering `List` in `List{int}`).
+- Hover/Completion docs: module generics now surface inferred per-parameter constraints from module `@require` contracts (e.g. `Key` constrained in `std::collections::map<Key, Value>`), with unconstrained parameters explicitly shown.
+- Hover: module symbols now include declared generic parameters in the signature line (e.g. `std::collections::map <Key, Value>`).
+- Hover/Completion docs: generic module constraints now render in the existing contract style (`@require ...`) and avoid duplicate display on direct module hover.
+- Completion accept: struct-construction snippet expansion is now suppressed in generic type-argument contexts (e.g. `HashMap{Tile, int}`), preventing invalid replacements like `Tile t = {...}` where only a type is expected.
+- Completion list: root symbol completion no longer suggests type methods (e.g. `Tile.print_tile`) outside member-access contexts; methods are now suggested only for valid receiver chains like `tile.`.
+- Navigation: go-to-definition/declaration now ignores literal contexts (e.g. `%s` inside string literals), preventing incorrect jumps to unrelated one-letter symbols like `alias s`.
+- Hover: hover lookup now ignores literal contexts (e.g. `%s` inside string literals), preventing unrelated symbol docs from appearing for format-specifier characters.
+- Navigation: added `textDocument/implementation` support for interfaces and interface methods (find implementors and method implementations across workspace/stdlib).
+- Configuration: added runtime settings refresh via `workspace/didChangeConfiguration` + `workspace/configuration` (supports `C3`/`c3` and `Diagnostics`/`diagnostics` sections).
+- Stdlib indexing: improved cache robustness with cache-format versioning plus module rehydration/merge to preserve symbol relationships after reload.
+- Server capabilities: initialize now advertises implementation support and emits workspace/diagnostics status messages to the client window/log channels.
+- Rename: added module rename support via LSP `textDocument/prepareRename` and `textDocument/rename`, updating module declarations/imports/qualified usages.
+
 ## 0.4.0
 
 - Support <* and *> comments (https://github.com/pherrymason/c3-lsp/pull/99) Credit to @PgBiel
@@ -121,4 +160,3 @@
   - TextDocumentDefinition
   - TextDocumentHover
   - TextDocumentCompletion
-

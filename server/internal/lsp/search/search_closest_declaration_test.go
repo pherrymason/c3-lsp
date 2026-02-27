@@ -112,6 +112,31 @@ func TestLanguage_findClosestSymbolDeclaration_ignores_keywords(t *testing.T) {
 }
 
 func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
+	t.Run("Find imported module function when cursor is after symbol", func(t *testing.T) {
+		state := NewTestState()
+		search := NewSearchWithoutLog()
+
+		state.registerDoc(
+			"stress.c3",
+			`module blem::http::stress;
+			fn void run_fiber_backend_repro(uint workers = 2) {}`,
+		)
+
+		cursorlessBody, position := parseBodyWithCursor(
+			`module app;
+			import blem::http::stress;
+			fn void main() {
+				stress::run_fiber_backend_repro|||();
+			}`,
+		)
+
+		state.registerDoc("app.c3", cursorlessBody)
+
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+		assert.True(t, symbolOption.IsSome(), "Symbol not found")
+		assert.Equal(t, "run_fiber_backend_repro", symbolOption.Get().GetName())
+	})
+
 	t.Run("Find global variable definition, with cursor in usage", func(t *testing.T) {
 		symbolOption := SearchUnderCursor_ClosestDecl(
 			`int number = 0;
@@ -457,6 +482,49 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "WindowStatus.isOpen", symbolOption.Get().GetName())
 	})
+}
+
+func TestLanguage_findClosestSymbolDeclaration_macros(t *testing.T) {
+	t.Run("Find module macro declaration with at-sign usage", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`module runtime;
+			macro @start_benchmark() {}
+
+			module app;
+			import runtime;
+			fn void main() {
+				runtime::@start_b|||enchmark();
+			}`,
+		)
+
+		assert.True(t, symbolOption.IsSome(), "Element not found")
+		fun, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, "Element found should be a Function")
+		assert.Equal(t, "@start_benchmark", fun.GetMethodName())
+		assert.Equal(t, "runtime", fun.GetModuleString())
+	})
+
+	t.Run("Find module macro declaration when cursor is exactly on at-sign", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`module runtime;
+			macro @start_benchmark() {}
+
+			module app;
+			import runtime;
+			fn void main() {
+				runtime::|||@start_benchmark();
+			}`,
+		)
+
+		assert.True(t, symbolOption.IsSome(), "Element not found")
+		if symbolOption.IsSome() {
+			fun, ok := symbolOption.Get().(*idx.Function)
+			assert.True(t, ok, "Element found should be a Function")
+			assert.Equal(t, "@start_benchmark", fun.GetMethodName())
+			assert.Equal(t, "runtime", fun.GetModuleString())
+		}
+	})
+
 }
 
 func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {

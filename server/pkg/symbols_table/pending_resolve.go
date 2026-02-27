@@ -146,6 +146,10 @@ func (p *PendingToResolve) AddDefType(def *symbols.Def, contextModule *symbols.M
 
 func (p *PendingToResolve) AddDistinctType(distinct *symbols.Distinct, contextModule *symbols.Module) {
 	baseType := distinct.GetBaseType()
+	if baseType == nil || baseType.GetName() == "" {
+		return
+	}
+
 	if !baseType.IsBaseTypeLanguage() {
 		p.typesByModule[contextModule.GetName()] = append(
 			p.typesByModule[contextModule.GetName()],

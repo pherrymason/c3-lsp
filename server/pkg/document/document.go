@@ -87,7 +87,7 @@ func (d *Document) HasPointInFrontSymbol(position symbols.Position) bool {
 		return false
 	}
 
-	if rune(d.SourceCode.Text[start-1]) == STRUCT_SEPARATOR {
+	if start-1 < len(d.SourceCode.Text) && rune(d.SourceCode.Text[start-1]) == STRUCT_SEPARATOR {
 		return true
 	}
 
@@ -98,11 +98,12 @@ func (d *Document) HasModuleSeparatorInFrontSymbol(position symbols.Position) bo
 	index := position.IndexIn(d.SourceCode.Text)
 	start, _, _ := d.getWordIndexLimits(index)
 
-	if start == 0 {
+	if start < 2 {
 		return false
 	}
 
-	if rune(d.SourceCode.Text[start-1]) == MODULE_SEPARATOR && rune(d.SourceCode.Text[start-2]) == MODULE_SEPARATOR {
+	if start-1 < len(d.SourceCode.Text) && start-2 < len(d.SourceCode.Text) &&
+		rune(d.SourceCode.Text[start-1]) == MODULE_SEPARATOR && rune(d.SourceCode.Text[start-2]) == MODULE_SEPARATOR {
 		return true
 	}
 

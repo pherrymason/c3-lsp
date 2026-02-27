@@ -60,6 +60,11 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 		for _, c := range m.Captures {
 			nodeType := c.Node.Type()
 			nodeEndPoint := idx.NewPositionFromTreeSitterPoint(c.Node.EndPoint())
+			if nodeType != "doc_comment" {
+				if nodeDocComment := p.docCommentFromNode(c.Node, sourceCode); nodeDocComment != nil {
+					lastDocComment = nodeDocComment
+				}
+			}
 			if nodeType != "module_declaration" && nodeType != "doc_comment" {
 				moduleSymbol = parsedModules.GetOrInitModule(
 					lastModuleName,
@@ -81,11 +86,13 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 					doc.ContextSyntaxTree.RootNode(),
 				)
 
-				start := c.Node.StartPoint()
-				moduleSymbol.
-					SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
-
-				moduleSymbol.SetStartPosition(idx.NewPositionFromTreeSitterPoint(start))
+				start := startPointSkippingDocComment(c.Node)
+				startPosition := idx.NewPositionFromTreeSitterPoint(start)
+				currentStart := moduleSymbol.GetDocumentRange().Start
+				if startPosition.Line < currentStart.Line ||
+					(startPosition.Line == currentStart.Line && startPosition.Character < currentStart.Character) {
+					moduleSymbol.SetStartPosition(startPosition)
+				}
 				moduleSymbol.ChangeModule(lastModuleName)
 
 				if lastDocComment != nil {
@@ -264,4 +271,15 @@ func (p *Parser) FindVariableDeclarations(node *sitter.Node, moduleName string, 
 	}
 
 	return variables
+}
+
+func (p *Parser) docCommentFromNode(node *sitter.Node, sourceCode []byte) *idx.DocComment {
+	for i := 0; i < int(node.NamedChildCount()); i++ {
+		child := node.NamedChild(i)
+		if child.Type() == "doc_comment" {
+			return cast.ToPtr(p.nodeToDocComment(child, sourceCode))
+		}
+	}
+
+	return nil
 }

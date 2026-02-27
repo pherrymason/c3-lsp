@@ -27,8 +27,15 @@ func BuildFromDocumentPosition(
 	}
 
 	doc := state.GetDocument(docURI)
+	if doc == nil || doc.ContextSyntaxTree == nil {
+		return context
+	}
+
 	tree := doc.ContextSyntaxTree
 	root := tree.RootNode()
+	if root == nil {
+		return context
+	}
 
 	// Search sitter.Node where cursor is currently
 	node := root.NamedDescendantForPointRange(
@@ -39,6 +46,13 @@ func BuildFromDocumentPosition(
 	if node == nil {
 		// Could not find node in document.
 		return context
+	}
+
+	for p := node; p != nil; p = p.Parent() {
+		if isLiteralNodeType(p.Type()) {
+			context.IsLiteral = true
+			break
+		}
 	}
 
 	//s := fmt.Sprintf("Node found. Type: %s. Content: %s", node.Type(), node.Content([]byte(doc.SourceCode.Text)))
@@ -63,10 +77,19 @@ func BuildFromDocumentPosition(
 	case "ident":
 		context.IsIdentifier = true
 
-		if node.Parent().Type() == "module_resolution" {
+		if parent := node.Parent(); parent != nil && parent.Type() == "module_resolution" {
 			context.IsModuleIdentifier = true
 		}
 	}
 
 	return context
+}
+
+func isLiteralNodeType(nodeType string) bool {
+	switch nodeType {
+	case "integer_literal", "real_literal", "char_literal", "string_literal", "raw_string_literal", "string_expr", "bytes_expr", "string_content":
+		return true
+	default:
+		return false
+	}
 }

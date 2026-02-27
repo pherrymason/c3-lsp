@@ -1,6 +1,7 @@
 package symbols
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 
@@ -20,6 +21,7 @@ type Module struct {
 	Interfaces        map[string]*Interface
 	Imports           []string // modules imported in this scope
 	GenericParameters map[string]*GenericParameter
+	GenericParamOrder []string
 
 	BaseIndexable
 }
@@ -148,12 +150,43 @@ func (m *Module) SetGenericParameters(generics map[string]*GenericParameter) *Mo
 	return m
 }
 
+func (m *Module) SetGenericParameterOrder(names []string) *Module {
+	m.GenericParamOrder = names
+	return m
+}
+
 func (m *Module) GetHoverInfo() string {
-	return m.Name
+	if len(m.GenericParameters) == 0 {
+		return m.Name
+	}
+
+	names := m.GenericParamOrder
+	if len(names) == 0 {
+		names = make([]string, 0, len(m.GenericParameters))
+		for name := range m.GenericParameters {
+			names = append(names, name)
+		}
+		slices.Sort(names)
+	}
+
+	return m.Name + " <" + strings.Join(names, ", ") + ">"
 }
 
 func (m *Module) GetCompletionDetail() string {
-	return "Module"
+	if len(m.GenericParameters) == 0 {
+		return "Module"
+	}
+
+	names := m.GenericParamOrder
+	if len(names) == 0 {
+		names = make([]string, 0, len(m.GenericParameters))
+		for name := range m.GenericParameters {
+			names = append(names, name)
+		}
+		slices.Sort(names)
+	}
+
+	return "Module<" + strings.Join(names, ", ") + ">"
 }
 
 func (m *Module) GetChildrenFunctionByName(name string) option.Option[*Function] {

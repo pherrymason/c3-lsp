@@ -37,6 +37,8 @@ type Indexable interface {
 	GetHoverInfo() string
 	GetCompletionDetail() string
 	HasSourceCode() bool // This will return false for that code that is not accesible either because it belongs to the stdlib, or inside a .c3lib library. This results in disabling "Go to definition" / "Go to declaration" on these symbols
+	IsPrivate() bool
+	IsLocal() bool
 
 	Children() []Indexable
 	ChildrenNames() []string
@@ -116,6 +118,15 @@ func (b *BaseIndexable) HasSourceCode() bool {
 func (b *BaseIndexable) IsPrivate() bool {
 	for _, attr := range b.Attributes {
 		if attr == "@private" {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *BaseIndexable) IsLocal() bool {
+	for _, attr := range b.Attributes {
+		if attr == "@local" {
 			return true
 		}
 	}

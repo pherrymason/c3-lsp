@@ -947,6 +947,8 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 
 	module := symbols.Get("foo_test")
 	assert.Equal(t, "foo_test", module.GetName())
+	assert.Equal(t, "foo_test <Type1, Type2>", module.GetHoverInfo())
+	assert.Equal(t, "Module<Type1, Type2>", module.GetCompletionDetail())
 
 	// Generic parameter was found
 	generic, ok := module.GenericParameters["Type1"]
@@ -971,4 +973,26 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 
 	module = symbols.Get("foo::another::deep")
 	assert.Equal(t, "foo::another::deep", module.GetName())
+}
+
+func TestParses_Constdefs(t *testing.T) {
+	docId := "doc"
+	source := `
+	module foo;
+	constdef Bar { ABC, DEF }
+	`
+	doc := document.NewDocument(docId, source)
+	parser := createParser()
+
+	symbols, _ := parser.ParseSymbols(&doc)
+	module := symbols.Get("foo")
+
+	assert.NotNil(t, module.Enums["Bar"])
+	assert.Equal(t, "Bar", module.Enums["Bar"].GetName())
+	assert.Equal(t, findRange(source, "constdef Bar { ABC, DEF }"), module.Enums["Bar"].GetDocumentRange())
+	assert.Equal(t, findRange(source, "Bar"), module.Enums["Bar"].GetIdRange())
+
+	enum := module.Enums["Bar"]
+	assert.NotNil(t, enum.GetEnumerator("ABC"))
+	assert.NotNil(t, enum.GetEnumerator("DEF"))
 }

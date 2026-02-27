@@ -2,6 +2,7 @@ package search
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -265,7 +266,7 @@ func TestBuildCompletionList_suggests_C3_keywords(t *testing.T) {
 		{input: "do", expected: []string{"double", "do"}},
 		{input: "fl", expected: []string{"float", "float16", "float128"}},
 		{input: "ic", expected: []string{"ichar"}},
-		{input: "in", expected: []string{"int", "int128", "inline"}},
+		{input: "in", expected: []string{"int", "int128", "inline", "interface"}},
 		{input: "ipt", expected: []string{"iptr"}},
 		{input: "is", expected: []string{"isz"}},
 		{input: "lo", expected: []string{"long"}},
@@ -283,14 +284,14 @@ func TestBuildCompletionList_suggests_C3_keywords(t *testing.T) {
 		{input: "bit", expected: []string{"bitstruct"}},
 		{input: "br", expected: []string{"break"}},
 		{input: "ca", expected: []string{"case", "catch"}},
-		{input: "con", expected: []string{"const", "continue"}},
+		{input: "con", expected: []string{"const", "constdef", "continue"}},
 		{input: "de", expected: []string{"default", "defer"}},
 		{input: "ty", expected: []string{"typedef", "typeid"}},
 		{input: "d", expected: []string{"default", "defer", "do", "double"}},
 		{input: "el", expected: []string{"else"}},
 		{input: "en", expected: []string{"enum"}},
 		{input: "ex", expected: []string{"extern"}},
-		{input: "fa", expected: []string{"false", "fault"}},
+		{input: "fa", expected: []string{"false", "fault", "faultdef"}},
 		{input: "fo", expected: []string{"for", "foreach", "foreach_r"}},
 		{input: "tl", expected: []string{"tlocal"}},
 		{input: "im", expected: []string{"import"}},
@@ -628,6 +629,30 @@ func TestBuildCompletionList_struct_type(t *testing.T) {
 	}
 }
 
+func TestBuildCompletionList_does_not_suggest_methods_in_root_symbol_completion(t *testing.T) {
+	completionList := CompleteAtCursor(`
+	struct Tile {
+		int side;
+	}
+
+	fn void Tile.print_tile(&self) {}
+
+	fn void main() {
+		Ti|||
+	}
+	`)
+
+	filtered := filterOutKeywordSuggestions(completionList)
+
+	assert.True(t, slices.ContainsFunc(filtered, func(item protocol.CompletionItem) bool {
+		return item.Label == "Tile" && item.Kind != nil && *item.Kind == protocol.CompletionItemKindStruct
+	}))
+
+	assert.False(t, slices.ContainsFunc(filtered, func(item protocol.CompletionItem) bool {
+		return item.Label == "Tile.print_tile"
+	}))
+}
+
 func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 	commonlog.Configure(2, nil)
 	logger := commonlog.GetLogger("C3-LSP.parser")
@@ -749,6 +774,155 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 		{Label: "red", Kind: &expectedKind, Detail: cast.ToPtr("int")},
 	},
 		completionList)
+}
+
+func TestBuildCompletionList_struct_suggest_members_after_dot_on_next_line(t *testing.T) {
+	expectedKind := protocol.CompletionItemKindField
+
+	completionList := CompleteAtCursor(`
+	struct Square { int width; int height; }
+	fn void main() {
+		Square inst;
+		inst.
+	|||height;
+	}`)
+
+	filteredCompletionList := filterOutKeywordSuggestions(completionList)
+
+	assert.Equal(t, []protocol.CompletionItem{
+		{Label: "height", Kind: &expectedKind, Detail: cast.ToPtr("int")},
+		{Label: "width", Kind: &expectedKind, Detail: cast.ToPtr("int")},
+	}, filteredCompletionList)
+}
+
+func TestBuildCompletionList_struct_suggest_members_when_cursor_is_on_dot(t *testing.T) {
+	expectedKind := protocol.CompletionItemKindField
+
+	completionList := CompleteAtCursor(`
+	struct Tile {
+		int side;
+		int angle;
+	}
+	fn void main() {
+		Tile test = {};
+		test|||.angle;
+	}`)
+
+	filteredCompletionList := filterOutKeywordSuggestions(completionList)
+
+	assert.Equal(t, []protocol.CompletionItem{
+		{Label: "angle", Kind: &expectedKind, Detail: cast.ToPtr("int")},
+		{Label: "side", Kind: &expectedKind, Detail: cast.ToPtr("int")},
+	}, filteredCompletionList)
+}
+
+func TestBuildCompletionList_methods_after_trailing_dot_before_next_statement(t *testing.T) {
+	completionList := CompleteAtCursor(`
+	module main;
+	struct HashMap {
+		int dummy;
+	}
+	fn void HashMap.tinit(&self) {}
+	fn void HashMap.remove(&self, int value) {}
+	fn void HashMap.free(&self) {}
+	fn void main() {
+		HashMap v;
+		v.
+		|||int x = 0;
+	}`)
+
+	filteredCompletionList := filterOutKeywordSuggestions(completionList)
+	labels := []string{}
+	for _, item := range filteredCompletionList {
+		labels = append(labels, item.Label)
+	}
+	t.Logf("labels=%v", labels)
+
+	assert.Contains(t, labels, "HashMap.free")
+	assert.Contains(t, labels, "HashMap.remove")
+	assert.Contains(t, labels, "HashMap.tinit")
+}
+
+func TestBuildCompletionList_map_hashmap_members_on_imported_generic_instance(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	state.registerDoc("std_map.c3", `module std::collections::map;
+	struct HashMap {
+		int dummy;
+	}
+	fn void HashMap.tinit(&self) {}
+	fn void HashMap.remove(&self, int value) {}
+	fn void HashMap.free(&self) {}
+	`)
+
+	body, position := parseBodyWithCursor(`module main;
+	import std::collections::map;
+	fn void main() {
+		HashMap { int, int } v = map::ONHEAP{int, int};
+		v.
+		|||
+		v.free();
+	}`)
+	state.registerDoc("app.c3", body)
+
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: position,
+			DocURI:   "app.c3",
+		},
+		&state.state,
+	)
+
+	filteredCompletionList := filterOutKeywordSuggestions(completionList)
+	labels := []string{}
+	for _, item := range filteredCompletionList {
+		labels = append(labels, item.Label)
+	}
+
+	assert.Contains(t, labels, "HashMap.free")
+	assert.Contains(t, labels, "HashMap.remove")
+	assert.Contains(t, labels, "HashMap.tinit")
+}
+
+func TestBuildCompletionList_list_members_on_imported_collections_root(t *testing.T) {
+	state := NewTestState()
+	search := NewSearchWithoutLog()
+
+	state.registerDoc("std_list.c3", `module std::collections::list <Type>;
+	struct List {
+		Type *entries;
+	}
+	fn void List.push(&self, Type element) {}
+	fn usz List.len(&self) { return 0; }
+	fn void List.free(&self) {}
+	`)
+
+	body, position := parseBodyWithCursor(`module main;
+	import std::collections;
+	fn void main() {
+		List{int} l;
+		l.|||
+	}`)
+	state.registerDoc("app.c3", body)
+
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: position,
+			DocURI:   "app.c3",
+		},
+		&state.state,
+	)
+
+	filteredCompletionList := filterOutKeywordSuggestions(completionList)
+	labels := []string{}
+	for _, item := range filteredCompletionList {
+		labels = append(labels, item.Label)
+	}
+
+	assert.Contains(t, labels, "List.push")
+	assert.Contains(t, labels, "List.len")
+	assert.Contains(t, labels, "List.free")
 }
 
 func TestBuildCompletionList_struct_suggest_members_with_prefix_of_substruct(t *testing.T) {
@@ -2242,4 +2416,202 @@ func TestBuildCompletionList_should_resolve_(t *testing.T) {
 		},
 		completionList,
 	)
+}
+
+func TestBuildCompletionList_module_import_completion_excludes_private_symbols(t *testing.T) {
+	state := NewTestState()
+
+	appSource, position := parseBodyWithCursor(`module app;
+	import my::io;
+	fn void main() {
+		io::fn_|||
+	}`)
+	state.registerDoc("app.c3", appSource)
+
+	state.registerDoc(
+		"my.c3",
+		`module my::io;
+		fn void fn_pub() {
+		}
+
+		fn void fn_priv() @private {
+		}
+
+		fn void fn_local() @local {
+		}
+		`,
+	)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: position,
+			DocURI:   "app.c3",
+		},
+		&state.state,
+	)
+
+	labels := []string{}
+	for _, item := range completionList {
+		labels = append(labels, item.Label)
+	}
+
+	assert.Equal(t, 1, len(completionList), "Wrong number of items to suggest")
+	assert.Contains(t, labels, "fn_pub")
+	assert.NotContains(t, labels, "fn_priv")
+	assert.NotContains(t, labels, "fn_local")
+}
+
+func TestBuildCompletionList_module_local_visibility_is_scoped_to_declaration_section(t *testing.T) {
+	state := NewTestState()
+
+	part1Source, part1Position := parseBodyWithCursor(`module example;
+	fn void fn_pub() {
+	}
+
+	fn void fn_local() @local {
+	}
+
+	fn void in_part1() {
+		fn_|||
+	}
+
+	module example;
+	fn void in_part2() {
+	}
+	`)
+	state.registerDoc("example.c3", part1Source)
+
+	search := NewSearchWithoutLog()
+	part1CompletionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: part1Position,
+			DocURI:   "example.c3",
+		},
+		&state.state,
+	)
+
+	part1Labels := []string{}
+	for _, item := range part1CompletionList {
+		part1Labels = append(part1Labels, item.Label)
+	}
+
+	assert.Contains(t, part1Labels, "fn_pub")
+	assert.Contains(t, part1Labels, "fn_local")
+
+	part2Source, part2Position := parseBodyWithCursor(`module example;
+	fn void fn_pub() {
+	}
+
+	fn void fn_local() @local {
+	}
+
+	fn void in_part1() {
+	}
+
+	module example;
+	fn void in_part2() {
+		fn_|||
+	}
+	`)
+	state.registerDoc("example.c3", part2Source)
+
+	part2CompletionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: part2Position,
+			DocURI:   "example.c3",
+		},
+		&state.state,
+	)
+
+	part2Labels := []string{}
+	for _, item := range part2CompletionList {
+		part2Labels = append(part2Labels, item.Label)
+	}
+
+	assert.Contains(t, part2Labels, "fn_pub")
+	assert.NotContains(t, part2Labels, "fn_local")
+}
+
+func TestBuildCompletionList_module_path_completion_has_no_duplicates_inside_same_function(t *testing.T) {
+	state := NewTestState()
+
+	source, position := parseBodyWithCursor(`module example;
+	fn void fn_pub() {
+	}
+
+	fn void fn_pub2() {
+		example::fn_|||
+	}`)
+	state.registerDoc("example.c3", source)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: position,
+			DocURI:   "example.c3",
+		},
+		&state.state,
+	)
+
+	labels := []string{}
+	labelCount := map[string]int{}
+	for _, item := range completionList {
+		labels = append(labels, item.Label)
+		labelCount[item.Label]++
+	}
+
+	assert.Equal(t, 2, len(completionList), "Wrong number of items to suggest")
+	assert.Equal(t, 1, labelCount["fn_pub"])
+	assert.Equal(t, 1, labelCount["fn_pub2"])
+}
+
+func TestBuildCompletionList_empty_line_shows_in_scope_suggestions(t *testing.T) {
+	state := NewTestState()
+
+	state.registerDoc("example.c3", `module example;
+	fn void public_api() {
+	}
+	`)
+
+	source, position := parseBodyWithCursor(`module app;
+	import example;
+
+	fn void helper() {
+	}
+
+	fn int main() {
+		int local_value = 0;
+		|||
+		return 0;
+	}
+	`)
+	state.registerDoc("app.c3", source)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: position,
+			DocURI:   "app.c3",
+		},
+		&state.state,
+	)
+
+	labels := []string{}
+	for _, item := range completionList {
+		labels = append(labels, item.Label)
+	}
+
+	assert.Contains(t, labels, "helper")
+	assert.Contains(t, labels, "example")
+
+	localIndex := slices.Index(labels, "local_value")
+	moduleIndex := slices.Index(labels, "example")
+	keywordIndex := slices.Index(labels, "for")
+
+	assert.NotEqual(t, -1, localIndex)
+	assert.NotEqual(t, -1, moduleIndex)
+	assert.NotEqual(t, -1, keywordIndex)
+	assert.True(t, localIndex < moduleIndex)
+	assert.True(t, moduleIndex < keywordIndex)
 }

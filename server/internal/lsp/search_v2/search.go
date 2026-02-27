@@ -233,6 +233,14 @@ func (s *SearchV2) FindSymbolDeclarationInWorkspace(
 	return option.None[symbols.Indexable]()
 }
 
+func (s *SearchV2) FindImplementationsInWorkspace(
+	docId string,
+	position symbols.Position,
+	state *project_state.ProjectState,
+) []symbols.Indexable {
+	return s.fallback.FindImplementationsInWorkspace(docId, position, state)
+}
+
 // BuildCompletionList delegates to the old search implementation for now
 // TODO: Implement native completion support in SearchV2
 func (s *SearchV2) BuildCompletionList(

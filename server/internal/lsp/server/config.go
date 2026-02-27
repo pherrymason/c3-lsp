@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pherrymason/c3-lsp/internal/c3c"
@@ -130,10 +132,21 @@ func (s *Server) applyVersionAndLoadStdlib(userConfiguredVersion option.Option[s
 	// Priority: explicit stdlib-path > c3c-path/lib > empty string
 	c3cLibPath := ""
 	if s.options.C3.StdlibPath.IsSome() {
-		c3cLibPath = s.options.C3.StdlibPath.Get()
+		normalizedStdlibPath := normalizeStdlibRootPath(s.options.C3.StdlibPath.Get())
+		s.options.C3.StdlibPath = option.Some(normalizedStdlibPath)
+		c3cLibPath = normalizedStdlibPath
 	} else if s.options.C3.Path.IsSome() {
 		c3cLibPath = s.options.C3.Path.Get() + "/lib"
 	}
 
 	s.state.SetLanguageVersion(requestedLanguageVersion, c3cLibPath)
+}
+
+func normalizeStdlibRootPath(path string) string {
+	clean := filepath.Clean(path)
+	if strings.EqualFold(filepath.Base(clean), "std") {
+		return filepath.Dir(clean)
+	}
+
+	return clean
 }
