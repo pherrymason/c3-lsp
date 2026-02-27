@@ -77,7 +77,7 @@ func BuildFromDocumentPosition(
 	case "ident":
 		context.IsIdentifier = true
 
-		if node.Parent().Type() == "module_resolution" {
+		if parent := node.Parent(); parent != nil && parent.Type() == "module_resolution" {
 			context.IsModuleIdentifier = true
 		}
 	}

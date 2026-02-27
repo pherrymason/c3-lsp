@@ -494,7 +494,11 @@ func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string,
 	case *symbols.Distinct:
 		// Translate to the real symbol
 		distinct := elm.(*symbols.Distinct)
-		query := distinct.GetBaseType().GetFullQualifiedName()
+		baseType := distinct.GetBaseType()
+		if baseType == nil || baseType.GetName() == "" {
+			return nil
+		}
+		query := baseType.GetFullQualifiedName()
 
 		symbols := projState.SearchByFQN(query)
 		if len(symbols) > 0 {
@@ -552,7 +556,7 @@ func (l *Search) resolveType(_type symbols.Type, hierarchySymbols []symbols.Inde
 		return _type
 	}
 
-	panic("Generic type not found")
+	return _type
 }
 
 type FindParentState struct {

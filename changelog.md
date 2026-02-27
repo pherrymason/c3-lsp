@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Stability/Zed: hardened request handling with per-request panic recovery for hover/definition/declaration/typeDefinition/implementation/completion/signatureHelp/rename, so single bad requests no longer kill the LSP process.
+- Stability/Hover: fixed multiple nil-deref paths when hovering symbols (including typed-nil search results and unresolved distinct base types like `Thread`), returning safe empty hover/error responses instead of crashing.
+- Stability/position parsing: replaced several out-of-bounds panics in document/source parsing and cursor-position math with safe bounds checks/clamping and fallback returns.
+- Stability/path parsing: `NormalizePath` now falls back to canonical raw paths when URI parsing fails, instead of panicking.
+- Grammar compatibility: added support for the new C3 `constdef` keyword (keywords/completion/tests) while keeping parser compatibility by normalizing `constdef` during CST parsing for the current vendored tree-sitter runtime.
+
 - Workspace/navigation: improved aggregate-folder support (e.g. opening `/Users/.../c3`) by resolving the nearest project root per active document, deferring heavy root-wide indexing on non-project roots, and indexing subprojects on demand for go-to-definition/hover.
 - Diagnostics/configuration: diagnostics now run from the active file's nearest project root (with per-project config reload), instead of always using the opened workspace root.
 - Navigation compatibility: added `textDocument/typeDefinition` support and more robust document-loading guards for editors that send different navigation requests or delayed open/index events.

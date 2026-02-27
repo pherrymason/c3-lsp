@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	lspcontext "github.com/pherrymason/c3-lsp/internal/lsp/context"
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search"
 	"github.com/pherrymason/c3-lsp/pkg/document"
@@ -13,6 +14,22 @@ import (
 	"github.com/tliron/commonlog"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
+
+type nilSymbolSearchMock struct{}
+
+func (nilSymbolSearchMock) FindSymbolDeclarationInWorkspace(_ string, _ symbols.Position, _ *project_state.ProjectState) option.Option[symbols.Indexable] {
+	var variable *symbols.Variable
+	var indexable symbols.Indexable = variable
+	return option.Some(indexable)
+}
+
+func (nilSymbolSearchMock) FindImplementationsInWorkspace(_ string, _ symbols.Position, _ *project_state.ProjectState) []symbols.Indexable {
+	return nil
+}
+
+func (nilSymbolSearchMock) BuildCompletionList(_ lspcontext.CursorContext, _ *project_state.ProjectState) []protocol.CompletionItem {
+	return nil
+}
 
 func TestGenericTypeSuffixAtPosition(t *testing.T) {
 	t.Run("simple generic", func(t *testing.T) {
@@ -131,5 +148,41 @@ fn void main() {
 	}
 	if hover != nil {
 		t.Fatalf("expected nil hover inside string literal, got: %#v", hover)
+	}
+}
+
+func TestTextDocumentHover_returns_nil_when_search_returns_typed_nil_symbol(t *testing.T) {
+	logger := commonlog.MockLogger{}
+	state := project_state.NewProjectState(logger, option.Some("dummy"), false)
+	prs := parser.NewParser(logger)
+
+	srv := &Server{
+		state:  &state,
+		parser: &prs,
+		search: nilSymbolSearchMock{},
+	}
+
+	source := `module app;
+fn void main() {
+	int thread;
+}`
+
+	doc := document.NewDocumentFromDocURI("file:///tmp/hover_nil_symbol_test.c3", source, 1)
+	state.RefreshDocumentIdentifiers(doc, &prs)
+
+	hover, err := srv.TextDocumentHover(nil, &protocol.HoverParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: "file:///tmp/hover_nil_symbol_test.c3"},
+			Position: protocol.Position{
+				Line:      2,
+				Character: 5,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected hover error: %v", err)
+	}
+	if hover != nil {
+		t.Fatalf("expected nil hover for typed nil search result, got: %#v", hover)
 	}
 }

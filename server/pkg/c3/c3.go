@@ -10,7 +10,7 @@ var keywords = map[string]struct{}{
 	"any": {}, "fault": {}, "typeid": {}, "assert": {},
 	"asm": {}, "bitstruct": {}, "break": {}, "case": {},
 	"catch": {}, "const": {}, "continue": {}, "alias": {},
-	"bfloat": {}, "cenum": {}, "faultdef": {}, "interface": {}, "lengthof": {},
+	"bfloat": {}, "constdef": {}, "faultdef": {}, "interface": {}, "lengthof": {},
 	"default": {}, "defer": {}, "typedef": {}, "do": {},
 	"else": {}, "enum": {}, "extern": {}, "false": {},
 	"for": {}, "foreach": {}, "foreach_r": {}, "fn": {},

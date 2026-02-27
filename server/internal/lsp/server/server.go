@@ -1,8 +1,11 @@
 package server
 
 import (
+	stderrors "errors"
 	"fmt"
+	"log"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/bep/debounce"
@@ -152,15 +155,42 @@ func NewServer(opts ServerOpts, appName string, version string) *Server {
 	handler.TextDocumentDidChange = server.TextDocumentDidChange
 	handler.TextDocumentDidClose = server.TextDocumentDidClose
 	handler.TextDocumentDidSave = server.TextDocumentDidSave
-	handler.TextDocumentHover = server.TextDocumentHover
-	handler.TextDocumentDeclaration = server.TextDocumentDeclaration
-	handler.TextDocumentDefinition = server.TextDocumentDefinition
-	handler.TextDocumentTypeDefinition = server.TextDocumentTypeDefinition
-	handler.TextDocumentImplementation = server.TextDocumentImplementation
-	handler.TextDocumentPrepareRename = server.TextDocumentPrepareRename
-	handler.TextDocumentRename = server.TextDocumentRename
-	handler.TextDocumentCompletion = server.TextDocumentCompletion
-	handler.TextDocumentSignatureHelp = server.TextDocumentSignatureHelp
+	handler.TextDocumentHover = func(context *glsp.Context, params *protocol.HoverParams) (result *protocol.Hover, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentHover, &err)
+		return server.TextDocumentHover(context, params)
+	}
+	handler.TextDocumentDeclaration = func(context *glsp.Context, params *protocol.DeclarationParams) (result any, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentDeclaration, &err)
+		return server.TextDocumentDeclaration(context, params)
+	}
+	handler.TextDocumentDefinition = func(context *glsp.Context, params *protocol.DefinitionParams) (result any, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentDefinition, &err)
+		return server.TextDocumentDefinition(context, params)
+	}
+	handler.TextDocumentTypeDefinition = func(context *glsp.Context, params *protocol.TypeDefinitionParams) (result any, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentTypeDefinition, &err)
+		return server.TextDocumentTypeDefinition(context, params)
+	}
+	handler.TextDocumentImplementation = func(context *glsp.Context, params *protocol.ImplementationParams) (result any, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentImplementation, &err)
+		return server.TextDocumentImplementation(context, params)
+	}
+	handler.TextDocumentPrepareRename = func(context *glsp.Context, params *protocol.PrepareRenameParams) (result any, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentPrepareRename, &err)
+		return server.TextDocumentPrepareRename(context, params)
+	}
+	handler.TextDocumentRename = func(context *glsp.Context, params *protocol.RenameParams) (result *protocol.WorkspaceEdit, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentRename, &err)
+		return server.TextDocumentRename(context, params)
+	}
+	handler.TextDocumentCompletion = func(context *glsp.Context, params *protocol.CompletionParams) (result any, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentCompletion, &err)
+		return server.TextDocumentCompletion(context, params)
+	}
+	handler.TextDocumentSignatureHelp = func(context *glsp.Context, params *protocol.SignatureHelpParams) (result *protocol.SignatureHelp, err error) {
+		defer server.recoverRequestPanic(context, protocol.MethodTextDocumentSignatureHelp, &err)
+		return server.TextDocumentSignatureHelp(context, params)
+	}
 	handler.WorkspaceDidChangeWatchedFiles = server.WorkspaceDidChangeWatchedFiles
 	handler.WorkspaceDidChangeConfiguration = server.WorkspaceDidChangeConfiguration
 	handler.WorkspaceDidDeleteFiles = server.WorkspaceDidDeleteFiles
@@ -218,6 +248,16 @@ func notifyLogTrace(context *glsp.Context, message string, verbose *string) {
 	}
 
 	go context.Notify(protocol.MethodLogTrace, params)
+}
+
+func (s *Server) recoverRequestPanic(context *glsp.Context, method string, errp *error) {
+	if recovered := recover(); recovered != nil {
+		msg := fmt.Sprintf("panic recovered in %s: %v", method, recovered)
+		stack := debug.Stack()
+		log.Printf("%s\n%s", msg, string(stack))
+		s.notifyWindowLogMessage(context, protocol.MessageTypeError, msg)
+		*errp = stderrors.New(msg)
+	}
 }
 
 func checkRequestedLanguageVersion(logger commonlog.Logger, version option.Option[string]) string {

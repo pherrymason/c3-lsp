@@ -268,6 +268,16 @@ func Test_SourceCode_SymbolInPosition_finds_symbol_with_module_path(t *testing.T
 	}
 }
 
+func Test_SourceCode_SymbolInPosition_out_of_bounds_cursor_does_not_panic(t *testing.T) {
+	unitModule := symbols_table.UnitModules{}
+	sc := NewSourceCode("int value;")
+
+	assert.NotPanics(t, func() {
+		result := sc.SymbolInPosition(symbols.NewPosition(99, 99), &unitModule)
+		assert.Equal(t, "", result.Text())
+	})
+}
+
 func Test_SourceCode_SymbolInPosition_should_resolve_full_module_paths(t *testing.T) {
 
 	// Resolves full name of module, even if sentence uses short name

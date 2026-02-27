@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"unicode"
 
@@ -30,6 +31,9 @@ func (h *Server) TextDocumentHover(context *glsp.Context, params *protocol.Hover
 	}
 
 	foundSymbol := foundSymbolOption.Get()
+	if isNilIndexable(foundSymbol) {
+		return nil, nil
+	}
 	doc := h.state.GetDocument(docId)
 
 	// expected behaviour:
@@ -278,4 +282,18 @@ func genericTypeSuffixAtPosition(source string, position symbols.Position) (stri
 
 func isTypeIdentByte(b byte) bool {
 	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
+}
+
+func isNilIndexable(symbol symbols.Indexable) bool {
+	if symbol == nil {
+		return true
+	}
+
+	v := reflect.ValueOf(symbol)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return v.IsNil()
+	default:
+		return false
+	}
 }

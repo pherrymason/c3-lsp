@@ -284,7 +284,7 @@ func TestBuildCompletionList_suggests_C3_keywords(t *testing.T) {
 		{input: "bit", expected: []string{"bitstruct"}},
 		{input: "br", expected: []string{"break"}},
 		{input: "ca", expected: []string{"case", "catch"}},
-		{input: "con", expected: []string{"const", "continue"}},
+		{input: "con", expected: []string{"const", "constdef", "continue"}},
 		{input: "de", expected: []string{"default", "defer"}},
 		{input: "ty", expected: []string{"typedef", "typeid"}},
 		{input: "d", expected: []string{"default", "defer", "do", "double"}},

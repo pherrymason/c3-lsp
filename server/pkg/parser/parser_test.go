@@ -975,11 +975,11 @@ func TestExtractSymbols_module_with_generics(t *testing.T) {
 	assert.Equal(t, "foo::another::deep", module.GetName())
 }
 
-func TestParses_CEnums(t *testing.T) {
+func TestParses_Constdefs(t *testing.T) {
 	docId := "doc"
 	source := `
 	module foo;
-	cenum Bar { ABC, DEF }
+	constdef Bar { ABC, DEF }
 	`
 	doc := document.NewDocument(docId, source)
 	parser := createParser()
@@ -989,7 +989,7 @@ func TestParses_CEnums(t *testing.T) {
 
 	assert.NotNil(t, module.Enums["Bar"])
 	assert.Equal(t, "Bar", module.Enums["Bar"].GetName())
-	assert.Equal(t, findRange(source, "cenum Bar { ABC, DEF }"), module.Enums["Bar"].GetDocumentRange())
+	assert.Equal(t, findRange(source, "constdef Bar { ABC, DEF }"), module.Enums["Bar"].GetDocumentRange())
 	assert.Equal(t, findRange(source, "Bar"), module.Enums["Bar"].GetIdRange())
 
 	enum := module.Enums["Bar"]

@@ -71,7 +71,12 @@ func (r *TypeResolver) resolveOneLevel(symbol symbols.Indexable) symbols.Indexab
 		return r.lookupType(s.GetModuleString() + "::" + s.GetResolvesTo())
 
 	case *symbols.Distinct:
-		return r.lookupType(s.GetBaseType().GetFullQualifiedName())
+		baseType := s.GetBaseType()
+		if baseType == nil || baseType.GetName() == "" {
+			return nil
+		}
+
+		return r.lookupType(baseType.GetFullQualifiedName())
 
 	default:
 		return nil

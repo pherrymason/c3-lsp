@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"log"
 	"strings"
 	"unicode"
 
@@ -45,7 +46,8 @@ func FindLineColOfSubstring(s string, substring string) (uint, uint) {
 func NormalizePath(pathOrUri string) string {
 	path, err := fs.UriToPath(pathOrUri)
 	if err != nil {
-		panic(errors.Wrapf(err, "unable to parse URI: %s", pathOrUri))
+		log.Printf("unable to parse URI, using raw path: %v", errors.Wrapf(err, "unable to parse URI: %s", pathOrUri))
+		return fs.GetCanonicalPath(pathOrUri)
 	}
 	return fs.GetCanonicalPath(path)
 }

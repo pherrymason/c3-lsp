@@ -51,7 +51,7 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 
 		limitsOpt := s.getWordIndexLimits(index, true)
 		if limitsOpt.IsNone() {
-			panic("error")
+			break
 		}
 
 		limits := limitsOpt.Get()
@@ -174,6 +174,10 @@ func tryToResolveFullModulePaths(wb *WordBuilder, unitModules *symbols_table.Uni
 // Returns start and end index of symbol present in index.
 // If no symbol is found in index, error will be returned
 func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Option[symbolLimits] {
+	if index < 0 {
+		return option.None[symbolLimits]()
+	}
+
 	if index >= len(s.Text) {
 		return option.None[symbolLimits]()
 	}
@@ -206,15 +210,12 @@ func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Opti
 		}
 	}
 
-	if symbolStart > len(s.Text) {
-		panic("start limit greater than content")
-		//return 0, 0, errors.New("wordStart out of bounds")
-	} else if symbolEnd > len(s.Text) {
-		panic("end limit greater than content")
-		//return 0, 0, errors.New("wordEnd out of bounds")
+	if symbolStart < 0 || symbolStart >= len(s.Text) {
+		return option.None[symbolLimits]()
+	} else if symbolEnd < 0 || symbolEnd >= len(s.Text) {
+		return option.None[symbolLimits]()
 	} else if symbolStart > symbolEnd {
-		panic("start limit greater than end limit")
-		//return 0, 0, errors.New("wordStart > wordEnd!")
+		return option.None[symbolLimits]()
 	}
 
 	return option.Some(symbolLimits{symbolStart, symbolEnd})

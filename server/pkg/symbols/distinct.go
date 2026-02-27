@@ -28,6 +28,11 @@ func NewDistinct(name string, baseType *Type, inline bool, resolvesTo string, mo
 }
 
 func (d *Distinct) GetBaseType() *Type {
+	if d.baseType == nil {
+		empty := Type{}
+		return &empty
+	}
+
 	return d.baseType
 }
 
@@ -40,6 +45,14 @@ func (d *Distinct) SetInline(inline bool) {
 }
 
 func (d Distinct) GetHoverInfo() string {
+	if d.baseType == nil {
+		if d.inline {
+			return fmt.Sprintf("distinct %s = inline ?", d.Name)
+		}
+
+		return fmt.Sprintf("distinct %s = ?", d.Name)
+	}
+
 	baseType := d.baseType.String()
 
 	inline := ""

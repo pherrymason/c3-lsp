@@ -1,6 +1,8 @@
 package search
 
 import (
+	"reflect"
+
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 )
@@ -70,7 +72,26 @@ func (s *SearchResult) SetMembersReadable(membersReadable bool) {
 }
 
 func (s *SearchResult) Set(symbol symbols.Indexable) {
+	if isNilIndexable(symbol) {
+		s.result = option.None[symbols.Indexable]()
+		return
+	}
+
 	s.result = option.Some(symbol)
+}
+
+func isNilIndexable(symbol symbols.Indexable) bool {
+	if symbol == nil {
+		return true
+	}
+
+	v := reflect.ValueOf(symbol)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return v.IsNil()
+	default:
+		return false
+	}
 }
 
 const (
