@@ -2432,11 +2432,24 @@ func TestBuildCompletionList_cross_module_private_filtered(t *testing.T) {
 	state := NewTestState()
 	state.registerDoc(
 		"utils.c3",
-		"module utils;\n\nfn long public_fn(ulong a) {\n  return (long)a;\n}\n\nfn ulong helper(int n) @private {\n  return (ulong)1 << n;\n}")
+		`module utils;
+
+		fn long public_fn(ulong a) {
+			return (long)a;
+		}
+
+		fn ulong helper(int n) @private {
+			return (ulong)1 << n;
+		}`)
 
 	state.registerDoc(
 		"app.c3",
-		"module app;\nimport utils;\n\nfn void test() {\n  utils::\n}")
+		`module app;
+		import utils;
+
+		fn void test() {
+			utils::
+		}`)
 
 	search := NewSearchWithoutLog()
 	completionList := search.BuildCompletionList(
@@ -2447,10 +2460,6 @@ func TestBuildCompletionList_cross_module_private_filtered(t *testing.T) {
 		&state.state)
 
 	completionList = filterOutKeywordSuggestions(completionList)
-
-	for _, item := range completionList {
-		t.Logf("Completion item: %s", item.Label)
-	}
 
 	foundPublic := false
 	foundPrivate := false
@@ -2473,17 +2482,17 @@ func TestBuildCompletionList_same_module_private_visible(t *testing.T) {
 		"utils.c3",
 		`module utils;
 
-fn long public_fn(ulong a) {
-  return (long)a;
-}
+		fn long public_fn(ulong a) {
+			return (long)a;
+		}
 
-fn ulong helper(int n) @private {
-  return (ulong)1 << n;
-}
+		fn ulong helper(int n) @private {
+			return (ulong)1 << n;
+		}
 
-fn void test() {
-  utils::
-}`)
+		fn void test() {
+			utils::
+		}`)
 
 	search := NewSearchWithoutLog()
 	completionList := search.BuildCompletionList(
@@ -2494,10 +2503,6 @@ fn void test() {
 		&state.state)
 
 	completionList = filterOutKeywordSuggestions(completionList)
-
-	for _, item := range completionList {
-		t.Logf("Completion item: %s", item.Label)
-	}
 
 	foundPublic := false
 	foundPrivate := false
