@@ -2517,3 +2517,44 @@ func TestBuildCompletionList_same_module_private_visible(t *testing.T) {
 	assert.True(t, foundPublic, "Expected 'public_fn' in completion list within same module")
 	assert.True(t, foundPrivate, "Expected @private 'helper' to appear in completion list within same module")
 }
+
+func TestBuildCompletionList_module_path_should_not_show_enum_values(t *testing.T) {
+	state := NewTestState()
+	state.registerDoc("exe.c3",
+		`module exe;
+		enum Foo {
+			ONE,
+			TWO,
+			THREE,
+		}`)
+
+	state.registerDoc("main.c3",
+		`module main;
+		import exe;
+		fn void main() {
+			exe::
+		}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(4, 8),
+			DocURI:   "main.c3",
+		},
+		&state.state)
+
+	completionList = filterOutKeywordSuggestions(completionList)
+
+	foundLabels := map[string]bool{}
+	for _, item := range completionList {
+		foundLabels[item.Label] = true
+	}
+
+	assert.True(t, foundLabels["Foo"],
+		"Expected 'Foo' enum type in completion list, got: %v", completionList)
+
+	for _, enumVal := range []string{"ONE", "TWO", "THREE"} {
+		assert.False(t, foundLabels[enumVal],
+			"Did not expect enum value '%s' in module path completion, got: %v", enumVal, completionList)
+	}
+}

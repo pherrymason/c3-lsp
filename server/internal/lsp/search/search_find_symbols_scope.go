@@ -85,8 +85,14 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 				continue
 			}
 			symbolsCollection = append(symbolsCollection, enum)
-			for _, enumerable := range enum.GetEnumerators() {
-				symbolsCollection = append(symbolsCollection, enumerable)
+			// Only inline enumerators when not scoped to an explicit module path.
+			// When the user writes "exe::", they want top-level types (Foo),
+			// not individual enum values (ONE, TWO). Enum values are accessed
+			// via the enum type (e.g. Foo.ONE).
+			if params.scopedToModulePath.IsNone() {
+				for _, enumerable := range enum.GetEnumerators() {
+					symbolsCollection = append(symbolsCollection, enumerable)
+				}
 			}
 		}
 		for _, strukt := range module.Structs {
@@ -112,8 +118,10 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 				continue
 			}
 			symbolsCollection = append(symbolsCollection, fault)
-			for _, constant := range fault.GetConstants() {
-				symbolsCollection = append(symbolsCollection, constant)
+			if params.scopedToModulePath.IsNone() {
+				for _, constant := range fault.GetConstants() {
+					symbolsCollection = append(symbolsCollection, constant)
+				}
 			}
 		}
 		for _, interfaces := range module.Interfaces {
