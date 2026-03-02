@@ -2521,7 +2521,7 @@ func TestBuildCompletionList_same_module_private_visible(t *testing.T) {
 func TestBuildCompletionList_module_path_should_not_show_enum_values(t *testing.T) {
 	state := NewTestState()
 	state.registerDoc("exe.c3",
-		`module exe;
+		`module test;
 		enum Foo {
 			ONE,
 			TWO,
@@ -2530,15 +2530,15 @@ func TestBuildCompletionList_module_path_should_not_show_enum_values(t *testing.
 
 	state.registerDoc("main.c3",
 		`module main;
-		import exe;
+		import test;
 		fn void main() {
-			exe::
+			test::
 		}`)
 
 	search := NewSearchWithoutLog()
 	completionList := search.BuildCompletionList(
 		context.CursorContext{
-			Position: buildPosition(4, 8),
+			Position: buildPosition(4, 9),
 			DocURI:   "main.c3",
 		},
 		&state.state)

@@ -86,7 +86,7 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 			}
 			symbolsCollection = append(symbolsCollection, enum)
 			// Only inline enumerators when not scoped to an explicit module path.
-			// When the user writes "exe::", they want top-level types (Foo),
+			// When the user writes "some_module::", they want top-level enum type (eg. Foo),
 			// not individual enum values (ONE, TWO). Enum values are accessed
 			// via the enum type (e.g. Foo.ONE).
 			if params.scopedToModulePath.IsNone() {
