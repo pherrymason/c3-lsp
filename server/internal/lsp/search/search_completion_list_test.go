@@ -2558,3 +2558,70 @@ func TestBuildCompletionList_module_path_should_not_show_enum_values(t *testing.
 			"Did not expect enum value '%s' in module path completion, got: %v", enumVal, completionList)
 	}
 }
+
+func TestBuildCompletionList_struct_bare_dot_suggest_all_its_members(t *testing.T) {
+	state := NewTestState()
+	state.registerDoc("test.c3",
+		`struct Color { int r; int g; int b; }
+	fn void Color.toHex() {}
+	fn void main() {
+		Color c;
+		c.;
+	}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(5, 4),
+			DocURI:   "test.c3",
+		},
+		&state.state)
+
+	assert.Equal(t, 4, len(completionList))
+	expectedNames := map[string]bool{"r": false, "g": false, "b": false, "Color.toHex": false}
+	for _, item := range completionList {
+		if _, ok := expectedNames[item.Label]; ok {
+			expectedNames[item.Label] = true
+		}
+	}
+
+	for name, found := range expectedNames {
+		assert.True(t, found, "Expected value '%s' in completion list, got: %v", name, completionList)
+	}
+}
+
+func TestBuildCompletionList_struct_bare_dot_cross_module(t *testing.T) {
+	state := NewTestState()
+	state.registerDoc("foo.c3",
+		`module foo;
+		struct Bar { int width; int height; }
+		fn void Bar.resize(Bar* self) {}`)
+
+	state.registerDoc("app.c3",
+		`module app;
+		import foo;
+		fn void main() {
+			Bar b;
+			b.;
+		}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(5, 5),
+			DocURI:   "app.c3",
+		},
+		&state.state)
+
+	assert.Equal(t, 3, len(completionList))
+	expectedNames := map[string]bool{"Bar.resize": false, "height": false, "width": false}
+	for _, item := range completionList {
+		if _, ok := expectedNames[item.Label]; ok {
+			expectedNames[item.Label] = true
+		}
+	}
+
+	for name, found := range expectedNames {
+		assert.True(t, found, "Expected value '%s' in completion list, got: %v", name, completionList)
+	}
+}

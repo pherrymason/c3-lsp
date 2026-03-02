@@ -15,6 +15,7 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
 	"github.com/pherrymason/c3-lsp/pkg/option"
+	p "github.com/pherrymason/c3-lsp/pkg/parser"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -222,6 +223,9 @@ func (s *Search) BuildCompletionList(
 	*/
 
 	doc := state.GetDocument(ctx.DocURI)
+	unlockDocument := state.LockDocument(doc.URI)
+	defer unlockDocument()
+
 	symbolInPosition := doc.SourceCode.SymbolInPosition(
 		ctx.Position.RewindCharacter(),
 		state.GetUnitModulesByDoc(doc.URI),
@@ -285,6 +289,34 @@ func (s *Search) BuildCompletionList(
 		)
 
 		items = append(items, initialItems...)
+
+		if prevIndexableOption.IsNone() && symbolInPosition.IsSeparator() {
+			// The search found nothing and we're on a bare dot (e.g. "foo." with no
+			// character after the dot). This typically happens because tree-sitter
+			// cannot parse "foo.;" as a valid expression and produces an ERROR node,
+			// which causes local variable declarations to be lost from the function body.
+			//
+			// Work around this by inserting a placeholder identifier at the cursor
+			// position, re-parsing the document temporarily, and retrying the search.
+			placeholderDoc, placeholderSymbol, cleanup := s.retryWithPlaceholder(doc, ctx.Position, state)
+			if placeholderDoc != nil {
+				defer cleanup()
+
+				searchParams = sp.BuildSearchBySymbolUnderCursor(
+					placeholderDoc,
+					*state.GetUnitModulesByDoc(doc.URI),
+					placeholderSymbol.PrevAccessPath().TextRange().End.RewindCharacter(),
+				)
+				membersReadable, fromDistinct, initialItems, prevIndexableOption = s.findParentTypeWithCompletions(
+					false,
+					placeholderSymbol,
+					searchParams,
+					state,
+					FindDebugger{depth: 0, enabled: true},
+				)
+				items = append(items, initialItems...)
+			}
+		}
 
 		if prevIndexableOption.IsNone() {
 			return items
@@ -480,6 +512,58 @@ func (s *Search) BuildCompletionList(
 	})
 
 	return items
+}
+
+// retryWithPlaceholder works around a tree-sitter parsing limitation where
+// a bare dot expression like "c.;" produces an ERROR node, causing local
+// variable declarations in the same function body to be lost.
+//
+// It inserts a placeholder identifier ("_z") at the cursor position so that
+// tree-sitter can parse the expression as "c._z;" (a valid field access),
+// re-parses the document, and temporarily registers it in the project state.
+//
+// Returns the placeholder document, the symbol-in-position from the modified
+// source, and a cleanup function that MUST be called (typically via defer) to
+// restore the original document in the project state.
+//
+// If the placeholder insertion fails for any reason, returns
+// (nil, Word{}, func() {}).
+func (s *Search) retryWithPlaceholder(
+	doc *document.Document,
+	cursorPos symbols.Position,
+	state *l.ProjectState,
+) (*document.Document, sourcecode.Word, func()) {
+	cleanup := func() {}
+
+	source := doc.SourceCode.Text
+	offset := cursorPos.IndexIn(source)
+	if offset < 0 || offset > len(source) {
+		return nil, sourcecode.Word{}, cleanup
+	}
+
+	// Insert a placeholder identifier at the cursor position.
+	// Note: a single-character placeholder can still produce an ERROR node.
+	// We use "_z" which is a valid lowercase identifier.
+	modified := source[:offset] + "_z" + source[offset:]
+
+	placeholderDoc := document.NewDocument(doc.URI, modified)
+	parser := p.NewParser(s.logger)
+	state.RefreshDocumentIdentifiers(&placeholderDoc, &parser)
+
+	// The placeholder "_z" is now at cursorPos. SymbolInPosition scans backwards
+	// from the given index, so we pass cursorPos to land on "_z".
+	placeholderSymbol := placeholderDoc.SourceCode.SymbolInPosition(
+		cursorPos,
+		state.GetUnitModulesByDoc(doc.URI),
+	)
+
+	cleanup = func() {
+		// Restore the original document's symbols in the project state.
+		parser := p.NewParser(s.logger)
+		state.RefreshDocumentIdentifiers(doc, &parser)
+	}
+
+	return &placeholderDoc, placeholderSymbol, cleanup
 }
 
 // Returns whether members can be read from the found symbol, the 'fromDistinct' status, the list of

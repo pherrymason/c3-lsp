@@ -3,6 +3,7 @@ package project_state
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	trie "github.com/pherrymason/c3-lsp/internal/lsp/symbol_trie"
 	"github.com/pherrymason/c3-lsp/pkg/document"
@@ -26,14 +27,18 @@ type ProjectState struct {
 
 	logger       commonlog.Logger
 	debugEnabled bool
+
+	documentLocksMu sync.Mutex
+	documentLocks   map[string]*sync.Mutex
 }
 
 func NewProjectState(logger commonlog.Logger, languageVersion option.Option[string], debug bool) ProjectState {
 	projectState := ProjectState{
-		documents:    document.NewDocumentStore(fs.FileStorage{}),
-		symbolsTable: symbols_table.NewSymbolsTable(),
-		fqnIndex:     trie.NewTrie(),
-		diagnostics:  make(map[string][]protocol.Diagnostic),
+		documents:     document.NewDocumentStore(fs.FileStorage{}),
+		symbolsTable:  symbols_table.NewSymbolsTable(),
+		fqnIndex:      trie.NewTrie(),
+		diagnostics:   make(map[string][]protocol.Diagnostic),
+		documentLocks: make(map[string]*sync.Mutex),
 
 		logger:       logger,
 		debugEnabled: debug,
@@ -91,6 +96,28 @@ func (s *ProjectState) RemoveDocumentDiagnostics(docId string) {
 	delete(s.diagnostics, docId)
 }
 
+func (s *ProjectState) LockDocument(docId string) func() {
+	docLock := s.getDocumentLock(docId)
+	docLock.Lock()
+
+	return func() {
+		docLock.Unlock()
+	}
+}
+
+func (s *ProjectState) getDocumentLock(docId string) *sync.Mutex {
+	s.documentLocksMu.Lock()
+	defer s.documentLocksMu.Unlock()
+
+	docLock, ok := s.documentLocks[docId]
+	if !ok {
+		docLock = &sync.Mutex{}
+		s.documentLocks[docId] = docLock
+	}
+
+	return docLock
+}
+
 func (s *ProjectState) RefreshDocumentIdentifiers(doc *document.Document, parser *parser.Parser) {
 	parsedModules, pendingTypes := parser.ParseSymbols(doc)
 
@@ -101,6 +128,9 @@ func (s *ProjectState) RefreshDocumentIdentifiers(doc *document.Document, parser
 }
 
 func (s *ProjectState) DeleteDocument(docId string) {
+	unlockDocument := s.LockDocument(docId)
+	defer unlockDocument()
+
 	s.symbolsTable.DeleteDocument(docId)
 	s.fqnIndex.ClearByTag(docId)
 }
