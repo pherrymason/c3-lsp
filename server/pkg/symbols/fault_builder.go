@@ -11,10 +11,10 @@ func NewFaultBuilder(name string, baseType string, module string, docId string) 
 		fault: Fault{
 			baseType: baseType,
 			BaseIndexable: BaseIndexable{
-				name:         name,
-				moduleString: module,
-				module:       NewModulePathFromString(module),
-				documentURI:  docId,
+				Name:         name,
+				ModuleString: module,
+				Module:       NewModulePathFromString(module),
+				DocumentURI:  docId,
 				Kind:         protocol.CompletionItemKindEnum,
 			},
 		},
@@ -22,17 +22,17 @@ func NewFaultBuilder(name string, baseType string, module string, docId string) 
 }
 
 func (eb *FaultBuilder) WithoutSourceCode() *FaultBuilder {
-	eb.fault.BaseIndexable.hasSourceCode = false
+	eb.fault.BaseIndexable.HasSourceCode_ = false
 	return eb
 }
 
 func (eb *FaultBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultBuilder {
-	eb.fault.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.fault.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
 func (eb *FaultBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultBuilder {
-	eb.fault.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.fault.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
@@ -40,7 +40,7 @@ func (eb *FaultBuilder) WithDocs(docs string) *FaultBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	eb.fault.BaseIndexable.docComment = &docComment
+	eb.fault.BaseIndexable.DocComment = &docComment
 	return eb
 }
 
@@ -63,10 +63,10 @@ func NewFaultConstantBuilder(name string, module string, docId string) *FaultCon
 	return &FaultConstantBuilder{
 		faultConstant: FaultConstant{
 			BaseIndexable: BaseIndexable{
-				name:         name,
-				moduleString: module,
-				module:       NewModulePathFromString(module),
-				documentURI:  docId,
+				Name:         name,
+				ModuleString: module,
+				Module:       NewModulePathFromString(module),
+				DocumentURI:  docId,
 				Kind:         protocol.CompletionItemKindEnumMember,
 			},
 		},
@@ -74,7 +74,7 @@ func NewFaultConstantBuilder(name string, module string, docId string) *FaultCon
 }
 
 func (eb *FaultConstantBuilder) WithoutSourceCode() *FaultConstantBuilder {
-	eb.faultConstant.BaseIndexable.hasSourceCode = false
+	eb.faultConstant.BaseIndexable.HasSourceCode_ = false
 	return eb
 }
 
@@ -84,12 +84,12 @@ func (eb *FaultConstantBuilder) WithFaultName(faultName string) *FaultConstantBu
 }
 
 func (eb *FaultConstantBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultConstantBuilder {
-	eb.faultConstant.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.faultConstant.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
 func (eb *FaultConstantBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultConstantBuilder {
-	eb.faultConstant.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.faultConstant.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 

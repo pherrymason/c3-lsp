@@ -1,6 +1,9 @@
 package symbols
 
 import (
+	"encoding/json"
+	"fmt"
+
 	sitter "github.com/smacker/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -8,6 +11,27 @@ import (
 type Range struct {
 	Start Position
 	End   Position
+}
+
+// MarshalJSON serializes Range as [[startLine, startChar], [endLine, endChar]]
+func (r Range) MarshalJSON() ([]byte, error) {
+	compact := [2][2]uint{
+		{r.Start.Line, r.Start.Character},
+		{r.End.Line, r.End.Character},
+	}
+	return json.Marshal(compact)
+}
+
+// UnmarshalJSON deserializes Range from [[startLine, startChar], [endLine, endChar]]
+func (r *Range) UnmarshalJSON(data []byte) error {
+	var compact [2][2]uint
+	if err := json.Unmarshal(data, &compact); err != nil {
+		return fmt.Errorf("failed to unmarshal range: %w", err)
+	}
+
+	r.Start = Position{Line: compact[0][0], Character: compact[0][1]}
+	r.End = Position{Line: compact[1][0], Character: compact[1][1]}
+	return nil
 }
 
 func (r Range) HasPosition(position Position) bool {

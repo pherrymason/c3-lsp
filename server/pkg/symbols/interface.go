@@ -37,7 +37,7 @@ func (i *Interface) AddMethods(methods []*Function) {
 }
 
 func (i Interface) GetHoverInfo() string {
-	return fmt.Sprintf("%s", i.name)
+	return fmt.Sprintf("%s", i.Name)
 }
 
 func (i Interface) GetCompletionDetail() string {

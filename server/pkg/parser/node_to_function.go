@@ -98,6 +98,19 @@ func (p *Parser) nodeToFunction(node *sitter.Node, currentModule *idx.Module, do
 		)
 	}
 
+	// Parse attributes (e.g. @private, @inline, etc.)
+	for i := 0; i < int(node.ChildCount()); i++ {
+		child := node.Child(i)
+		if child.Type() == "attributes" {
+			var attributes []string
+			for a := 0; a < int(child.ChildCount()); a++ {
+				attributes = append(attributes, child.Child(a).Content(sourceCode))
+			}
+			symbol.SetAttributes(attributes)
+			break
+		}
+	}
+
 	var variables []*idx.Variable
 	if node.ChildByFieldName("body") != nil {
 		variables = p.FindVariableDeclarations(node, currentModule.GetModuleString(), currentModule, docId, sourceCode)

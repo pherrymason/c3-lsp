@@ -2,7 +2,6 @@ package document
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
@@ -89,7 +88,7 @@ func TestDocument_ParentSymbolInPosition(t *testing.T) {
 
 			assert.Equal(t, tt.expected, parentSymbol.Text())
 			if tt.expected != "" && err != nil {
-				t.Fatalf(fmt.Sprint(err))
+				t.Fatal(err)
 			}
 		})
 	}

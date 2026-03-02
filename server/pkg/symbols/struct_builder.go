@@ -13,7 +13,7 @@ func NewStructBuilder(name string, module string, docId string) *StructBuilder {
 }
 
 func (sb *StructBuilder) WithoutSourceCode() *StructBuilder {
-	sb.strukt.BaseIndexable.hasSourceCode = false
+	sb.strukt.BaseIndexable.HasSourceCode_ = false
 	return sb
 }
 
@@ -21,7 +21,7 @@ func (sb *StructBuilder) WithDocs(docs string) *StructBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	sb.strukt.BaseIndexable.docComment = &docComment
+	sb.strukt.BaseIndexable.DocComment = &docComment
 	return sb
 }
 
@@ -53,12 +53,12 @@ func (b *StructBuilder) WithSubStructMember(name string, baseType Type, module s
 }
 
 func (b *StructBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *StructBuilder {
-	b.strukt.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	b.strukt.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return b
 }
 
 func (b *StructBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *StructBuilder {
-	b.strukt.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	b.strukt.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return b
 }
 

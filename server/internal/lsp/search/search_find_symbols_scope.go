@@ -29,6 +29,11 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 				// Only include current module in the search if there is no scopedToModule
 				if params.scopedToModulePath.IsNone() {
 					currentContextModules = append(currentContextModules, module.GetModule())
+
+					// Also include explicitly imported modules so their symbols
+					for _, importedModule := range module.Imports {
+						currentContextModules = append(currentContextModules, symbols.NewModulePathFromString(importedModule))
+					}
 				}
 				currentModule = module
 				break
@@ -57,6 +62,10 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 	)
 
 	for _, module := range modulesToLook {
+		// Determine if this module is foreign (not the module the cursor is in).
+		// @private symbols should only be visible within their own module.
+		isForeignModule := currentModule == nil || module.GetModuleString() != currentModule.GetModuleString()
+
 		// Only include Module itself, when text is not already prepended with same module name
 		isAlreadyPrepended := params.scopedToModulePath.IsNone() ||
 			(params.scopedToModulePath.IsSome() && module.GetName() != params.scopedToModulePath.Get().GetName() && !strings.HasSuffix(module.GetName(), params.scopedToModulePath.Get().GetName()))
@@ -66,36 +75,63 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 		}
 
 		for _, variable := range module.Variables {
+			if isForeignModule && variable.IsPrivate() {
+				continue
+			}
 			symbolsCollection = append(symbolsCollection, variable)
 		}
 		for _, enum := range module.Enums {
+			if isForeignModule && enum.IsPrivate() {
+				continue
+			}
 			symbolsCollection = append(symbolsCollection, enum)
 			for _, enumerable := range enum.GetEnumerators() {
 				symbolsCollection = append(symbolsCollection, enumerable)
 			}
 		}
 		for _, strukt := range module.Structs {
+			if isForeignModule && strukt.IsPrivate() {
+				continue
+			}
 			symbolsCollection = append(symbolsCollection, strukt)
 		}
 		for _, def := range module.Defs {
+			if isForeignModule && def.IsPrivate() {
+				continue
+			}
 			symbolsCollection = append(symbolsCollection, def)
 		}
 		for _, distinct := range module.Distincts {
+			if isForeignModule && distinct.IsPrivate() {
+				continue
+			}
 			symbolsCollection = append(symbolsCollection, distinct)
 		}
 		for _, fault := range module.Faults {
+			if isForeignModule && fault.IsPrivate() {
+				continue
+			}
 			symbolsCollection = append(symbolsCollection, fault)
 			for _, constant := range fault.GetConstants() {
 				symbolsCollection = append(symbolsCollection, constant)
 			}
 		}
 		for _, interfaces := range module.Interfaces {
+			if isForeignModule && interfaces.IsPrivate() {
+				continue
+			}
 			symbolsCollection = append(symbolsCollection, interfaces)
 		}
 
 		for _, function := range module.ChildrenFunctions {
+			if isForeignModule && function.IsPrivate() {
+				continue
+			}
 			symbolsCollection = append(symbolsCollection, function)
-			if params.position.IsSome() && function.GetDocumentRange().HasPosition(params.position.Get()) {
+
+			// Only inspect function bodies (local variables) for the current module,
+			// not for imported/foreign modules.
+			if !isForeignModule && params.position.IsSome() && function.GetDocumentRange().HasPosition(params.position.Get()) {
 				symbolsCollection = append(symbolsCollection, function)
 
 				for _, variable := range function.Variables {

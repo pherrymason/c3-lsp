@@ -639,10 +639,9 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 	fn void Square.toCircle() {}
 	fn void main() {
 		Square inst;
-		inst.;
+		inst.x;
 	}`
-	//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
-	// originally this test did not had this ';'
+	// cursor is positioned after the dot, before 'x' to trigger completion
 	position := buildPosition(7, 7) // Cursor after `inst.|`
 
 	state := NewTestState(logger)
@@ -718,11 +717,10 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 	fn uint Color.toHex(Color* color) {}
 	fn void main() {
 		Square inst;
-		inst.color.;
+		inst.color.x;
 	}`
-	//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
-	// originally this test did not had this ';'
-	position := buildPosition(7, 13) // Cursor after `inst.|`
+	// cursor is positioned after the second dot, before 'x' to trigger completion
+	position := buildPosition(7, 13) // Cursor after `inst.color.|`
 
 	state := NewTestState(logger)
 	state.registerDoc("test.c3", source)
@@ -1116,9 +1114,12 @@ green.transp`,
 			t.Run(fmt.Sprintf("Autocomplete enum methods: #%s", tt.name), func(t *testing.T) {
 				state := NewTestState(logger)
 
-				//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
-				// originally this test did not had this ';'
-				state.registerDoc("test.c3", source+tt.input+`;}`)
+				// If input ends with '.', append 'x;}' to make valid syntax, otherwise just ';}'
+				suffix := `;}`
+				if strings.HasSuffix(tt.input, ".") {
+					suffix = `x;}`
+				}
+				state.registerDoc("test.c3", source+tt.input+suffix)
 				lines := strings.Split(tt.input, "\n")
 				lastLine := lines[len(lines)-1]
 				position := buildPosition(5+uint(len(lines)-1), uint(len(lastLine))) // Cursor after `<input>|`
@@ -2130,11 +2131,15 @@ func TestBuildCompletionList_distinct(t *testing.T) {
 			expr := ""
 			if tt.expression != "" {
 				// Add cursor at the end of expression if applicable
-				//TODO without `;` inst. does not work because the function_definidion node becomes ERROR without it
-				// originally this test did not had this ';'
+				// If expression ends with '.', use '|||x;' for valid syntax after cursor removal
+				// Otherwise use '|||;' since the expression already ends with an identifier
+				suffix := "|||;\n}"
+				if strings.HasSuffix(tt.expression, ".") {
+					suffix = "|||x;\n}"
+				}
 				expr = `
 fn void func() {
-` + tt.expression + "|||;\n}"
+` + tt.expression + suffix
 			}
 
 			completions := filterOutKeywordSuggestions(CompleteAtCursor(preamble + tt.input + expr))
@@ -2237,4 +2242,278 @@ func TestBuildCompletionList_should_resolve_(t *testing.T) {
 		},
 		completionList,
 	)
+}
+
+func TestBuildCompletionList_cross_module_enum_plain_symbol(t *testing.T) {
+	// Test: typing "Fo" in a module that imports another module defining an Foo enum.
+	// The completion should suggest "Foo" from the imported module.
+	state := NewTestState()
+	state.registerDoc(
+		"my.c3",
+		`module my;
+
+		enum Foo : int {
+			ZERO,
+			ONE,
+			TWO,
+		}`)
+
+	state.registerDoc(
+		"app.c3",
+		`module app;
+		import my;
+
+		fn void test() {
+			Fo
+		}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(5, 5),
+			DocURI:   "app.c3",
+		},
+		&state.state)
+
+	completionList = filterOutKeywordSuggestions(completionList)
+
+	found := false
+	for _, item := range completionList {
+		if item.Label == "Foo" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected 'Foo' enum from imported module in completion list, got: %v", completionList)
+}
+
+func TestBuildCompletionList_cross_module_enum_with_module_path(t *testing.T) {
+	// Test: typing "my::Fo" should suggest "Foo" from my module.
+	state := NewTestState()
+	state.registerDoc(
+		"my.c3",
+		`module my;
+
+		enum Foo : int {
+			ZERO,
+			ONE,
+			TWO,
+		}`)
+
+	state.registerDoc(
+		"app.c3",
+		`module app;
+		import my;
+
+		fn void test() {
+			my::Fo
+		}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(5, 9),
+			DocURI:   "app.c3",
+		},
+		&state.state)
+
+	completionList = filterOutKeywordSuggestions(completionList)
+
+	found := false
+	for _, item := range completionList {
+		if item.Label == "Foo" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Expected 'Foo' enum in completion list when using module path, got: %v", completionList)
+}
+
+func TestBuildCompletionList_cross_module_enum_dot_completion(t *testing.T) {
+	// Test: typing "my::Foo." should suggest enum values ZERO, ONE_IMM, TWO_IMM.
+	state := NewTestState()
+	state.registerDoc(
+		"my.c3",
+		`module app;
+
+		enum Foo : char {
+			ZERO,
+			ONE,
+			TWO,
+		}`)
+
+	state.registerDoc(
+		"app.c3",
+		`module app;
+		import my;
+
+		fn void test() {
+			my::Foo.
+		}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(5, 11),
+			DocURI:   "app.c3",
+		},
+		&state.state)
+	completionList = filterOutKeywordSuggestions(completionList)
+
+	expectedNames := map[string]bool{"ZERO": false, "ONE": false, "TWO": false}
+	for _, item := range completionList {
+		if _, ok := expectedNames[item.Label]; ok {
+			expectedNames[item.Label] = true
+		}
+	}
+
+	for name, found := range expectedNames {
+		assert.True(t, found, "Expected enum value '%s' in completion list, got: %v", name, completionList)
+	}
+}
+
+func TestBuildCompletionList_cross_module_functions_with_module_path(t *testing.T) {
+	// Typing "math::" in a module that imports math (which has only functions).
+	state := NewTestState()
+	state.registerDoc(
+		"math.c3",
+		`module math;
+
+		alias Type = char;
+
+		fn Type min(Type a, Type b) {
+			return a < b ? a : b;
+		}
+
+		fn Type max(Type a, Type b) {
+			return a > b ? a : b;
+		}`)
+
+	state.registerDoc(
+		"app.c3",
+		`module app;
+		import math;
+
+		fn void test() {
+			math::
+		}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(5, 9),
+			DocURI:   "app.c3",
+		},
+		&state.state)
+
+	completionList = filterOutKeywordSuggestions(completionList)
+
+	foundMin := false
+	foundMax := false
+	foundType := false
+	for _, item := range completionList {
+		if item.Label == "min" {
+			foundMin = true
+		}
+		if item.Label == "max" {
+			foundMax = true
+		}
+		if item.Label == "Type" {
+			foundType = true
+		}
+	}
+	assert.True(t, foundMin, "Expected 'min' in completion list, got: %v", completionList)
+	assert.True(t, foundMax, "Expected 'max' in completion list, got: %v", completionList)
+	assert.True(t, foundType, "Expected 'Type' in completion list, got: %v", completionList)
+}
+
+func TestBuildCompletionList_cross_module_private_filtered(t *testing.T) {
+	// @private symbols from imported modules should NOT appear in completions.
+	state := NewTestState()
+	state.registerDoc(
+		"utils.c3",
+		`module utils;
+
+		fn long public_fn(ulong a) {
+			return (long)a;
+		}
+
+		fn ulong helper(int n) @private {
+			return (ulong)1 << n;
+		}`)
+
+	state.registerDoc(
+		"app.c3",
+		`module app;
+		import utils;
+
+		fn void test() {
+			utils::
+		}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(5, 9),
+			DocURI:   "app.c3",
+		},
+		&state.state)
+
+	completionList = filterOutKeywordSuggestions(completionList)
+
+	foundPublic := false
+	foundPrivate := false
+	for _, item := range completionList {
+		if item.Label == "public_fn" {
+			foundPublic = true
+		}
+		if item.Label == "helper" {
+			foundPrivate = true
+		}
+	}
+	assert.True(t, foundPublic, "Expected 'public_fn' in completion list")
+	assert.False(t, foundPrivate, "Expected @private 'helper' to NOT appear in completion list from another module")
+}
+
+func TestBuildCompletionList_same_module_private_visible(t *testing.T) {
+	// @private symbols should still appear when completing within the same module.
+	state := NewTestState()
+	state.registerDoc(
+		"utils.c3",
+		`module utils;
+
+		fn long public_fn(ulong a) {
+			return (long)a;
+		}
+
+		fn ulong helper(int n) @private {
+			return (ulong)1 << n;
+		}
+
+		fn void test() {
+			utils::
+		}`)
+
+	search := NewSearchWithoutLog()
+	completionList := search.BuildCompletionList(
+		context.CursorContext{
+			Position: buildPosition(12, 9),
+			DocURI:   "utils.c3",
+		},
+		&state.state)
+
+	completionList = filterOutKeywordSuggestions(completionList)
+
+	foundPublic := false
+	foundPrivate := false
+	for _, item := range completionList {
+		if item.Label == "public_fn" {
+			foundPublic = true
+		}
+		if item.Label == "helper" {
+			foundPrivate = true
+		}
+	}
+	assert.True(t, foundPublic, "Expected 'public_fn' in completion list within same module")
+	assert.True(t, foundPrivate, "Expected @private 'helper' to appear in completion list within same module")
 }

@@ -31,6 +31,23 @@ func (s *Server) RunDiagnostics(state *project_state.ProjectState, notify glsp.N
 			return
 		}
 
+		// Check for fatal errors (errors not starting with > LSPERR|) e.g., project configuration issues
+		if err != nil && len(errorsInfo) == 0 {
+			stderrOutput := stdErr.String()
+			log.Println("Diagnostics report: c3c command failed:", err)
+
+			// Check if this is a configuration error (missing directory, invalid project.json, etc.)
+			if strings.Contains(stderrOutput, "Can't open the directory") ||
+				strings.Contains(stderrOutput, "No such file or directory") ||
+				strings.Contains(stderrOutput, "project.json") {
+				log.Println("Project configuration error detected. Please check your project.json file and ensure all referenced directories exist.")
+			}
+
+			// Clear old diagnostics since we can't generate new ones
+			s.clearOldDiagnostics(s.state, notify)
+			return
+		}
+
 		if len(errorsInfo) == 0 && err == nil {
 			// No diagnostics to report, clear existing ones.
 			s.clearOldDiagnostics(s.state, notify)

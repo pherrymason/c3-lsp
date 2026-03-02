@@ -6,7 +6,7 @@ ASSETS_DIR = assets
 TREE_SITTER_GENERATE_ABI = 14
 TREE_SITTER_DIR = $(ASSETS_DIR)/tree-sitter-c3
 TREE_SITTER_GIT = git@github.com:c3lang/tree-sitter-c3.git
-TREE_SITTER_COMMIT = 057a75df0c866034d8edce989f701ee2cb0481d8
+TREE_SITTER_COMMIT = 2c04e78
 
 C3C_DIR = $(ASSETS_DIR)/c3c
 C3C_GIT = git@github.com:c3lang/c3c.git
@@ -36,8 +36,6 @@ build-parser:
 
 index-c3-std:
 	export C3C_DIR=$(C3C_DIR) && bash ./bin/build_index.sh
-
-# cp server/stdlib_indexer/stdlib/*.go server/lsp/language/stdlib
 
 build:
 	bash ./bin/build.sh

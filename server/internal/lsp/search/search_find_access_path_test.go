@@ -35,20 +35,23 @@ func SearchUnderCursor_AccessPath(body string, optionalState ...TestState) Searc
 }
 
 func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
-	t.Run("Should find method from std collection", func(t *testing.T) {
-		state := NewTestStateWithStdLibVersion("0.7.7")
+	t.Run("Should find method from struct via access path", func(t *testing.T) {
+		// Mock HashMap and its set method directly instead of depending on stdlib
 		symbolOption := SearchUnderCursor_AccessPath(
 			`module core::actions;
-			import std::collections::map;
 
-			alias ActionListMap = HashMap{char*, ActionList};
+			struct HashMap {
+				int dummy;
+			}
+			fn void HashMap.set(&self, char* key, void* value) {}
+
+			alias ActionListMap = HashMap;
 			struct ActionListManager{
 				ActionListMap actionLists;
 			}
-			fn void ActionListManager.addActionList(&self, ActionList actionList) {
-				self.actionLists.s|||et(actionList.getName(), actionList);
+			fn void ActionListManager.addActionList(&self) {
+				self.actionLists.s|||et("key", null);
 			}`,
-			state,
 		)
 
 		assert.False(t, symbolOption.IsNone(), "Element not found")

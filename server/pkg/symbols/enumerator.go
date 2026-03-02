@@ -44,7 +44,7 @@ func (e *Enumerator) GetEnumFQN() string {
 }
 
 func (e Enumerator) GetHoverInfo() string {
-	return fmt.Sprintf("%s: %s", e.name, e.value)
+	return fmt.Sprintf("%s: %s", e.Name, e.value)
 }
 
 func (e Enumerator) GetCompletionDetail() string {

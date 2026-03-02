@@ -468,9 +468,7 @@ func TestProjectState_findClosestSymbolDeclaration_in_imported_modules(t *testin
 func TestResolve_generic_module_parameters(t *testing.T) {
 	state := NewTestState()
 
-	state.registerDoc(
-		"module.c3",
-		`module foo_test{Type1, Type2};
+	moduleSource := `module foo_test{Type1, Type2};
 		struct Foo
 		{
 			Type1 a;
@@ -478,8 +476,8 @@ func TestResolve_generic_module_parameters(t *testing.T) {
 		fn Type2 test(Type2 b, Foo *foo)
 		{
 			return foo.a + b;
-		}`,
-	)
+		}`
+	state.registerDoc("module.c3", moduleSource)
 
 	position := buildPosition(6, 17) // Cursor at `fn Type2 test(T|ype2 b, Foo *foo)`
 	doc := state.GetDoc("module.c3")
@@ -494,6 +492,44 @@ func TestResolve_generic_module_parameters(t *testing.T) {
 	assert.Equal(t, "Type2", genericParameter.GetName())
 	assert.Equal(t, idx.NewRange(0, 23, 0, 28), genericParameter.GetIdRange())
 	assert.Equal(t, idx.NewRange(0, 23, 0, 28), genericParameter.GetDocumentRange())
+}
+
+func TestResolve_generic_module_parameters_with_auto_ranges(t *testing.T) {
+	state := NewTestState()
+
+	moduleSource := `module foo_test{Type1, Type2};
+		struct Foo
+		{
+			Type1 a;
+		}
+		fn Type2 test(Type2 b, Foo *foo)
+		{
+			return foo.a + b;
+		}`
+	state.registerDoc("module.c3", moduleSource)
+
+	position := buildPosition(6, 17) // Cursor at `fn Type2 test(T|ype2 b, Foo *foo)`
+	doc := state.GetDoc("module.c3")
+	searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
+
+	search := NewSearchWithoutLog()
+	symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+
+	assert.True(t, symbolOption.IsSome())
+
+	genericParameter := symbolOption.Get()
+	assert.Equal(t, "Type2", genericParameter.GetName())
+
+	// There are 2 occurrences of "Type2" in the source:
+	// 1st: in the generic module declaration `module foo_test{Type1, Type2};`
+	// 2nd: in the return type of the function `fn Type2 test(...)`
+	// 3rd: in the parameter `fn Type2 test(Type2 b, ...)`
+	//
+	// We want the 2nd occurrence (index 2) because it is the declaration of the generic parameter
+	expectedRange := findNthRange(moduleSource, "Type2", 1)
+
+	assert.Equal(t, expectedRange, genericParameter.GetIdRange())
+	assert.Equal(t, expectedRange, genericParameter.GetDocumentRange())
 }
 
 func TestProjectState_findClosestSymbolDeclaration_should_find_right_module_when_partial_name_of_module_is_used(t *testing.T) {
@@ -531,5 +567,4 @@ func TestProjectState_findClosestSymbolDeclaration_should_find_right_module_when
 
 	mod := symbolOption.Get().(*idx.Module)
 	assert.Equal(t, "mystd::io", mod.GetName())
-	//assert.Equal(t, idx.FunctionType(idx.UserDefined), mod.FunctionType())
 }

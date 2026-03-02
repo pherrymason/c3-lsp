@@ -55,7 +55,7 @@ func (d Distinct) GetHoverInfo() string {
 		inline = "inline "
 	}
 
-	return fmt.Sprintf("distinct %s = %s%s", d.name, inline, baseType)
+	return fmt.Sprintf("distinct %s = %s%s", d.Name, inline, baseType)
 }
 
 func (d Distinct) GetCompletionDetail() string {

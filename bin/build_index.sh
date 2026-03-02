@@ -6,4 +6,5 @@ fi
 TAG="${TAG:-"v$VERSION"}"
 
 cd "$C3C_DIR" && git fetch --all && git reset --hard origin/master && git checkout tags/$TAG
-cd ../../server/cmd/stdlib_indexer && go run main.go blurp.go --"$VERSION"
+cd ../../server && go run ./cmd/stdlib_indexer_json ../$C3C_DIR
+#cd ../../server/cmd/stdlib_indexer && go run main.go blurp.go --"$VERSION"

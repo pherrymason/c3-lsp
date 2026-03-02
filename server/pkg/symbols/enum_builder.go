@@ -23,17 +23,17 @@ func NewEnumBuilder(name string, baseType string, module string, docId string) *
 }
 
 func (d *EnumBuilder) WithoutSourceCode() *EnumBuilder {
-	d.enum.BaseIndexable.hasSourceCode = false
+	d.enum.BaseIndexable.HasSourceCode_ = false
 	return d
 }
 
 func (eb *EnumBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumBuilder {
-	eb.enum.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.enum.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
 func (eb *EnumBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumBuilder {
-	eb.enum.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.enum.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
@@ -41,7 +41,7 @@ func (eb *EnumBuilder) WithDocs(docs string) *EnumBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	eb.enum.BaseIndexable.docComment = &docComment
+	eb.enum.BaseIndexable.DocComment = &docComment
 	return eb
 }
 
@@ -77,12 +77,12 @@ func NewEnumeratorBuilder(name string, docId string) *EnumeratorBuilder {
 }
 
 func (eb *EnumeratorBuilder) WithoutSourceCode() *EnumeratorBuilder {
-	eb.enumerator.BaseIndexable.hasSourceCode = false
+	eb.enumerator.BaseIndexable.HasSourceCode_ = false
 	return eb
 }
 
 func (eb *EnumeratorBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *EnumeratorBuilder {
-	eb.enumerator.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.enumerator.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 

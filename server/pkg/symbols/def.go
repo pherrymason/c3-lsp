@@ -50,7 +50,7 @@ func (d Def) GetResolvesTo() string {
 
 func (d Def) GetHoverInfo() string {
 	if d.resolvesToType.IsNone() {
-		return fmt.Sprintf("def %s = %s", d.name, d.resolvesTo)
+		return fmt.Sprintf("def %s = %s", d.Name, d.resolvesTo)
 	}
 
 	resolvesTo := d.resolvesToType.Get().String()
@@ -64,13 +64,13 @@ func (d Def) GetHoverInfo() string {
 		resolvesTo += "(<" + strings.Join(genericNames, ", ") + ">)"
 	}
 
-	return fmt.Sprintf("def %s = %s", d.name, resolvesTo)
+	return fmt.Sprintf("def %s = %s", d.Name, resolvesTo)
 }
 
 func (d Def) GetCompletionDetail() string {
 	if d.resolvesToType.IsSome() {
 		return "Type"
-	} else if strings.HasPrefix(d.name, "@") {
+	} else if strings.HasPrefix(d.Name, "@") {
 		return "Alias for macro '" + d.resolvesTo + "'"
 	} else {
 		// No semantic information

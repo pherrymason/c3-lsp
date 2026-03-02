@@ -15,10 +15,10 @@ func NewVariableBuilder(name string, variableType Type, module string, docId str
 		variable: Variable{
 			Type: variableType,
 			BaseIndexable: BaseIndexable{
-				name:         name,
-				moduleString: module,
-				module:       NewModulePathFromString(module),
-				documentURI:  docId,
+				Name:         name,
+				ModuleString: module,
+				Module:       NewModulePathFromString(module),
+				DocumentURI:  docId,
 				Kind:         protocol.CompletionItemKindVariable,
 			},
 		},
@@ -26,17 +26,17 @@ func NewVariableBuilder(name string, variableType Type, module string, docId str
 }
 
 func (vb *VariableBuilder) WithoutSourceCode() *VariableBuilder {
-	vb.variable.BaseIndexable.hasSourceCode = false
+	vb.variable.BaseIndexable.HasSourceCode_ = false
 	return vb
 }
 
 func (vb *VariableBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *VariableBuilder {
-	vb.variable.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	vb.variable.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return vb
 }
 
 func (vb *VariableBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *VariableBuilder {
-	vb.variable.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	vb.variable.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return vb
 }
 
@@ -44,7 +44,7 @@ func (vb *VariableBuilder) WithDocs(docs string) *VariableBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	vb.variable.BaseIndexable.docComment = &docComment
+	vb.variable.BaseIndexable.DocComment = &docComment
 	return vb
 }
 

@@ -70,7 +70,7 @@ func (s Struct) IsUnion() bool {
 }
 
 func (s Struct) GetHoverInfo() string {
-	return fmt.Sprintf("%s", s.name)
+	return fmt.Sprintf("%s", s.Name)
 }
 
 func (s Struct) GetCompletionDetail() string {
@@ -126,13 +126,13 @@ func (m StructMember) GetBitRange() [2]uint {
 }
 
 func (s StructMember) GetHoverInfo() string {
-	return fmt.Sprintf("%s %s", s.baseType, s.name)
+	return fmt.Sprintf("%s %s", s.baseType, s.Name)
 }
 
 func (s StructMember) GetCompletionDetail() string {
 	if s.isStruct {
 		// Anonymous substruct, not much to say
-		return fmt.Sprintf("Struct member '%s'", s.subStruct.Get().name)
+		return fmt.Sprintf("Struct member '%s'", s.subStruct.Get().Name)
 	} else {
 		return s.GetType().String()
 	}

@@ -27,17 +27,17 @@ func NewInterfaceBuilder(name string, module string, docId string) *InterfaceBui
 }
 
 func (ib *InterfaceBuilder) WithoutSourceCode() *InterfaceBuilder {
-	ib._interface.BaseIndexable.hasSourceCode = false
+	ib._interface.BaseIndexable.HasSourceCode_ = false
 	return ib
 }
 
 func (ib *InterfaceBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *InterfaceBuilder {
-	ib._interface.BaseIndexable.idRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	ib._interface.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return ib
 }
 
 func (ib *InterfaceBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *InterfaceBuilder {
-	ib._interface.BaseIndexable.docRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	ib._interface.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return ib
 }
 
@@ -45,7 +45,7 @@ func (ib *InterfaceBuilder) WithDocs(docs string) *InterfaceBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	ib._interface.BaseIndexable.docComment = &docComment
+	ib._interface.BaseIndexable.DocComment = &docComment
 	return ib
 }
 

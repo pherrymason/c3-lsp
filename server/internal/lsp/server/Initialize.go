@@ -53,7 +53,6 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 		path, _ := fs.UriToPath(*params.RootURI)
 		s.loadServerConfigurationForWorkspace(path)
 		s.indexWorkspace()
-
 		s.RunDiagnostics(s.state, context.Notify, false)
 	}
 

@@ -3,6 +3,7 @@ package utils
 func getFeatureFlags() map[string]bool {
 	return map[string]bool{
 		"SIZE_ON_HOVER": false,
+		"USE_SEARCH_V2": false,
 	}
 }
 
