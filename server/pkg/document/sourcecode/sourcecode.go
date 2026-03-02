@@ -96,6 +96,13 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 				gettingModule = true
 			} else if gettingAccess && symbol == "(" {
 				insideParenthesis--
+				if insideParenthesis < 0 {
+					// We've scanned past the opening parenthesis that
+					// encloses our cursor (e.g. `foo(b.` — we just
+					// passed the `(` before `b`). Everything before
+					// this point is irrelevant, so stop scanning.
+					break
+				}
 				if insideParenthesis == 0 {
 					ignoreSymbol = false
 				}
