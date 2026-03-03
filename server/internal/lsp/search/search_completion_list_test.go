@@ -2963,6 +2963,33 @@ func TestPatchBrokenSeparators(t *testing.T) {
 			"mod::\nother::", 12,
 			"mod::_z;\nother::_z;", 15,
 		},
+
+		// --- Unclosed parentheses ---
+		{
+			"bare dot inside unclosed paren, end of line",
+			"bar(c.\nreturn;", 6,
+			"bar(c._z);\nreturn;", 6,
+		},
+		{
+			"bare dot inside unclosed paren at EOF",
+			"bar(c.", 6,
+			"bar(c._z);", 6,
+		},
+		{
+			"bare dot inside unclosed paren with semicolon already",
+			"bar(c.);", 6,
+			"bar(c._z);", 6,
+		},
+		{
+			"bare dot inside nested parens, end of line",
+			"foo(bar(c.\nreturn;", 10,
+			"foo(bar(c._z));\nreturn;", 10,
+		},
+		{
+			"bare dot inside paren on earlier line shifts cursor",
+			"bar(a.\nx.", 8,
+			"bar(a._z);\nx._z;", 12,
+		},
 	}
 
 	for _, tt := range cases {
@@ -2970,6 +2997,49 @@ func TestPatchBrokenSeparators(t *testing.T) {
 			result, newOffset := patchBrokenSeparators(tt.source, tt.cursorOffset)
 			assert.Equal(t, tt.expectedSource, result, "patched source mismatch")
 			assert.Equal(t, tt.expectedOffset, newOffset, "adjusted cursor offset mismatch")
+		})
+	}
+}
+
+func TestBuildCompletionList_unclosed_paren_with_following_statements(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"fn void, no following statement",
+			`struct Foo { int x; }
+			fn void bar(int a) {}
+			fn void main() {
+				Foo foo;
+				bar(foo.|||
+			}`},
+		{"fn int, with return after",
+			`struct Foo { int x; }
+			fn void bar(int a) {}
+			fn int main() {
+				Foo foo;
+				bar(foo.|||
+				return 0;
+			}`},
+		{"fn void, with extra statement after",
+			`struct Foo { int x; }
+			fn void bar(int a) {}
+			fn void main() {
+				Foo foo;
+				bar(foo.|||
+				int y = 1;
+			}`},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			completionList := CompleteAtCursor(tt.body)
+			completionList = filterOutKeywordSuggestions(completionList)
+			t.Logf("Got %d items:", len(completionList))
+			for _, item := range completionList {
+				t.Logf("  - %s", item.Label)
+			}
+			assert.True(t, len(completionList) >= 1, "Expected at least 1 completion (x), got %d", len(completionList))
 		})
 	}
 }

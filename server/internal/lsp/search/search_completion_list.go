@@ -616,12 +616,8 @@ func patchBrokenSeparators(source string, cursorOffset int) (string, int) {
 						newCursorOffset += 2
 					}
 
-					if parenDepth == 0 && needsSemicolon(source, i) {
-						b.WriteByte(';')
-						if posAfter < cursorOffset {
-							newCursorOffset++
-						}
-					}
+					newCursorOffset += writeStatementEnding(&b, source, i, parenDepth, posAfter, cursorOffset)
+					parenDepth = 0 // closing parens resets depth
 					continue
 				}
 			}
@@ -645,12 +641,8 @@ func patchBrokenSeparators(source string, cursorOffset int) (string, int) {
 						newCursorOffset += 2
 					}
 
-					if parenDepth == 0 && needsSemicolon(source, i) {
-						b.WriteByte(';')
-						if posAfter < cursorOffset {
-							newCursorOffset++
-						}
-					}
+					newCursorOffset += writeStatementEnding(&b, source, i, parenDepth, posAfter, cursorOffset)
+					parenDepth = 0 // closing parens resets depth
 					continue
 				}
 			}
@@ -661,6 +653,34 @@ func patchBrokenSeparators(source string, cursorOffset int) (string, int) {
 	}
 
 	return b.String(), newCursorOffset
+}
+
+// writeStatementEnding appends closing parentheses (if parenDepth > 0) and a
+// semicolon (if the rest of the line has none) after a patched separator.
+// Returns the number of bytes by which the cursor offset should be increased.
+func writeStatementEnding(b *strings.Builder, source string, i int, parenDepth int, posAfter int, cursorOffset int) int {
+	shift := 0
+	beforeCursor := posAfter < cursorOffset
+
+	if needsSemicolon(source, i) {
+		// Close any unclosed parentheses.
+		for p := 0; p < parenDepth; p++ {
+			b.WriteByte(')')
+			if beforeCursor {
+				shift++
+			}
+		}
+		b.WriteByte(';')
+		if beforeCursor {
+			shift++
+		}
+	} else if parenDepth == 0 {
+		// Line already has a semicolon and we're not inside parens — nothing to add.
+	}
+	// If parenDepth > 0 but there's already a semicolon on this line, we don't
+	// close parens because the user may have the closing paren elsewhere.
+
+	return shift
 }
 
 // isIdentChar returns true if c is a valid C3 identifier character [a-zA-Z0-9_$].
