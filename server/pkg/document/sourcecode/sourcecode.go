@@ -223,6 +223,11 @@ func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Opti
 	return option.Some(symbolLimits{symbolStart, symbolEnd})
 }
 
+// OffsetToPosition converts a byte offset into a line/character Position.
+func (d SourceCode) OffsetToPosition(index int) symbols.Position {
+	return d.indexToPosition(index)
+}
+
 func (d SourceCode) indexToPosition(index int) symbols.Position {
 	character := 0
 	line := 0
