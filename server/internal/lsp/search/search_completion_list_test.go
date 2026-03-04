@@ -2779,6 +2779,89 @@ func TestBuildCompletionList_struct_bare_dot_various_contexts(t *testing.T) {
 	}
 }
 
+func TestBuildCompletionList_struct_dot_inside_nested_blocks(t *testing.T) {
+	// Variables declared inside nested blocks (while, for, if, etc.)
+	// must be found by the parser and available for dot-completion.
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"variable declared inside while block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				int i = 0;
+				while (i < 10) {
+					Page p;
+					p.|||;
+				}
+			}`},
+		{"variable declared inside for block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				for (int i = 0; i < 10; i++) {
+					Page p;
+					p.|||;
+				}
+			}`},
+		{"variable declared inside if block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				if (true) {
+					Page p;
+					p.|||;
+				}
+			}`},
+		{"variable declared inside else block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				if (false) {
+				} else {
+					Page p;
+					p.|||;
+				}
+			}`},
+		{"variable declared 2 levels deep (while > if)",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				while (true) {
+					if (true) {
+						Page p;
+						p.|||;
+					}
+				}
+			}`},
+		{"bare dot without semicolon inside while block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				while (true) {
+					Page p;
+					p.|||
+				}
+			}`},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			completionList := CompleteAtCursor(tt.body)
+			completionList = filterOutKeywordSuggestions(completionList)
+			t.Logf("Got %d items:", len(completionList))
+			for _, item := range completionList {
+				t.Logf("  - %s", item.Label)
+			}
+
+			expectedNames := map[string]bool{"data": false, "flags": false}
+			for _, item := range completionList {
+				if _, ok := expectedNames[item.Label]; ok {
+					expectedNames[item.Label] = true
+				}
+			}
+			for name, found := range expectedNames {
+				assert.True(t, found, "Expected member '%s' in completion list", name)
+			}
+		})
+	}
+}
+
 func TestBuildCompletionList_struct_bare_dot_with_other_errors_in_file(t *testing.T) {
 	// When the file has other broken lines (like an incomplete "pool." on a
 	// different line), tree-sitter's error recovery can swallow the entire
