@@ -518,9 +518,15 @@ func (s *Search) BuildCompletionList(
 // a bare dot expression like "c.;" produces an ERROR node, causing local
 // variable declarations in the same function body to be lost.
 //
-// It inserts a placeholder identifier ("_z") at the cursor position so that
-// tree-sitter can parse the expression as "c._z;" (a valid field access),
-// re-parses the document, and temporarily registers it in the project state.
+// It patches ALL bare dot expressions in the source (not just the one at the
+// cursor) because a single broken expression elsewhere in the file can cause
+// tree-sitter's error recovery to swallow the entire function body into an
+// ERROR node, hiding variable declarations needed for completion.
+//
+// A "bare dot" is a '.' followed by a non-identifier character such as
+// whitespace, ';', newline, ')', '}', or ']'. For each bare dot it inserts
+// a placeholder identifier ("_z") and, when there is no trailing semicolon
+// before a newline, also appends one so tree-sitter can parse the statement.
 //
 // Returns the placeholder document, the symbol-in-position from the modified
 // source, and a cleanup function that MUST be called (typically via defer) to
@@ -536,24 +542,22 @@ func (s *Search) retryWithPlaceholder(
 	cleanup := func() {}
 
 	source := doc.SourceCode.Text
-	offset := cursorPos.IndexIn(source)
-	if offset < 0 || offset > len(source) {
+	cursorOffset := cursorPos.IndexIn(source)
+	if cursorOffset < 0 || cursorOffset > len(source) {
 		return nil, sourcecode.Word{}, cleanup
 	}
 
-	// Insert a placeholder identifier at the cursor position.
-	// Note: a single-character placeholder can still produce an ERROR node.
-	// We use "_z" which is a valid lowercase identifier.
-	modified := source[:offset] + "_z" + source[offset:]
+	modified, newCursorOffset := patchBrokenSeparators(source, cursorOffset)
 
 	placeholderDoc := document.NewDocument(doc.URI, modified)
 	parser := p.NewParser(s.logger)
 	state.RefreshDocumentIdentifiers(&placeholderDoc, &parser)
 
-	// The placeholder "_z" is now at cursorPos. SymbolInPosition scans backwards
-	// from the given index, so we pass cursorPos to land on "_z".
+	// Compute the new cursor position from the adjusted offset.
+	newCursorPos := placeholderDoc.SourceCode.OffsetToPosition(newCursorOffset)
+
 	placeholderSymbol := placeholderDoc.SourceCode.SymbolInPosition(
-		cursorPos,
+		newCursorPos,
 		state.GetUnitModulesByDoc(doc.URI),
 	)
 
@@ -564,6 +568,143 @@ func (s *Search) retryWithPlaceholder(
 	}
 
 	return &placeholderDoc, placeholderSymbol, cleanup
+}
+
+// patchBrokenSeparators finds every bare "." and bare "::" in source and
+// inserts a placeholder identifier ("_z") so tree-sitter can parse them as
+// valid field accesses / module paths. If a bare separator appears at the end
+// of a statement line (no semicolon before newline and not inside parentheses),
+// a semicolon is also appended.
+//
+// cursorOffset is the byte offset of the cursor in the original source
+// (typically the character right after the trigger separator).
+//
+// Returns the patched source and the adjusted cursor offset in the new source.
+func patchBrokenSeparators(source string, cursorOffset int) (string, int) {
+	var b strings.Builder
+	b.Grow(len(source) + 64)
+
+	newCursorOffset := cursorOffset
+	parenDepth := 0
+	i := 0
+
+	for i < len(source) {
+		ch := source[i]
+
+		// Track parenthesis depth so we don't insert semicolons inside calls.
+		if ch == '(' {
+			parenDepth++
+		} else if ch == ')' && parenDepth > 0 {
+			parenDepth--
+		}
+
+		// --- Bare "::" ---
+		if ch == ':' && i+1 < len(source) && source[i+1] == ':' && i > 0 {
+			prevCh := source[i-1]
+			if isIdentChar(prevCh) {
+				afterColons := byte(0)
+				if i+2 < len(source) {
+					afterColons = source[i+2]
+				}
+				if !isIdentChar(afterColons) {
+					b.WriteString("::")
+					posAfter := i + 2
+					i = posAfter
+
+					b.WriteString("_z")
+					if posAfter < cursorOffset {
+						newCursorOffset += 2
+					}
+
+					newCursorOffset += writeStatementEnding(&b, source, i, parenDepth, posAfter, cursorOffset)
+					parenDepth = 0 // closing parens resets depth
+					continue
+				}
+			}
+		}
+
+		// --- Bare "." ---
+		if ch == '.' && i > 0 {
+			prevCh := source[i-1]
+			if isIdentChar(prevCh) || prevCh == ')' {
+				nextCh := byte(0)
+				if i+1 < len(source) {
+					nextCh = source[i+1]
+				}
+				if !isIdentChar(nextCh) {
+					b.WriteByte('.')
+					posAfter := i + 1
+					i = posAfter
+
+					b.WriteString("_z")
+					if posAfter < cursorOffset {
+						newCursorOffset += 2
+					}
+
+					newCursorOffset += writeStatementEnding(&b, source, i, parenDepth, posAfter, cursorOffset)
+					parenDepth = 0 // closing parens resets depth
+					continue
+				}
+			}
+		}
+
+		b.WriteByte(ch)
+		i++
+	}
+
+	return b.String(), newCursorOffset
+}
+
+// writeStatementEnding appends closing parentheses (if parenDepth > 0) and a
+// semicolon (if the rest of the line has none) after a patched separator.
+// Returns the number of bytes by which the cursor offset should be increased.
+func writeStatementEnding(b *strings.Builder, source string, i int, parenDepth int, posAfter int, cursorOffset int) int {
+	shift := 0
+	beforeCursor := posAfter < cursorOffset
+
+	if needsSemicolon(source, i) {
+		// Close any unclosed parentheses.
+		for p := 0; p < parenDepth; p++ {
+			b.WriteByte(')')
+			if beforeCursor {
+				shift++
+			}
+		}
+		b.WriteByte(';')
+		if beforeCursor {
+			shift++
+		}
+	} else if parenDepth == 0 {
+		// Line already has a semicolon and we're not inside parens — nothing to add.
+	}
+	// If parenDepth > 0 but there's already a semicolon on this line, we don't
+	// close parens because the user may have the closing paren elsewhere.
+
+	return shift
+}
+
+// isIdentChar returns true if c is a valid C3 identifier character [a-zA-Z0-9_$].
+func isIdentChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '$'
+}
+
+// needsSemicolon checks whether position i in source is followed (ignoring
+// spaces/tabs) by a newline or EOF, meaning the statement has no semicolon.
+func needsSemicolon(source string, i int) bool {
+	for j := i; j < len(source); j++ {
+		switch source[j] {
+		case ' ', '\t':
+			continue
+		case '\n', '\r':
+			return true
+		case ';':
+			return false
+		default:
+			return false
+		}
+	}
+	// EOF without semicolon
+	return true
 }
 
 // Returns whether members can be read from the found symbol, the 'fromDistinct' status, the list of

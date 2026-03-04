@@ -2625,3 +2625,504 @@ func TestBuildCompletionList_struct_bare_dot_cross_module(t *testing.T) {
 		assert.True(t, found, "Expected value '%s' in completion list, got: %v", name, completionList)
 	}
 }
+
+func TestBuildCompletionList_struct_bare_dot_various_contexts(t *testing.T) {
+	// Test dot-completion in every common context where a user might type "c."
+	// without a semicolon yet (the realistic "typing" scenario).
+	cases := []struct {
+		name string
+		body string
+	}{
+		// Basic cases
+		{"bare statement c.;",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				c.|||;
+			}`},
+		{"bare statement c. (no semicolon)",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				c.|||
+			}`},
+
+		// After = (assignment)
+		{"after = with semicolon",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				int a = c.|||;
+			}`},
+		{"after = without semicolon",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				int a = c.|||
+			}`},
+
+		// Inside function call arguments
+		{"inside function call: foo(c.",
+			`struct Color { int r; int g; int b; }
+			fn void foo(int x) {}
+			fn void main() {
+				Color c;
+				foo(c.|||
+			}`},
+		{"inside function call with semicolon: foo(c.);",
+			`struct Color { int r; int g; int b; }
+			fn void foo(int x) {}
+			fn void main() {
+				Color c;
+				foo(c.|||);
+			}`},
+		{"inside function call after comma: foo(1, c.",
+			`struct Color { int r; int g; int b; }
+			fn void foo(int x, int y) {}
+			fn void main() {
+				Color c;
+				foo(1, c.|||
+			}`},
+
+		// Return statement
+		{"return c. (no semicolon)",
+			`struct Color { int r; int g; int b; }
+			fn int main() {
+				Color c;
+				return c.|||
+			}`},
+		{"return c.; (with semicolon)",
+			`struct Color { int r; int g; int b; }
+			fn int main() {
+				Color c;
+				return c.|||;
+			}`},
+
+		// Inside if condition
+		{"inside if condition: if (c.)",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				if (c.|||) {}
+			}`},
+
+		// Inside while condition
+		{"inside while condition: while (c.)",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				while (c.|||) {}
+			}`},
+
+		// Array index
+		{"inside array index: arr[c.]",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				int[4] arr;
+				arr[c.|||];
+			}`},
+
+		// After + operator
+		{"after + operator: 1 + c.",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				int a = 1 + c.|||
+			}`},
+
+		// Chained: c.r + c.
+		{"after chain expression: c.r + c.",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				int a = c.r + c.|||
+			}`},
+
+		// After comparison
+		{"after comparison: a == c.",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				int a;
+				bool x = a == c.|||
+			}`},
+
+		// Nested in ternary
+		{"in ternary: true ? c. : 0",
+			`struct Color { int r; int g; int b; }
+			fn void main() {
+				Color c;
+				int a = true ? c.||| : 0;
+			}`},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			completionList := CompleteAtCursor(tt.body)
+			completionList = filterOutKeywordSuggestions(completionList)
+			t.Logf("Got %d items:", len(completionList))
+			for _, item := range completionList {
+				t.Logf("  - %s", item.Label)
+			}
+
+			expectedNames := map[string]bool{"r": false, "g": false, "b": false}
+			for _, item := range completionList {
+				if _, ok := expectedNames[item.Label]; ok {
+					expectedNames[item.Label] = true
+				}
+			}
+			for name, found := range expectedNames {
+				assert.True(t, found, "Expected member '%s' in completion list", name)
+			}
+		})
+	}
+}
+
+func TestBuildCompletionList_struct_dot_inside_nested_blocks(t *testing.T) {
+	// Variables declared inside nested blocks (while, for, if, etc.)
+	// must be found by the parser and available for dot-completion.
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"variable declared inside while block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				int i = 0;
+				while (i < 10) {
+					Page p;
+					p.|||;
+				}
+			}`},
+		{"variable declared inside for block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				for (int i = 0; i < 10; i++) {
+					Page p;
+					p.|||;
+				}
+			}`},
+		{"variable declared inside if block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				if (true) {
+					Page p;
+					p.|||;
+				}
+			}`},
+		{"variable declared inside else block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				if (false) {
+				} else {
+					Page p;
+					p.|||;
+				}
+			}`},
+		{"variable declared 2 levels deep (while > if)",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				while (true) {
+					if (true) {
+						Page p;
+						p.|||;
+					}
+				}
+			}`},
+		{"bare dot without semicolon inside while block",
+			`struct Page { int data; int flags; }
+			fn void main() {
+				while (true) {
+					Page p;
+					p.|||
+				}
+			}`},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			completionList := CompleteAtCursor(tt.body)
+			completionList = filterOutKeywordSuggestions(completionList)
+			t.Logf("Got %d items:", len(completionList))
+			for _, item := range completionList {
+				t.Logf("  - %s", item.Label)
+			}
+
+			expectedNames := map[string]bool{"data": false, "flags": false}
+			for _, item := range completionList {
+				if _, ok := expectedNames[item.Label]; ok {
+					expectedNames[item.Label] = true
+				}
+			}
+			for name, found := range expectedNames {
+				assert.True(t, found, "Expected member '%s' in completion list", name)
+			}
+		})
+	}
+}
+
+func TestBuildCompletionList_struct_bare_dot_with_other_errors_in_file(t *testing.T) {
+	// When the file has other broken lines (like an incomplete "pool." on a
+	// different line), tree-sitter's error recovery can swallow the entire
+	// function body into an ERROR node, hiding variable declarations.
+	// The placeholder workaround must fix ALL bare dots, not just the one at cursor.
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"bare dot on earlier line, cursor on later bare dot",
+			`struct Pool { int x; int y; int z; }
+			fn void Pool.init(Pool* self, int n) {}
+			fn void Pool.clean_pool(Pool* self) {}
+			fn int main() {
+				Pool pool;
+				pool.init(3);
+				defer pool.clean_pool();
+				pool.
+				int a = pool.|||;
+				return 0;
+			}`},
+		{"bare dot on earlier line, cursor on bare dot without semicolon",
+			`struct Pool { int x; int y; int z; }
+			fn void Pool.init(Pool* self, int n) {}
+			fn void Pool.clean_pool(Pool* self) {}
+			fn int main() {
+				Pool pool;
+				pool.init(3);
+				defer pool.clean_pool();
+				pool.
+				int b = pool.|||
+				return 0;
+			}`},
+		{"multiple bare dots in file, cursor on the first one",
+			`struct Pool { int x; int y; int z; }
+			fn int main() {
+				Pool pool;
+				pool.|||
+				int a = pool.;
+				int b = pool.
+				return 0;
+			}`},
+		{"bare dot without semicolon on earlier line, cursor on line with semicolon",
+			`struct Pool { int x; int y; int z; }
+			fn int main() {
+				Pool pool;
+				pool.
+				int a = pool.|||;
+				return 0;
+			}`},
+		{"valid code after bare dot line",
+			`struct Pool { int x; int y; int z; }
+			fn void Pool.do_thing(Pool* self) {}
+			fn int main() {
+				Pool pool;
+				pool.
+				pool.do_thing();
+				pool.|||
+				return 0;
+			}`},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			completionList := CompleteAtCursor(tt.body)
+			completionList = filterOutKeywordSuggestions(completionList)
+			t.Logf("Got %d items:", len(completionList))
+			for _, item := range completionList {
+				t.Logf("  - %s", item.Label)
+			}
+
+			expectedNames := map[string]bool{"x": false, "y": false, "z": false}
+			for _, item := range completionList {
+				if _, ok := expectedNames[item.Label]; ok {
+					expectedNames[item.Label] = true
+				}
+			}
+			for name, found := range expectedNames {
+				assert.True(t, found, "Expected member '%s' in completion list", name)
+			}
+		})
+	}
+}
+
+func TestPatchBrokenSeparators(t *testing.T) {
+	cases := []struct {
+		name           string
+		source         string
+		cursorOffset   int // cursor is right after the trigger separator
+		expectedSource string
+		expectedOffset int
+	}{
+		// --- Bare dots ---
+		{
+			"bare dot with semicolon, cursor at dot",
+			"c.;", 2,
+			"c._z;", 2,
+		},
+		{
+			"bare dot at EOF, cursor at dot",
+			"c.", 2,
+			"c._z;", 2,
+		},
+		{
+			"bare dot before newline, cursor at dot",
+			"c.\nfoo;", 2,
+			"c._z;\nfoo;", 2,
+		},
+		{
+			"dot with identifier is not patched",
+			"c.foo;", 2,
+			"c.foo;", 2,
+		},
+		{
+			"method declaration dot is not patched",
+			"fn void Pool.init() {}", 13,
+			"fn void Pool.init() {}", 13,
+		},
+		{
+			"bare dot on earlier line shifts cursor on later line",
+			// "a.\nb." cursor after second dot (offset 4)
+			"a.\nb.", 4,
+			"a._z;\nb._z;", 7,
+			// a._z;\n = 6 bytes before b, cursor was at 4, shift +3 from first patch
+		},
+		{
+			"multiple bare dots before cursor",
+			// "a.\nb.\nc." cursor after third dot (offset 7)
+			"a.\nb.\nc.", 7,
+			"a._z;\nb._z;\nc._z;", 13,
+		},
+		{
+			"assignment with bare dot and semicolon",
+			"int x = a.;", 10,
+			"int x = a._z;", 10,
+		},
+		{
+			"assignment with bare dot, no semicolon before newline",
+			"int x = a.\nreturn;", 10,
+			"int x = a._z;\nreturn;", 10,
+		},
+		{
+			"dot after closing paren",
+			"foo().\nbar;", 6,
+			"foo()._z;\nbar;", 6,
+		},
+		{
+			"float literal is not patched",
+			"3.14", 2,
+			"3.14", 2,
+		},
+		{
+			"cursor after earlier bare dot, later dot also patched",
+			// "a.\nb.foo;" cursor after first dot (offset 2)
+			"a.\nb.foo;", 2,
+			"a._z;\nb.foo;", 2,
+		},
+
+		// --- Bare :: ---
+		{
+			"bare :: with semicolon, cursor at ::",
+			"mod::;", 5,
+			"mod::_z;", 5,
+		},
+		{
+			"bare :: at EOF, cursor at ::",
+			"mod::", 5,
+			"mod::_z;", 5,
+		},
+		{
+			"bare :: before newline, cursor at ::",
+			"mod::\nfoo;", 5,
+			"mod::_z;\nfoo;", 5,
+		},
+		{
+			":: with identifier is not patched",
+			"mod::func;", 5,
+			"mod::func;", 5,
+		},
+		{
+			"bare :: on earlier line shifts cursor",
+			"mod::\nother::", 12,
+			"mod::_z;\nother::_z;", 15,
+		},
+
+		// --- Unclosed parentheses ---
+		{
+			"bare dot inside unclosed paren, end of line",
+			"bar(c.\nreturn;", 6,
+			"bar(c._z);\nreturn;", 6,
+		},
+		{
+			"bare dot inside unclosed paren at EOF",
+			"bar(c.", 6,
+			"bar(c._z);", 6,
+		},
+		{
+			"bare dot inside unclosed paren with semicolon already",
+			"bar(c.);", 6,
+			"bar(c._z);", 6,
+		},
+		{
+			"bare dot inside nested parens, end of line",
+			"foo(bar(c.\nreturn;", 10,
+			"foo(bar(c._z));\nreturn;", 10,
+		},
+		{
+			"bare dot inside paren on earlier line shifts cursor",
+			"bar(a.\nx.", 8,
+			"bar(a._z);\nx._z;", 12,
+		},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			result, newOffset := patchBrokenSeparators(tt.source, tt.cursorOffset)
+			assert.Equal(t, tt.expectedSource, result, "patched source mismatch")
+			assert.Equal(t, tt.expectedOffset, newOffset, "adjusted cursor offset mismatch")
+		})
+	}
+}
+
+func TestBuildCompletionList_unclosed_paren_with_following_statements(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"fn void, no following statement",
+			`struct Foo { int x; }
+			fn void bar(int a) {}
+			fn void main() {
+				Foo foo;
+				bar(foo.|||
+			}`},
+		{"fn int, with return after",
+			`struct Foo { int x; }
+			fn void bar(int a) {}
+			fn int main() {
+				Foo foo;
+				bar(foo.|||
+				return 0;
+			}`},
+		{"fn void, with extra statement after",
+			`struct Foo { int x; }
+			fn void bar(int a) {}
+			fn void main() {
+				Foo foo;
+				bar(foo.|||
+				int y = 1;
+			}`},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			completionList := CompleteAtCursor(tt.body)
+			completionList = filterOutKeywordSuggestions(completionList)
+			t.Logf("Got %d items:", len(completionList))
+			for _, item := range completionList {
+				t.Logf("  - %s", item.Label)
+			}
+			assert.True(t, len(completionList) >= 1, "Expected at least 1 completion (x), got %d", len(completionList))
+		})
+	}
+}
