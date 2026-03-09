@@ -1,7 +1,6 @@
 package search
 
 import (
-	"fmt"
 	"strings"
 
 	p "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
@@ -81,6 +80,11 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 				// Only include current module in the search if there is no scopedToModule
 				if params.scopedToModulePath.IsNone() {
 					currentContextModules = append(currentContextModules, module.GetModule())
+
+					// Also include explicitly imported modules so their symbols
+					for _, importedModule := range module.Imports {
+						currentContextModules = append(currentContextModules, symbols.NewModulePathFromString(importedModule))
+					}
 				}
 				currentModule = module
 				break
@@ -225,11 +229,17 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 				continue
 			}
 			symbolsCollection = append(symbolsCollection, enum)
-			for _, enumerable := range enum.GetEnumerators() {
-				if shouldSkipSymbol(module, enumerable) {
-					continue
+			// Only inline enumerators when not scoped to an explicit module path.
+			// When the user writes "some_module::", they want top-level enum type (eg. Foo),
+			// not individual enum values (ONE, TWO). Enum values are accessed
+			// via the enum type (e.g. Foo.ONE).
+			if params.scopedToModulePath.IsNone() {
+				for _, enumerable := range enum.GetEnumerators() {
+					if shouldSkipSymbol(module, enumerable) {
+						continue
+					}
+					symbolsCollection = append(symbolsCollection, enumerable)
 				}
-				symbolsCollection = append(symbolsCollection, enumerable)
 			}
 		}
 		for _, strukt := range module.Structs {
@@ -238,28 +248,30 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 			}
 			symbolsCollection = append(symbolsCollection, strukt)
 		}
-		for _, def := range module.Defs {
+		for _, def := range module.Aliases {
 			if shouldSkipSymbol(module, def) {
 				continue
 			}
 			symbolsCollection = append(symbolsCollection, def)
 		}
-		for _, distinct := range module.Distincts {
+		for _, distinct := range module.TypeDefs {
 			if shouldSkipSymbol(module, distinct) {
 				continue
 			}
 			symbolsCollection = append(symbolsCollection, distinct)
 		}
-		for _, fault := range module.Faults {
+		for _, fault := range module.FaultDefs {
 			if shouldSkipSymbol(module, fault) {
 				continue
 			}
 			symbolsCollection = append(symbolsCollection, fault)
-			for _, constant := range fault.GetConstants() {
-				if shouldSkipSymbol(module, constant) {
-					continue
+			if params.scopedToModulePath.IsNone() {
+				for _, constant := range fault.GetConstants() {
+					if shouldSkipSymbol(module, constant) {
+						continue
+					}
+					symbolsCollection = append(symbolsCollection, constant)
 				}
-				symbolsCollection = append(symbolsCollection, constant)
 			}
 		}
 		for _, interfaces := range module.Interfaces {
@@ -274,9 +286,9 @@ func (s *Search) findSymbolsInScope(params FindSymbolsParams, state *p.ProjectSt
 				continue
 			}
 			symbolsCollection = append(symbolsCollection, function)
-			if params.position.IsSome() && function.GetDocumentRange().HasPosition(params.position.Get()) {
+			if currentModule != nil && module.GetModuleString() == currentModule.GetModuleString() && params.position.IsSome() && function.GetDocumentRange().HasPosition(params.position.Get()) {
 				for _, variable := range function.Variables {
-					s.logger.Debug(fmt.Sprintf("Checking %s variable:", variable.GetName()))
+					s.logger.Debug("checking variable", "name", variable.GetName())
 					declarationPosition := variable.GetIdRange().End
 					if declarationPosition.Line > uint(params.position.Get().Line) ||
 						(declarationPosition.Line == uint(params.position.Get().Line) && declarationPosition.Character > uint(params.position.Get().Character)) {

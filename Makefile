@@ -54,6 +54,14 @@ build-dev:
 
 build-all: build-darwin build-linux
 
+# Build windows-amd64 from macOS
+build-windows-from-osx:
+	@echo "Building windows-amd64 from macOS"
+	@if [ "$(shell uname -s)" != "Darwin" ]; then echo "build-windows-from-osx must run on macOS"; exit 1; fi
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC="x86_64-w64-mingw32-gcc" go build -C ./server/cmd/lsp -o ../../bin/c3lsp.exe
+	cd ./server/bin && zip ./windows-amd64-c3lsp.zip c3lsp.exe
+	@echo "windows-amd64 built"
+
 # Build darwin-amd64
 build-darwin:
 	@echo "Building darwin-amd64"
@@ -88,6 +96,18 @@ pack-release:
 
 test:
 	cd server && go test ./...
+
+test-race-server:
+	cd server && go test -race ./internal/lsp/server ./internal/lsp/project_state ./internal/lsp/search ./internal/lsp/search_v2
+
+perf-gate:
+	bash ./bin/perf_gate.sh
+
+perf-metrics-update:
+	bash ./bin/perf_metrics_update.sh
+
+perf-lsp-metrics-update:
+	bash ./bin/lsp_perf_metrics_update.sh
 
 
 ## VS Code extension

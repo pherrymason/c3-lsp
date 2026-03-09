@@ -24,10 +24,10 @@ func NewSourceCode(text string) SourceCode {
 	return SourceCode{Text: text}
 }
 
-var symbolPattern = regexp.MustCompile(`^[\$@a-zA-Z0-9_]+$`)
+var symbolPattern = regexp.MustCompile(`^[\$#@a-zA-Z0-9_]+$`)
 
 func isSymbolRune(r rune) bool {
-	return utils.IsAZ09_(r) || r == '@'
+	return utils.IsAZ09_(r) || r == '@' || r == '$' || r == '#'
 }
 
 // Tries to find the symbol under cursor position
@@ -38,16 +38,13 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 	gettingAccess := false
 	gettingModule := false
 	ignoreSymbol := false
-	insideParenthesis := 0
+	insideAccessNesting := 0
 
 	wb := NewWordBuilderE()
 	var accessPath []Word
 	var modulePath []Word
 
-	for {
-		if index < 0 {
-			break
-		}
+	for index >= 0 {
 
 		limitsOpt := s.getWordIndexLimits(index, true)
 		if limitsOpt.IsNone() {
@@ -63,12 +60,12 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 
 		// Just ignore content inside parenthesis
 		if symbolPattern.MatchString(symbol) {
-			if gettingAccess && insideParenthesis == 0 /*!ignoreSymbol*/ {
+			if gettingAccess && insideAccessNesting == 0 /*!ignoreSymbol*/ {
 				accessPath = append([]Word{{
 					text:      symbol,
 					textRange: posRange,
 				}}, accessPath...)
-			} else if gettingModule && insideParenthesis == 0 /*!ignoreSymbol*/ {
+			} else if gettingModule && insideAccessNesting == 0 /*!ignoreSymbol*/ {
 				modulePath = append([]Word{{
 					text:      symbol,
 					textRange: posRange,
@@ -98,15 +95,18 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 			} else if symbol == ":" {
 				gettingAccess = false
 				gettingModule = true
-			} else if gettingAccess && symbol == "(" {
-				insideParenthesis--
-				if insideParenthesis == 0 {
+			} else if gettingAccess && (symbol == "(" || symbol == "[") {
+				insideAccessNesting--
+				if insideAccessNesting < 0 {
+					break
+				}
+				if insideAccessNesting == 0 {
 					ignoreSymbol = false
 				}
-			} else if gettingAccess && symbol == ")" {
+			} else if gettingAccess && (symbol == ")" || symbol == "]") {
 				ignoreSymbol = true
-				insideParenthesis++
-			} else if insideParenthesis > 0 {
+				insideAccessNesting++
+			} else if insideAccessNesting > 0 {
 
 			} else {
 				// End
@@ -125,10 +125,7 @@ func (s SourceCode) SymbolInPosition(cursorPosition symbols.Position, docModules
 func (s SourceCode) RewindBeforePreviousParenthesis(cursorPosition symbols.Position) option.Option[symbols.Position] {
 
 	parentFound := false
-	for {
-		if cursorPosition.Character == 0 {
-			break
-		}
+	for cursorPosition.Character != 0 {
 
 		cursorPosition.Character -= 1
 		index := cursorPosition.IndexIn(s.Text)
@@ -182,7 +179,16 @@ func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Opti
 		return option.None[symbolLimits]()
 	}
 
-	if !isSymbolRune(rune(s.Text[index])) {
+	for index > 0 && !utf8.RuneStart(s.Text[index]) {
+		index--
+	}
+
+	r, size := utf8.DecodeRuneInString(s.Text[index:])
+	if r == utf8.RuneError && size == 0 {
+		return option.None[symbolLimits]()
+	}
+
+	if !isSymbolRune(r) {
 		if returnAnyway {
 			return option.Some(symbolLimits{index, index})
 		} else {
@@ -190,25 +196,31 @@ func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Opti
 		}
 	}
 
-	symbolStart := 0
-	for i := index; i >= 0; i-- {
-		r := rune(s.Text[i])
-		if !isSymbolRune(r) {
-			// First invalid character found, that means previous iteration contained first character of symbol
-			symbolStart = i + 1
+	symbolStart := index
+	for current := index; current > 0; {
+		prev := current - 1
+		for prev > 0 && !utf8.RuneStart(s.Text[prev]) {
+			prev--
+		}
+
+		pr, _ := utf8.DecodeRuneInString(s.Text[prev:])
+		if !isSymbolRune(pr) {
 			break
 		}
+
+		symbolStart = prev
+		current = prev
 	}
 
-	symbolEnd := len(s.Text) - 1
-	for i := index; i < len(s.Text); i++ {
-		r := rune(s.Text[i])
-		if !isSymbolRune(r) {
-			// First invalid character found, that means previous iteration contained last character of symbol
-			symbolEnd = i - 1
+	symbolEndExclusive := index + size
+	for symbolEndExclusive < len(s.Text) {
+		nextRune, nextSize := utf8.DecodeRuneInString(s.Text[symbolEndExclusive:])
+		if !isSymbolRune(nextRune) {
 			break
 		}
+		symbolEndExclusive += nextSize
 	}
+	symbolEnd := symbolEndExclusive - 1
 
 	if symbolStart < 0 || symbolStart >= len(s.Text) {
 		return option.None[symbolLimits]()
@@ -219,6 +231,11 @@ func (s SourceCode) getWordIndexLimits(index int, returnAnyway bool) option.Opti
 	}
 
 	return option.Some(symbolLimits{symbolStart, symbolEnd})
+}
+
+// OffsetToPosition converts a byte offset into a line/character Position.
+func (d SourceCode) OffsetToPosition(index int) symbols.Position {
+	return d.indexToPosition(index)
 }
 
 func (d SourceCode) indexToPosition(index int) symbols.Position {
@@ -248,23 +265,4 @@ func (d SourceCode) indexToPosition(index int) symbols.Position {
 		Line:      uint(line),
 		Character: uint(character),
 	}
-}
-
-func (s SourceCode) modulePathAtIndex(index int) option.Option[string] {
-	/*if !utils.IsAZ09_(rune(s.Text[index])) {
-		return option.None[string]()
-	}*/
-
-	symbolStart := 0
-	for i := index; i >= 0; i-- {
-		r := rune(s.Text[i])
-		if utils.IsAZ09_(r) || r == ':' {
-			// First invalid character found, that means previous iteration contained first character of symbol
-			symbolStart = i
-		} else {
-			break
-		}
-	}
-
-	return option.Some(s.Text[symbolStart:index])
 }

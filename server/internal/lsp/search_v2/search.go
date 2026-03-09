@@ -107,19 +107,18 @@ func (s *SearchV2) tryFindAsModuleName(
 	traversedModules map[string]int,
 ) *symbols.Module {
 
-	for _, unitModules := range projState.GetAllUnitModules() {
-		for _, modId := range unitModules.ModuleIds() {
-			module := unitModules.Get(modId)
-			if module.GetName() == symbolName {
-				// Check if this module was traversed during search
-				if _, ok := traversedModules[symbolName]; ok {
-					return module
-				}
+	var result *symbols.Module
+	projState.ForEachModuleUntil(func(module *symbols.Module) bool {
+		if module.GetName() == symbolName {
+			if _, ok := traversedModules[symbolName]; ok {
+				result = module
+				return true
 			}
 		}
-	}
+		return false
+	})
 
-	return nil
+	return result
 }
 
 // ResolveAccessPath is the main entry point for resolving foo.bar.baz style paths
@@ -241,6 +240,15 @@ func (s *SearchV2) FindImplementationsInWorkspace(
 	return s.fallback.FindImplementationsInWorkspace(docId, position, state)
 }
 
+func (s *SearchV2) FindReferencesInWorkspace(
+	docId string,
+	position symbols.Position,
+	state *project_state.ProjectState,
+	includeDeclaration bool,
+) []protocol.Location {
+	return s.fallback.FindReferencesInWorkspace(docId, position, state, includeDeclaration)
+}
+
 // BuildCompletionList delegates to the old search implementation for now
 // TODO: Implement native completion support in SearchV2
 func (s *SearchV2) BuildCompletionList(
@@ -252,6 +260,6 @@ func (s *SearchV2) BuildCompletionList(
 
 func (s *SearchV2) debug(message string) {
 	if s.debugEnabled {
-		s.logger.Debug(fmt.Sprintf("[V2] %s", message))
+		s.logger.Debug("[V2] search debug", "message", message)
 	}
 }

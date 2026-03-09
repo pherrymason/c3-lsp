@@ -1,27 +1,37 @@
 package symbols_table
 
 import (
-	"github.com/pherrymason/c3-lsp/pkg/option"
-	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
 type SymbolsTable struct {
 	parsedModulesByDocument map[protocol.DocumentUri]UnitModules
 	pendingToResolve        PendingToResolve
+	typeIndex               *TypeIndex // Fast O(1) type lookup index
 }
 
 func NewSymbolsTable() SymbolsTable {
 	return SymbolsTable{
 		parsedModulesByDocument: make(map[protocol.DocumentUri]UnitModules),
 		pendingToResolve:        NewPendingToResolve(),
+		typeIndex:               NewTypeIndex(),
 	}
 }
 
 func (st *SymbolsTable) Register(unitModules UnitModules, pendingToResolve PendingToResolve) {
-	st.parsedModulesByDocument[unitModules.DocId()] = unitModules
+	docID := unitModules.DocId()
 
-	// Merge pendingToResolve types
+	// Store unit modules
+	st.parsedModulesByDocument[docID] = unitModules
+
+	// Rebuild type index for this document (Issue #2 fix)
+	st.typeIndex.Clear(docID)
+	st.typeIndex.Index(unitModules)
+
+	// Clear old pending types for this document (Issue #5 fix)
+	st.clearPendingForDocument(docID)
+
+	// Merge new pendingToResolve types
 	for moduleName, types := range pendingToResolve.typesByModule {
 		st.pendingToResolve.typesByModule[moduleName] = append(
 			st.pendingToResolve.typesByModule[moduleName],
@@ -37,20 +47,57 @@ func (st *SymbolsTable) Register(unitModules UnitModules, pendingToResolve Pendi
 	st.resolveTypes()
 }
 
+// clearPendingForDocument removes all pending type resolutions for a specific document.
+// This prevents memory leaks when documents are re-parsed (Issue #5 fix).
+func (st *SymbolsTable) clearPendingForDocument(docID protocol.DocumentUri) {
+	// Clear pending type resolutions
+	for moduleName := range st.pendingToResolve.typesByModule {
+		filtered := []PendingTypeContext{}
+		for _, ctx := range st.pendingToResolve.typesByModule[moduleName] {
+			// Keep only types NOT from this document
+			if ctx.contextModule.GetDocumentURI() != string(docID) {
+				filtered = append(filtered, ctx)
+			}
+		}
+
+		if len(filtered) > 0 {
+			st.pendingToResolve.typesByModule[moduleName] = filtered
+		} else {
+			// No more pending types for this module - remove the key
+			delete(st.pendingToResolve.typesByModule, moduleName)
+		}
+	}
+
+	// Clear struct subtyping resolutions
+	filtered := []StructWithSubtyping{}
+	for _, strukt := range st.pendingToResolve.subtyptingToResolve {
+		if strukt.strukt.GetDocumentURI() != string(docID) {
+			filtered = append(filtered, strukt)
+		}
+	}
+	st.pendingToResolve.subtyptingToResolve = filtered
+}
+
 func (st *SymbolsTable) DeleteDocument(docId string) {
 	delete(st.parsedModulesByDocument, docId)
+	st.typeIndex.Clear(docId) // Clear type index for deleted document
 }
 func (st *SymbolsTable) RenameDocument(oldDocId string, newDocId string) {
 	if val, ok := st.parsedModulesByDocument[oldDocId]; ok {
-		// Asignar el valor a la nueva clave
+		// Clear old document from index
+		st.typeIndex.Clear(oldDocId)
+
+		// Move to new document
 		st.parsedModulesByDocument[newDocId] = val
-		// Eliminar la clave antigua
 		delete(st.parsedModulesByDocument, oldDocId)
+
+		// Rebuild index with new docID
+		st.typeIndex.Index(val)
 	}
 }
 
 func (st *SymbolsTable) GetByDoc(docId string) *UnitModules {
-	value, _ := st.parsedModulesByDocument[docId]
+	value := st.parsedModulesByDocument[docId]
 	return &value
 }
 
@@ -78,58 +125,33 @@ func (st *SymbolsTable) resolveTypes() {
 }
 
 func (st *SymbolsTable) tryToSolveType(typeContext *PendingTypeContext, moduleName string) {
+	typeName := typeContext.vType.GetName()
+
 	if len(typeContext.contextModule.Imports) > 0 {
 		// Check inside imported modules
+		// Issue #3 fix: Now we constrain search to the specific imported module!
 		for _, imported := range typeContext.contextModule.Imports {
-			mpath := symbols.NewModulePathFromString(imported)
+			// Use type index for O(1) lookup constrained to imported module
+			locations := st.typeIndex.Find(typeName, imported)
 
-			// Loop through project modules searching for `imported`
-			for _, parsedModules := range st.parsedModulesByDocument {
-
-				if !parsedModules.HasExplicitlyImportedModules(mpath) {
-					continue
-				}
-
-				moduleOption := st.findTypeInModules(typeContext.vType)
-				if moduleOption.IsSome() {
-					// Found in same file! Fix it
-					typeContext.vType.SetModule(moduleOption.Get())
-					typeContext.Solve()
-				}
-
+			if len(locations) > 0 {
+				// Found! Use first matching location
+				typeContext.vType.SetModule(locations[0].ModuleName)
+				typeContext.Solve()
+				return
 			}
 		}
-		// Not found! Keep it registered as pending
+		// Not found in imports - keep as pending
 	} else {
-		moduleOption := st.findTypeInModules(typeContext.vType)
-		if moduleOption.IsSome() {
-			// Found in same file! Fix it
-			typeContext.vType.SetModule(moduleOption.Get())
+		// No imports - search globally using index
+		locations := st.typeIndex.Find(typeName, "")
+
+		if len(locations) > 0 {
+			// Found! Use first matching location
+			typeContext.vType.SetModule(locations[0].ModuleName)
 			typeContext.Solve()
 		}
 	}
-}
-
-func (st *SymbolsTable) findTypeInModules(vType *symbols.Type) option.Option[string] {
-	vTypeName := vType.GetName()
-	for _, parsedModules := range st.parsedModulesByDocument {
-		// Use ModuleIds() to cheaply copy the slice of module names
-		// Using Modules() appears to lead to expensive clones
-		for _, moduleName := range parsedModules.ModuleIds() {
-			module := parsedModules.Get(moduleName)
-
-			// Use ChildrenNames() since we are only comparing names
-			// Avoid expensive cloning of children
-			for _, childName := range module.ChildrenNames() {
-				if childName == vTypeName {
-					// Found!
-					return option.Some(module.GetName())
-				}
-			}
-		}
-	}
-
-	return option.None[string]()
 }
 
 // Resolves inline sub structs
@@ -157,4 +179,10 @@ func (st *SymbolsTable) expendStructSubtypes() {
 	}
 
 	st.pendingToResolve.subtyptingToResolve = []StructWithSubtyping{}
+}
+
+// TypeIndexStats returns statistics about the type index.
+// Useful for monitoring performance and debugging.
+func (st *SymbolsTable) TypeIndexStats() IndexStats {
+	return st.typeIndex.Stats()
 }

@@ -54,13 +54,23 @@ func cmdLineArguments() (server.ServerOpts, bool, bool) {
 			CompileArgs: []string{},
 		},
 		Diagnostics: server.DiagnosticsOpts{
-			Delay:   time.Duration(*diagnosticsDelay),
-			Enabled: true,
+			Delay:           diagnosticsDelayFromMs(*diagnosticsDelay),
+			SaveFullIdle:    10000,
+			FullMinInterval: 30000,
+			Enabled:         true,
+		},
+		Formatting: server.FormattingOpts{
+			C3FmtPath: option.None[string](),
+			Config:    option.None[string](),
 		},
 		LogFilepath:      logFilePathOpt,
 		Debug:            *debug,
 		SendCrashReports: *sendCrashReports,
 	}, *showHelp, *showVersion
+}
+
+func diagnosticsDelayFromMs(delayMs int) time.Duration {
+	return time.Duration(delayMs) * time.Millisecond
 }
 
 func printAppGreet(appName string, version string, commit string) {

@@ -5,13 +5,13 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-type DefBuilder struct {
-	def Def
+type AliasBuilder struct {
+	def Alias
 }
 
-func NewDefBuilder(name string, module string, docId string) *DefBuilder {
-	return &DefBuilder{
-		def: Def{
+func NewAliasBuilder(name string, module string, docId string) *AliasBuilder {
+	return &AliasBuilder{
+		def: Alias{
 			BaseIndexable: NewBaseIndexable(
 				name,
 				module,
@@ -24,44 +24,44 @@ func NewDefBuilder(name string, module string, docId string) *DefBuilder {
 	}
 }
 
-func (d *DefBuilder) WithName(name string) *DefBuilder {
+func (d *AliasBuilder) WithName(name string) *AliasBuilder {
 	d.def.Name = name
 	return d
 }
 
-func (d *DefBuilder) WithResolvesTo(resolvesTo string) *DefBuilder {
+func (d *AliasBuilder) WithResolvesTo(resolvesTo string) *AliasBuilder {
 	d.def.resolvesTo = resolvesTo
 	return d
 }
 
-func (d *DefBuilder) WithResolvesToType(resolvesTo Type) *DefBuilder {
+func (d *AliasBuilder) WithResolvesToType(resolvesTo Type) *AliasBuilder {
 	d.def.resolvesToType = option.Some(&resolvesTo)
 	return d
 }
 
-func (d *DefBuilder) WithoutSourceCode() *DefBuilder {
-	d.def.BaseIndexable.HasSourceCode_ = false
+func (d *AliasBuilder) WithoutSourceCode() *AliasBuilder {
+	d.def.HasSourceCode_ = false
 	return d
 }
 
-func (d *DefBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *DefBuilder {
-	d.def.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+func (d *AliasBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *AliasBuilder {
+	d.def.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return d
 }
 
-func (d *DefBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *DefBuilder {
-	d.def.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+func (d *AliasBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *AliasBuilder {
+	d.def.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return d
 }
 
-func (d *DefBuilder) WithDocs(docs string) *DefBuilder {
+func (d *AliasBuilder) WithDocs(docs string) *AliasBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	d.def.BaseIndexable.DocComment = &docComment
+	d.def.DocComment = &docComment
 	return d
 }
 
-func (d *DefBuilder) Build() *Def {
+func (d *AliasBuilder) Build() *Alias {
 	return &d.def
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
@@ -18,9 +19,17 @@ type runtimeSettings struct {
 	} `json:"C3"`
 
 	Diagnostics struct {
-		Enabled *bool          `json:"enabled,omitempty"`
-		Delay   *time.Duration `json:"delay,omitempty"`
+		Enabled         *bool          `json:"enabled,omitempty"`
+		Delay           *time.Duration `json:"delay,omitempty"`
+		SaveFullIdle    *time.Duration `json:"save-full-idle-ms,omitempty"`
+		FullMinInterval *time.Duration `json:"full-min-interval-ms,omitempty"`
 	} `json:"Diagnostics"`
+
+	Formatting struct {
+		C3Fmt             *string `json:"c3fmt,omitempty"`
+		Config            *string `json:"config,omitempty"`
+		WillSaveWaitUntil *bool   `json:"will-save-wait-until,omitempty"`
+	} `json:"Formatting"`
 }
 
 type runtimeSettingsLower struct {
@@ -32,28 +41,45 @@ type runtimeSettingsLower struct {
 	} `json:"c3"`
 
 	Diagnostics struct {
-		Enabled *bool          `json:"enabled,omitempty"`
-		Delay   *time.Duration `json:"delay,omitempty"`
+		Enabled         *bool          `json:"enabled,omitempty"`
+		Delay           *time.Duration `json:"delay,omitempty"`
+		SaveFullIdle    *time.Duration `json:"save-full-idle-ms,omitempty"`
+		FullMinInterval *time.Duration `json:"full-min-interval-ms,omitempty"`
 	} `json:"diagnostics"`
+
+	Formatting struct {
+		C3Fmt             *string `json:"c3fmt,omitempty"`
+		Config            *string `json:"config,omitempty"`
+		WillSaveWaitUntil *bool   `json:"will-save-wait-until,omitempty"`
+	} `json:"formatting"`
 }
 
 func (s *Server) WorkspaceDidChangeConfiguration(context *glsp.Context, params *protocol.DidChangeConfigurationParams) error {
-	if !s.applyRuntimeSettings(params.Settings) {
-		s.server.Log.Infof("workspace/didChangeConfiguration received, reloading c3lsp.json")
+	if !s.shouldProcessNotification(protocol.MethodWorkspaceDidChangeConfiguration) {
+		return nil
+	}
+	if params == nil {
+		return nil
+	}
+
+	if !s.applyRuntimeSettings(params.Settings, context) {
+		s.server.Log.Info("workspace/didChangeConfiguration received, reloading c3lsp.json")
 	} else {
-		s.server.Log.Infof("workspace/didChangeConfiguration applied runtime settings")
+		s.server.Log.Info("workspace/didChangeConfiguration applied runtime settings")
 	}
 
 	if root := s.state.GetProjectRootURI(); root != "" {
+		s.invalidateProjectRootCache()
 		s.activeConfigRoot = ""
-		s.configureProjectForRoot(root)
+		s.configureProjectForRootWithContext(root, context)
 	}
 
 	if isBuildableProjectRoot(s.state.GetProjectRootURI()) {
-		s.indexWorkspace()
-		s.RunDiagnostics(s.state, context.Notify, false, nil)
+		s.cancelRootIndexing(fs.GetCanonicalPath(s.state.GetProjectRootURI()))
+		s.indexWorkspaceWithLSPContext(context)
+		s.RunDiagnosticsFull(s.state, context.Notify, false)
 	} else {
-		s.server.Log.Infof("workspace/didChangeConfiguration skipped full workspace indexing: aggregate root")
+		s.server.Log.Info("workspace/didChangeConfiguration skipped full workspace indexing: aggregate root")
 	}
 
 	return nil
@@ -65,7 +91,7 @@ func (s *Server) loadClientRuntimeConfiguration(context *glsp.Context, rootURI *
 	}
 
 	items := []protocol.ConfigurationItem{}
-	sections := []string{"C3", "Diagnostics", "c3", "diagnostics", "c3lsp"}
+	sections := []string{"C3", "Diagnostics", "Formatting", "c3", "diagnostics", "formatting", "c3lsp"}
 	for _, section := range sections {
 		sec := section
 		items = append(items, protocol.ConfigurationItem{
@@ -78,7 +104,7 @@ func (s *Server) loadClientRuntimeConfiguration(context *glsp.Context, rootURI *
 	context.Call(protocol.ServerWorkspaceConfiguration, protocol.ConfigurationParams{Items: items}, &result)
 
 	for _, entry := range result {
-		_ = s.applyRuntimeSettings(entry)
+		_ = s.applyRuntimeSettings(entry, context)
 	}
 }
 
@@ -90,7 +116,7 @@ func supportsWorkspaceConfiguration(capabilities protocol.ClientCapabilities) bo
 	return *capabilities.Workspace.Configuration
 }
 
-func (s *Server) applyRuntimeSettings(settings any) bool {
+func (s *Server) applyRuntimeSettings(settings any, context *glsp.Context) bool {
 	runtime, ok := parseRuntimeSettings(settings)
 	if !ok {
 		return false
@@ -128,11 +154,37 @@ func (s *Server) applyRuntimeSettings(settings any) bool {
 	}
 	if runtime.Diagnostics.Delay != nil {
 		s.options.Diagnostics.Delay = *runtime.Diagnostics.Delay
+		s.resetDiagnosticsSchedulers()
+		applied = true
+	}
+	if runtime.Diagnostics.SaveFullIdle != nil {
+		s.options.Diagnostics.SaveFullIdle = *runtime.Diagnostics.SaveFullIdle
+		s.resetDiagnosticsSchedulers()
+		applied = true
+	}
+	if runtime.Diagnostics.FullMinInterval != nil {
+		s.options.Diagnostics.FullMinInterval = *runtime.Diagnostics.FullMinInterval
+		s.resetDiagnosticsSchedulers()
+		applied = true
+	}
+
+	if runtime.Formatting.C3Fmt != nil {
+		s.options.Formatting.C3FmtPath = optionFromPtr(runtime.Formatting.C3Fmt)
+		applied = true
+	}
+
+	if runtime.Formatting.Config != nil {
+		s.options.Formatting.Config = optionFromPtr(runtime.Formatting.Config)
+		applied = true
+	}
+
+	if runtime.Formatting.WillSaveWaitUntil != nil {
+		s.options.Formatting.WillSaveWaitUntil = *runtime.Formatting.WillSaveWaitUntil
 		applied = true
 	}
 
 	if applied {
-		s.applyVersionAndLoadStdlib(version)
+		s.applyVersionAndLoadStdlibWithProgress(context, version)
 	}
 
 	return applied
@@ -159,6 +211,9 @@ func parseRuntimeSettings(settings any) (runtimeSettings, bool) {
 	runtime.C3.CompileArgs = lower.C3.CompileArgs
 	runtime.Diagnostics.Enabled = lower.Diagnostics.Enabled
 	runtime.Diagnostics.Delay = lower.Diagnostics.Delay
+	runtime.Formatting.C3Fmt = lower.Formatting.C3Fmt
+	runtime.Formatting.Config = lower.Formatting.Config
+	runtime.Formatting.WillSaveWaitUntil = lower.Formatting.WillSaveWaitUntil
 
 	return runtime, hasRuntimeSettings(runtime)
 }
@@ -182,5 +237,8 @@ func hasRuntimeSettings(runtime runtimeSettings) bool {
 		runtime.C3.StdlibPath != nil ||
 		len(runtime.C3.CompileArgs) > 0 ||
 		runtime.Diagnostics.Enabled != nil ||
-		runtime.Diagnostics.Delay != nil
+		runtime.Diagnostics.Delay != nil ||
+		runtime.Formatting.C3Fmt != nil ||
+		runtime.Formatting.Config != nil ||
+		runtime.Formatting.WillSaveWaitUntil != nil
 }

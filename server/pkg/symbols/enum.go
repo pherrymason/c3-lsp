@@ -1,8 +1,7 @@
 package symbols
 
 import (
-	"fmt"
-
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
@@ -63,14 +62,14 @@ func (e *Enum) GetAssociatedValues() []Variable {
 	}
 }
 
-func (e *Enum) GetEnumerator(identifier string) *Enumerator {
+func (e *Enum) GetEnumerator(identifier string) option.Option[*Enumerator] {
 	for _, enumerator := range e.enumerators {
 		if enumerator.Name == identifier {
-			return enumerator
+			return option.Some(enumerator)
 		}
 	}
 
-	panic(fmt.Sprint(identifier, " enumerator not found"))
+	return option.None[*Enumerator]()
 }
 
 func (e *Enum) GetEnumerators() []*Enumerator {

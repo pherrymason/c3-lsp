@@ -70,7 +70,7 @@ func (s Struct) IsUnion() bool {
 }
 
 func (s Struct) GetHoverInfo() string {
-	return fmt.Sprintf("%s", s.Name)
+	return s.Name
 }
 
 func (s Struct) GetCompletionDetail() string {
@@ -86,9 +86,7 @@ func (s *Struct) InheritMembersFrom(inlinedMemberName string, otherStruct *Struc
 		}
 	}
 
-	for _, member := range otherStruct.GetMembers() {
-		s.members = append(s.members, member)
-	}
+	s.members = append(s.members, otherStruct.GetMembers()...)
 }
 
 type StructMember struct {

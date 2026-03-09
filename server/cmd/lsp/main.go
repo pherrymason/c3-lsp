@@ -43,7 +43,9 @@ func main() {
 	}
 
 	server := server.NewServer(options, appName, version)
-	server.Run()
+	if err := server.Run(); err != nil {
+		log.Fatalf("server run failed: %v", err)
+	}
 }
 
 func appVersion() string {

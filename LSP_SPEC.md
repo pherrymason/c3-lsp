@@ -17,57 +17,57 @@ Scope: `server/internal/lsp/server` in this repository, mapped against the LSP 3
 - [x] `textDocument/declaration`
 - [x] `textDocument/definition`
 - [x] `textDocument/implementation`
+- [x] `textDocument/typeDefinition`
 - [x] `textDocument/completion`
 - [x] `completionItem/resolve` (passthrough)
 - [x] `textDocument/signatureHelp`
+- [x] `textDocument/formatting`
+- [x] `textDocument/rename`
+- [x] `textDocument/prepareRename`
+- [x] `textDocument/references`
+- [x] `textDocument/documentHighlight`
+- [x] `textDocument/documentSymbol`
+- [x] `textDocument/foldingRange`
+- [x] `textDocument/selectionRange`
+- [x] `textDocument/rangeFormatting`
+- [x] `textDocument/onTypeFormatting`
+- [x] `textDocument/documentLink`
+- [x] `documentLink/resolve`
 - [x] `textDocument/publishDiagnostics` (server notification)
 - [x] `window/logMessage`
 - [x] `window/showMessage`
 - [x] `workspace/didChangeConfiguration`
 - [x] `workspace/configuration`
+- [x] `workspace/symbol`
 - [x] `workspace/didDeleteFiles`
 - [x] `workspace/didRenameFiles`
 
 ## Missing (ordered easiest -> hardest)
 
 ### Easy
-- [ ] `telemetry/event`
-- [ ] `workspace/workspaceFolders` request
-- [ ] `workspace/willCreateFiles`
-- [ ] `workspace/didCreateFiles`
-- [ ] `workspace/willRenameFiles`
-- [ ] `workspace/willDeleteFiles`
+- [x] `telemetry/event`
+- [x] `workspace/workspaceFolders` request
+- [x] `workspace/willCreateFiles`
+- [x] `workspace/didCreateFiles`
+- [x] `workspace/willRenameFiles`
+- [x] `workspace/willDeleteFiles`
 
 ### Medium
 
-- [ ] `textDocument/willSave`
-- [ ] `textDocument/willSaveWaitUntil`
-- [ ] `textDocument/typeDefinition`
-- [ ] `textDocument/references`
-- [ ] `textDocument/documentHighlight`
-- [ ] `textDocument/documentLink`
-- [ ] `documentLink/resolve`
-- [ ] `textDocument/documentSymbol`
-- [ ] `workspace/symbol`
-- [ ] `workspaceSymbol/resolve`
-- [ ] `textDocument/foldingRange`
-- [ ] `textDocument/selectionRange`
-- [ ] `textDocument/formatting`
-- [ ] `textDocument/rangeFormatting`
-- [ ] `textDocument/onTypeFormatting`
-- [ ] `textDocument/rename`
-- [ ] `textDocument/prepareRename`
-- [ ] `textDocument/linkedEditingRange`
-- [ ] `window/showMessageRequest`
-- [ ] `window/showDocument`
-- [ ] `workspace/executeCommand`
-- [ ] `workspace/applyEdit`
+- [x] `textDocument/willSave`
+- [x] `textDocument/willSaveWaitUntil`
+- [x] `workspaceSymbol/resolve`
+- [x] `textDocument/linkedEditingRange`
+- [x] `window/showMessageRequest`
+- [x] `window/showDocument`
+- [x] `workspace/executeCommand`
+- [x] `workspace/applyEdit`
 
 ### Hard
 
 - [ ] Notebook document sync (`notebookDocument/*`)
-- [ ] `textDocument/codeAction`
-- [ ] `codeAction/resolve`
+- [x] `textDocument/codeAction`
+- [x] `codeAction/resolve`
 - [ ] `textDocument/codeLens`
 - [ ] `codeLens/resolve`
 - [ ] `workspace/codeLens/refresh`
@@ -79,14 +79,24 @@ Scope: `server/internal/lsp/server` in this repository, mapped against the LSP 3
 - [ ] `workspace/inlineValue/refresh`
 - [ ] `textDocument/documentColor`
 - [ ] `textDocument/colorPresentation`
-- [ ] `textDocument/moniker`
-- [ ] Call hierarchy (`textDocument/prepareCallHierarchy`, `callHierarchy/incomingCalls`, `callHierarchy/outgoingCalls`)
+- [x] `textDocument/moniker`
+- [x] `textDocument/prepareCallHierarchy`
+- [x] `callHierarchy/incomingCalls`
+- [x] `callHierarchy/outgoingCalls`
 - [ ] Type hierarchy (`textDocument/prepareTypeHierarchy`, `typeHierarchy/supertypes`, `typeHierarchy/subtypes`)
-- [ ] `window/workDoneProgress/create`
-- [ ] `window/workDoneProgress/cancel`
+- [x] `window/workDoneProgress/create`
+- [x] `window/workDoneProgress/cancel`
 
 ## Notes
 
-- `workspace/didChangeWatchedFiles` exists but currently no-op.
-- `workspace/didChangeWorkspaceFolders` exists but currently no-op.
-- Initialize responses currently advertise `renameProvider`, but no `textDocument/rename` handler is wired yet.
+- `workspace/didChangeWatchedFiles` updates deleted/changed documents, reloads project config markers, and triggers scoped reindexing for external source changes.
+- `workspace/didChangeWorkspaceFolders` now updates root tracking, cancels removed-root indexing, and schedules indexing for added buildable roots.
+- `window/showMessageRequest` and `window/showDocument` are wrapped via request helpers; reload-configuration command uses them in an actionable `project.json` open prompt flow.
+- `workspace/executeCommand` supports `c3lsp.reindexWorkspace`, `c3lsp.reloadConfiguration`, and `c3lsp.clearDiagnosticsCache`; diagnostics-cache command uses internal `workspace/applyEdit` helper when client request channel is available.
+- `textDocument/linkedEditingRange` returns deterministic identifier-linked ranges for module/symbol targets in the active document.
+- `workspaceSymbol/resolve` is handled through a protocol-extension dispatch path (for clients that send it despite 3.16 surface); current behavior is deterministic pass-through of symbol payload.
+- `window/workDoneProgress/create` and `window/workDoneProgress/cancel` are handled via request/cancel helpers and deterministic token tracking.
+- `textDocument/moniker` returns deterministic C3 moniker identifiers for module and symbol targets with stable kind/uniqueness mapping.
+- Call hierarchy is implemented for function symbols with deterministic prepare/incoming/outgoing behavior based on indexed references.
+- `textDocument/codeAction` currently returns a deterministic empty list and `codeAction/resolve` is a deterministic pass-through for forward-compatible client flows.
+- `renameProvider` is wired to `textDocument/prepareRename` and `textDocument/rename`.

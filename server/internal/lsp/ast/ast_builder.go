@@ -139,8 +139,8 @@ func (b *TypeInfoBuilder) WithNameStartEnd(startRow uint, startCol uint, endRow 
 }
 
 func (b *TypeInfoBuilder) WithStartEnd(startRow uint, startCol uint, endRow uint, endCol uint) *TypeInfoBuilder {
-	b.t.ASTNodeBase.StartPos = Position{startRow, startCol}
-	b.t.ASTNodeBase.EndPos = Position{endRow, endCol}
+	b.t.StartPos = Position{startRow, startCol}
+	b.t.EndPos = Position{endRow, endCol}
 	return b
 }
 

@@ -1,25 +1,21 @@
 package search_v2
 
-import "github.com/pherrymason/c3-lsp/pkg/symbols"
+import (
+	"github.com/pherrymason/c3-lsp/internal/lsp/search"
+	"github.com/pherrymason/c3-lsp/pkg/symbols"
+)
 
 // AccessContext tracks what is accessible at each step of resolution
 // Immutable
 type AccessContext struct {
-	FromDistinct    int  // One of NotFromDistinct, InlineDistinct, NonInlineDistinct
+	FromDistinct    int  // One of search.NotFromDistinct/search.NonInlineDistinct/search.InlineDistinct
 	MembersReadable bool // Can access enum variants, fault constants, struct members
 	MethodsReadable bool // Can access methods
 }
 
-// Constants for FromDistinct field (defined in search package)
-const (
-	NotFromDistinct   = 0
-	InlineDistinct    = 1
-	NonInlineDistinct = 2
-)
-
 func NewAccessContext() AccessContext {
 	return AccessContext{
-		FromDistinct:    NotFromDistinct,
+		FromDistinct:    search.NotFromDistinct,
 		MembersReadable: true,
 		MethodsReadable: true,
 	}
@@ -34,14 +30,14 @@ func (ctx AccessContext) AfterResolving(from, to symbols.Indexable) AccessContex
 	newCtx.MembersReadable = isTypeSymbol(to)
 
 	// Handle distinct type resolution
-	if distinct, ok := from.(*symbols.Distinct); ok {
+	if distinct, ok := from.(*symbols.TypeDef); ok {
 		if distinct.IsInline() {
-			newCtx.FromDistinct = InlineDistinct
+			newCtx.FromDistinct = search.InlineDistinct
 			// Methods on inline distincts only accessible on instances, not on the type itself
 			wasInstance := !isTypeSymbol(from)
 			newCtx.MethodsReadable = ctx.MethodsReadable && wasInstance
 		} else {
-			newCtx.FromDistinct = NonInlineDistinct
+			newCtx.FromDistinct = search.NonInlineDistinct
 			newCtx.MethodsReadable = false
 		}
 	}
@@ -55,16 +51,16 @@ func (ctx AccessContext) AfterFindingMember(member symbols.Indexable) AccessCont
 	// Members become unreadable only for non-type members (like enum variants)
 	// StructMembers, Variables, etc. need to resolve to their types first
 	newCtx.MembersReadable = !isTypeSymbol(member)
-	newCtx.FromDistinct = NotFromDistinct
+	newCtx.FromDistinct = search.NotFromDistinct
 	return newCtx
 }
 
 func isTypeSymbol(s symbols.Indexable) bool {
-	switch s.(type) {
-	case *symbols.Struct, *symbols.Enum, *symbols.Fault, *symbols.Distinct:
+	switch s := s.(type) {
+	case *symbols.Struct, *symbols.Enum, *symbols.FaultDef, *symbols.TypeDef:
 		return true
-	case *symbols.Def:
-		return s.(*symbols.Def).ResolvesToType()
+	case *symbols.Alias:
+		return s.ResolvesToType()
 	default:
 		return false
 	}

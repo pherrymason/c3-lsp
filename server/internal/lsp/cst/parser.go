@@ -45,6 +45,15 @@ func GetParsedTreeFromString(source string) *sitter.Tree {
 	return n
 }
 
+// NormalizeSource applies any source-level transformations needed before
+// passing code to the tree-sitter parser (e.g. rewriting legacy keywords).
+// It is byte-offset-preserving: every replacement has the same byte length as
+// the original token, so CST node positions remain valid against the original
+// source text.
+func NormalizeSource(source string) string {
+	return normalizeLegacyConstdef(source)
+}
+
 func normalizeLegacyConstdef(source string) string {
 	const keyword = "constdef"
 	if !strings.Contains(source, keyword) {

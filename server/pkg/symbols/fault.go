@@ -3,18 +3,18 @@ package symbols
 import (
 	"fmt"
 
+	"github.com/pherrymason/c3-lsp/pkg/option"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-type Fault struct {
-	// TODO: FaultDefs do not have a baseType anymore
+type FaultDef struct {
 	baseType  string
 	constants []*FaultConstant
 	BaseIndexable
 }
 
-func NewFault(name string, baseType string, constants []*FaultConstant, module string, docId string, idRange Range, docRange Range) Fault {
-	fault := Fault{
+func NewFaultDef(name string, baseType string, constants []*FaultConstant, module string, docId string, idRange Range, docRange Range) FaultDef {
+	fault := FaultDef{
 		baseType:  baseType,
 		constants: constants,
 		BaseIndexable: NewBaseIndexable(
@@ -32,11 +32,11 @@ func NewFault(name string, baseType string, constants []*FaultConstant, module s
 	return fault
 }
 
-func (e Fault) GetType() string {
+func (e FaultDef) GetType() string {
 	return e.baseType
 }
 
-func (e *Fault) RegisterConstant(name string, value string, posRange Range) {
+func (e *FaultDef) RegisterConstant(name string, value string, posRange Range) {
 	constant := &FaultConstant{
 		faultName: e.GetName(),
 		BaseIndexable: BaseIndexable{
@@ -52,14 +52,14 @@ func (e *Fault) RegisterConstant(name string, value string, posRange Range) {
 	e.Insert(constant)
 }
 
-func (e *Fault) AddConstants(constants []*FaultConstant) {
+func (e *FaultDef) AddConstants(constants []*FaultConstant) {
 	e.constants = constants
 	for _, constant := range constants {
 		e.Insert(constant)
 	}
 }
 
-func (e Fault) HasConstant(identifier string) bool {
+func (e FaultDef) HasConstant(identifier string) bool {
 	for _, constant := range e.constants {
 		if constant.Name == identifier {
 			return true
@@ -69,25 +69,25 @@ func (e Fault) HasConstant(identifier string) bool {
 	return false
 }
 
-func (e Fault) GetConstant(identifier string) *FaultConstant {
+func (e FaultDef) GetConstant(identifier string) option.Option[*FaultConstant] {
 	for _, constant := range e.constants {
 		if constant.Name == identifier {
-			return constant
+			return option.Some(constant)
 		}
 	}
 
-	panic(fmt.Sprint(identifier, " enumerator not found"))
+	return option.None[*FaultConstant]()
 }
 
-func (e Fault) GetConstants() []*FaultConstant {
+func (e FaultDef) GetConstants() []*FaultConstant {
 	return e.constants
 }
 
-func (e Fault) GetHoverInfo() string {
+func (e FaultDef) GetHoverInfo() string {
 	return e.Name
 }
 
-func (e Fault) GetCompletionDetail() string {
+func (e FaultDef) GetCompletionDetail() string {
 	return "Fault"
 }
 

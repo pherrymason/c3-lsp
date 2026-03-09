@@ -27,6 +27,8 @@ func Test_SourceCode_SymbolInPosition_finds_symbol(t *testing.T) {
 		{"mod::hola.adios.", ".", []string{"hola", "adios"}, []string{"mod"}},
 		{"mod::mod2::hola.adios.", ".", []string{"hola", "adios"}, []string{"mod", "mod2"}},
 		{"runtime::@start_benchmark", "@start_benchmark", []string{}, []string{"runtime"}},
+		{"args[2].to_integer", "to_integer", []string{"args"}, []string{}},
+		{"nodes[i + 1].next.value", "value", []string{"nodes", "next"}, []string{}},
 	}
 
 	for _, tt := range cases {
@@ -359,5 +361,80 @@ func Test_SourceCode_SymbolInPosition_cursor_after_symbol(t *testing.T) {
 		if assert.Equal(t, 1, len(result.parentAccessPath)) {
 			assert.Equal(t, "p", result.parentAccessPath[0].Text())
 		}
+	})
+}
+
+func Test_SourceCode_SymbolInPosition_inside_function_call_arguments(t *testing.T) {
+	unitModule := symbols_table.UnitModules{}
+
+	t.Run("dot access inside function call: print(b.", func(t *testing.T) {
+		sc := NewSourceCode("io::print(b.")
+		// Cursor on '.' (position 11)
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 11), &unitModule)
+
+		assert.Equal(t, ".", result.Text())
+		if assert.Equal(t, 1, len(result.parentAccessPath)) {
+			assert.Equal(t, "b", result.parentAccessPath[0].Text())
+		}
+		assert.Equal(t, 0, len(result.modulePath))
+	})
+
+	t.Run("dot access with prefix inside function call: print(b.x", func(t *testing.T) {
+		sc := NewSourceCode("io::print(b.x")
+		// Cursor on 'x' (position 12)
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 12), &unitModule)
+
+		assert.Equal(t, "x", result.Text())
+		if assert.Equal(t, 1, len(result.parentAccessPath)) {
+			assert.Equal(t, "b", result.parentAccessPath[0].Text())
+		}
+		assert.Equal(t, 0, len(result.modulePath))
+	})
+
+	t.Run("dot access inside function call after comma: print(a, b.", func(t *testing.T) {
+		sc := NewSourceCode("io::print(a, b.")
+		// Cursor on '.' (position 14)
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 14), &unitModule)
+
+		assert.Equal(t, ".", result.Text())
+		if assert.Equal(t, 1, len(result.parentAccessPath)) {
+			assert.Equal(t, "b", result.parentAccessPath[0].Text())
+		}
+		assert.Equal(t, 0, len(result.modulePath))
+	})
+
+	t.Run("chained dot access inside function call: print(b.color.", func(t *testing.T) {
+		sc := NewSourceCode("io::print(b.color.")
+		// Cursor on last '.' (position 17)
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 17), &unitModule)
+
+		assert.Equal(t, ".", result.Text())
+		if assert.Equal(t, 2, len(result.parentAccessPath)) {
+			assert.Equal(t, "b", result.parentAccessPath[0].Text())
+			assert.Equal(t, "color", result.parentAccessPath[1].Text())
+		}
+		assert.Equal(t, 0, len(result.modulePath))
+	})
+
+	t.Run("simple symbol inside function call: print(b", func(t *testing.T) {
+		sc := NewSourceCode("io::print(b")
+		// Cursor on 'b' (position 10)
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 10), &unitModule)
+
+		assert.Equal(t, "b", result.Text())
+		assert.Equal(t, 0, len(result.parentAccessPath))
+		assert.Equal(t, 0, len(result.modulePath))
+	})
+
+	t.Run("nested function call: outer(inner(b.", func(t *testing.T) {
+		sc := NewSourceCode("outer(inner(b.")
+		// Cursor on '.' (position 13)
+		result := sc.SymbolInPosition(symbols.NewPosition(0, 13), &unitModule)
+
+		assert.Equal(t, ".", result.Text())
+		if assert.Equal(t, 1, len(result.parentAccessPath)) {
+			assert.Equal(t, "b", result.parentAccessPath[0].Text())
+		}
+		assert.Equal(t, 0, len(result.modulePath))
 	})
 }

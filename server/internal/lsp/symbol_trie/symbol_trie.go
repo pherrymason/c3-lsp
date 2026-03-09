@@ -16,6 +16,32 @@ func NewTrie() *Trie {
 	}
 }
 
+func (t *Trie) Clone() *Trie {
+	if t == nil || t.root == nil {
+		return NewTrie()
+	}
+
+	return &Trie{root: cloneNode(t.root)}
+}
+
+func cloneNode(node *TrieNode) *TrieNode {
+	if node == nil {
+		return nil
+	}
+
+	cloned := &TrieNode{
+		children: make(map[string]*TrieNode, len(node.children)),
+		symbol:   node.symbol,
+		name:     node.name,
+	}
+
+	for key, child := range node.children {
+		cloned.children[key] = cloneNode(child)
+	}
+
+	return cloned
+}
+
 func (t *Trie) ClearByTag(tag string) {
 	clearByTagHelper(t.root, tag)
 }

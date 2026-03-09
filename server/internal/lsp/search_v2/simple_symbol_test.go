@@ -24,7 +24,7 @@ func SearchSimpleSymbol(t *testing.T, body string) *idx.Indexable {
 		position,
 	)
 
-	result := search.FindSimpleSymbol(searchParams, &state.State)
+	result := search.FindSimpleSymbol(searchParams, state.State)
 
 	if result.IsNone() {
 		return nil
@@ -229,7 +229,7 @@ func TestFindSimpleSymbol_Functions(t *testing.T) {
 
 func TestFindSimpleSymbol_Faults(t *testing.T) {
 	t.Run("Find fault in variable declaration", func(t *testing.T) {
-		t.Skip("TODO: Fault finding not working yet - needs investigation")
+		t.Skip("TODO: FaultDef finding not working yet - needs investigation")
 		symbol := SearchSimpleSymbol(t, `
 			fault MyError {
 				ERROR_ONE,
@@ -242,7 +242,7 @@ func TestFindSimpleSymbol_Faults(t *testing.T) {
 
 		assert.NotNil(t, symbol, "Symbol should be found")
 		if symbol != nil {
-			_fault := (*symbol).(*idx.Fault)
+			_fault := (*symbol).(*idx.FaultDef)
 			assert.Equal(t, "MyError", _fault.GetName())
 		}
 	})
@@ -276,7 +276,7 @@ func TestFindSimpleSymbol_ModulePriority(t *testing.T) {
 			position,
 		)
 
-		result := search.FindSimpleSymbol(searchParams, &state.State)
+		result := search.FindSimpleSymbol(searchParams, state.State)
 
 		assert.True(t, result.IsSome(), "Symbol should be found")
 		variable := result.Get().(*idx.Variable)

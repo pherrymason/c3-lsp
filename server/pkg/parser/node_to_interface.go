@@ -14,7 +14,7 @@ interface_declaration: $ => seq(
 	),
 */
 func (p *Parser) nodeToInterface(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Interface {
-	// TODO parse attributes
+	attributes := parseNodeAttributes(node, sourceCode)
 	methods := []*idx.Function{}
 
 	for i := 0; i < int(node.ChildCount()); i++ {
@@ -57,6 +57,7 @@ func (p *Parser) nodeToInterface(node *sitter.Node, currentModule *idx.Module, d
 	)
 
 	_interface.AddMethods(methods)
+	_interface.SetAttributes(attributes)
 
 	return _interface
 }

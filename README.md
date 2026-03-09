@@ -19,6 +19,7 @@ Supported Language server features:
 - Go to declaration
 - Hover
 - Signature Help
+- Formatting (via `c3fmt`)
 
 Furthermore, the LSP is able to resolve stdlib symbols information (for supported C3c versions), allowing to use this in completion and hover functionalities.
 
@@ -36,6 +37,26 @@ It supports the following options:
 - **help:** Display accepted options.
 - **send-reports:** If enabled (disabled by default) will send __crash__ reports to Sentry so bugs can be debugged easily.
 - **lang-version:** Use it to specify a specific c3 language version. By default `c3lsp` will select the last version supported.
+
+### Formatter usage (`textDocument/formatting`)
+Formatting is backed by the external `c3fmt` binary. Configure it in your project `c3lsp.json`:
+
+```json
+{
+  "Formatting": {
+    "c3fmt": "/path/to/c3fmt",
+    "config": ":default:"
+  }
+}
+```
+
+- `Formatting.c3fmt`: path to `c3fmt` executable, or a directory containing `build/c3fmt`.
+- `Formatting.config`:
+  - `":default:"` passes `--default` to `c3fmt`.
+  - explicit file path passes `--config=<path>`.
+  - omitted lets `c3fmt` discover `.c3fmt` from working directory.
+
+Then trigger your editor's **Format Document** action while connected to `c3lsp`.
 
 
 ## Installation

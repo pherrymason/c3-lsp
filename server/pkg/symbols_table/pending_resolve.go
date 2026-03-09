@@ -126,7 +126,7 @@ func (p *PendingToResolve) AddFunctionTypes(function *symbols.Function, contextM
 	}
 }
 
-func (p *PendingToResolve) AddDefType(def *symbols.Def, contextModule *symbols.Module) {
+func (p *PendingToResolve) AddAliasType(def *symbols.Alias, contextModule *symbols.Module) {
 	if !def.ResolvesToType() {
 		return
 	}
@@ -144,7 +144,7 @@ func (p *PendingToResolve) AddDefType(def *symbols.Def, contextModule *symbols.M
 	)
 }
 
-func (p *PendingToResolve) AddDistinctType(distinct *symbols.Distinct, contextModule *symbols.Module) {
+func (p *PendingToResolve) AddTypeDefType(distinct *symbols.TypeDef, contextModule *symbols.Module) {
 	baseType := distinct.GetBaseType()
 	if baseType == nil || baseType.GetName() == "" {
 		return

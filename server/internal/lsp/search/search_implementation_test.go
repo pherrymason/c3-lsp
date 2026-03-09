@@ -34,7 +34,7 @@ fn void main() {
 	cursorlessBody, position := parseBodyWithCursor(body)
 	state.registerDoc("app.c3", cursorlessBody)
 
-	implementations := search.FindImplementationsInWorkspace("app.c3", position, &state.state)
+	implementations := search.FindImplementationsInWorkspace("app.c3", position, state.state)
 
 	assert.Len(t, implementations, 2)
 	actualNames := []string{implementations[0].GetName(), implementations[1].GetName()}
@@ -65,7 +65,7 @@ fn void Dog.greet(&self) {}`
 	cursorlessBody, position := parseBodyWithCursor(body)
 	state.registerDoc("app.c3", cursorlessBody)
 
-	implementations := search.FindImplementationsInWorkspace("app.c3", position, &state.state)
+	implementations := search.FindImplementationsInWorkspace("app.c3", position, state.state)
 
 	assert.Len(t, implementations, 2)
 	actualNames := []string{implementations[0].GetName(), implementations[1].GetName()}

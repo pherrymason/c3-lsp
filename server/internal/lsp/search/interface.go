@@ -25,6 +25,14 @@ type SearchInterface interface {
 		state *project_state.ProjectState,
 	) []symbols.Indexable
 
+	// FindReferencesInWorkspace searches semantic references for symbol at position
+	FindReferencesInWorkspace(
+		docId string,
+		position symbols.Position,
+		state *project_state.ProjectState,
+		includeDeclaration bool,
+	) []protocol.Location
+
 	// BuildCompletionList generates completion suggestions for the given cursor context
 	BuildCompletionList(
 		ctx context.CursorContext,

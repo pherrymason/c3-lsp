@@ -20,7 +20,7 @@ func ResolveAccessPath(t *testing.T, body string) option.Option[symbols.Indexabl
 	doc := state.GetDoc("app.c3")
 
 	// Use the main entry point which handles both simple symbols and access paths
-	result := search.FindSymbolDeclarationInWorkspace(doc.URI, position, &state.State)
+	result := search.FindSymbolDeclarationInWorkspace(doc.URI, position, state.State)
 
 	return result
 }
@@ -253,8 +253,8 @@ func TestResolveAccessPath_ComplexChains(t *testing.T) {
 }
 
 func TestResolveAccessPath_FaultTypes(t *testing.T) {
-	t.Run("Fault constant access", func(t *testing.T) {
-		t.Skip("TODO: Fault access path not tested in original search - C3 uses 'faultdef' syntax, needs investigation")
+	t.Run("FaultDef constant access", func(t *testing.T) {
+		t.Skip("TODO: FaultDef access path not tested in original search - C3 uses 'faultdef' syntax, needs investigation")
 		result := ResolveAccessPath(t, `
 			module app;
 			fault MyError {
@@ -284,7 +284,7 @@ func TestResolveAccessPath_EdgeCases(t *testing.T) {
 			WithText("test", symbols.NewRange(0, 0, 0, 0)).
 			Build()
 
-		result := search.ResolveAccessPath(searchParams, &state.State)
+		result := search.ResolveAccessPath(searchParams, state.State)
 		assert.False(t, result.IsSome(), "Empty access path should return no result")
 	})
 }
@@ -317,6 +317,6 @@ func BenchmarkResolveAccessPath_DeepNesting(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		search.ResolveAccessPath(searchParams, &state.State)
+		search.ResolveAccessPath(searchParams, state.State)
 	}
 }

@@ -55,29 +55,6 @@ func findNthRange(source string, text string, n int) idx.Range {
 	return idx.Range{}
 }
 
-// findRangeAfter searches for text that appears after a context string.
-// Useful when the same text appears multiple times.
-func findRangeAfter(source string, text string, afterContext string) idx.Range {
-	contextIdx := findInString(source, afterContext)
-	if contextIdx == -1 {
-		return idx.Range{}
-	}
-
-	afterSource := source[contextIdx+len(afterContext):]
-	textIdx := findInString(afterSource, text)
-	if textIdx == -1 {
-		return idx.Range{}
-	}
-
-	// Calculate position in original source
-	beforeText := source[:contextIdx+len(afterContext)+textIdx]
-	lines := splitLines(beforeText)
-	line := uint(len(lines) - 1)
-	col := uint(len(lines[len(lines)-1]))
-
-	return idx.NewRange(line, col, line, col+uint(len(text)))
-}
-
 func splitLines(s string) []string {
 	lines := []string{}
 	current := ""
@@ -160,22 +137,25 @@ func TestParses_TypedEnums(t *testing.T) {
 		enum := symbols.Get("doc").Enums["Colors"]
 
 		e := enum.GetEnumerator("RED")
-		assert.Equal(t, "RED", e.GetName())
-		assert.Equal(t, findRange(source, "RED"), e.GetIdRange())
-		assert.Equal(t, "Colors", e.GetEnumName())
-		assert.Same(t, enum.Children()[0], e)
+		assert.True(t, e.IsSome())
+		assert.Equal(t, "RED", e.Get().GetName())
+		assert.Equal(t, findRange(source, "RED"), e.Get().GetIdRange())
+		assert.Equal(t, "Colors", e.Get().GetEnumName())
+		assert.Same(t, enum.Children()[0], e.Get())
 
 		e = enum.GetEnumerator("BLUE")
-		assert.Equal(t, "BLUE", e.GetName())
-		assert.Equal(t, findRange(source, "BLUE"), e.GetIdRange())
-		assert.Equal(t, "Colors", e.GetEnumName())
-		assert.Same(t, enum.Children()[1], e)
+		assert.True(t, e.IsSome())
+		assert.Equal(t, "BLUE", e.Get().GetName())
+		assert.Equal(t, findRange(source, "BLUE"), e.Get().GetIdRange())
+		assert.Equal(t, "Colors", e.Get().GetEnumName())
+		assert.Same(t, enum.Children()[1], e.Get())
 
 		e = enum.GetEnumerator("GREEN")
-		assert.Equal(t, "GREEN", e.GetName())
-		assert.Equal(t, findRange(source, "GREEN"), e.GetIdRange())
-		assert.Equal(t, "Colors", e.GetEnumName())
-		assert.Same(t, enum.Children()[2], e)
+		assert.True(t, e.IsSome())
+		assert.Equal(t, "GREEN", e.Get().GetName())
+		assert.Equal(t, findRange(source, "GREEN"), e.Get().GetIdRange())
+		assert.Equal(t, "Colors", e.Get().GetEnumName())
+		assert.Same(t, enum.Children()[2], e.Get())
 	})
 
 	t.Run("associate values >= v0.6.0", func(t *testing.T) {
@@ -226,6 +206,7 @@ func TestParses_TypedEnums(t *testing.T) {
 		for enum_i, enumerator := range enumerators {
 			t.Run(fmt.Sprintf("Enumerator #%d", enum_i), func(t *testing.T) {
 				assert.Equal(t, len(expectedAssocValues), len(enumerator.AssociatedValues))
+				assert.NotEmpty(t, enumerator.GetHoverInfo())
 				for i, assoc := range enumerator.AssociatedValues {
 					assocIndex := fmt.Sprintf("Associated value #%d", i)
 					expected := expectedAssocValues[i]
@@ -233,6 +214,23 @@ func TestParses_TypedEnums(t *testing.T) {
 					assert.Equal(t, expected.type_, assoc.GetType().GetName(), assocIndex+" didn't match")
 				}
 			})
+		}
+	})
+
+	t.Run("captures explicit enumerator values", func(t *testing.T) {
+		source := `
+		enum SqliteResult : int {
+			ROW = 100,
+			DONE = 101
+		}`
+		doc := document.NewDocument("enumv.c3", source)
+		parser := createParser()
+
+		symbols, _ := parser.ParseSymbols(&doc)
+		enum := symbols.Get("enumv").Enums["SqliteResult"]
+		if assert.NotNil(t, enum) {
+			assert.Equal(t, "enum SqliteResult.ROW = 100", enum.GetEnumerator("ROW").Get().GetHoverInfo())
+			assert.Equal(t, "enum SqliteResult.DONE = 101", enum.GetEnumerator("DONE").Get().GetHoverInfo())
 		}
 	})
 
@@ -344,16 +342,19 @@ func TestParses_UnTypedEnums(t *testing.T) {
 
 		enum := symbols.Get("doc").Enums["Colors"]
 		e := enum.GetEnumerator("RED")
-		assert.Equal(t, "RED", e.GetName())
-		assert.Equal(t, findRange(source, "RED"), e.GetIdRange())
+		assert.True(t, e.IsSome())
+		assert.Equal(t, "RED", e.Get().GetName())
+		assert.Equal(t, findRange(source, "RED"), e.Get().GetIdRange())
 
 		e = enum.GetEnumerator("BLUE")
-		assert.Equal(t, "BLUE", e.GetName())
-		assert.Equal(t, findRange(source, "BLUE"), e.GetIdRange())
+		assert.True(t, e.IsSome())
+		assert.Equal(t, "BLUE", e.Get().GetName())
+		assert.Equal(t, findRange(source, "BLUE"), e.Get().GetIdRange())
 
 		e = enum.GetEnumerator("GREEN")
-		assert.Equal(t, "GREEN", e.GetName())
-		assert.Equal(t, findRange(source, "GREEN"), e.GetIdRange())
+		assert.True(t, e.IsSome())
+		assert.Equal(t, "GREEN", e.Get().GetName())
+		assert.Equal(t, findRange(source, "GREEN"), e.Get().GetIdRange())
 	})
 }
 
@@ -366,34 +367,34 @@ func TestParse_fault(t *testing.T) {
 	doc := document.NewDocument(docId, source)
 	parser := createParser()
 
-	t.Run("finds Fault identifier", func(t *testing.T) {
+	t.Run("finds FaultDef identifier", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
 		scope := symbols.Get("doc")
 		if scope == nil {
 			t.Fatalf("scope is nil")
 		}
-		if !assert.Equal(t, len(scope.Faults), 1) {
+		if !assert.Equal(t, len(scope.FaultDefs), 1) {
 			return
 		}
-		assert.NotNil(t, scope.Faults[0], "faults: %v", scope.Faults)
-		assert.Equal(t, "", scope.Faults[0].GetName())
-		assert.Equal(t, "", scope.Faults[0].GetType())
-		assert.Same(t, scope.Children()[0], scope.Faults[0])
+		assert.NotNil(t, scope.FaultDefs[0], "faults: %v", scope.FaultDefs)
+		assert.Equal(t, "", scope.FaultDefs[0].GetName())
+		assert.Equal(t, "", scope.FaultDefs[0].GetType())
+		assert.Same(t, scope.Children()[0], scope.FaultDefs[0])
 	})
 
 	t.Run("reads ranges for fault", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		found := symbols.Get("doc").Faults[0]
+		found := symbols.Get("doc").FaultDefs[0]
 		assert.Equal(t, findRange(source, "faultdef IO_ERROR, PARSE_ERROR;"), found.GetDocumentRange(), "Wrong document rage")
-		assert.Equal(t, idx.NewRange(0, 0, 0, 0), found.GetIdRange(), "Wrong identifier range")
+		assert.Equal(t, findRange(source, "IO_ERROR"), found.GetIdRange(), "Wrong identifier range")
 	})
 
 	t.Run("finds doc comment", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		fault := symbols.Get("doc").Faults[0]
+		fault := symbols.Get("doc").FaultDefs[0]
 
 		assert.Equal(t, "docs", fault.GetDocComment().GetBody())
 	})
@@ -401,22 +402,24 @@ func TestParse_fault(t *testing.T) {
 	t.Run("finds defined fault constants", func(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 
-		fault := symbols.Get("doc").Faults[0]
+		fault := symbols.Get("doc").FaultDefs[0]
 		e := fault.GetConstant("IO_ERROR")
-		assert.Equal(t, "IO_ERROR", e.GetName())
+		assert.True(t, e.IsSome())
+		assert.Equal(t, "IO_ERROR", e.Get().GetName())
 		ioErrorRange := findRange(source, "IO_ERROR")
-		assert.Equal(t, ioErrorRange, e.GetIdRange())
-		assert.Equal(t, ioErrorRange, e.GetDocumentRange())
-		assert.Equal(t, "", e.GetFaultName())
-		assert.Same(t, fault.Children()[0], e)
+		assert.Equal(t, ioErrorRange, e.Get().GetIdRange())
+		assert.Equal(t, ioErrorRange, e.Get().GetDocumentRange())
+		assert.Equal(t, "", e.Get().GetFaultName())
+		assert.Same(t, fault.Children()[0], e.Get())
 
 		e = fault.GetConstant("PARSE_ERROR")
-		assert.Equal(t, "PARSE_ERROR", e.GetName())
+		assert.True(t, e.IsSome())
+		assert.Equal(t, "PARSE_ERROR", e.Get().GetName())
 		parseErrorRange := findRange(source, "PARSE_ERROR")
-		assert.Equal(t, parseErrorRange, e.GetIdRange())
-		assert.Equal(t, parseErrorRange, e.GetDocumentRange())
-		assert.Equal(t, "", e.GetFaultName())
-		assert.Same(t, fault.Children()[1], e)
+		assert.Equal(t, parseErrorRange, e.Get().GetIdRange())
+		assert.Equal(t, parseErrorRange, e.Get().GetDocumentRange())
+		assert.Equal(t, "", e.Get().GetFaultName())
+		assert.Same(t, fault.Children()[1], e.Get())
 	})
 }
 
@@ -501,7 +504,7 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 	symbols, _ := parser.ParseSymbols(&doc)
 	module := symbols.Get(mod)
 
-	expectedDefKilo := idx.NewDefBuilder("Kilo", mod, doc.URI).
+	expectedDefKilo := idx.NewAliasBuilder("Kilo", mod, doc.URI).
 		WithResolvesToType(
 			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
 		).
@@ -509,29 +512,29 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithDocumentRange(2, 1, 2, 18).
 		Build()
 	expectedDefKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
-	assert.Equal(t, expectedDefKilo, module.Defs["Kilo"])
-	assert.Same(t, module.Children()[0], module.Defs["Kilo"])
+	assert.Equal(t, expectedDefKilo, module.Aliases["Kilo"])
+	assert.Same(t, module.Children()[0], module.Aliases["Kilo"])
 
-	expectedDefKiloPtr := idx.NewDefBuilder("KiloPtr", mod, doc.URI).
+	expectedDefKiloPtr := idx.NewAliasBuilder("KiloPtr", mod, doc.URI).
 		WithResolvesToType(
 			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
 		).
 		WithIdentifierRange(3, 7, 3, 14).
 		WithDocumentRange(3, 1, 3, 23).
 		Build()
-	assert.Equal(t, expectedDefKiloPtr, module.Defs["KiloPtr"])
-	assert.Same(t, module.Children()[1], module.Defs["KiloPtr"])
+	assert.Equal(t, expectedDefKiloPtr, module.Aliases["KiloPtr"])
+	assert.Same(t, module.Children()[1], module.Aliases["KiloPtr"])
 
-	expectedDefFunction := idx.NewDefBuilder("MyFunction", mod, doc.URI).
+	expectedDefFunction := idx.NewAliasBuilder("MyFunction", mod, doc.URI).
 		WithResolvesTo("fn void (Allocator*, JSONRPCRequest*, JSONRPCResponse*)").
 		WithIdentifierRange(4, 7, 4, 17).
 		WithDocumentRange(4, 1, 4, 76).
 		Build()
 
-	assert.Equal(t, expectedDefFunction, module.Defs["MyFunction"])
-	assert.Same(t, module.Children()[2], module.Defs["MyFunction"])
+	assert.Equal(t, expectedDefFunction, module.Aliases["MyFunction"])
+	assert.Same(t, module.Children()[2], module.Aliases["MyFunction"])
 
-	expectedDefTypeWithGenerics := idx.NewDefBuilder("MyMap", mod, doc.URI).
+	expectedDefTypeWithGenerics := idx.NewAliasBuilder("MyMap", mod, doc.URI).
 		WithResolvesToType(
 			idx.NewTypeWithGeneric(
 				false,
@@ -547,10 +550,10 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithDocumentRange(5, 1, 5, 40).
 		Build()
 
-	assert.Equal(t, expectedDefTypeWithGenerics, module.Defs["MyMap"])
-	assert.Same(t, module.Children()[3], module.Defs["MyMap"])
+	assert.Equal(t, expectedDefTypeWithGenerics, module.Aliases["MyMap"])
+	assert.Same(t, module.Children()[3], module.Aliases["MyMap"])
 
-	expectedDefTypeWithModulePath := idx.NewDefBuilder("Camera", mod, doc.URI).
+	expectedDefTypeWithModulePath := idx.NewAliasBuilder("Camera", mod, doc.URI).
 		WithResolvesToType(
 			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
 		).
@@ -558,44 +561,44 @@ func TestExtractSymbols_finds_definition(t *testing.T) {
 		WithDocumentRange(6, 1, 6, 31).
 		Build()
 
-	assert.Equal(t, expectedDefTypeWithModulePath, module.Defs["Camera"])
-	assert.Same(t, module.Children()[4], module.Defs["Camera"])
+	assert.Equal(t, expectedDefTypeWithModulePath, module.Aliases["Camera"])
+	assert.Same(t, module.Children()[4], module.Aliases["Camera"])
 
-	expectedDefTypeAliasingToFunc := idx.NewDefBuilder("func", mod, doc.URI).
+	expectedDefTypeAliasingToFunc := idx.NewAliasBuilder("func", mod, doc.URI).
 		WithResolvesTo("a{String}").
 		WithIdentifierRange(13, 7, 13, 11).
 		WithDocumentRange(13, 1, 13, 24).
 		Build()
 
-	assert.Equal(t, expectedDefTypeAliasingToFunc, module.Defs["func"])
-	assert.Same(t, module.Children()[7], module.Defs["func"])
+	assert.Equal(t, expectedDefTypeAliasingToFunc, module.Aliases["func"])
+	assert.Same(t, module.Children()[7], module.Aliases["func"])
 
-	expectedDefTypeAliasingToGlobalVar := idx.NewDefBuilder("aliased_global", mod, doc.URI).
+	expectedDefTypeAliasingToGlobalVar := idx.NewAliasBuilder("aliased_global", mod, doc.URI).
 		WithResolvesTo("global_var").
 		WithIdentifierRange(14, 7, 14, 21).
 		WithDocumentRange(14, 1, 14, 35).
 		Build()
 
-	assert.Equal(t, expectedDefTypeAliasingToGlobalVar, module.Defs["aliased_global"])
-	assert.Same(t, module.Children()[8], module.Defs["aliased_global"])
+	assert.Equal(t, expectedDefTypeAliasingToGlobalVar, module.Aliases["aliased_global"])
+	assert.Same(t, module.Children()[8], module.Aliases["aliased_global"])
 
-	expectedDefTypeAliasingToConst := idx.NewDefBuilder("CONST_ALIAS", mod, doc.URI).
+	expectedDefTypeAliasingToConst := idx.NewAliasBuilder("CONST_ALIAS", mod, doc.URI).
 		WithResolvesTo("MY_CONST").
 		WithIdentifierRange(15, 7, 15, 18).
 		WithDocumentRange(15, 1, 15, 30).
 		Build()
 
-	assert.Equal(t, expectedDefTypeAliasingToConst, module.Defs["CONST_ALIAS"])
-	assert.Same(t, module.Children()[9], module.Defs["CONST_ALIAS"])
+	assert.Equal(t, expectedDefTypeAliasingToConst, module.Aliases["CONST_ALIAS"])
+	assert.Same(t, module.Children()[9], module.Aliases["CONST_ALIAS"])
 
-	expectedDefTypeAliasingToMacro := idx.NewDefBuilder("@macro_alias", mod, doc.URI).
+	expectedDefTypeAliasingToMacro := idx.NewAliasBuilder("@macro_alias", mod, doc.URI).
 		WithResolvesTo("@a").
 		WithIdentifierRange(16, 7, 16, 19).
 		WithDocumentRange(16, 1, 16, 25).
 		Build()
 
-	assert.Equal(t, expectedDefTypeAliasingToMacro, module.Defs["@macro_alias"])
-	assert.Same(t, module.Children()[10], module.Defs["@macro_alias"])
+	assert.Equal(t, expectedDefTypeAliasingToMacro, module.Aliases["@macro_alias"])
+	assert.Same(t, module.Children()[10], module.Aliases["@macro_alias"])
 }
 
 func TestExtractSymbols_finds_distinct(t *testing.T) {
@@ -613,7 +616,7 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 	symbols, _ := parser.ParseSymbols(&doc)
 	module := symbols.Get(mod)
 
-	expectedDistinctKilo := idx.NewDistinctBuilder("Kilo", mod, doc.URI).
+	expectedDistinctKilo := idx.NewTypeDefBuilder("Kilo", mod, doc.URI).
 		WithInline(false).
 		WithBaseType(
 			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
@@ -622,10 +625,10 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 		WithDocumentRange(2, 1, 2, 20).
 		Build()
 	expectedDistinctKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
-	assert.Equal(t, expectedDistinctKilo, module.Distincts["Kilo"])
-	assert.Same(t, module.Children()[0], module.Distincts["Kilo"])
+	assert.Equal(t, expectedDistinctKilo, module.TypeDefs["Kilo"])
+	assert.Same(t, module.Children()[0], module.TypeDefs["Kilo"])
 
-	expectedDistinctKiloPtr := idx.NewDistinctBuilder("KiloPtr", mod, doc.URI).
+	expectedDistinctKiloPtr := idx.NewTypeDefBuilder("KiloPtr", mod, doc.URI).
 		WithInline(false).
 		WithBaseType(
 			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
@@ -633,10 +636,10 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 		WithIdentifierRange(3, 9, 3, 16).
 		WithDocumentRange(3, 1, 3, 25).
 		Build()
-	assert.Equal(t, expectedDistinctKiloPtr, module.Distincts["KiloPtr"])
-	assert.Same(t, module.Children()[1], module.Distincts["KiloPtr"])
+	assert.Equal(t, expectedDistinctKiloPtr, module.TypeDefs["KiloPtr"])
+	assert.Same(t, module.Children()[1], module.TypeDefs["KiloPtr"])
 
-	expectedDistinctTypeWithGenerics := idx.NewDistinctBuilder("MyMap", mod, doc.URI).
+	expectedDistinctTypeWithGenerics := idx.NewTypeDefBuilder("MyMap", mod, doc.URI).
 		WithInline(false).
 		WithBaseType(
 			idx.NewTypeWithGeneric(
@@ -653,10 +656,10 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 		WithDocumentRange(4, 1, 4, 42).
 		Build()
 
-	assert.Equal(t, expectedDistinctTypeWithGenerics, module.Distincts["MyMap"])
-	assert.Same(t, module.Children()[2], module.Distincts["MyMap"])
+	assert.Equal(t, expectedDistinctTypeWithGenerics, module.TypeDefs["MyMap"])
+	assert.Same(t, module.Children()[2], module.TypeDefs["MyMap"])
 
-	expectedDistinctTypeWithModulePath := idx.NewDistinctBuilder("Camera", mod, doc.URI).
+	expectedDistinctTypeWithModulePath := idx.NewTypeDefBuilder("Camera", mod, doc.URI).
 		WithInline(false).
 		WithBaseType(
 			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
@@ -665,8 +668,8 @@ func TestExtractSymbols_finds_distinct(t *testing.T) {
 		WithDocumentRange(5, 1, 5, 33).
 		Build()
 
-	assert.Equal(t, expectedDistinctTypeWithModulePath, module.Distincts["Camera"])
-	assert.Same(t, module.Children()[3], module.Distincts["Camera"])
+	assert.Equal(t, expectedDistinctTypeWithModulePath, module.TypeDefs["Camera"])
+	assert.Same(t, module.Children()[3], module.TypeDefs["Camera"])
 }
 
 func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
@@ -684,7 +687,7 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 	symbols, _ := parser.ParseSymbols(&doc)
 	module := symbols.Get(mod)
 
-	expectedDistinctKilo := idx.NewDistinctBuilder("Kilo", mod, doc.URI).
+	expectedDistinctKilo := idx.NewTypeDefBuilder("Kilo", mod, doc.URI).
 		WithInline(true).
 		WithBaseType(
 			idx.NewType(true, "int", 0, false, false, option.None[int](), "mod"),
@@ -693,10 +696,10 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 		WithDocumentRange(2, 1, 2, 27).
 		Build()
 	expectedDistinctKilo.SetDocComment(cast.ToPtr(idx.NewDocComment("docs")))
-	assert.Equal(t, expectedDistinctKilo, module.Distincts["Kilo"])
-	assert.Same(t, module.Children()[0], module.Distincts["Kilo"])
+	assert.Equal(t, expectedDistinctKilo, module.TypeDefs["Kilo"])
+	assert.Same(t, module.Children()[0], module.TypeDefs["Kilo"])
 
-	expectedDistinctKiloPtr := idx.NewDistinctBuilder("KiloPtr", mod, doc.URI).
+	expectedDistinctKiloPtr := idx.NewTypeDefBuilder("KiloPtr", mod, doc.URI).
 		WithInline(true).
 		WithBaseType(
 			idx.NewType(false, "Kilo", 1, false, false, option.None[int](), "mod"),
@@ -704,10 +707,10 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 		WithIdentifierRange(3, 9, 3, 16).
 		WithDocumentRange(3, 1, 3, 32).
 		Build()
-	assert.Equal(t, expectedDistinctKiloPtr, module.Distincts["KiloPtr"])
-	assert.Same(t, module.Children()[1], module.Distincts["KiloPtr"])
+	assert.Equal(t, expectedDistinctKiloPtr, module.TypeDefs["KiloPtr"])
+	assert.Same(t, module.Children()[1], module.TypeDefs["KiloPtr"])
 
-	expectedDistinctTypeWithGenerics := idx.NewDistinctBuilder("MyMap", mod, doc.URI).
+	expectedDistinctTypeWithGenerics := idx.NewTypeDefBuilder("MyMap", mod, doc.URI).
 		WithInline(true).
 		WithBaseType(
 			idx.NewTypeWithGeneric(
@@ -724,10 +727,10 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 		WithDocumentRange(4, 1, 4, 49).
 		Build()
 
-	assert.Equal(t, expectedDistinctTypeWithGenerics, module.Distincts["MyMap"])
-	assert.Same(t, module.Children()[2], module.Distincts["MyMap"])
+	assert.Equal(t, expectedDistinctTypeWithGenerics, module.TypeDefs["MyMap"])
+	assert.Same(t, module.Children()[2], module.TypeDefs["MyMap"])
 
-	expectedDistinctTypeWithModulePath := idx.NewDistinctBuilder("Camera", mod, doc.URI).
+	expectedDistinctTypeWithModulePath := idx.NewTypeDefBuilder("Camera", mod, doc.URI).
 		WithInline(true).
 		WithBaseType(
 			idx.NewType(false, "Camera", 0, false, false, option.None[int](), "raylib"),
@@ -736,8 +739,8 @@ func TestExtractSymbols_finds_distinct_with_inline(t *testing.T) {
 		WithDocumentRange(5, 1, 5, 40).
 		Build()
 
-	assert.Equal(t, expectedDistinctTypeWithModulePath, module.Distincts["Camera"])
-	assert.Same(t, module.Children()[3], module.Distincts["Camera"])
+	assert.Equal(t, expectedDistinctTypeWithModulePath, module.TypeDefs["Camera"])
+	assert.Same(t, module.Children()[3], module.TypeDefs["Camera"])
 }
 
 func TestExtractSymbols_finds_distinct_with_methods(t *testing.T) {
@@ -754,7 +757,7 @@ func TestExtractSymbols_finds_distinct_with_methods(t *testing.T) {
 	symbols, _ := parser.ParseSymbols(&doc)
 	module := symbols.Get(mod)
 
-	_, success := module.Distincts["SuperInt"]
+	_, success := module.TypeDefs["SuperInt"]
 	assert.True(t, success)
 
 	f := module.GetChildrenFunctionByName("SuperInt.addOne")
@@ -780,7 +783,7 @@ func TestExtractSymbols_find_macro(t *testing.T) {
 	parser := createParser()
 	symbols, _ := parser.ParseSymbols(&doc)
 
-	module := symbols.Get("docid")
+	module := symbols.Get(idx.NormalizeModuleName("docId"))
 	fn := module.GetChildrenFunctionByName("m")
 	assert.True(t, fn.IsSome())
 	assert.Equal(t, "macro m(x)", fn.Get().GetHoverInfo())
@@ -811,7 +814,7 @@ func TestExtractSymbols_find_macro_with_return_type(t *testing.T) {
 	parser := createParser()
 	symbols, _ := parser.ParseSymbols(&doc)
 
-	module := symbols.Get("docid")
+	module := symbols.Get(idx.NormalizeModuleName("docId"))
 	fn := module.GetChildrenFunctionByName("m")
 	assert.True(t, fn.IsSome())
 	assert.Equal(t, "macro int m(int x)", fn.Get().GetHoverInfo())
@@ -834,7 +837,7 @@ func TestExtractSymbols_handle_invalid_macro_signature(t *testing.T) {
 	parser := createParser()
 	symbols, _ := parser.ParseSymbols(&doc)
 
-	module := symbols.Get("docid")
+	module := symbols.Get(idx.NormalizeModuleName("docId"))
 	assert.Empty(t, module.ChildrenFunctions)
 	assert.True(t, cast.ToPtr(module.GetChildrenFunctionByName("scary")).IsNone())
 	assert.True(t, cast.ToPtr(module.GetChildrenFunctionByName("void")).IsNone())
@@ -848,9 +851,9 @@ func TestExtractSymbols_find_module(t *testing.T) {
 		doc := document.NewDocument("file name.c3", source)
 		parser := createParser()
 		symbols, _ := parser.ParseSymbols(&doc)
-		fn := symbols.Get("file_name")
+		fn := symbols.Get(idx.NormalizeModuleName("file name.c3"))
 
-		assert.Equal(t, "file_name", fn.GetModuleString(), "Function module is wrong")
+		assert.Equal(t, idx.NormalizeModuleName("file name.c3"), fn.GetModuleString(), "Function module is wrong")
 	})
 
 	t.Run("finds single module in single file", func(t *testing.T) {
@@ -914,6 +917,7 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 	module foo;
 	import some, other, foo::bar::final;
 	import another;
+	import util @norecurse;
 	import another2;
 	int value = 1;
 	`
@@ -922,7 +926,43 @@ func TestExtractSymbols_find_imports(t *testing.T) {
 	parser := createParser()
 	symbols, _ := parser.ParseSymbols(&doc)
 
-	assert.Equal(t, []string{"some", "other", "foo::bar::final", "another", "another2"}, symbols.Get("foo").Imports)
+	module := symbols.Get("foo")
+	assert.Equal(t, []string{"some", "other", "foo::bar::final", "another", "util", "another2"}, module.Imports)
+	assert.Equal(t, true, module.IsImportNoRecurse("util"))
+	assert.Equal(t, false, module.IsImportNoRecurse("some"))
+}
+
+func TestExtractSymbols_includes_inline_lambda_parameters_as_local_variables(t *testing.T) {
+	source := `module app;
+
+fn void main() {
+	BGTransCallbacks tcb = {
+		.constant = fn String(String str, Allocator alloc) =>
+			str,
+	};
+}`
+
+	doc := document.NewDocument("docid", source)
+	parser := createParser()
+	parsed, _ := parser.ParseSymbols(&doc)
+
+	module := parsed.Get("app")
+	if module == nil {
+		t.Fatalf("expected app module")
+	}
+
+	mainOpt := module.GetChildrenFunctionByName("main")
+	if mainOpt.IsNone() {
+		t.Fatalf("expected main function")
+	}
+
+	main := mainOpt.Get()
+	if _, ok := main.Variables["str"]; !ok {
+		t.Fatalf("expected lambda parameter 'str' in main local variables")
+	}
+	if _, ok := main.Variables["alloc"]; !ok {
+		t.Fatalf("expected lambda parameter 'alloc' in main local variables")
+	}
 }
 
 func TestExtractSymbols_module_with_generics(t *testing.T) {
@@ -993,6 +1033,8 @@ func TestParses_Constdefs(t *testing.T) {
 	assert.Equal(t, findRange(source, "Bar"), module.Enums["Bar"].GetIdRange())
 
 	enum := module.Enums["Bar"]
-	assert.NotNil(t, enum.GetEnumerator("ABC"))
-	assert.NotNil(t, enum.GetEnumerator("DEF"))
+	abcEnum := enum.GetEnumerator("ABC")
+	defEnum := enum.GetEnumerator("DEF")
+	assert.True(t, abcEnum.IsSome())
+	assert.True(t, defEnum.IsSome())
 }

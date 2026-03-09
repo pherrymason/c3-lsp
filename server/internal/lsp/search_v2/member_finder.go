@@ -2,6 +2,7 @@ package search_v2
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
+	"github.com/pherrymason/c3-lsp/internal/lsp/search"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
@@ -30,7 +31,7 @@ func (f *MemberFinder) FindMemberOrMethod(
 
 	// Try to find direct member first (if readable)
 	// Inline distinct types allow member access (that's the point of inline)
-	if ctx.MembersReadable && (ctx.FromDistinct == NotFromDistinct || ctx.FromDistinct == InlineDistinct) {
+	if ctx.MembersReadable && (ctx.FromDistinct == search.NotFromDistinct || ctx.FromDistinct == search.InlineDistinct) {
 		if member := f.findDirectMember(parent, name); member != nil {
 			return member, true
 		}
@@ -68,7 +69,7 @@ func (f *MemberFinder) findDirectMember(parent symbols.Indexable, name string) s
 			}
 		}
 
-	case *symbols.Fault:
+	case *symbols.FaultDef:
 		for _, constant := range p.GetConstants() {
 			if constant.GetName() == name {
 				return constant
@@ -119,7 +120,7 @@ func (f *MemberFinder) findMethod(
 		parentName = p.GetName()
 	case *symbols.Enum:
 		parentName = p.GetName()
-	case *symbols.Fault:
+	case *symbols.FaultDef:
 		parentName = p.GetName()
 	case *symbols.Enumerator:
 		if p.GetModuleString() == "" || p.GetEnumName() == "" {

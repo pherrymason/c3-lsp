@@ -10,18 +10,18 @@ distinct_declaration: $ => seq(
 
 	  'distinct',
 	  field('name', $.type_ident),
-	  optional($.interface_impl),  // TODO
-	  optional($.attributes),      // TODO
+	  optional($.interface_impl),
+	  optional($.attributes),
 	  '=',
 	  optional('inline'),
 	  $.type,
 	  ';'
 	),
 */
-func (p *Parser) nodeToDistinct(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Distinct {
+func (p *Parser) nodeToTypeDef(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.TypeDef {
 	start := startPointSkippingDocComment(node)
 
-	distinctBuilder := idx.NewDistinctBuilder("", currentModule.GetModuleString(), *docId).
+	typeDefBuilder := idx.NewTypeDefBuilder("", currentModule.GetModuleString(), *docId).
 		WithDocumentRange(
 			uint(start.Row),
 			uint(start.Column),
@@ -31,7 +31,7 @@ func (p *Parser) nodeToDistinct(node *sitter.Node, currentModule *idx.Module, do
 
 	nameNode := node.ChildByFieldName("name")
 	if nameNode != nil {
-		distinctBuilder.
+		typeDefBuilder.
 			WithName(nameNode.Content(sourceCode)).
 			WithIdentifierRange(
 				uint(nameNode.StartPoint().Row),
@@ -41,17 +41,21 @@ func (p *Parser) nodeToDistinct(node *sitter.Node, currentModule *idx.Module, do
 			)
 	}
 
+	attributes := parseNodeAttributes(node, sourceCode)
+
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
 		switch n.Type() {
 		case "inline":
-			distinctBuilder.WithInline(true)
+			typeDefBuilder.WithInline(true)
 		case "type":
 			// Might contain module path
 			_type := p.typeNodeToType(n, currentModule, sourceCode)
-			distinctBuilder.WithBaseType(_type)
+			typeDefBuilder.WithBaseType(_type)
 		}
 	}
 
-	return *distinctBuilder.Build()
+	td := typeDefBuilder.Build()
+	td.SetAttributes(attributes)
+	return *td
 }

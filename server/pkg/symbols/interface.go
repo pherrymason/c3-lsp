@@ -1,10 +1,6 @@
 package symbols
 
-import (
-	"fmt"
-
-	protocol "github.com/tliron/glsp/protocol_3_16"
-)
+import protocol "github.com/tliron/glsp/protocol_3_16"
 
 type Interface struct {
 	methods map[string]*Function
@@ -37,7 +33,7 @@ func (i *Interface) AddMethods(methods []*Function) {
 }
 
 func (i Interface) GetHoverInfo() string {
-	return fmt.Sprintf("%s", i.Name)
+	return i.Name
 }
 
 func (i Interface) GetCompletionDetail() string {

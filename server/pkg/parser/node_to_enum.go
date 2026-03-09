@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
 )
@@ -44,7 +46,7 @@ enum_declaration: $ => seq(
 	),
 */
 func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Enum {
-	// TODO parse attributes
+	attributes := parseNodeAttributes(node, sourceCode)
 
 	baseType := ""
 	var enumerators []*idx.Enumerator
@@ -112,9 +114,13 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 						// Invalid node
 						continue
 					}
+					enumeratorValue := ""
+					if argsNode := enumeratorNode.ChildByFieldName("args"); argsNode != nil {
+						enumeratorValue = enumConstantValue(argsNode.Content(sourceCode))
+					}
 					enumerator := idx.NewEnumerator(
 						enumeratorName.Content(sourceCode),
-						"",
+						enumeratorValue,
 						associatedParameters,
 						name,
 						module,
@@ -138,6 +144,14 @@ func (p *Parser) nodeToEnum(node *sitter.Node, currentModule *idx.Module, docId 
 	)
 
 	enum.AddEnumerators(enumerators)
+	enum.SetAttributes(attributes)
 
 	return enum
+}
+
+func enumConstantValue(content string) string {
+	value := strings.TrimSpace(content)
+	value = strings.TrimSpace(strings.TrimPrefix(value, "="))
+	value = strings.TrimSuffix(value, ",")
+	return strings.TrimSpace(value)
 }

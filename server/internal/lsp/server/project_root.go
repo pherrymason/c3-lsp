@@ -3,17 +3,28 @@ package server
 import (
 	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 
 	"github.com/pherrymason/c3-lsp/pkg/fs"
+	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
+
+// projectRootCacheState groups the project-root resolution cache.
+type projectRootCacheState struct {
+	mu     sync.Mutex
+	cache  map[string]string
+	hits   atomic.Uint64
+	misses atomic.Uint64
+}
 
 var projectMarkers = []string{"project.json", "c3lsp.json"}
 
 func (s *Server) resolveProjectRootForURI(uri *protocol.DocumentUri) string {
 	if uri != nil {
 		if path, err := fs.UriToPath(string(*uri)); err == nil {
-			if root := findNearestProjectRoot(path); root != "" {
+			if root := s.resolveProjectRootForPath(path); root != "" {
 				return root
 			}
 
@@ -27,6 +38,57 @@ func (s *Server) resolveProjectRootForURI(uri *protocol.DocumentUri) string {
 	}
 
 	return ""
+}
+
+func (s *Server) resolveProjectRootForPath(path string) string {
+	canonicalPath := fs.GetCanonicalPath(path)
+	if canonicalPath == "" {
+		canonicalPath = path
+	}
+
+	s.rootCache.mu.Lock()
+	if cached, ok := s.rootCache.cache[canonicalPath]; ok {
+		s.rootCache.mu.Unlock()
+		s.rootCache.hits.Add(1)
+		return cached
+	}
+	s.rootCache.mu.Unlock()
+	s.rootCache.misses.Add(1)
+
+	root := findNearestProjectRoot(canonicalPath)
+
+	s.rootCache.mu.Lock()
+	if s.rootCache.cache == nil {
+		s.rootCache.cache = make(map[string]string)
+	}
+	s.rootCache.cache[canonicalPath] = root
+	s.rootCache.mu.Unlock()
+
+	return root
+}
+
+func (s *Server) invalidateProjectRootCache() {
+	if s == nil {
+		return
+	}
+
+	s.rootCache.mu.Lock()
+	if len(s.rootCache.cache) == 0 {
+		s.rootCache.mu.Unlock()
+		return
+	}
+	s.rootCache.cache = make(map[string]string)
+	s.rootCache.mu.Unlock()
+}
+
+func (s *Server) projectRootCacheCounters() (uint64, uint64) {
+	if s == nil {
+		return 0, 0
+	}
+
+	hits := s.rootCache.hits.Load()
+	misses := s.rootCache.misses.Load()
+	return hits, misses
 }
 
 func findNearestProjectRoot(path string) string {
@@ -63,6 +125,10 @@ func isBuildableProjectRoot(path string) bool {
 }
 
 func (s *Server) configureProjectForRoot(root string) {
+	s.configureProjectForRootWithContext(root, nil)
+}
+
+func (s *Server) configureProjectForRootWithContext(root string, context *glsp.Context) {
 	root = fs.GetCanonicalPath(root)
 
 	if root == "" || s.activeConfigRoot == root {
@@ -70,8 +136,9 @@ func (s *Server) configureProjectForRoot(root string) {
 	}
 
 	s.options.C3 = cloneC3Opts(s.workspaceC3Options)
+	s.workspaceDependencyDirs = loadDependencySearchPathsForRoot(root)
 	if s.server != nil {
-		s.loadServerConfigurationForWorkspace(root)
+		s.loadServerConfigurationForWorkspace(root, context)
 	}
 	s.activeConfigRoot = root
 }

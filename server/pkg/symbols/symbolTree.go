@@ -12,7 +12,7 @@ func NewNode(symbol Indexable) Node {
 }
 
 func (n *Node) Insert(node *Node) {
-	n.children = append(n.children, n)
+	n.children = append(n.children, node)
 }
 
 func (n Node) GetSymbol() Indexable {

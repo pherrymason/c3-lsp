@@ -7,7 +7,7 @@ import (
 )
 
 func TestDistinct_GetHoverInfo_handles_nil_base_type(t *testing.T) {
-	d := NewDistinctBuilder("Thread", "std::threads", "thread.c3").Build()
+	d := NewTypeDefBuilder("Thread", "std::threads", "thread.c3").Build()
 
 	assert.NotPanics(t, func() {
 		hover := d.GetHoverInfo()

@@ -37,25 +37,28 @@ func (r *Range) UnmarshalJSON(data []byte) error {
 func (r Range) HasPosition(position Position) bool {
 	line := uint(position.Line)
 	ch := uint(position.Character)
-
-	if line >= r.Start.Line && line <= r.End.Line {
-		// Exactly same line
-		if line == r.Start.Line && line == r.End.Line {
-			// Must be inside character ranges
-			if ch >= r.Start.Character && ch <= r.End.Character {
-				return true
-			}
-		} else {
-			return true
-		}
+	if line < r.Start.Line || line > r.End.Line {
+		return false
 	}
 
-	return false
+	if r.Start.Line == r.End.Line {
+		return ch >= r.Start.Character && ch <= r.End.Character
+	}
+
+	if line == r.Start.Line {
+		return ch >= r.Start.Character
+	}
+
+	if line == r.End.Line {
+		return ch <= r.End.Character
+	}
+
+	return true
 }
 
 func (r Range) IsBeforePosition(position Position) bool {
-	if r.Start.Line > position.Line ||
-		(r.Start.Line == position.Line && r.Start.Character > position.Character) {
+	if r.Start.Line < position.Line ||
+		(r.Start.Line == position.Line && r.Start.Character <= position.Character) {
 		return true
 	}
 

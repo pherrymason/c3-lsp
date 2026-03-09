@@ -10,28 +10,20 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 )
 
-// Retrieves symbol present in current cursor position
-// Details: It will grab only the symbol until the next `.` or `:`
-// If you want to grab full chain of symbols present un current cursor, use FullSymbolInPosition
-func (d *Document) SymbolInPositionDeprecated(position symbols.Position) (sourcecode.Word, error) {
-	index := position.IndexIn(d.SourceCode.Text)
-	return d.symbolInIndexDeprecated(index)
-}
-
 // Retrieves text from previous space until cursor position.
 func (d *Document) SymbolBeforeCursor(position symbols.Position) (sourcecode.Word, error) {
 	index := uint(position.IndexIn(d.SourceCode.Text))
 	if len(d.SourceCode.Text) == 0 || index >= uint(len(d.SourceCode.Text)) {
-		return sourcecode.Word{}, errors.New("No symbol at position")
+		return sourcecode.Word{}, errors.New("no symbol at position")
 	}
 
 	currentChar := rune(d.SourceCode.Text[index])
 	if currentChar == rune(' ') || currentChar == rune('.') {
-		return sourcecode.Word{}, errors.New("No symbol at position")
+		return sourcecode.Word{}, errors.New("no symbol at position")
 	}
 
-	start := uint(0)
-	for i := index; i >= 0; i-- {
+	start := 0
+	for i := int(index); i >= 0; i-- {
 		r := rune(d.SourceCode.Text[i])
 		//fmt.Printf("%c\n", r)
 		if utils.IsSpaceOrNewline(r) || rune('.') == r {
@@ -41,13 +33,13 @@ func (d *Document) SymbolBeforeCursor(position symbols.Position) (sourcecode.Wor
 		}
 	}
 
-	diff := index - start
+	diff := uint(int(index) - start)
 
 	theRange := symbols.NewRange(
 		position.Line, position.Character-diff,
 		position.Line, position.Character,
 	)
-	return sourcecode.NewWord(d.SourceCode.Text[start:index], theRange), nil
+	return sourcecode.NewWord(d.SourceCode.Text[start:int(index)], theRange), nil
 }
 
 func (d *Document) ParentSymbolInPosition(position symbols.Position) (sourcecode.Word, error) {
@@ -63,10 +55,8 @@ func (d *Document) ParentSymbolInPosition(position symbols.Position) (sourcecode
 
 	index = start - 2
 	foundPreviousChar := false
-	for {
-		if index == 0 {
-			break
-		}
+	for index != 0 {
+
 		r := rune(d.SourceCode.Text[index])
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' {
 			foundPreviousChar = true
@@ -76,47 +66,21 @@ func (d *Document) ParentSymbolInPosition(position symbols.Position) (sourcecode
 	}
 
 	if foundPreviousChar {
-		parentSymbol, errSymbol := d.symbolInIndexDeprecated(index)
+		start, end, errSymbol := d.getWordIndexLimits(index)
+		if errSymbol != nil {
+			return sourcecode.Word{}, errSymbol
+		}
+
+		posRange := symbols.Range{
+			Start: d.indexToPosition(start),
+			End:   d.indexToPosition(end + 1),
+		}
+		parentSymbol := sourcecode.NewWord(d.SourceCode.Text[start:end+1], posRange)
 
 		return parentSymbol, errSymbol
 	}
 
-	return sourcecode.Word{}, errors.New("No previous symbol found")
-}
-
-const SymbolUntilSpace = 0     // Get symbol until previous space
-const SymbolUntilSeparator = 1 // Get symbol until previous ./:
-
-// Retrieves symbol
-func (d *Document) symbolInIndexDeprecated(index int) (sourcecode.Word, error) {
-	if len(d.SourceCode.Text) == 0 || index < 0 || index >= len(d.SourceCode.Text) {
-		return sourcecode.Word{}, errors.New("No symbol at position")
-	}
-
-	var start, end int
-	var err error
-	start, end, err = d.getWordIndexLimits(index)
-
-	if err != nil {
-		end := index + 1
-		if end > len(d.SourceCode.Text) {
-			end = len(d.SourceCode.Text)
-		}
-		if end < index {
-			end = index
-		}
-		posRange := symbols.Range{
-			Start: d.indexToPosition(index),
-			End:   d.indexToPosition(end),
-		}
-		return sourcecode.NewWord(d.SourceCode.Text[index:end], posRange), err
-	}
-
-	posRange := symbols.Range{
-		Start: d.indexToPosition(start),
-		End:   d.indexToPosition(end + 1),
-	}
-	return sourcecode.NewWord(d.SourceCode.Text[start:end+1], posRange), nil
+	return sourcecode.Word{}, errors.New("no previous symbol found")
 }
 
 func (d *Document) indexToPosition(index int) symbols.Position {
@@ -152,32 +116,46 @@ func (d *Document) indexToPosition(index int) symbols.Position {
 // If no symbol is found in index, error will be returned
 func (d *Document) getWordIndexLimits(index int) (int, int, error) {
 	if index < 0 || index >= len(d.SourceCode.Text) {
-		return 0, 0, errors.New("No symbol at position")
+		return 0, 0, errors.New("no symbol at position")
+	}
+	for index > 0 && !utf8.RuneStart(d.SourceCode.Text[index]) {
+		index--
 	}
 
-	if !utils.IsAZ09_(rune(d.SourceCode.Text[index])) {
-		return 0, 0, errors.New("No symbol at position")
+	r, size := utf8.DecodeRuneInString(d.SourceCode.Text[index:])
+	if r == utf8.RuneError && size == 0 {
+		return 0, 0, errors.New("no symbol at position")
 	}
 
-	symbolStart := 0
-	for i := index; i >= 0; i-- {
-		r := rune(d.SourceCode.Text[i])
-		if !utils.IsAZ09_(r) {
-			// First invalid character found, that means previous iteration contained first character of symbol
-			symbolStart = i + 1
+	if !utils.IsAZ09_(r) {
+		return 0, 0, errors.New("no symbol at position")
+	}
+
+	symbolStart := index
+	for current := index; current > 0; {
+		prev := current - 1
+		for prev > 0 && !utf8.RuneStart(d.SourceCode.Text[prev]) {
+			prev--
+		}
+
+		pr, _ := utf8.DecodeRuneInString(d.SourceCode.Text[prev:])
+		if !utils.IsAZ09_(pr) {
 			break
 		}
+
+		symbolStart = prev
+		current = prev
 	}
 
-	symbolEnd := len(d.SourceCode.Text) - 1
-	for i := index; i < len(d.SourceCode.Text); i++ {
-		r := rune(d.SourceCode.Text[i])
-		if !utils.IsAZ09_(r) {
-			// First invalid character found, that means previous iteration contained last character of symbol
-			symbolEnd = i - 1
+	symbolEndExclusive := index + size
+	for symbolEndExclusive < len(d.SourceCode.Text) {
+		nextRune, nextSize := utf8.DecodeRuneInString(d.SourceCode.Text[symbolEndExclusive:])
+		if !utils.IsAZ09_(nextRune) {
 			break
 		}
+		symbolEndExclusive += nextSize
 	}
+	symbolEnd := symbolEndExclusive - 1
 
 	if symbolStart < 0 || symbolStart >= len(d.SourceCode.Text) {
 		return 0, 0, errors.New("wordStart out of bounds")
@@ -185,48 +163,6 @@ func (d *Document) getWordIndexLimits(index int) (int, int, error) {
 		return 0, 0, errors.New("wordEnd out of bounds")
 	} else if symbolStart > symbolEnd {
 		return 0, 0, errors.New("wordStart > wordEnd")
-	}
-
-	return symbolStart, symbolEnd, nil
-}
-
-// Returns start and end index of symbol present at index.
-// It will search backwards until a space is found
-func (d *Document) getFullSymbolRangeIndexesAtIndex(index int) (int, int, error) {
-	if index < 0 || index >= len(d.SourceCode.Text) {
-		return 0, 0, errors.New("No symbol at position")
-	}
-
-	if !utils.IsAZ09_(rune(d.SourceCode.Text[index])) {
-		return 0, 0, errors.New("No symbol at position")
-	}
-
-	symbolStart := 0
-	for i := index; i >= 0; i-- {
-		r := rune(d.SourceCode.Text[i])
-		if r == rune(' ') {
-			// First invalid character found, that means previous iteration contained first character of symbol
-			symbolStart = i + 1
-			break
-		}
-	}
-
-	symbolEnd := len(d.SourceCode.Text) - 1
-	for i := index; i < len(d.SourceCode.Text); i++ {
-		r := rune(d.SourceCode.Text[i])
-		if !utils.IsAZ09_(r) {
-			// First invalid character found, that means previous iteration contained last character of symbol
-			symbolEnd = i - 1
-			break
-		}
-	}
-
-	if symbolStart > len(d.SourceCode.Text) {
-		return 0, 0, errors.New("wordStart out of bounds")
-	} else if symbolEnd > len(d.SourceCode.Text) {
-		return 0, 0, errors.New("wordEnd out of bounds")
-	} else if symbolStart > symbolEnd {
-		return 0, 0, errors.New("wordStart > wordEnd!")
 	}
 
 	return symbolStart, symbolEnd, nil

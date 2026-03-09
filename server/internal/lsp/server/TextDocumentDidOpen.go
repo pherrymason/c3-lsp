@@ -11,6 +11,13 @@ import (
 )
 
 func (h *Server) TextDocumentDidOpen(context *glsp.Context, params *protocol.DidOpenTextDocumentParams) error {
+	if !h.shouldProcessNotification(protocol.MethodTextDocumentDidOpen) {
+		return nil
+	}
+	if params == nil {
+		return nil
+	}
+
 	/*
 		doc, err := h.documents.Open(*params, context.Notify)
 		if err != nil {
@@ -30,6 +37,12 @@ func (h *Server) TextDocumentDidOpen(context *glsp.Context, params *protocol.Did
 
 	doc := document.NewDocumentFromDocURI(params.TextDocument.URI, params.TextDocument.Text, params.TextDocument.Version)
 	h.state.RefreshDocumentIdentifiers(doc, h.parser)
+	h.preloadImportedRootModulesForURI(params.TextDocument.URI)
+	notify := noopNotify
+	if context != nil {
+		notify = context.Notify
+	}
+	h.RunDiagnosticsQuick(h.state, notify, true, &params.TextDocument.URI)
 
 	return nil
 }

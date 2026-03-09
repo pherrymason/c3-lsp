@@ -119,13 +119,13 @@ func (s SearchParams) GetFullQualifiedName() string {
 
 func (s *SearchParams) TrackTraversedModule(module string) bool {
 	mt, ok := s.trackedModules[module]
-	trackValue := LockStatusReady
 	if ok && mt == LockStatusLocked {
 		return false
 	} else if mt == LockStatusReady {
-		trackValue = LockStatusLocked
+		s.trackedModules[module] = LockStatusLocked
+		return true
 	}
-	s.trackedModules[module] = trackValue
+	s.trackedModules[module] = LockStatusReady
 
 	return true
 }
@@ -138,15 +138,9 @@ func (s SearchParams) TrackTraversedModules() map[string]int {
 // This calculates the module cursor is located.
 func BuildSearchBySymbolUnderCursor(doc *document.Document, docParsedModules symbols_table.UnitModules, cursorPosition symbols.Position) SearchParams {
 	symbolInPosition := doc.SourceCode.SymbolInPosition(cursorPosition, &docParsedModules)
-	/*if symbolInPosition.IsNone() {
-		panic("Could not find symbol in cursor")
-	}*/
 
 	sp := SearchParams{
-		word: symbolInPosition,
-		//symbol: symbolInPosition.Text(), // Deprecated
-		//symbolRange: symbolInPosition.TextRange(), // Deprecated
-
+		word:           symbolInPosition,
 		limitToDocId:   option.Some(doc.URI),
 		moduleInCursor: symbols.NewModulePathFromString(docParsedModules.FindContextModuleInCursorPosition(cursorPosition)),
 
@@ -172,15 +166,15 @@ func BuildSearchBySymbolUnderCursor(doc *document.Document, docParsedModules sym
 		}
 	}
 
-	// TODO if sp.modulePath.IsEmpty() === false, mean that sp.module should be sp.moduelPath.String()
+	// Keep moduleInCursor bound to the document context module. Qualified symbols
+	// are represented separately via limitToModule.
 
 	return sp
 }
 
 func BuildSearchBySymbolAtModule(symbol string, symbolModule string) SearchParams {
 	sp := SearchParams{
-		word: sourcecode.NewWord(symbol, symbols.NewRange(0, 0, 0, 0)),
-		//symbol:            symbol,
+		word:           sourcecode.NewWord(symbol, symbols.NewRange(0, 0, 0, 0)),
 		moduleInCursor: symbols.NewModulePathFromString(symbolModule),
 		trackedModules: make(TrackedModules),
 	}
@@ -188,10 +182,14 @@ func BuildSearchBySymbolAtModule(symbol string, symbolModule string) SearchParam
 	return sp
 }
 
+func CopyWithFreshTracking(input SearchParams) SearchParams {
+	clone := input
+	clone.trackedModules = make(TrackedModules)
+	return clone
+}
+
 func NewSearchParams(symbol string, symbolRange symbols.Range, symbolModule string, docId option.Option[string]) SearchParams {
 	return SearchParams{
-		//symbol:            symbol,
-		//symbolRange:       symbolRange,
 		word:           sourcecode.NewWord(symbol, symbolRange),
 		moduleInCursor: symbols.NewModulePathFromString(symbolModule),
 		limitToDocId:   docId,

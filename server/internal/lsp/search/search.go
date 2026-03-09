@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
-	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	l "github.com/pherrymason/c3-lsp/internal/lsp/project_state"
 	"github.com/pherrymason/c3-lsp/internal/lsp/search_params"
 	"github.com/pherrymason/c3-lsp/pkg/c3"
@@ -18,15 +18,27 @@ import (
 )
 
 type Search struct {
-	debugEnabled bool
-	logger       commonlog.Logger
+	debugEnabled   bool
+	logger         commonlog.Logger
+	declCache      *symbolLookupCache
+	paramsCache    *searchParamsCache
+	parentCache    *parentResolutionCache
+	searchTimeout  time.Duration
+	searchMaxDepth int
 }
 
 func NewSearch(logger commonlog.Logger, debugEnabled bool) Search {
-	return Search{
+	s := Search{
 		debugEnabled: debugEnabled,
 		logger:       logger,
+		declCache:    newSymbolLookupCache(),
+		paramsCache:  newSearchParamsCache(),
+		parentCache:  newParentResolutionCache(),
 	}
+	// Read env vars once at construction time.
+	s.searchTimeout = symbolSearchTimeout()
+	s.searchMaxDepth = symbolSearchMaxDepth()
+	return s
 }
 
 func (s *Search) debug(message string, debugger FindDebugger) {
@@ -40,10 +52,10 @@ func (s *Search) debug(message string, debugger FindDebugger) {
 		prep = fmt.Sprintf("%s (%d)", prep, debugger.depth)
 	}
 
-	s.logger.Debug(fmt.Sprintf("%s %s", prep, message))
+	s.logger.Debug("search debug", "depth", debugger.depth, "message", prep+" "+message)
 }
 
-func (self Search) FindSymbolDeclarationInWorkspace(
+func (s *Search) FindSymbolDeclarationInWorkspace(
 	docId string,
 	position symbols.Position,
 	state *l.ProjectState,
@@ -54,25 +66,65 @@ func (self Search) FindSymbolDeclarationInWorkspace(
 		return option.None[symbols.Indexable]()
 	}
 
-	unitModules := state.GetUnitModulesByDoc(doc.URI)
-	if unitModules == nil {
-		return option.None[symbols.Indexable]()
+	cacheKey := buildSymbolLookupCacheKey(docId, doc, position, state.Revision())
+	if cached, ok := s.declCache.get(cacheKey); ok {
+		return cached
 	}
 
-	searchParams := search_params.BuildSearchBySymbolUnderCursor(
-		doc,
-		*unitModules,
-		position,
-	)
-	searchResult := self.findClosestSymbolDeclaration(searchParams, state, FindDebugger{enabled: self.debugEnabled, depth: 0})
+	snapshot := state.Snapshot()
+	if snapshot == nil {
+		result := option.None[symbols.Indexable]()
+		s.declCache.set(cacheKey, result)
+		return result
+	}
+
+	unitModules, ok := snapshot.UnitModulesByDocValue(doc.URI)
+	if !ok {
+		result := option.None[symbols.Indexable]()
+		s.declCache.set(cacheKey, result)
+		return result
+	}
+
+	searchParamsKey := buildSearchParamsCacheKey(docId, doc, position, state.Revision())
+	searchParams, ok := s.paramsCache.get(searchParamsKey)
+	if !ok {
+		searchParams = search_params.BuildSearchBySymbolUnderCursor(
+			doc,
+			unitModules,
+			position,
+		)
+		s.paramsCache.set(searchParamsKey, searchParams)
+	}
+	debugger := FindDebugger{enabled: s.debugEnabled, depth: 0}
+	if s.searchTimeout > 0 {
+		debugger = debugger.withDeadline(time.Now().Add(s.searchTimeout))
+	}
+
+	searchResult := s.findClosestSymbolDeclaration(searchParams, state, debugger)
 	if searchResult.IsSome() {
+		s.declCache.set(cacheKey, searchResult.result)
 		return searchResult.result
 	}
 
-	if !shouldRetryLookupAtPreviousPosition(searchParams.Symbol()) {
-		return option.None[symbols.Indexable]()
+	if builtinFallback := resolveBuiltinFaultFallback(searchParams.Symbol(), state); builtinFallback.IsSome() {
+		s.declCache.set(cacheKey, builtinFallback)
+		return builtinFallback
+	}
+	if qualifiedFaultFallback := s.resolveQualifiedFaultFallback(searchParams, state); qualifiedFaultFallback.IsSome() {
+		s.declCache.set(cacheKey, qualifiedFaultFallback)
+		return qualifiedFaultFallback
 	}
 
+	if !shouldRetryLookupAtPreviousPosition(searchParams.Symbol()) {
+		result := option.None[symbols.Indexable]()
+		s.declCache.set(cacheKey, result)
+		return result
+	}
+
+	nextPositions := []symbols.Position{
+		symbols.NewPosition(position.Line, position.Character+1),
+		symbols.NewPosition(position.Line, position.Character+2),
+	}
 	previousPositions := []symbols.Position{}
 	if position.Character > 0 {
 		previousPositions = append(previousPositions, symbols.NewPosition(position.Line, position.Character-1))
@@ -81,11 +133,173 @@ func (self Search) FindSymbolDeclarationInWorkspace(
 		previousPositions = append(previousPositions, symbols.NewPosition(position.Line, position.Character-2))
 	}
 
-	for _, lookupPosition := range previousPositions {
-		retryParams := search_params.BuildSearchBySymbolUnderCursor(doc, *unitModules, lookupPosition)
-		retryResult := self.findClosestSymbolDeclaration(retryParams, state, FindDebugger{enabled: self.debugEnabled, depth: 0})
+	probePositions := append(nextPositions, previousPositions...)
+
+	for _, lookupPosition := range probePositions {
+		retryParams := search_params.BuildSearchBySymbolUnderCursor(doc, unitModules, lookupPosition)
+		retryResult := s.findClosestSymbolDeclaration(retryParams, state, debugger)
 		if retryResult.IsSome() {
+			s.declCache.set(cacheKey, retryResult.result)
 			return retryResult.result
+		}
+
+		if builtinFallback := resolveBuiltinFaultFallback(retryParams.Symbol(), state); builtinFallback.IsSome() {
+			s.declCache.set(cacheKey, builtinFallback)
+			return builtinFallback
+		}
+		if qualifiedFaultFallback := s.resolveQualifiedFaultFallback(retryParams, state); qualifiedFaultFallback.IsSome() {
+			s.declCache.set(cacheKey, qualifiedFaultFallback)
+			return qualifiedFaultFallback
+		}
+	}
+
+	result := option.None[symbols.Indexable]()
+	s.declCache.set(cacheKey, result)
+	return result
+}
+
+func resolveBuiltinFaultFallback(symbolName string, state *l.ProjectState) option.Option[symbols.Indexable] {
+	if state == nil {
+		return option.None[symbols.Indexable]()
+	}
+
+	symbolName = normalizeIdentifierSymbol(symbolName)
+	if symbolName == "" || strings.Contains(symbolName, "::") {
+		return option.None[symbols.Indexable]()
+	}
+
+	for _, r := range symbolName {
+		if !utils.IsAZ09_(r) && r != '_' {
+			return option.None[symbols.Indexable]()
+		}
+	}
+
+	builtinFQN := "std::core::builtin::" + symbolName
+	for _, symbol := range state.SearchByFQN(builtinFQN) {
+		if isFaultLikeSymbol(symbol) {
+			return option.Some[symbols.Indexable](symbol)
+		}
+	}
+
+	var found symbols.Indexable
+	state.ForEachModuleUntil(func(module *symbols.Module) bool {
+		if module.GetName() != "std::core::builtin" {
+			return false
+		}
+		for _, fault := range module.FaultDefs {
+			if fault == nil {
+				continue
+			}
+			for _, constant := range fault.GetConstants() {
+				if constant != nil && constant.GetName() == symbolName {
+					found = constant
+					return true
+				}
+			}
+		}
+		return false
+	})
+	if found != nil {
+		return option.Some[symbols.Indexable](found)
+	}
+
+	return option.None[symbols.Indexable]()
+}
+
+func normalizeIdentifierSymbol(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	start := -1
+	end := -1
+	for i, r := range raw {
+		if start < 0 {
+			if utils.IsAZ09_(r) || r == '_' {
+				start = i
+				end = i
+			}
+			continue
+		}
+
+		if utils.IsAZ09_(r) || r == '_' {
+			end = i
+			continue
+		}
+
+		break
+	}
+
+	if start < 0 || end < start {
+		return ""
+	}
+
+	return raw[start : end+1]
+}
+
+func isFaultLikeSymbol(symbol symbols.Indexable) bool {
+	if symbol == nil {
+		return false
+	}
+	if _, ok := symbol.(*symbols.FaultConstant); ok {
+		return true
+	}
+	if _, ok := symbol.(*symbols.FaultDef); ok {
+		return true
+	}
+	return false
+}
+
+func (s *Search) resolveQualifiedFaultFallback(searchParams search_params.SearchParams, state *l.ProjectState) option.Option[symbols.Indexable] {
+	if state == nil || !searchParams.HasModuleSpecified() {
+		return option.None[symbols.Indexable]()
+	}
+
+	faultName := normalizeIdentifierSymbol(searchParams.Symbol())
+	if faultName == "" {
+		return option.None[symbols.Indexable]()
+	}
+
+	moduleOpt := searchParams.LimitToModule()
+	if moduleOpt.IsNone() {
+		return option.None[symbols.Indexable]()
+	}
+
+	snapshot := state.Snapshot()
+	if snapshot == nil {
+		return option.None[symbols.Indexable]()
+	}
+
+	moduleCandidates := []symbols.ModulePath{moduleOpt.Get()}
+	if resolved := s.resolveShortModulePath(moduleOpt.Get(), searchParams, state); resolved.IsSome() {
+		if resolved.Get().GetName() != moduleOpt.Get().GetName() {
+			moduleCandidates = append(moduleCandidates, resolved.Get())
+		}
+	}
+
+	seenModules := map[string]struct{}{}
+	for _, modulePath := range moduleCandidates {
+		moduleName := modulePath.GetName()
+		if moduleName == "" {
+			continue
+		}
+		if _, ok := seenModules[moduleName]; ok {
+			continue
+		}
+		seenModules[moduleName] = struct{}{}
+
+		for _, module := range snapshot.ModulesByName(moduleName) {
+			for _, fault := range module.FaultDefs {
+				if fault == nil {
+					continue
+				}
+				for _, constant := range fault.GetConstants() {
+					if constant != nil && constant.GetName() == faultName {
+						return option.Some[symbols.Indexable](constant)
+					}
+				}
+			}
 		}
 	}
 
@@ -106,7 +320,7 @@ func shouldRetryLookupAtPreviousPosition(symbol string) bool {
 	return false
 }
 
-func (s *Search) FindHoverInformation(docURI string, params *protocol.HoverParams, state *project_state.ProjectState) option.Option[protocol.Hover] {
+func (s *Search) FindHoverInformation(docURI string, params *protocol.HoverParams, state *l.ProjectState) option.Option[protocol.Hover] {
 	doc := state.GetDocument(docURI)
 	if doc == nil {
 		return option.None[protocol.Hover]()
@@ -124,6 +338,11 @@ func (s *Search) FindHoverInformation(docURI string, params *protocol.HoverParam
 	)
 
 	if c3.IsLanguageKeyword(search.Symbol()) {
+		return option.None[protocol.Hover]()
+	}
+
+	snapshot := state.Snapshot()
+	if snapshot == nil {
 		return option.None[protocol.Hover]()
 	}
 
@@ -151,21 +370,45 @@ func (s *Search) FindHoverInformation(docURI string, params *protocol.HoverParam
 // Finds the closest selectedSymbol based on current scope.
 // If not present in current Scope:
 // - Search in files of same module
-// - SearchParams in imported files (TODO)
+// - Search in imported files
 // - SearchParams in global symbols in workspace
-func (self Search) findClosestSymbolDeclaration(searchParams search_params.SearchParams, state *l.ProjectState, debugger FindDebugger) SearchResult {
+func (s *Search) findClosestSymbolDeclaration(searchParams search_params.SearchParams, state *l.ProjectState, debugger FindDebugger) SearchResult {
 	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
+	if debugger.depth > s.searchMaxDepth {
+		return searchResult
+	}
+	if state == nil {
+		return searchResult
+	}
+
+	snapshot := state.Snapshot()
+	if snapshot == nil {
+		return searchResult
+	}
+	if debugger.timedOut() {
+		return searchResult
+	}
 	if c3.IsLanguageKeyword(searchParams.Symbol()) {
-		self.debug("Ignore because C3 keyword", debugger)
+		s.debug("Ignore because C3 keyword", debugger)
 		return NewSearchResultEmpty(searchParams.TrackTraversedModules())
 	}
 
-	self.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s: %s", searchParams.DocId(), searchParams.ModuleInCursor(), searchParams.Symbol()), debugger)
+	s.debug(fmt.Sprintf("findClosestSymbolDeclaration on doc %s: %s: %s", searchParams.DocId(), searchParams.ModuleInCursor(), searchParams.Symbol()), debugger)
 
 	// Check if there's parent contextual information in searchParams
 	if searchParams.HasAccessPath() {
+		cacheKey := buildParentResolutionCacheKey(searchParams, state.Revision())
+		if cached, ok := s.parentCache.get(cacheKey); ok {
+			result := NewSearchResult(searchParams.TrackTraversedModules())
+			if cached.IsSome() {
+				result.Set(cached.Get())
+			}
+			return result
+		}
+
 		// Going from here, search should not limit to root search
-		symbolResult := self.findInParentSymbols(searchParams, state, debugger)
+		symbolResult := s.findInParentSymbols(searchParams, state, debugger)
+		s.parentCache.set(cacheKey, symbolResult.result)
 		//if symbolResult.IsSome() {
 		return symbolResult
 		//}
@@ -180,14 +423,14 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 		*/
 		//searchResult := l.findSymbolDeclarationInModule(searchParams, searchParams.LimitToModule().Get(), debugger.goIn())
 		moduleToSearch := searchParams.LimitToModule().Get()
-		searchResult := self.strictFindSymbolDeclarationInModule(searchParams, moduleToSearch, state, debugger.goIn())
+		searchResult := s.strictFindSymbolDeclarationInModule(searchParams, moduleToSearch, state, debugger.goIn())
 		if searchResult.IsSome() {
 			return searchResult
 		}
 
-		resolvedModule := self.resolveShortModulePath(moduleToSearch, searchParams, state)
+		resolvedModule := s.resolveShortModulePath(moduleToSearch, searchParams, state)
 		if resolvedModule.IsSome() && resolvedModule.Get().GetName() != moduleToSearch.GetName() {
-			searchResult = self.strictFindSymbolDeclarationInModule(searchParams, resolvedModule.Get(), state, debugger.goIn())
+			searchResult = s.strictFindSymbolDeclarationInModule(searchParams, resolvedModule.Get(), state, debugger.goIn())
 			if searchResult.IsSome() {
 				return searchResult
 			}
@@ -200,17 +443,18 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 
 	//docIdOption := searchParams.DocId()
 	var collectionParsedModules []symbols_table.UnitModules
+	allModulesByDoc := snapshot.AllUnitModulesView()
 	if searchParams.LimitSearchToDoc() {
 		docIdOption := searchParams.DocId()
 		docId := docIdOption.Get()
-		parsedModules := state.GetUnitModulesByDoc(docId)
-		if parsedModules == nil {
+		parsedModules, ok := snapshot.UnitModulesByDocValue(docId)
+		if !ok {
 			return searchResult
 		}
 
-		collectionParsedModules = append(collectionParsedModules, *parsedModules)
+		collectionParsedModules = append(collectionParsedModules, parsedModules)
 
-		for oDocId, parsedModules := range state.GetAllUnitModules() {
+		for oDocId, parsedModules := range allModulesByDoc {
 			if docId == oDocId {
 				continue
 			}
@@ -230,7 +474,7 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 		}
 
 		// Doc id not specified, search by module. Collect scope belonging to same module as searchParams.module
-		for docId, parsedModules := range state.GetAllUnitModules() {
+		for docId, parsedModules := range allModulesByDoc {
 			if searchParams.ShouldExcludeDocId(docId) {
 				continue
 			}
@@ -245,13 +489,18 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 	}
 
 	trackedModules := searchParams.TrackTraversedModules()
-	var imports []string
-	importsAdded := make(map[string]bool)
 	contextModulePath := searchParams.ModulePathInCursor()
 	for _, parsedModules := range collectionParsedModules {
+		if debugger.timedOut() {
+			return searchResult
+		}
+
 		for _, scopedTree := range parsedModules.GetLoadableModules(contextModulePath) {
+			if debugger.timedOut() {
+				return searchResult
+			}
+
 			scopeMode := searchParams.ScopeMode()
-			moduleName := scopedTree.GetModuleString()
 			if scopeMode == search_params.InScope {
 				docOpt := searchParams.DocId()
 				if docOpt.IsSome() {
@@ -260,14 +509,6 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 					}
 				}
 			}
-			self.debug(
-				fmt.Sprintf("Checking module \"%s\": mode %d, symbol: %s",
-					moduleName,
-					scopeMode,
-					searchParams.Symbol(),
-				),
-				debugger,
-			)
 
 			// Go through every element defined in scopedTree
 			identifier, _ := findDeepFirst(
@@ -284,13 +525,6 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 				return searchResult
 			}
 
-			// Not found, store imports traversed to avoid checking them again
-			for _, imp := range scopedTree.Imports {
-				if !importsAdded[imp] {
-					importsAdded[imp] = true
-					imports = append(imports, imp)
-				}
-			}
 		}
 	}
 	/*
@@ -315,14 +549,26 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 	// SEARCH IN IMPORTED MODULES
 	if searchParams.LimitSearchToDoc() {
 		for _, parsedModules := range collectionParsedModules {
+			if debugger.timedOut() {
+				return searchResult
+			}
+
 			for _, mod := range parsedModules.Modules() {
-				for i := 0; i < len(mod.Imports); i++ {
-					searchResult.TrackTraversedModule(mod.Imports[i])
-					if !searchParams.TrackTraversedModule(mod.Imports[i]) {
-						continue
+				if debugger.timedOut() {
+					return searchResult
+				}
+
+				importCandidates := s.expandImportedModuleCandidates(mod, snapshot)
+				for i := 0; i < len(importCandidates); i++ {
+					if debugger.timedOut() {
+						return searchResult
 					}
 
-					module := mod.Imports[i]
+					module := importCandidates[i]
+					searchResult.TrackTraversedModule(module)
+					if !searchParams.TrackTraversedModule(module) {
+						continue
+					}
 					sp := search_params.NewSearchParamsBuilder().
 						WithSymbolWord(searchParams.SymbolW()).
 						LimitedToModulePath(symbols.NewModulePathFromString(module)).
@@ -330,8 +576,8 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 						WithScopeMode(search_params.InModuleRoot). // Document this
 						Build()
 
-					self.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\": %s", module, searchParams.Symbol()), debugger)
-					symbol := self.findSymbolDeclarationInModule(sp, symbols.NewModulePathFromString(module), state, debugger.goIn())
+					s.debug(fmt.Sprintf("findClosestSymbolDeclaration: search in imported module \"%s\": %s", module, searchParams.Symbol()), debugger)
+					symbol := s.findSymbolDeclarationInModule(sp, symbols.NewModulePathFromString(module), state, debugger.goIn())
 					if symbol.IsSome() {
 						return symbol
 					}
@@ -342,7 +588,7 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 
 	// Last resort, check if any loadable module is compatible with the string being searched
 	if /*debugger.depth == 0 &&*/ searchResult.IsNone() {
-		moduleMatches := self.findModuleNameInTraversedModules(searchParams, searchResult.traversedModules, state)
+		moduleMatches := s.findModuleNameInTraversedModules(searchParams, searchResult.traversedModules, state)
 
 		if len(moduleMatches) > 0 {
 			searchResult.Set(moduleMatches[0])
@@ -354,17 +600,28 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 }
 
 // Search symbols inside a given module
-func (l *Search) findSymbolDeclarationInModule(searchParams search_params.SearchParams, moduleToSearch symbols.ModulePath, projState *project_state.ProjectState, debugger FindDebugger) SearchResult {
+func (l *Search) findSymbolDeclarationInModule(searchParams search_params.SearchParams, moduleToSearch symbols.ModulePath, projState *l.ProjectState, debugger FindDebugger) SearchResult {
 	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
+	if projState == nil {
+		return searchResult
+	}
 
-	for docId, modulesByDoc := range projState.GetAllUnitModules() {
-		//for _, scope := range modulesByDoc.GetLoadableModules(searchParams.ModulePathInCursor()) {
+	snapshot := projState.Snapshot()
+	if snapshot == nil {
+		return searchResult
+	}
+
+	for docId, modulesByDoc := range snapshot.AllUnitModulesView() {
+		if debugger.timedOut() {
+			return searchResult
+		}
+
 		for _, scope := range modulesByDoc.GetLoadableModules(moduleToSearch) {
-			searchResult.TrackTraversedModule(scope.GetModuleString())
+			if debugger.timedOut() {
+				return searchResult
+			}
 
-			//if scope.GetModuleString() != expectedModule { // TODO Ignore current doc we are comming from
-			//	continue
-			//}
+			searchResult.TrackTraversedModule(scope.GetModuleString())
 
 			if !searchParams.TrackTraversedModule(scope.GetModuleString()) {
 				continue
@@ -379,7 +636,7 @@ func (l *Search) findSymbolDeclarationInModule(searchParams search_params.Search
 				Build()
 
 			symbolResult := l.findClosestSymbolDeclaration(
-				sp, projState, FindDebugger{depth: debugger.depth + 1})
+				sp, projState, FindDebugger{depth: debugger.depth + 1, deadline: debugger.deadline})
 			l.debug(fmt.Sprintf("end searching symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
 			if symbolResult.IsSome() {
 				return symbolResult
@@ -390,15 +647,31 @@ func (l *Search) findSymbolDeclarationInModule(searchParams search_params.Search
 	return searchResult
 }
 
-func (l *Search) strictFindSymbolDeclarationInModule(searchParams search_params.SearchParams, moduleToSearch symbols.ModulePath, projState *project_state.ProjectState, debugger FindDebugger) SearchResult {
+func (l *Search) strictFindSymbolDeclarationInModule(searchParams search_params.SearchParams, moduleToSearch symbols.ModulePath, projState *l.ProjectState, debugger FindDebugger) SearchResult {
 	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
+	if projState == nil {
+		return searchResult
+	}
+
+	snapshot := projState.Snapshot()
+	if snapshot == nil {
+		return searchResult
+	}
 	results := []struct {
 		identifier symbols.Indexable
 		score      int
 	}{}
 
-	for docId, modulesByDoc := range projState.GetAllUnitModules() {
+	for docId, modulesByDoc := range snapshot.AllUnitModulesView() {
+		if debugger.timedOut() {
+			return searchResult
+		}
+
 		for _, scope := range modulesByDoc.GetLoadableModules(moduleToSearch) {
+			if debugger.timedOut() {
+				return searchResult
+			}
+
 			searchResult.TrackTraversedModule(scope.GetModuleString())
 			if !searchParams.TrackTraversedModule(scope.GetModuleString()) {
 				continue
@@ -450,7 +723,7 @@ func (l *Search) strictFindSymbolDeclarationInModule(searchParams search_params.
 	return searchResult
 }
 
-func (l Search) findModuleNameInTraversedModules(searchParams search_params.SearchParams, traversedModules map[string]bool, projState *project_state.ProjectState) []*symbols.Module {
+func (l *Search) findModuleNameInTraversedModules(searchParams search_params.SearchParams, traversedModules map[string]bool, projState *l.ProjectState) []*symbols.Module {
 	matches := []*symbols.Module{}
 
 	// full module name
@@ -460,32 +733,42 @@ func (l Search) findModuleNameInTraversedModules(searchParams search_params.Sear
 
 	moduleName := searchParams.GetFullQualifiedName()
 
-	for _, parsedModulesByDoc := range projState.GetAllUnitModules() {
-		for _, module := range parsedModulesByDoc.Modules() {
-
-			if module.GetName() == moduleName {
-				_, ok := traversedModules[moduleName]
-				if ok {
-					matches = append(matches, module)
-				}
-			}
-		}
+	if projState == nil {
+		return matches
 	}
+	snapshot := projState.Snapshot()
+	if snapshot == nil {
+		return matches
+	}
+
+	if _, ok := traversedModules[moduleName]; !ok {
+		return matches
+	}
+
+	matches = append(matches, snapshot.ModulesByName(moduleName)...)
 
 	return matches
 }
 
-func (s Search) resolveShortModulePath(moduleToSearch symbols.ModulePath, searchParams search_params.SearchParams, state *project_state.ProjectState) option.Option[symbols.ModulePath] {
+func (s *Search) resolveShortModulePath(moduleToSearch symbols.ModulePath, searchParams search_params.SearchParams, state *l.ProjectState) option.Option[symbols.ModulePath] {
 	shortName := moduleToSearch.GetName()
 	if shortName == "" || strings.Contains(shortName, "::") {
 		return option.None[symbols.ModulePath]()
 	}
+	if state == nil {
+		return option.None[symbols.ModulePath]()
+	}
+	snapshot := state.Snapshot()
+	if snapshot == nil {
+		return option.None[symbols.ModulePath]()
+	}
 
 	imports := map[string]bool{}
+	recursiveImports := map[string]bool{}
 	docIdOpt := searchParams.DocId()
 	if docIdOpt.IsSome() {
 		docId := docIdOpt.Get()
-		if modulesByDoc := state.GetUnitModulesByDoc(docId); modulesByDoc != nil {
+		if modulesByDoc, ok := snapshot.UnitModulesByDocValue(docId); ok {
 			contextModule := searchParams.ModulePathInCursor().GetName()
 			for _, mod := range modulesByDoc.Modules() {
 				if mod.GetName() != contextModule {
@@ -493,6 +776,9 @@ func (s Search) resolveShortModulePath(moduleToSearch symbols.ModulePath, search
 				}
 				for _, imp := range mod.Imports {
 					imports[imp] = true
+					if !mod.IsImportNoRecurse(imp) {
+						recursiveImports[imp] = true
+					}
 				}
 			}
 		}
@@ -503,44 +789,45 @@ func (s Search) resolveShortModulePath(moduleToSearch symbols.ModulePath, search
 		score int
 	}
 
+	candidates := snapshot.ModuleNamesByShort(shortName)
+	if len(candidates) == 0 {
+		return option.None[symbols.ModulePath]()
+	}
+
 	best := option.None[candidate]()
-	for _, modulesByDoc := range state.GetAllUnitModules() {
-		for _, module := range modulesByDoc.Modules() {
-			name := module.GetName()
+	for _, name := range candidates {
+		score := 0
+		switch {
+		case name == shortName:
+			score = 1000
+		case strings.HasSuffix(name, "::"+shortName):
+			score = 100
+		default:
+			continue
+		}
 
-			score := -1
-			switch {
-			case name == shortName:
-				score = 1000
-			case strings.HasSuffix(name, "::"+shortName):
-				score = 100
-			default:
-				continue
-			}
+		if name == "std::core::"+shortName {
+			score += 500
+		}
 
-			if name == "std::core::"+shortName {
-				score += 500
+		if imports[name] {
+			score += 300
+		}
+		for imp := range recursiveImports {
+			if strings.HasPrefix(name, imp+"::") {
+				score += 200
 			}
+		}
 
-			if imports[name] {
-				score += 300
-			}
-			for imp := range imports {
-				if strings.HasPrefix(name, imp+"::") {
-					score += 200
-				}
-			}
+		cand := candidate{path: symbols.NewModulePathFromString(name), score: score}
+		if best.IsNone() {
+			best = option.Some(cand)
+			continue
+		}
 
-			cand := candidate{path: symbols.NewModulePathFromString(name), score: score}
-			if best.IsNone() {
-				best = option.Some(cand)
-				continue
-			}
-
-			current := best.Get()
-			if cand.score > current.score || (cand.score == current.score && cand.path.GetName() < current.path.GetName()) {
-				best = option.Some(cand)
-			}
+		current := best.Get()
+		if cand.score > current.score || (cand.score == current.score && cand.path.GetName() < current.path.GetName()) {
+			best = option.Some(cand)
 		}
 	}
 
@@ -551,6 +838,44 @@ func (s Search) resolveShortModulePath(moduleToSearch symbols.ModulePath, search
 	return option.Some(best.Get().path)
 }
 
+func (s *Search) expandImportedModuleCandidates(module *symbols.Module, snapshot *l.ProjectSnapshot) []string {
+	if module == nil {
+		return nil
+	}
+
+	seen := map[string]struct{}{}
+	result := make([]string, 0, len(module.Imports))
+
+	for _, imported := range module.Imports {
+		if imported == "" {
+			continue
+		}
+		if _, ok := seen[imported]; !ok {
+			seen[imported] = struct{}{}
+			result = append(result, imported)
+		}
+
+		if module.IsImportNoRecurse(imported) || snapshot == nil {
+			continue
+		}
+
+		prefix := imported + "::"
+		snapshot.ForEachModule(func(scope *symbols.Module) {
+			name := scope.GetName()
+			if !strings.HasPrefix(name, prefix) {
+				return
+			}
+			if _, ok := seen[name]; ok {
+				return
+			}
+			seen[name] = struct{}{}
+			result = append(result, name)
+		})
+	}
+
+	return result
+}
+
 func (s *Search) implicitImportedParsedModules(
 	state *l.ProjectState,
 	acceptedModulePaths []symbols.ModulePath,
@@ -558,7 +883,54 @@ func (s *Search) implicitImportedParsedModules(
 
 ) []*symbols.Module {
 	var collectionModules []*symbols.Module
-	for docId, parsedModules := range state.GetAllUnitModules() {
+	if state == nil {
+		return collectionModules
+	}
+
+	snapshot := state.Snapshot()
+	if snapshot == nil {
+		return collectionModules
+	}
+
+	scopeIdx := snapshot.ScopeIndex()
+
+	// Fast path: use the pre-computed index when available.
+	// For each accepted module, the index gives us exactly which module names
+	// are reachable — no O(D×M) document scan required.
+	if scopeIdx != nil {
+		seen := make(map[*symbols.Module]struct{})
+		indexMiss := false
+
+		for _, acceptedModule := range acceptedModulePaths {
+			names := scopeIdx.ModuleNames(acceptedModule.GetName())
+			if names == nil {
+				// Module not in index (e.g. snapshot is stale) — use slow path.
+				indexMiss = true
+				break
+			}
+			for _, name := range names {
+				for _, mod := range snapshot.ModulesByName(name) {
+					if excludeDocId.IsSome() && excludeDocId.Get() == mod.GetDocumentURI() {
+						continue
+					}
+					if _, dup := seen[mod]; !dup {
+						seen[mod] = struct{}{}
+						collectionModules = append(collectionModules, mod)
+					}
+				}
+			}
+		}
+
+		if !indexMiss {
+			return collectionModules
+		}
+
+		// Reset and fall through to the linear scan.
+		collectionModules = collectionModules[:0]
+	}
+
+	// Slow path: O(D×M×A) linear scan — used only when the index is absent.
+	for docId, parsedModules := range snapshot.AllUnitModulesView() {
 		if excludeDocId.IsSome() && excludeDocId.Get() == docId {
 			continue
 		}

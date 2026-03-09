@@ -784,7 +784,7 @@ func TestConvertToAST_def_decl(t *testing.T) {
 			),
 		}, ast.Modules[0].Declarations[1])
 
-	// Def with generics
+	// Alias with generics
 	row = 4
 	assert.Equal(t,
 		DefDecl{
@@ -800,7 +800,7 @@ func TestConvertToAST_def_decl(t *testing.T) {
 			),
 		}, ast.Modules[0].Declarations[3])
 
-	// Def with Identifier path
+	// Alias with Identifier path
 	row = 5
 	assert.Equal(t,
 		DefDecl{

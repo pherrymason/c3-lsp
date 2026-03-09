@@ -1,6 +1,8 @@
 package document
 
 import (
+	"strings"
+
 	"github.com/pherrymason/c3-lsp/pkg/fs"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
 	"github.com/pkg/errors"
@@ -22,6 +24,13 @@ func NewDocumentStore(fs fs.FileStorage) *DocumentStore {
 }
 
 func (s *DocumentStore) normalizePath(pathOrUri string) (string, error) {
+	if pathOrUri == "" {
+		return "", errors.New("empty path")
+	}
+	if !strings.HasPrefix(pathOrUri, "file://") {
+		return fs.GetCanonicalPath(pathOrUri), nil
+	}
+
 	path, err := fs.UriToPath(pathOrUri)
 	if err != nil {
 		return "", errors.Wrapf(err, "unable to parse URI: %s", pathOrUri)
@@ -37,12 +46,10 @@ func (s *DocumentStore) Open(params protocol.DidOpenTextDocumentParams, notify g
 
 	uri := params.TextDocument.URI
 	path, err := s.normalizePath(uri)
-	//s.logger.Debug(fmt.Sprintf("Opening %s :: %s", uri, path))
-
 	if err != nil {
 		return nil, err
 	}
-	// TODO test that document is created with the normalized path and not params.TextDocument.URI
+
 	doc := NewDocumentFromString(path, params.TextDocument.Text)
 
 	s.documents[path] = &doc
@@ -50,19 +57,23 @@ func (s *DocumentStore) Open(params protocol.DidOpenTextDocumentParams, notify g
 }
 
 func (s *DocumentStore) Close(uri protocol.DocumentUri) {
-	delete(s.documents, uri)
+	if doc, ok := s.documents[uri]; ok {
+		doc.Close()
+		delete(s.documents, uri)
+	}
 }
 
 func (s *DocumentStore) Get(pathOrURI string) (*Document, bool) {
 	path, err := s.normalizePath(pathOrURI)
-	//s.logger.Debugf("normalized path:%s", path)
-
 	if err != nil {
-		//s.logger.Errorf("Could not normalize path: %s", err)
-		// If normalization fails, try with the path as-is (fallback for tests)
-		path = pathOrURI
+		return nil, false
 	}
 
+	d, ok := s.documents[path]
+	return d, ok
+}
+
+func (s *DocumentStore) GetNormalized(path string) (*Document, bool) {
 	d, ok := s.documents[path]
 	return d, ok
 }
@@ -70,14 +81,16 @@ func (s *DocumentStore) Get(pathOrURI string) (*Document, bool) {
 func (s *DocumentStore) Set(doc *Document) {
 	path, err := s.normalizePath(doc.URI)
 	if err != nil {
-		// If normalization fails, use the URI as-is (fallback for tests)
-		path = doc.URI
+		return
 	}
 	s.documents[path] = doc
 }
 
 func (s *DocumentStore) Delete(docId string) {
-	delete(s.documents, docId)
+	if doc, ok := s.documents[docId]; ok {
+		doc.Close()
+		delete(s.documents, docId)
+	}
 }
 
 func (s *DocumentStore) Rename(oldDocURI string, newDocURI string) {

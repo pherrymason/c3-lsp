@@ -16,77 +16,77 @@ type MockLogger struct {
 }
 
 // ([Logger] interface)
-func (self MockLogger) AllowLevel(level log.Level) bool {
+func (m MockLogger) AllowLevel(level log.Level) bool {
 	return false
 }
 
 // ([Logger] interface)
-func (self MockLogger) SetMaxLevel(level log.Level) {
+func (m MockLogger) SetMaxLevel(level log.Level) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) GetMaxLevel() log.Level {
+func (m MockLogger) GetMaxLevel() log.Level {
 	return log.None
 }
 
 // ([Logger] interface)
-func (self MockLogger) NewMessage(level log.Level, depth int, keysAndValues ...any) log.Message {
+func (m MockLogger) NewMessage(level log.Level, depth int, keysAndValues ...any) log.Message {
 	return nil
 }
 
 // ([Logger] interface)
-func (self MockLogger) Log(level log.Level, depth int, message string, keysAndValues ...any) {
+func (m MockLogger) Log(level log.Level, depth int, message string, keysAndValues ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Logf(level log.Level, depth int, format string, args ...any) {
+func (m MockLogger) Logf(level log.Level, depth int, format string, args ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Critical(message string, keysAndValues ...any) {
+func (m MockLogger) Critical(message string, keysAndValues ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Criticalf(format string, args ...any) {
+func (m MockLogger) Criticalf(format string, args ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Error(message string, keysAndValues ...any) {
+func (m MockLogger) Error(message string, keysAndValues ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Errorf(format string, args ...any) {
+func (m MockLogger) Errorf(format string, args ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Warning(message string, keysAndValues ...any) {
+func (m MockLogger) Warning(message string, keysAndValues ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Warningf(format string, args ...any) {
+func (m MockLogger) Warningf(format string, args ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Notice(message string, keysAndValues ...any) {
+func (m MockLogger) Notice(message string, keysAndValues ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Noticef(format string, args ...any) {
+func (m MockLogger) Noticef(format string, args ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Info(message string, keysAndValues ...any) {
+func (m MockLogger) Info(message string, keysAndValues ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Infof(format string, args ...any) {
+func (m MockLogger) Infof(format string, args ...any) {
 }
 
 // ([Logger] interface)
-func (self MockLogger) Debug(message string, keysAndValues ...any) {
-	self.tracker["debug"] = append(self.tracker["debug"], message)
+func (m MockLogger) Debug(message string, keysAndValues ...any) {
+	m.tracker["debug"] = append(m.tracker["debug"], message)
 }
 
 // ([Logger] interface)
-func (self MockLogger) Debugf(format string, args ...any) {
+func (m MockLogger) Debugf(format string, args ...any) {
 }

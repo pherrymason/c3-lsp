@@ -6,6 +6,14 @@ import (
 )
 
 func (h *Server) TextDocumentDidClose(context *glsp.Context, params *protocol.DidCloseTextDocumentParams) error {
-	h.state.CloseDocument(params.TextDocument.URI)
+	if !h.shouldProcessNotification(protocol.MethodTextDocumentDidClose) {
+		return nil
+	}
+	if params == nil {
+		return nil
+	}
+
+	docID := h.normalizedDocIDFromURI(params.TextDocument.URI)
+	h.state.CloseDocumentByNormalizedID(docID)
 	return nil
 }

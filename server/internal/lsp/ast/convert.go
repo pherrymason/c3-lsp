@@ -53,7 +53,7 @@ func ConvertToAST(cstNode *sitter.Node, sourceCode string, fileName string) File
 		case "module_declaration":
 			if anonymousModule {
 				anonymousModule = false
-				lastMod.ASTNodeBase.EndPos = Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
+				lastMod.EndPos = Position{uint(node.StartPoint().Row), uint(node.StartPoint().Column)}
 			}
 
 			prg.Modules = append(prg.Modules, convert_module(node, source))
@@ -349,7 +349,6 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 		}
 		fmt.Printf("%d - %s\n", i, memberNode.Content(sourceCode))
 
-		fieldType := TypeInfo{}
 		member := StructMemberDecl{
 			ASTNodeBase: NewBaseNodeBuilder().
 				WithSitterPosRange(memberNode.StartPoint(), memberNode.EndPoint()).
@@ -361,14 +360,11 @@ func convert_struct_declaration(node *sitter.Node, sourceCode []byte) StructDecl
 
 			switch n.Type() {
 			case "type":
-				fieldType = typeNodeToType(n, sourceCode)
-				member.Type = fieldType
+				member.Type = typeNodeToType(n, sourceCode)
 				//fmt.Println(fieldType, n.Content(sourceCode))
 
 				//fieldType = n.Content(sourceCode)
-				if isInline {
-					//	identifier = "dummy-subtyping"
-				}
+				_ = isInline
 			case "identifier_list":
 				for j := 0; j < int(n.ChildCount()); j++ {
 					member.Names = append(member.Names,

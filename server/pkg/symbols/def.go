@@ -8,14 +8,14 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-type Def struct {
+type Alias struct {
 	resolvesTo     string
 	resolvesToType option.Option[*Type]
 	BaseIndexable
 }
 
-func NewDef(name string, resolvesTo string, module string, docId string, idRange Range, docRange Range) Def {
-	return Def{
+func NewAlias(name string, resolvesTo string, module string, docId string, idRange Range, docRange Range) Alias {
+	return Alias{
 		resolvesTo:     resolvesTo,
 		resolvesToType: option.None[*Type](),
 		BaseIndexable: NewBaseIndexable(
@@ -29,8 +29,8 @@ func NewDef(name string, resolvesTo string, module string, docId string, idRange
 	}
 }
 
-func NewDefType(name string, resolvesTo Type, module string, docId string, idRange Range, docRange Range) Def {
-	return Def{
+func NewAliasType(name string, resolvesTo Type, module string, docId string, idRange Range, docRange Range) Alias {
+	return Alias{
 		resolvesTo:     "",
 		resolvesToType: option.Some(&resolvesTo),
 		BaseIndexable: NewBaseIndexable(
@@ -44,11 +44,11 @@ func NewDefType(name string, resolvesTo Type, module string, docId string, idRan
 	}
 }
 
-func (d Def) GetResolvesTo() string {
+func (d Alias) GetResolvesTo() string {
 	return d.resolvesTo
 }
 
-func (d Def) GetHoverInfo() string {
+func (d Alias) GetHoverInfo() string {
 	if d.resolvesToType.IsNone() {
 		return fmt.Sprintf("def %s = %s", d.Name, d.resolvesTo)
 	}
@@ -56,22 +56,20 @@ func (d Def) GetHoverInfo() string {
 	return fmt.Sprintf("def %s = %s", d.Name, d.resolvesToType.Get().String())
 }
 
-func (d Def) GetCompletionDetail() string {
+func (d Alias) GetCompletionDetail() string {
 	if d.resolvesToType.IsSome() {
 		return "Type"
 	} else if strings.HasPrefix(d.Name, "@") {
 		return "Alias for macro '" + d.resolvesTo + "'"
 	} else {
-		// No semantic information
-		// TODO: Resolve the identifier and display its information?
 		return "Alias for '" + d.resolvesTo + "'"
 	}
 }
 
-func (d Def) ResolvesToType() bool {
+func (d Alias) ResolvesToType() bool {
 	return d.resolvesToType.IsSome()
 }
 
-func (d *Def) ResolvedType() *Type {
+func (d *Alias) ResolvedType() *Type {
 	return d.resolvesToType.Get()
 }

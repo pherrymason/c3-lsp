@@ -1,6 +1,8 @@
 package server
 
 import (
+	stdctx "context"
+
 	ctx "github.com/pherrymason/c3-lsp/internal/lsp/context"
 	_prot "github.com/pherrymason/c3-lsp/internal/lsp/protocol"
 	"github.com/pherrymason/c3-lsp/pkg/fs"
@@ -24,12 +26,20 @@ func (h *Server) TextDocumentTypeDefinition(context *glsp.Context, params *proto
 		symbols.NewPositionFromLSPPosition(params.Position),
 		h.state,
 	)
+	docID := utils.NormalizePath(params.TextDocument.URI)
+	pos := symbols.NewPositionFromLSPPosition(params.Position)
+	if identifierOption.IsNone() {
+		identifierOption = h.resolveSymbolCommonFallbacks(stdctx.Background(), docID, pos)
+	}
 
 	if identifierOption.IsNone() {
 		return nil, nil
 	}
 
 	symbol := identifierOption.Get()
+	if isNilIndexable(symbol) {
+		return nil, nil
+	}
 	if !symbol.HasSourceCode() && h.options.C3.StdlibPath.IsNone() {
 		return nil, nil
 	}

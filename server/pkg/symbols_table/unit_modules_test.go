@@ -116,3 +116,30 @@ func TestRegisterModule_UsesSymbolNameWhenModulePathMissing(t *testing.T) {
 	assert.NotNil(t, pm.Get("std::io"))
 	assert.Equal(t, "std::io", pm.Get("std::io").GetModule().GetName())
 }
+
+func TestFindContextModuleInCursorPosition_prefers_nearest_previous_module(t *testing.T) {
+	docID := "doc"
+	pm := NewParsedModules(&docID)
+
+	moduleA := symbols.NewModule(
+		"bgimpl::data_methods",
+		docID,
+		symbols.NewRange(5, 7, 5, 22),
+		symbols.NewRange(5, 0, 5, 22),
+	)
+	pm.modules.Set(moduleA.GetName(), moduleA)
+
+	moduleB := symbols.NewModule(
+		"std::core::array",
+		docID,
+		symbols.NewRange(204, 7, 204, 24),
+		symbols.NewRange(204, 0, 204, 24),
+	)
+	pm.modules.Set(moduleB.GetName(), moduleB)
+
+	contextBeforeSecond := pm.FindContextModuleInCursorPosition(symbols.NewPosition(40, 13))
+	assert.Equal(t, "bgimpl::data_methods", contextBeforeSecond)
+
+	contextAfterSecond := pm.FindContextModuleInCursorPosition(symbols.NewPosition(215, 4))
+	assert.Equal(t, "std::core::array", contextAfterSecond)
+}

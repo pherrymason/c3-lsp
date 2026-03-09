@@ -57,8 +57,8 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		module.AddVariable(
 			symbols.NewVariableBuilder("value", symbols.NewTypeFromString("Ref", mod), mod, docId).Build(),
 		)
-		module.AddDef(
-			symbols.NewDefBuilder("Ref", mod, docId).Build(),
+		module.AddAlias(
+			symbols.NewAliasBuilder("Ref", mod, docId).Build(),
 		)
 		um.modules.Set("xx", module)
 
@@ -90,8 +90,8 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		modB := "yy"
 		umB := NewParsedModules(&docBId)
 		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
-		moduleB.AddDef(
-			symbols.NewDefBuilder("Ref", modB, docBId).Build(),
+		moduleB.AddAlias(
+			symbols.NewAliasBuilder("Ref", modB, docBId).Build(),
 		)
 		umB.modules.Set(mod, moduleB)
 		symbolsTable.Register(umB, NewPendingToResolve())
@@ -123,8 +123,8 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		modB := "yy"
 		umB := NewParsedModules(&docBId)
 		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
-		moduleB.AddDef(
-			symbols.NewDefBuilder("Ref", modB, docBId).Build(),
+		moduleB.AddAlias(
+			symbols.NewAliasBuilder("Ref", modB, docBId).Build(),
 		)
 		umB.modules.Set(mod, moduleB)
 		symbolsTable.Register(umB, NewPendingToResolve())
@@ -158,8 +158,8 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		modB := "yy"
 		umB := NewParsedModules(&docBId)
 		moduleB := symbols.NewModuleBuilder(modB, docBId).Build()
-		moduleB.AddDef(
-			symbols.NewDefBuilder("Ref", modB, docBId).Build(),
+		moduleB.AddAlias(
+			symbols.NewAliasBuilder("Ref", modB, docBId).Build(),
 		)
 		umB.modules.Set(mod, moduleB)
 		symbolsTable.Register(umB, NewPendingToResolve())
@@ -176,8 +176,8 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 
 		um := NewParsedModules(&docId)
 		module := symbols.NewModuleBuilder(mod, docId).Build()
-		module.AddDef(
-			symbols.NewDefBuilder("foo", mod, docId).
+		module.AddAlias(
+			symbols.NewAliasBuilder("foo", mod, docId).
 				WithResolvesToType(symbols.NewTypeFromString("HashMap", mod)).
 				Build(),
 		)
@@ -185,7 +185,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 
 		um.modules.Set(mod, module)
 		pendingToResolve := NewPendingToResolve()
-		pendingToResolve.AddDefType(module.Defs["foo"], module)
+		pendingToResolve.AddAliasType(module.Aliases["foo"], module)
 		symbolsTable.Register(um, pendingToResolve)
 
 		docBId := "aDocBId"
@@ -199,7 +199,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		symbolsTable.Register(umB, NewPendingToResolve())
 
 		assert.Equal(t, true, symbolsTable.pendingToResolve.GetTypesByModule(mod)[0].solved)
-		assert.Equal(t, "std::collections::map::HashMap", module.Defs["foo"].ResolvedType().GetFullQualifiedName())
+		assert.Equal(t, "std::collections::map::HashMap", module.Aliases["foo"].ResolvedType().GetFullQualifiedName())
 	})
 
 	t.Run("resolves distinct defined in different file & module should resolve", func(t *testing.T) {
@@ -209,8 +209,8 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 
 		um := NewParsedModules(&docId)
 		module := symbols.NewModuleBuilder(mod, docId).Build()
-		module.AddDistinct(
-			symbols.NewDistinctBuilder("foo", mod, docId).
+		module.AddTypeDef(
+			symbols.NewTypeDefBuilder("foo", mod, docId).
 				WithBaseType(symbols.NewTypeFromString("HashMap", mod)).
 				Build(),
 		)
@@ -218,7 +218,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 
 		um.modules.Set(mod, module)
 		pendingToResolve := NewPendingToResolve()
-		pendingToResolve.AddDistinctType(module.Distincts["foo"], module)
+		pendingToResolve.AddTypeDefType(module.TypeDefs["foo"], module)
 		symbolsTable.Register(um, pendingToResolve)
 
 		docBId := "aDocBId"
@@ -232,7 +232,7 @@ func TestExtractSymbols_find_variables_flag_pending_to_resolve(t *testing.T) {
 		symbolsTable.Register(umB, NewPendingToResolve())
 
 		assert.Equal(t, true, symbolsTable.pendingToResolve.GetTypesByModule(mod)[0].solved)
-		assert.Equal(t, "std::collections::map::HashMap", module.Distincts["foo"].GetBaseType().GetFullQualifiedName())
+		assert.Equal(t, "std::collections::map::HashMap", module.TypeDefs["foo"].GetBaseType().GetFullQualifiedName())
 	})
 
 }

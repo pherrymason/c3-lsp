@@ -13,7 +13,7 @@ func NewBitstructBuilder(name string, backingType Type, module string, docId str
 }
 
 func (sb *BitstructBuilder) WithoutSourceCode() *BitstructBuilder {
-	sb.bitstruct.BaseIndexable.HasSourceCode_ = false
+	sb.bitstruct.HasSourceCode_ = false
 	return sb
 }
 
@@ -24,12 +24,12 @@ func (b *BitstructBuilder) WithStructMember(name string, baseType Type, module s
 }
 
 func (b *BitstructBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *BitstructBuilder {
-	b.bitstruct.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	b.bitstruct.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return b
 }
 
 func (b *BitstructBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *BitstructBuilder {
-	b.bitstruct.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	b.bitstruct.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return b
 }
 
@@ -37,7 +37,7 @@ func (b *BitstructBuilder) WithDocs(docs string) *BitstructBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	b.bitstruct.BaseIndexable.DocComment = &docComment
+	b.bitstruct.DocComment = &docComment
 	return b
 }
 

@@ -2,13 +2,13 @@ package symbols
 
 import protocol "github.com/tliron/glsp/protocol_3_16"
 
-type FaultBuilder struct {
-	fault Fault
+type FaultDefBuilder struct {
+	fault FaultDef
 }
 
-func NewFaultBuilder(name string, baseType string, module string, docId string) *FaultBuilder {
-	return &FaultBuilder{
-		fault: Fault{
+func NewFaultDefBuilder(name string, baseType string, module string, docId string) *FaultDefBuilder {
+	return &FaultDefBuilder{
+		fault: FaultDef{
 			baseType: baseType,
 			BaseIndexable: BaseIndexable{
 				Name:         name,
@@ -21,36 +21,36 @@ func NewFaultBuilder(name string, baseType string, module string, docId string) 
 	}
 }
 
-func (eb *FaultBuilder) WithoutSourceCode() *FaultBuilder {
-	eb.fault.BaseIndexable.HasSourceCode_ = false
+func (eb *FaultDefBuilder) WithoutSourceCode() *FaultDefBuilder {
+	eb.fault.HasSourceCode_ = false
 	return eb
 }
 
-func (eb *FaultBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultBuilder {
-	eb.fault.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+func (eb *FaultDefBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultDefBuilder {
+	eb.fault.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
-func (eb *FaultBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultBuilder {
-	eb.fault.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+func (eb *FaultDefBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultDefBuilder {
+	eb.fault.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
-func (eb *FaultBuilder) WithDocs(docs string) *FaultBuilder {
+func (eb *FaultDefBuilder) WithDocs(docs string) *FaultDefBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	eb.fault.BaseIndexable.DocComment = &docComment
+	eb.fault.DocComment = &docComment
 	return eb
 }
 
-func (eb *FaultBuilder) WithConstant(constant *FaultConstant) *FaultBuilder {
+func (eb *FaultDefBuilder) WithConstant(constant *FaultConstant) *FaultDefBuilder {
 	eb.fault.constants = append(eb.fault.constants, constant)
 
 	return eb
 }
 
-func (eb *FaultBuilder) Build() *Fault {
+func (eb *FaultDefBuilder) Build() *FaultDef {
 	return &eb.fault
 }
 
@@ -74,7 +74,7 @@ func NewFaultConstantBuilder(name string, module string, docId string) *FaultCon
 }
 
 func (eb *FaultConstantBuilder) WithoutSourceCode() *FaultConstantBuilder {
-	eb.faultConstant.BaseIndexable.HasSourceCode_ = false
+	eb.faultConstant.HasSourceCode_ = false
 	return eb
 }
 
@@ -84,12 +84,12 @@ func (eb *FaultConstantBuilder) WithFaultName(faultName string) *FaultConstantBu
 }
 
 func (eb *FaultConstantBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultConstantBuilder {
-	eb.faultConstant.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.faultConstant.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 
 func (eb *FaultConstantBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *FaultConstantBuilder {
-	eb.faultConstant.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+	eb.faultConstant.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return eb
 }
 

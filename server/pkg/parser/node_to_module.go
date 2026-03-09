@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	sitter "github.com/smacker/go-tree-sitter"
@@ -79,8 +81,9 @@ func (p *Parser) nodeToModule(doc *document.Document, node *sitter.Node, sourceC
 	      ';'
 	    ),
 */
-func (p *Parser) nodeToImport(doc *document.Document, node *sitter.Node, sourceCode []byte) []string {
+func (p *Parser) nodeToImport(doc *document.Document, node *sitter.Node, sourceCode []byte) ([]string, bool) {
 	imports := []string{}
+	noRecurse := strings.Contains(node.Content(sourceCode), "@norecurse")
 
 	for i := 0; i < int(node.ChildCount()); i++ {
 		n := node.Child(i)
@@ -105,5 +108,5 @@ func (p *Parser) nodeToImport(doc *document.Document, node *sitter.Node, sourceC
 		}
 	}
 
-	return imports
+	return imports, noRecurse
 }

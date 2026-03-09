@@ -13,16 +13,16 @@ import (
 // If `false`, this indexable is a variable or similar, so its parent type is distinct
 // from the indexable itself, therefore only methods can be accessed.
 func canReadMembersOf(s symbols.Indexable) bool {
-	switch s.(type) {
+	switch s := s.(type) {
 
 	// Theoretically, a 'distinct' cannot have members, and in fact any type obtained
 	// from a distinct cannot have its members accessed, but, for consistency, we
 	// specify 'true' here to indicate that we're handling a type, not some instance.
-	case *symbols.Struct, *symbols.Enum, *symbols.Fault, *symbols.Distinct:
+	case *symbols.Struct, *symbols.Enum, *symbols.FaultDef, *symbols.TypeDef:
 		return true
-	case *symbols.Def:
-		// If Def resolves to a type, it can receive its members.
-		return s.(*symbols.Def).ResolvesToType()
+	case *symbols.Alias:
+		// If Alias resolves to a type, it can receive its members.
+		return s.ResolvesToType()
 	default:
 		return false
 	}
@@ -114,7 +114,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			}
 			subprotection++
 
-			distinct, isDistinct := elm.(*symbols.Distinct)
+			distinct, isDistinct := elm.(*symbols.TypeDef)
 
 			if isDistinct && state.IsEnd() {
 				// Don't convert distinct into its base type when there won't be any
@@ -137,7 +137,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 					// own method. If so, don't resolve it to its inner type
 					// and break out of type resolution.
 					searchingSymbol := state.GetNextSymbol()
-					newIterSearch, methodResult := s.findMethod(
+					_, methodResult := s.findMethod(
 						distinct.GetName(),
 						searchingSymbol,
 						docId,
@@ -147,7 +147,6 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 					)
 
 					if methodResult.IsSome() {
-						iterSearch = newIterSearch
 						elm = methodResult.Get()
 						symbolsHierarchy = append(symbolsHierarchy, elm)
 						state.Advance()
@@ -204,9 +203,9 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 		}
 
 		// Here we can look inside elm
-		switch elm.(type) {
+		switch typed := elm.(type) {
 		case *symbols.Enumerator:
-			enumerator := elm.(*symbols.Enumerator)
+			enumerator := typed
 			assocValues := enumerator.AssociatedValues
 			searchingSymbol := state.GetNextSymbol()
 			foundAssoc := false
@@ -232,7 +231,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				enumSymbols := projState.SearchByFQN(enumerator.GetEnumFQN())
 				if len(enumSymbols) > 0 {
 					// Search the enum's methods
-					newIterSearch, result := s.findMethod(
+					_, result := s.findMethod(
 						enumSymbols[0].GetName(),
 						searchingSymbol,
 						docId,
@@ -243,7 +242,6 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 					if result.IsNone() {
 						return NewSearchResultEmpty(trackedModules)
 					}
-					iterSearch = newIterSearch
 					elm = result.Get()
 					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
@@ -251,7 +249,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			}
 
 		case *symbols.FaultConstant:
-			constant := elm.(*symbols.FaultConstant)
+			constant := typed
 
 			if methodsReadable && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
 				// Search in methods
@@ -260,7 +258,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				if len(faultSymbols) > 0 {
 					// Search the fault's methods
 					searchingSymbol := state.GetNextSymbol()
-					newIterSearch, result := s.findMethod(
+					_, result := s.findMethod(
 						faultSymbols[0].GetName(),
 						searchingSymbol,
 						docId,
@@ -271,7 +269,6 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 					if result.IsNone() {
 						return NewSearchResultEmpty(trackedModules)
 					}
-					iterSearch = newIterSearch
 					elm = result.Get()
 					symbolsHierarchy = append(symbolsHierarchy, elm)
 					state.Advance()
@@ -282,7 +279,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 			}
 
 		case *symbols.Enum:
-			_enum := elm.(*symbols.Enum)
+			_enum := typed
 			foundMemberOrAssoc := false
 			searchingSymbol := state.GetNextSymbol()
 
@@ -321,7 +318,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 
 				// Search in methods
-				newIterSearch, result := s.findMethod(
+				_, result := s.findMethod(
 					_enum.GetName(),
 					searchingSymbol,
 					docId,
@@ -332,14 +329,13 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
-				iterSearch = newIterSearch
 				elm = result.Get()
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
 			}
 
-		case *symbols.Fault:
-			fault := elm.(*symbols.Fault)
+		case *symbols.FaultDef:
+			fault := typed
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
 
@@ -362,7 +358,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 
 				// Search in methods
-				newIterSearch, result := s.findMethod(
+				_, result := s.findMethod(
 					fault.GetName(),
 					searchingSymbol,
 					docId,
@@ -373,14 +369,13 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
-				iterSearch = newIterSearch
 				elm = result.Get()
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
 			}
 
 		case *symbols.Struct:
-			strukt, _ := elm.(*symbols.Struct)
+			strukt := typed
 			members := strukt.GetMembers()
 			searchingSymbol := state.GetNextSymbol()
 			foundMember := false
@@ -406,7 +401,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				}
 
 				// Search in methods
-				newIterSearch, result := s.findMethod(
+				_, result := s.findMethod(
 					strukt.GetName(),
 					searchingSymbol,
 					docId,
@@ -417,7 +412,6 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 				if result.IsNone() {
 					return NewSearchResultEmpty(trackedModules)
 				}
-				iterSearch = newIterSearch
 				elm = result.Get()
 				symbolsHierarchy = append(symbolsHierarchy, elm)
 				state.Advance()
@@ -438,7 +432,7 @@ func (s *Search) findInParentSymbols(searchParams search_params.SearchParams, pr
 func isInspectable(elm symbols.Indexable) bool {
 	isInspectable := true
 	switch elm.(type) {
-	case *symbols.Variable, *symbols.Function, *symbols.StructMember, *symbols.Def:
+	case *symbols.Variable, *symbols.Function, *symbols.StructMember, *symbols.Alias:
 		isInspectable = false
 	}
 
@@ -447,64 +441,26 @@ func isInspectable(elm symbols.Indexable) bool {
 
 func (l *Search) resolve(elm symbols.Indexable, docId string, moduleName string, projState *project_state.ProjectState, symbolsHierarchy []symbols.Indexable, debugger FindDebugger) symbols.Indexable {
 	var symbol sourcecode.Word
-	switch elm.(type) {
+	switch elm := elm.(type) {
 	case *symbols.Variable:
-		variable, _ := elm.(*symbols.Variable)
+		variable := elm
 		symbol = sourcecode.NewWord(variable.GetType().GetName(), variable.GetIdRange())
 	case *symbols.StructMember:
-		sm, _ := elm.(*symbols.StructMember)
-		if sm.IsStruct() {
-			// This is an inline struct definition, just return it
-			return sm.Substruct().Get()
-		} else {
-			symbol := projState.SearchByFQN(sm.GetType().GetFullQualifiedName())
-			if len(symbol) > 0 {
-				return symbol[0]
-			} else {
-				return nil
-				//panic(fmt.Sprintf("Could not resolve structmember symbol: %s, with query: %s", elm.GetName(), sm.GetType().GetFullQualifiedName()))
-			}
-		}
+		return ResolveOneLevelSymbol(elm, projState, symbolsHierarchy)
 
 	case *symbols.Function:
-		fun, _ := elm.(*symbols.Function)
+		fun := elm
 
 		returnType := fun.GetReturnType()
 		_type := l.resolveType(*returnType, symbolsHierarchy, projState)
 
 		symbol = sourcecode.NewWord(_type.GetName(), fun.GetIdRange())
 
-	case *symbols.Def:
-		// Translate to the real symbol
-		def := elm.(*symbols.Def)
-		var query string
-		if def.ResolvesToType() {
-			query = def.ResolvedType().GetFullQualifiedName()
-		} else {
-			// ??? This was first version of this search
-			query = def.GetModuleString() + "::" + def.GetResolvesTo()
-		}
+	case *symbols.Alias:
+		return ResolveOneLevelSymbol(elm, projState, symbolsHierarchy)
 
-		symbols := projState.SearchByFQN(query)
-		if len(symbols) > 0 {
-			return symbols[0]
-			// Do not advance state, we need to look inside
-		}
-
-	case *symbols.Distinct:
-		// Translate to the real symbol
-		distinct := elm.(*symbols.Distinct)
-		baseType := distinct.GetBaseType()
-		if baseType == nil || baseType.GetName() == "" {
-			return nil
-		}
-		query := baseType.GetFullQualifiedName()
-
-		symbols := projState.SearchByFQN(query)
-		if len(symbols) > 0 {
-			return symbols[0]
-			// Do not advance state, we need to look inside
-		}
+	case *symbols.TypeDef:
+		return ResolveOneLevelSymbol(elm, projState, symbolsHierarchy)
 	}
 
 	iterSearch := search_params.NewSearchParamsBuilder().
@@ -538,9 +494,9 @@ func (l *Search) resolveType(_type symbols.Type, hierarchySymbols []symbols.Inde
 	for i := len(hierarchySymbols) - 1; i >= 0 && !escape; i-- {
 		elm := hierarchySymbols[i]
 
-		switch elm.(type) {
+		switch elm := elm.(type) {
 		case *symbols.StructMember:
-			sm := elm.(*symbols.StructMember)
+			sm := elm
 			if sm.GetType().HasGenericArguments() {
 				parentType = sm.GetType()
 				escape = true
@@ -562,16 +518,12 @@ func (l *Search) resolveType(_type symbols.Type, hierarchySymbols []symbols.Inde
 type FindParentState struct {
 	currentStep int
 	accessPath  []sourcecode.Word
-
-	needsSearch bool
-	nextSearch  search_params.SearchParams
 }
 
 func NewFindParentState(accessPath []sourcecode.Word) FindParentState {
 	return FindParentState{
 		currentStep: 0,
 		accessPath:  accessPath,
-		needsSearch: false,
 	}
 }
 

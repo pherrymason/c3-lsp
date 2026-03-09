@@ -11,6 +11,7 @@ import (
 func (p *Parser) nodeToBitStruct(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Bitstruct {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
+	attributes := parseNodeAttributes(node, sourceCode)
 	var interfaces []string
 	var bakedType idx.Type
 
@@ -23,15 +24,12 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, currentModule *idx.Module, d
 
 		switch child.Type() {
 		case "interface_impl":
-			// TODO
 			for x := 0; x < int(child.ChildCount()); x++ {
 				n := child.Child(x)
 				if n.Type() == "interface" {
 					interfaces = append(interfaces, n.Content(sourceCode))
 				}
 			}
-		case "attributes":
-			// TODO attributes
 		case "type":
 			bakedType = p.typeNodeToType(child, currentModule, sourceCode)
 		}
@@ -47,6 +45,7 @@ func (p *Parser) nodeToBitStruct(node *sitter.Node, currentModule *idx.Module, d
 		idx.NewRangeFromTreeSitterPositions(nameNode.StartPoint(), nameNode.EndPoint()),
 		idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), node.EndPoint()),
 	)
+	_struct.SetAttributes(attributes)
 
 	return _struct
 }

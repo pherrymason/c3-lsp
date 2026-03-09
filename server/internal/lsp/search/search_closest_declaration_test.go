@@ -2,7 +2,6 @@ package search
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"testing"
 
@@ -13,16 +12,6 @@ import (
 	idx "github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/stretchr/testify/assert"
 )
-
-func readC3File(filePath string) string {
-	contentBytes, err := os.ReadFile(filePath)
-	if err != nil {
-		panic(fmt.Sprintf("Error reading file: %v\n", err))
-	}
-
-	// Convierte el slice de bytes a un string
-	return string(contentBytes)
-}
 
 /*
 func initTestEnv() (*project_state.ProjectState, map[string]document.Document) {
@@ -48,7 +37,7 @@ func SearchUnderCursor_ClosestDecl(body string, optionalState ...TestState) opti
 		cursorlessBody,
 	)
 
-	return search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+	return search.FindSymbolDeclarationInWorkspace("app.c3", position, state.state)
 }
 
 var debugger = NewFindDebugger(true)
@@ -132,9 +121,29 @@ func TestLanguage_findClosestSymbolDeclaration_variables(t *testing.T) {
 
 		state.registerDoc("app.c3", cursorlessBody)
 
-		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, &state.state)
+		symbolOption := search.FindSymbolDeclarationInWorkspace("app.c3", position, state.state)
 		assert.True(t, symbolOption.IsSome(), "Symbol not found")
 		assert.Equal(t, "run_fiber_backend_repro", symbolOption.Get().GetName())
+	})
+
+	t.Run("Find method definition on indexed receiver", func(t *testing.T) {
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`struct Value {
+				int inner;
+			}
+			fn bool Value.to_bool(self) {
+				return true;
+			}
+			fn void main() {
+				Value[4] values;
+				values[0].to_b|||ool();
+			}`,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Function)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "Value.to_bool", symbolOption.Get().GetName())
 	})
 
 	t.Run("Find global variable definition, with cursor in usage", func(t *testing.T) {
@@ -537,7 +546,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 			}`,
 		)
 
-		if !assert.False(t, symbolOption.IsNone(), "Fault not found") {
+		if !assert.False(t, symbolOption.IsNone(), "FaultDef not found") {
 			return
 		}
 
@@ -554,7 +563,7 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 			}`,
 		)
 
-		assert.False(t, symbolOption.IsNone(), "Fault not found")
+		assert.False(t, symbolOption.IsNone(), "FaultDef not found")
 
 		fault := symbolOption.Get().(*idx.Variable)
 		assert.Equal(t, "error", fault.GetName())
@@ -573,6 +582,57 @@ func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {
 		_, ok := symbolOption.Get().(*idx.FaultConstant)
 		assert.Equal(t, true, ok, fmt.Sprintf("The symbol is not an fault constant, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "UNEXPECTED_ERROR", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should fallback to builtin fault constant for bare identifier", func(t *testing.T) {
+		state := NewTestState()
+		state.registerDoc("builtin.c3", `module std::core::builtin;
+			faultdef TYPE_MISMATCH;`)
+
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`module app;
+			fn String? parse() {
+				return TYPE_MIS|||MATCH~;
+			}`,
+			state,
+		)
+
+		if !assert.False(t, symbolOption.IsNone(), "Builtin fault constant not found") {
+			return
+		}
+
+		fault, ok := symbolOption.Get().(*idx.FaultConstant)
+		assert.True(t, ok, "Element found should be a FaultConstant")
+		if ok {
+			assert.Equal(t, "TYPE_MISMATCH", fault.GetName())
+			assert.Equal(t, "std::core::builtin", fault.GetModuleString())
+		}
+	})
+
+	t.Run("Should fallback to qualified fault constant using imported short module path", func(t *testing.T) {
+		state := NewTestState()
+		state.registerDoc("net.c3", `module blem::net;
+			faultdef ACCEPT_FAILED;`)
+
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`module app;
+			import blem::net;
+			fn String? read_data() {
+				return net::ACCEPT_FAIL|||ED~;
+			}`,
+			state,
+		)
+
+		if !assert.False(t, symbolOption.IsNone(), "Qualified fault constant not found") {
+			return
+		}
+
+		fault, ok := symbolOption.Get().(*idx.FaultConstant)
+		assert.True(t, ok, "Element found should be a FaultConstant")
+		if ok {
+			assert.Equal(t, "ACCEPT_FAILED", fault.GetName())
+			assert.Equal(t, "blem::net", fault.GetModuleString())
+		}
 	})
 
 	t.Run("Should not find fault constant on fault constant", func(t *testing.T) {

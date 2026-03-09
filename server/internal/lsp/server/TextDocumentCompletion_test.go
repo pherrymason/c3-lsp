@@ -1,222 +1,175 @@
 package server
 
 import (
-	"encoding/json"
+	stdctx "context"
+	"strings"
 	"testing"
 
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-func TestBuildCallableSnippet(t *testing.T) {
-	tests := []struct {
-		name     string
-		label    string
-		detail   string
-		expected string
-		ok       bool
-	}{
-		{
-			name:     "function without args",
-			label:    "run",
-			detail:   "fn void()",
-			expected: "run()",
-			ok:       true,
-		},
-		{
-			name:     "function with required args",
-			label:    "test",
-			detail:   "fn int(int hola, float world)",
-			expected: "test(${1:hola}, ${2:world})",
-			ok:       true,
-		},
-		{
-			name:     "skips default args",
-			label:    "test",
-			detail:   "fn int(int hola, int world = 2)",
-			expected: "test(${1:hola})",
-			ok:       true,
-		},
-		{
-			name:     "skips varargs",
-			label:    "test",
-			detail:   "fn void(int a, int... rest)",
-			expected: "test(${1:a})",
-			ok:       true,
-		},
-		{
-			name:     "skips implicit self in methods",
-			label:    "transparentize",
-			detail:   "fn Color(Color self)",
-			expected: "transparentize()",
-			ok:       true,
-		},
-		{
-			name:     "strips method type qualifier",
-			label:    "Tile.print_tile",
-			detail:   "fn void(Tile* self)",
-			expected: "print_tile()",
-			ok:       true,
-		},
-		{
-			name:     "macro with trailing body",
-			label:    "transform",
-			detail:   "macro int(int x; @body)",
-			expected: "transform(${1:x})",
-			ok:       true,
-		},
-	}
+func TestTextDocumentCompletion_usesCacheForRepeatedRequests(t *testing.T) {
+	source := `module app;
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			actual, ok := buildCallableSnippet(tt.label, tt.detail)
-			if ok != tt.ok {
-				t.Fatalf("unexpected ok: got %v, want %v", ok, tt.ok)
-			}
-
-			if actual != tt.expected {
-				t.Fatalf("unexpected snippet: got %q, want %q", actual, tt.expected)
-			}
-		})
-	}
+struct Todo {
+	int alpha;
 }
 
-func TestSnippetToPlainInsertText(t *testing.T) {
-	actual := snippetToPlainInsertText("test(${1:hola}, ${2:world})")
-	if actual != "test(hola, world)" {
-		t.Fatalf("unexpected plain insert text: got %q", actual)
-	}
-}
+fn void run() {
+	Todo t = {};
+	t.
+}`
+	uri := protocol.DocumentUri("file:///tmp/completion_cache_hit_test.c3")
+	srv := buildRenameTestServer(uri, source)
+	pos := byteIndexToLSPPosition(source, strings.Index(source, "t.")+2)
 
-func TestClientSupportsCompletionSnippets(t *testing.T) {
-	var withSnippet protocol.ClientCapabilities
-	err := json.Unmarshal(
-		[]byte(`{"textDocument":{"completion":{"completionItem":{"snippetSupport":true}}}}`),
-		&withSnippet,
-	)
+	first, err := srv.TextDocumentCompletion(nil, &protocol.CompletionParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+			Position:     pos,
+		},
+	})
 	if err != nil {
-		t.Fatalf("failed to unmarshal capabilities with snippet support: %v", err)
+		t.Fatalf("first completion failed: %v", err)
+	}
+	firstItems := completionItemsFromResult(t, first)
+	if !completionItemsContainLabel(firstItems, "alpha") {
+		t.Fatalf("expected completion items to include struct field alpha")
 	}
 
-	var withoutSnippet protocol.ClientCapabilities
-	err = json.Unmarshal(
-		[]byte(`{"textDocument":{"completion":{"completionItem":{"snippetSupport":false}}}}`),
-		&withoutSnippet,
-	)
+	if got := len(srv.completionCache); got != 1 {
+		t.Fatalf("expected one cached completion entry after first call, got %d", got)
+	}
+
+	second, err := srv.TextDocumentCompletion(nil, &protocol.CompletionParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+			Position:     pos,
+		},
+	})
 	if err != nil {
-		t.Fatalf("failed to unmarshal capabilities without snippet support: %v", err)
+		t.Fatalf("second completion failed: %v", err)
 	}
+	secondItems := completionItemsFromResult(t, second)
 
-	if !clientSupportsCompletionSnippets(withSnippet) {
-		t.Fatalf("expected snippet support to be true")
+	if len(firstItems) != len(secondItems) {
+		t.Fatalf("expected cached completion to preserve item count, got %d and %d", len(firstItems), len(secondItems))
 	}
-
-	if clientSupportsCompletionSnippets(withoutSnippet) {
-		t.Fatalf("expected snippet support to be false")
-	}
-
-	if clientSupportsCompletionSnippets(protocol.ClientCapabilities{}) {
-		t.Fatalf("expected snippet support to be false when capability is missing")
+	if got := len(srv.completionCache); got != 1 {
+		t.Fatalf("expected one cached completion entry after repeated call, got %d", got)
 	}
 }
 
-func TestBuildStructSnippetDeclaration(t *testing.T) {
-	snippet, ok := buildStructSnippet(structCompletionDeclaration, "Thing", []string{"a"})
+func TestTextDocumentCompletion_cacheInvalidatesOnDocumentVersionChange(t *testing.T) {
+	original := `module app;
+
+struct Todo {
+	int alpha;
+}
+
+fn void run() {
+	Todo t = {};
+	t.
+}`
+	updated := `module app;
+
+struct Todo {
+	int beta;
+}
+
+fn void run() {
+	Todo t = {};
+	t.
+}`
+
+	uri := protocol.DocumentUri("file:///tmp/completion_cache_version_change_test.c3")
+	srv := buildRenameTestServer(uri, original)
+	originalPos := byteIndexToLSPPosition(original, strings.Index(original, "t.")+2)
+
+	first, err := srv.TextDocumentCompletion(nil, &protocol.CompletionParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+			Position:     originalPos,
+		},
+	})
+	if err != nil {
+		t.Fatalf("completion on original source failed: %v", err)
+	}
+	firstItems := completionItemsFromResult(t, first)
+	if !completionItemsContainLabel(firstItems, "alpha") {
+		t.Fatalf("expected completion to include alpha")
+	}
+
+	srv.state.UpdateDocument(uri, 2, []interface{}{protocol.TextDocumentContentChangeEventWhole{Text: updated}}, srv.parser)
+	updatedPos := byteIndexToLSPPosition(updated, strings.Index(updated, "t.")+2)
+
+	second, err := srv.TextDocumentCompletion(nil, &protocol.CompletionParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+			Position:     updatedPos,
+		},
+	})
+	if err != nil {
+		t.Fatalf("completion on updated source failed: %v", err)
+	}
+	secondItems := completionItemsFromResult(t, second)
+	if completionItemsContainLabel(secondItems, "alpha") {
+		t.Fatalf("expected stale symbol alpha to be absent after version bump")
+	}
+	if !completionItemsContainLabel(secondItems, "beta") {
+		t.Fatalf("expected updated symbol beta to be present after version bump")
+	}
+}
+
+func completionItemsFromResult(t *testing.T, result any) []completionItemWithLabelDetails {
+	t.Helper()
+
+	items, ok := result.([]completionItemWithLabelDetails)
 	if !ok {
-		t.Fatalf("expected struct snippet to be built")
+		t.Fatalf("expected []completionItemWithLabelDetails, got %T", result)
 	}
 
-	expected := "Thing ${1:thing} = { .a = ${2:a} };"
-	if snippet != expected {
-		t.Fatalf("unexpected struct snippet: got %q, want %q", snippet, expected)
-	}
+	return items
 }
 
-func TestBuildStructSnippetValue(t *testing.T) {
-	snippet, ok := buildStructSnippet(structCompletionValue, "Thing", []string{"a", "b"})
-	if !ok {
-		t.Fatalf("expected struct value snippet to be built")
+func completionItemsContainLabel(items []completionItemWithLabelDetails, label string) bool {
+	for _, item := range items {
+		if item.Label == label {
+			return true
+		}
 	}
 
-	expected := "{\n\t.a = ${1:a},\n\t.b = ${2:b},\n}"
-	if snippet != expected {
-		t.Fatalf("unexpected struct value snippet: got %q, want %q", snippet, expected)
-	}
+	return false
 }
 
-func TestToLowerCamelName(t *testing.T) {
-	if actual := toLowerCamelName("Thing"); actual != "thing" {
-		t.Fatalf("unexpected lower camel result: got %q", actual)
-	}
+func TestTextDocumentCompletion_returnsNilWhenRequestContextCancelled(t *testing.T) {
+	source := `module app;
 
-	if actual := toLowerCamelName("URLParser"); actual != "urlParser" {
-		t.Fatalf("unexpected acronym lower camel result: got %q", actual)
-	}
+struct Todo {
+	int alpha;
 }
 
-func TestStructCompletionContext(t *testing.T) {
-	if actual := structCompletionContext("example::Thing", 0, len("example::Thing")); actual != structCompletionDeclaration {
-		t.Fatalf("unexpected declaration context: got %d", actual)
-	}
+fn void run() {
+	Todo t = {};
+	t.
+}`
+	uri := protocol.DocumentUri("file:///tmp/completion_cancelled_request_test.c3")
+	srv := buildRenameTestServer(uri, source)
+	pos := byteIndexToLSPPosition(source, strings.Index(source, "t.")+2)
 
-	bodyDeclaration := "fn void main() {\n\texample::Thing\n}"
-	if actual := structCompletionContext(bodyDeclaration, len("fn void main() {\n\t"), len("fn void main() {\n\texample::Thing")); actual != structCompletionDeclaration {
-		t.Fatalf("unexpected function-body declaration context: got %d", actual)
-	}
+	requestCtx, cancel := stdctx.WithCancel(stdctx.Background())
+	cancel()
 
-	if actual := structCompletionContext("value = example::Thing", len("value = "), len("value = example::Thing")); actual != structCompletionValue {
-		t.Fatalf("unexpected assignment context: got %d", actual)
+	result, err := srv.textDocumentCompletionWithTrace(nil, &protocol.CompletionParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+			Position:     pos,
+		},
+	}, "", requestCtx)
+	if err != nil {
+		t.Fatalf("expected nil error for cancelled request, got: %v", err)
 	}
-
-	if actual := structCompletionContext("call(example::Thing", len("call("), len("call(example::Thing")); actual != structCompletionValue {
-		t.Fatalf("unexpected call argument context: got %d", actual)
-	}
-
-	if actual := structCompletionContext("fn void f(example::Thing", len("fn void f("), len("fn void f(example::Thing")); actual != structCompletionNone {
-		t.Fatalf("unexpected function signature context: got %d", actual)
-	}
-
-	bodyCallArg := "fn void main() {\n\texample::do_thing(example::Thing);\n}"
-	if actual := structCompletionContext(bodyCallArg, len("fn void main() {\n\texample::do_thing("), len("fn void main() {\n\texample::do_thing(example::Thing")); actual != structCompletionValue {
-		t.Fatalf("unexpected function call argument context: got %d", actual)
-	}
-
-	if actual := structCompletionContext("HashMap { Tile", len("HashMap { "), len("HashMap { Tile")); actual != structCompletionNone {
-		t.Fatalf("unexpected generic key type context: got %d", actual)
-	}
-
-	if actual := structCompletionContext("HashMap { int, Tile", len("HashMap { int, "), len("HashMap { int, Tile")); actual != structCompletionNone {
-		t.Fatalf("unexpected generic value type context: got %d", actual)
-	}
-
-	if actual := structCompletionContext("HashMap{String, List{Tile", len("HashMap{String, List{"), len("HashMap{String, List{Tile")); actual != structCompletionNone {
-		t.Fatalf("unexpected nested generic type context: got %d", actual)
-	}
-}
-
-func TestCompletedStructTypeName(t *testing.T) {
-	if actual := completedStructTypeName("example::Th", "Thing"); actual != "example::Thing" {
-		t.Fatalf("unexpected module-qualified type: got %q", actual)
-	}
-
-	if actual := completedStructTypeName("Thi", "Thing"); actual != "Thing" {
-		t.Fatalf("unexpected plain type: got %q", actual)
-	}
-}
-
-func TestChooseTrailingToken(t *testing.T) {
-	if actual := chooseTrailingToken("call(abc", len("call(abc")); actual != "," {
-		t.Fatalf("unexpected token in list context: got %q", actual)
-	}
-
-	if actual := chooseTrailingToken("for (abc", len("for (abc")); actual != "" {
-		t.Fatalf("unexpected token in control header: got %q", actual)
-	}
-
-	if actual := chooseTrailingToken("abc", len("abc")); actual != ";" {
-		t.Fatalf("unexpected token in statement context: got %q", actual)
-	}
-
-	if actual := chooseTrailingToken("abc;", len("abc")); actual != "" {
-		t.Fatalf("unexpected token before existing semicolon: got %q", actual)
+	if result != nil {
+		t.Fatalf("expected nil result for cancelled request, got: %T", result)
 	}
 }

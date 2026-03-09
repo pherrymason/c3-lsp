@@ -16,8 +16,9 @@ type ArgInfo struct {
 }
 
 type Variable struct {
-	Type Type
-	Arg  ArgInfo
+	Type          Type
+	Arg           ArgInfo
+	ConstantValue string
 	BaseIndexable
 }
 
@@ -66,9 +67,31 @@ func (v Variable) IsConstant() bool {
 }
 
 func (v Variable) GetHoverInfo() string {
+	if v.IsConstant() {
+		typeString := v.GetType().String()
+		hover := "const "
+		if typeString != "" {
+			hover += typeString + " "
+		}
+		hover += v.GetName()
+		if v.ConstantValue != "" {
+			hover += " = " + v.ConstantValue
+		}
+
+		return hover
+	}
+
 	return fmt.Sprintf("%s %s", v.GetType(), v.GetName())
 }
 
 func (v Variable) GetCompletionDetail() string {
 	return v.GetType().String()
+}
+
+func (v *Variable) SetConstantValue(value string) {
+	v.ConstantValue = value
+}
+
+func (v *Variable) GetConstantValue() string {
+	return v.ConstantValue
 }

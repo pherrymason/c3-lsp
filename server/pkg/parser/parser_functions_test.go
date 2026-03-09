@@ -486,6 +486,66 @@ func TestExtractSymbols_StructMemberFunctionWithArguments(t *testing.T) {
 		assert.Equal(t, idx.NewRange(0, 36, 0, 48), variable.GetDocumentRange())
 
 	})
+
+	t.Run("Finds method arguments when receiver is not named self", func(t *testing.T) {
+		source := `fn void UserStruct.reset(&receiver) {
+			receiver = null;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.reset")
+		assert.True(t, fn.IsSome(), "Method was not found")
+
+		variable := fn.Get().Variables["receiver"]
+		assert.Equal(t, "receiver", variable.GetName())
+		assert.Equal(t, "UserStruct*", variable.GetType().String())
+	})
+
+	t.Run("Does not infer non-first byref argument as receiver", func(t *testing.T) {
+		source := `fn void UserStruct.reset(int value, &other) {
+			other = null;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.reset")
+		assert.True(t, fn.IsSome(), "Method was not found")
+
+		variable := fn.Get().Variables["other"]
+		assert.Equal(t, "other", variable.GetName())
+		assert.Equal(t, "", variable.GetType().String())
+	})
+
+	t.Run("Finds optional-return method name with owner type", func(t *testing.T) {
+		source := `fn void? UserStruct.close(&self) {
+			return;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("UserStruct.close")
+		assert.True(t, fn.IsSome(), "Method was not found")
+	})
+
+	t.Run("Finds optional-return namespaced method name with owner type", func(t *testing.T) {
+		source := `fn bool? tcp::TcpSocket.close(&self) {
+			return true;
+		}`
+		docId := "docId"
+		doc := document.NewDocument(docId, source)
+		parser := createParser()
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		fn := symbols.Get("docid").GetChildrenFunctionByName("tcp::TcpSocket.close")
+		assert.True(t, fn.IsSome(), "Namespaced method was not found")
+	})
 }
 
 func TestExtractSymbols_StructMemberMacroWithArguments(t *testing.T) {

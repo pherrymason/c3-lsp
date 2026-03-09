@@ -36,6 +36,7 @@ struct_member_declaration: $ => choice(
 func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) (idx.Struct, []idx.Type) {
 	nameNode := node.ChildByFieldName("name")
 	name := nameNode.Content(sourceCode)
+	attributes := parseNodeAttributes(node, sourceCode)
 	var interfaces []string
 	isUnion := false
 
@@ -45,22 +46,16 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 		case "union":
 			isUnion = true
 		case "interface_impl_list":
-			// TODO
 			for x := 0; x < int(child.ChildCount()); x++ {
 				n := child.Child(x)
 				if n.IsNamed() {
 					interfaces = append(interfaces, n.Content(sourceCode))
 				}
 			}
-		case "attributes":
-			// TODO attributes
 		}
 	}
 
-	// TODO parse attributes
 	bodyNode := node.ChildByFieldName("body")
-	structFields := make([]*idx.StructMember, 0)
-
 	structFields, membersNeedingSubtypingResolve := p.parse_struct_body(bodyNode, currentModule, docId, sourceCode)
 
 	var _struct idx.Struct
@@ -84,6 +79,8 @@ func (p *Parser) nodeToStruct(node *sitter.Node, currentModule *idx.Module, docI
 			idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), node.EndPoint()),
 		)
 	}
+
+	_struct.SetAttributes(attributes)
 
 	return _struct, membersNeedingSubtypingResolve
 }
@@ -109,6 +106,7 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 		var identifiersRange []idx.Range
 		var innerStructBody []*idx.StructMember
 		var innerMembersNeedingSubtypingResolve []idx.Type
+		var memberAttributes []string
 
 		// Iterate through children of struct_member_declaration
 		for x := 0; x < int(memberNode.ChildCount()); x++ {
@@ -129,7 +127,9 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 					)
 				}
 			case "attributes":
-				// TODO
+				for a := 0; a < int(n.ChildCount()); a++ {
+					memberAttributes = append(memberAttributes, n.Child(a).Content(sourceCode))
+				}
 			case "bitstruct_body":
 				bitStructsMembers := p.nodeToBitStructMembers(n, currentModule, docId, sourceCode)
 				structFields = append(structFields, bitStructsMembers...)
@@ -157,6 +157,7 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 		if isSubStruct {
 			if len(identifier) > 0 {
 				structMember := idx.NewSubstructMember(identifier, innerStructBody, currentModule.GetModuleString(), *docId, identifiersRange[0])
+				structMember.SetAttributes(memberAttributes)
 				structFields = append(structFields, &structMember)
 			} else {
 				// Inline member
@@ -175,12 +176,13 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 			for y := 0; y < len(identifiers); y++ {
 				structMember := idx.NewStructMember(
 					identifiers[y],
-					fieldType, // TODO <--- this type parsing is too simple
+					fieldType,
 					option.None[[2]uint](),
 					currentModule.GetModuleString(),
 					*docId,
 					identifiersRange[y],
 				)
+				structMember.SetAttributes(memberAttributes)
 				structFields = append(structFields, &structMember)
 			}
 		} else if isInline {
@@ -193,6 +195,7 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 					*docId,
 					identifiersRange[0],
 				)
+				structMember.SetAttributes(memberAttributes)
 				structFields = append(structFields, &structMember)
 			}
 		} else if len(identifier) > 0 {
@@ -204,7 +207,7 @@ func (p *Parser) parse_struct_body(bodyNode *sitter.Node, currentModule *idx.Mod
 				*docId,
 				identifiersRange[0],
 			)
-
+			structMember.SetAttributes(memberAttributes)
 			structFields = append(structFields, &structMember)
 		}
 	}

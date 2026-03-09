@@ -35,18 +35,18 @@ func (p Position) ToLSPPosition() protocol.Position {
 	}
 }
 
-func (self Position) IndexIn(content string) int {
+func (p Position) IndexIn(content string) int {
 	// This code is modified from the gopls implementation found:
 	// https://cs.opensource.google/go/x/tools/+/refs/tags/v0.1.5:internal/span/utf16.go;l=70
 
 	// In accordance with the LSP Spec:
 	// https://microsoft.github.io/language-server-protocol/specifications/specification-3-16#textDocuments
-	// self.Character represents utf-16 code units, not bytes and so we need to
+	// p.Character represents utf-16 code units, not bytes and so we need to
 	// convert utf-16 code units to a byte offset.
 
 	// Find the byte offset for the line
 	index := 0
-	for row := uint(0); row < self.Line; row++ {
+	for row := uint(0); row < p.Line; row++ {
 		content_ := content[index:]
 		if next := strings.Index(content_, "\n"); next != -1 {
 			index += next + 1
@@ -56,11 +56,11 @@ func (self Position) IndexIn(content string) int {
 	}
 
 	// The index represents the byte offset from the beginning of the line
-	// count self.Character utf-16 code units from the index byte offset.
+	// count p.Character utf-16 code units from the index byte offset.
 
 	byteOffset := index
 	remains := content[index:]
-	chr := int(self.Character)
+	chr := int(p.Character)
 
 	for count := 1; count <= chr; count++ {
 
@@ -75,6 +75,11 @@ func (self Position) IndexIn(content string) int {
 			//
 			// > If the character value is greater than the line length it
 			// > defaults back to the line length.
+			break
+		}
+		if r == '\r' && strings.HasPrefix(remains[w:], "\n") {
+			// CRLF line ending: treat as end-of-line for character clamping,
+			// same behavior as '\n'.
 			break
 		}
 
@@ -92,13 +97,4 @@ func (self Position) IndexIn(content string) int {
 	}
 
 	return byteOffset
-}
-
-// TODO: Cover when character is first character of line, and rewinding implies going one line back.
-func (p Position) RewindCharacter() Position {
-	if p.Character > 0 {
-		return NewPosition(p.Line, p.Character-1)
-	}
-
-	return p
 }

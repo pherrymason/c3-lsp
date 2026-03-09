@@ -16,6 +16,7 @@ import (
 	"github.com/pherrymason/c3-lsp/pkg/document"
 	"github.com/pherrymason/c3-lsp/pkg/document/sourcecode"
 	"github.com/pherrymason/c3-lsp/pkg/option"
+	p "github.com/pherrymason/c3-lsp/pkg/parser"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	"github.com/pherrymason/c3-lsp/pkg/symbols_table"
 	"github.com/pherrymason/c3-lsp/pkg/utils"
@@ -62,6 +63,8 @@ func importedModuleItems(state *l.ProjectState, scopeCtx completionScopeContext,
 		return []protocol.CompletionItem{}
 	}
 
+	snapshot := state.Snapshot()
+
 	items := []protocol.CompletionItem{}
 	for imported := range scopeCtx.importedModuleNames {
 		if prefix != "" && !strings.HasPrefix(imported, prefix) {
@@ -74,13 +77,11 @@ func importedModuleItems(state *l.ProjectState, scopeCtx completionScopeContext,
 			Detail: cast.ToPtr("Module"),
 		}
 
-		for _, parsedModulesByDoc := range state.GetAllUnitModules() {
-			for _, module := range parsedModulesByDoc.Modules() {
-				if module.GetName() == imported {
-					moduleItem.Documentation = GetCompletableDocComment(module)
-					moduleItem.Detail = GetCompletionDetail(module)
-					break
-				}
+		// Use O(1) index lookup instead of O(D×M) scan.
+		if snapshot != nil {
+			if mods := snapshot.ModulesByName(imported); len(mods) > 0 {
+				moduleItem.Documentation = GetCompletableDocComment(mods[0])
+				moduleItem.Detail = GetCompletionDetail(mods[0])
 			}
 		}
 
@@ -195,85 +196,6 @@ func completionPrefix(symbolInPosition sourcecode.Word, hasContextAtCursor bool)
 	return symbolInPosition.Text()
 }
 
-func nearestVariablePositionInScope(doc *document.Document, state *l.ProjectState, cursorPosition symbols.Position, variableName string) option.Option[symbols.Position] {
-	if variableName == "" {
-		return option.None[symbols.Position]()
-	}
-
-	unitModules := state.GetUnitModulesByDoc(doc.URI)
-	if unitModules == nil {
-		return option.None[symbols.Position]()
-	}
-
-	currentModuleName := unitModules.FindContextModuleInCursorPosition(cursorPosition)
-	if currentModuleName == "" {
-		return option.None[symbols.Position]()
-	}
-
-	currentModule := unitModules.Get(currentModuleName)
-	if currentModule == nil {
-		return option.None[symbols.Position]()
-	}
-
-	best := option.None[symbols.Position]()
-	for _, fun := range currentModule.ChildrenFunctions {
-		for _, variable := range fun.Variables {
-			if variable.GetName() != variableName {
-				continue
-			}
-
-			pos := variable.GetIdRange().Start
-			if pos.Line > cursorPosition.Line {
-				continue
-			}
-
-			if best.IsNone() || pos.Line > best.Get().Line || (pos.Line == best.Get().Line && pos.Character > best.Get().Character) {
-				best = option.Some(pos)
-			}
-		}
-	}
-
-	return best
-}
-
-func nearestVariablePositionByText(doc *document.Document, cursorPosition symbols.Position, variableName string) option.Option[symbols.Position] {
-	if variableName == "" {
-		return option.None[symbols.Position]()
-	}
-
-	lines := strings.Split(doc.SourceCode.Text, "\n")
-	if len(lines) == 0 {
-		return option.None[symbols.Position]()
-	}
-
-	lineLimit := int(cursorPosition.Line)
-	if lineLimit >= len(lines) {
-		lineLimit = len(lines) - 1
-	}
-
-	namePattern := regexp.MustCompile(`\b` + regexp.QuoteMeta(variableName) + `\b`)
-
-	for line := lineLimit; line >= 0; line-- {
-		content := lines[line]
-		matches := namePattern.FindAllStringIndex(content, -1)
-		for _, match := range matches {
-			next := match[1]
-			for next < len(content) && (content[next] == ' ' || content[next] == '\t') {
-				next++
-			}
-
-			if next < len(content) {
-				switch content[next] {
-				case ';', '=', ',', ')':
-					return option.Some(symbols.NewPosition(uint(line), uint(match[0])))
-				}
-			}
-		}
-	}
-
-	return option.None[symbols.Position]()
-}
-
 func inferVariableTypeNameFromText(doc *document.Document, cursorPosition symbols.Position, variableName string) option.Option[string] {
 	if variableName == "" {
 		return option.None[string]()
@@ -328,7 +250,8 @@ func inferVariableTypeNameFromText(doc *document.Document, cursorPosition symbol
 func completionSymbolAtCursor(doc *document.Document, state *l.ProjectState, cursorPosition symbols.Position) sourcecode.Word {
 	unitModules := state.GetUnitModulesByDoc(doc.URI)
 	atCursor, atCursorOk := symbolInPositionSafe(doc, unitModules, cursorPosition)
-	rewound, rewoundOk := symbolInPositionSafe(doc, unitModules, cursorPosition.RewindCharacter())
+	rewoundPos := doc.RewindPosition(cursorPosition)
+	rewound, rewoundOk := symbolInPositionSafe(doc, unitModules, rewoundPos)
 
 	if !atCursorOk {
 		return rewound
@@ -392,7 +315,7 @@ func isCompletingAModulePath(doc *document.Document, cursorPosition symbols.Posi
 	// Cursor is just right after last char, let's rewind one place
 	position := cursorPosition
 	if cursorPosition.Character > 0 {
-		position = cursorPosition.RewindCharacter()
+		position = doc.RewindPosition(cursorPosition)
 	}
 
 	index := position.IndexIn(doc.SourceCode.Text)
@@ -423,7 +346,7 @@ func isCompletingAChain(doc *document.Document, cursorPosition symbols.Position)
 	// Cursor is just right after last char, let's rewind one place
 	position := cursorPosition
 	if cursorPosition.Character > 0 {
-		position = cursorPosition.RewindCharacter()
+		position = doc.RewindPosition(cursorPosition)
 	}
 
 	index := position.IndexIn(doc.SourceCode.Text)
@@ -591,7 +514,7 @@ func (s *Search) BuildMethodCompletions(
 	for _, idx := range methods {
 		fn, success := idx.(*symbols.Function)
 		if !success {
-			s.logger.Warningf("unexpected: query returned non function symbol of type %T, skipping", idx)
+			s.logger.Warning("unexpected: query returned non function symbol", "type", fmt.Sprintf("%T", idx))
 			continue
 		}
 		kind := idx.GetKind()
@@ -621,19 +544,12 @@ func (s *Search) BuildCompletionList(
 
 	var items []protocol.CompletionItem
 
-	filterMembers := true /*
-			symbolInPosition, error := doc.SymbolInPositionDeprecated(
-				symbols.Position{
-					Line:      uint(position.Line),
-					Character: uint(position.Character - 1),
-				})
-				if error != nil {
-			// Probably, theres no symbol at cursor!
-			filterMembers = false
-		}
-	*/
+	filterMembers := true
 
 	doc := state.GetDocument(ctx.DocURI)
+	unlockDocument := state.LockDocument(doc.URI)
+	defer unlockDocument()
+
 	symbolInPosition := completionSymbolAtCursor(doc, state, ctx.Position)
 	scopeCtx := buildCompletionScopeContext(state, doc, ctx.Position)
 	hasContextAtCursor := hasCompletionContextAtCursor(symbolInPosition, ctx.Position, doc.SourceCode.Text)
@@ -667,7 +583,7 @@ func (s *Search) BuildCompletionList(
 		// Probably, theres no symbol at cursor!
 		filterMembers = false
 	}
-	s.logger.Debug(fmt.Sprintf("building completion list: \"%s\"", symbolInPosition.Text())) //TODO warp %s en "
+	s.logger.Debug("building completion list", "symbol", symbolInPosition.Text())
 
 	// Check if module path is being written/exists
 	isCompletingModulePath, possibleModulePath := isCompletingAModulePath(doc, ctx.Position)
@@ -697,11 +613,13 @@ func (s *Search) BuildCompletionList(
 		// Is writing a symbol child of a parent one.
 		// We need to limit the search to subtypes of parent token
 		// Let's find parent token
+		prevEndPos := symbolInPosition.PrevAccessPath().TextRange().End
+		rewoundPos := doc.RewindPosition(prevEndPos)
 
 		searchParams := sp.BuildSearchBySymbolUnderCursor(
 			doc,
 			*state.GetUnitModulesByDoc(doc.URI),
-			symbolInPosition.PrevAccessPath().TextRange().End.RewindCharacter(),
+			rewoundPos,
 		)
 
 		//	searchParams.scopeMode = AnyPosition
@@ -715,6 +633,36 @@ func (s *Search) BuildCompletionList(
 		)
 
 		items = append(items, initialItems...)
+
+		if prevIndexableOption.IsNone() && symbolInPosition.IsSeparator() {
+			// The search found nothing and we're on a bare dot (e.g. "foo." with no
+			// character after the dot). This typically happens because tree-sitter
+			// cannot parse "foo.;" as a valid expression and produces an ERROR node,
+			// which causes local variable declarations to be lost from the function body.
+			//
+			// Work around this by inserting a placeholder identifier at the cursor
+			// position, re-parsing the document temporarily, and retrying the search.
+			placeholderDoc, placeholderSymbol, cleanup := s.retryWithPlaceholder(doc, ctx.Position, state)
+			if placeholderDoc != nil {
+				defer cleanup()
+
+				prevEndPos := placeholderSymbol.PrevAccessPath().TextRange().End
+				rewoundPos := placeholderDoc.RewindPosition(prevEndPos)
+				searchParams = sp.BuildSearchBySymbolUnderCursor(
+					placeholderDoc,
+					*state.GetUnitModulesByDoc(doc.URI),
+					rewoundPos,
+				)
+				membersReadable, fromDistinct, initialItems, prevIndexableOption = s.findParentTypeWithCompletions(
+					false,
+					placeholderSymbol,
+					searchParams,
+					state,
+					FindDebugger{depth: 0, enabled: true},
+				)
+				items = append(items, initialItems...)
+			}
+		}
 
 		if prevIndexableOption.IsNone() {
 			inferredType := inferVariableTypeNameFromText(doc, ctx.Position, symbolInPosition.PrevAccessPath().Text())
@@ -747,10 +695,10 @@ func (s *Search) BuildCompletionList(
 		prevIndexable := prevIndexableOption.Get()
 		// fmt.Print(prevIndexable.GetName())
 
-		switch prevIndexable.(type) {
+		switch prevIndexable := prevIndexable.(type) {
 
 		case *symbols.Struct:
-			strukt := prevIndexable.(*symbols.Struct)
+			strukt := prevIndexable
 
 			// We don't check for 'membersReadable' here since even variables of structs
 			// can access its members. In addition, distincts of structs can always
@@ -779,7 +727,7 @@ func (s *Search) BuildCompletionList(
 			}
 
 		case *symbols.Enumerator:
-			enumerator := prevIndexable.(*symbols.Enumerator)
+			enumerator := prevIndexable
 
 			// Associated values are always available regardless of distinct status.
 			for _, assoc := range enumerator.AssociatedValues {
@@ -802,7 +750,7 @@ func (s *Search) BuildCompletionList(
 			}
 
 		case *symbols.FaultConstant:
-			constant := prevIndexable.(*symbols.FaultConstant)
+			constant := prevIndexable
 
 			// Add parent fault's methods
 			if methodsReadable && constant.GetModuleString() != "" && constant.GetFaultName() != "" {
@@ -810,7 +758,7 @@ func (s *Search) BuildCompletionList(
 			}
 
 		case *symbols.Enum:
-			enum := prevIndexable.(*symbols.Enum)
+			enum := prevIndexable
 
 			// Accessing MyEnum.VALUE is ok, but not MyEnum.VALUE.VALUE,
 			// so don't search for enumerators within enumerators
@@ -852,8 +800,8 @@ func (s *Search) BuildCompletionList(
 				items = append(items, s.BuildMethodCompletions(state, enum.GetFQN(), filterMembers, symbolInPosition, doc.SourceCode.Text)...)
 			}
 
-		case *symbols.Fault:
-			fault := prevIndexable.(*symbols.Fault)
+		case *symbols.FaultDef:
+			fault := prevIndexable
 
 			// Accessing MyFault.VALUE is ok, but not MyFault.VALUE.VALUE,
 			// so don't search for constants within constants
@@ -969,6 +917,197 @@ func (s *Search) BuildCompletionList(
 	return uniqueItems
 }
 
+// retryWithPlaceholder works around a tree-sitter parsing limitation where
+// a bare dot expression like "c.;" produces an ERROR node, causing local
+// variable declarations in the same function body to be lost.
+//
+// It patches ALL bare dot expressions in the source (not just the one at the
+// cursor) because a single broken expression elsewhere in the file can cause
+// tree-sitter's error recovery to swallow the entire function body into an
+// ERROR node, hiding variable declarations needed for completion.
+//
+// A "bare dot" is a '.' followed by a non-identifier character such as
+// whitespace, ';', newline, ')', '}', or ']'. For each bare dot it inserts
+// a placeholder identifier ("_z") and, when there is no trailing semicolon
+// before a newline, also appends one so tree-sitter can parse the statement.
+//
+// Returns the placeholder document, the symbol-in-position from the modified
+// source, and a cleanup function that MUST be called (typically via defer) to
+// restore the original document in the project state.
+//
+// If the placeholder insertion fails for any reason, returns
+// (nil, Word{}, func() {}).
+func (s *Search) retryWithPlaceholder(
+	doc *document.Document,
+	cursorPos symbols.Position,
+	state *l.ProjectState,
+) (*document.Document, sourcecode.Word, func()) {
+	cleanup := func() {}
+
+	source := doc.SourceCode.Text
+	cursorOffset := cursorPos.IndexIn(source)
+	if cursorOffset < 0 || cursorOffset > len(source) {
+		return nil, sourcecode.Word{}, cleanup
+	}
+
+	modified, newCursorOffset := patchBrokenSeparators(source, cursorOffset)
+
+	placeholderDoc := document.NewDocument(doc.URI, modified)
+	parser := p.NewParser(s.logger)
+	state.RefreshDocumentIdentifiers(&placeholderDoc, &parser)
+
+	// Compute the new cursor position from the adjusted offset.
+	newCursorPos := placeholderDoc.SourceCode.OffsetToPosition(newCursorOffset)
+
+	placeholderSymbol := placeholderDoc.SourceCode.SymbolInPosition(
+		newCursorPos,
+		state.GetUnitModulesByDoc(doc.URI),
+	)
+
+	cleanup = func() {
+		// Restore the original document's symbols in the project state.
+		parser := p.NewParser(s.logger)
+		state.RefreshDocumentIdentifiers(doc, &parser)
+	}
+
+	return &placeholderDoc, placeholderSymbol, cleanup
+}
+
+// patchBrokenSeparators finds every bare "." and bare "::" in source and
+// inserts a placeholder identifier ("_z") so tree-sitter can parse them as
+// valid field accesses / module paths. If a bare separator appears at the end
+// of a statement line (no semicolon before newline and not inside parentheses),
+// a semicolon is also appended.
+//
+// cursorOffset is the byte offset of the cursor in the original source
+// (typically the character right after the trigger separator).
+//
+// Returns the patched source and the adjusted cursor offset in the new source.
+func patchBrokenSeparators(source string, cursorOffset int) (string, int) {
+	var b strings.Builder
+	b.Grow(len(source) + 64)
+
+	newCursorOffset := cursorOffset
+	parenDepth := 0
+	i := 0
+
+	for i < len(source) {
+		ch := source[i]
+
+		// Track parenthesis depth so we don't insert semicolons inside calls.
+		if ch == '(' {
+			parenDepth++
+		} else if ch == ')' && parenDepth > 0 {
+			parenDepth--
+		}
+
+		// --- Bare "::" ---
+		if ch == ':' && i+1 < len(source) && source[i+1] == ':' && i > 0 {
+			prevCh := source[i-1]
+			if isIdentChar(prevCh) {
+				afterColons := byte(0)
+				if i+2 < len(source) {
+					afterColons = source[i+2]
+				}
+				if !isIdentChar(afterColons) {
+					b.WriteString("::")
+					posAfter := i + 2
+					i = posAfter
+
+					b.WriteString("_z")
+					if posAfter < cursorOffset {
+						newCursorOffset += 2
+					}
+
+					newCursorOffset += writeStatementEnding(&b, source, i, parenDepth, posAfter, cursorOffset)
+					parenDepth = 0 // closing parens resets depth
+					continue
+				}
+			}
+		}
+
+		// --- Bare "." ---
+		if ch == '.' && i > 0 {
+			prevCh := source[i-1]
+			if isIdentChar(prevCh) || prevCh == ')' {
+				nextCh := byte(0)
+				if i+1 < len(source) {
+					nextCh = source[i+1]
+				}
+				if !isIdentChar(nextCh) {
+					b.WriteByte('.')
+					posAfter := i + 1
+					i = posAfter
+
+					b.WriteString("_z")
+					if posAfter < cursorOffset {
+						newCursorOffset += 2
+					}
+
+					newCursorOffset += writeStatementEnding(&b, source, i, parenDepth, posAfter, cursorOffset)
+					parenDepth = 0 // closing parens resets depth
+					continue
+				}
+			}
+		}
+
+		b.WriteByte(ch)
+		i++
+	}
+
+	return b.String(), newCursorOffset
+}
+
+// writeStatementEnding appends closing parentheses (if parenDepth > 0) and a
+// semicolon (if the rest of the line has none) after a patched separator.
+// Returns the number of bytes by which the cursor offset should be increased.
+func writeStatementEnding(b *strings.Builder, source string, i int, parenDepth int, posAfter int, cursorOffset int) int {
+	shift := 0
+	beforeCursor := posAfter < cursorOffset
+
+	if needsSemicolon(source, i) {
+		// Close any unclosed parentheses.
+		for p := 0; p < parenDepth; p++ {
+			b.WriteByte(')')
+			if beforeCursor {
+				shift++
+			}
+		}
+		b.WriteByte(';')
+		if beforeCursor {
+			shift++
+		}
+	}
+	// If parenDepth > 0 but there's already a semicolon on this line, we don't
+	// close parens because the user may have the closing paren elsewhere.
+
+	return shift
+}
+
+// isIdentChar returns true if c is a valid C3 identifier character [a-zA-Z0-9_$].
+func isIdentChar(c byte) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '$'
+}
+
+// needsSemicolon checks whether position i in source is followed (ignoring
+// spaces/tabs) by a newline or EOF, meaning the statement has no semicolon.
+func needsSemicolon(source string, i int) bool {
+	for j := i; j < len(source); j++ {
+		switch source[j] {
+		case ' ', '\t':
+			continue
+		case '\n', '\r':
+			return true
+		case ';':
+			return false
+		default:
+			return false
+		}
+	}
+	// EOF without semicolon
+	return true
+}
+
 // Returns whether members can be read from the found symbol, the 'fromDistinct' status, the list of
 // completions found while resolving distincts in a distinct chain (if any), as well as the final symbol
 // found for further completions.
@@ -1006,7 +1145,7 @@ func (s *Search) findParentTypeWithCompletions(
 		}
 		protect++
 
-		distinct, isDistinct := prevIndexable.(*symbols.Distinct)
+		distinct, isDistinct := prevIndexable.(*symbols.TypeDef)
 
 		// If this distinct was the base type of a non-inline distinct, keep the
 		// status of non-inline distinct, since we can no longer access methods
@@ -1052,10 +1191,10 @@ func (s *Search) findParentTypeWithCompletions(
 	var resolvedIndexable option.Option[symbols.Indexable]
 
 	// Might need to do an additional resolution step even if it's inspectable
-	switch prevIndexable.(type) {
+	switch prevIndexable := prevIndexable.(type) {
 	case *symbols.StructMember:
 		var token sourcecode.Word
-		structMember, _ := prevIndexable.(*symbols.StructMember)
+		structMember := prevIndexable
 		token = sourcecode.NewWord(structMember.GetType().GetName(), prevIndexable.GetIdRange())
 
 		// Resolve a struct member into its field type for completion

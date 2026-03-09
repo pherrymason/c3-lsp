@@ -21,7 +21,7 @@ func hoverFromBody(state *TestState, body string) option.Option[protocol.Hover] 
 	}
 
 	search := NewSearchWithoutLog()
-	return search.FindHoverInformation("x", &params, &state.state)
+	return search.FindHoverInformation("x", &params, state.state)
 }
 
 func TestProjectState_FindHoverInformation(t *testing.T) {
@@ -46,7 +46,7 @@ func TestProjectState_FindHoverInformation(t *testing.T) {
 	}
 
 	search := NewSearchWithoutLog()
-	hover := search.FindHoverInformation("x", &params, &state.state)
+	hover := search.FindHoverInformation("x", &params, state.state)
 
 	expectedHover := option.Some(protocol.Hover{
 		Contents: protocol.MarkupContent{
@@ -83,7 +83,7 @@ func TestProjectState_FindHoverInformationFromDifferentFile(t *testing.T) {
 	}
 
 	search := NewSearchWithoutLog()
-	hover := search.FindHoverInformation("x", &params, &state.state)
+	hover := search.FindHoverInformation("x", &params, state.state)
 
 	expectedHover := option.Some(protocol.Hover{
 		Contents: protocol.MarkupContent{

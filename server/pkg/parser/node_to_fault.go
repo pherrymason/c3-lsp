@@ -24,32 +24,36 @@ fault_body: $ => seq(
 
 ),
 */
-func (p *Parser) nodeToFault(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Fault {
-	// TODO parse attributes
+func (p *Parser) nodeToFaultDef(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.FaultDef {
+	attributes := parseNodeAttributes(node, sourceCode)
 
-	baseType := "" // TODO Parse type!
+	baseType := ""
 	module := currentModule.GetModuleString()
 	var constants []*idx.FaultConstant
 
-	idRange := idx.NewRange(0, 0, 0, 0)
+	idRange := idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), startPointSkippingDocComment(node))
 	for i := 0; i < int(node.ChildCount()); i++ {
 		constantNode := node.Child(i)
 
 		if constantNode.Type() == "const_ident" {
+			constantRange := idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint())
+			if len(constants) == 0 {
+				idRange = constantRange
+			}
 			constants = append(constants,
 				idx.NewFaultConstant(
 					constantNode.Content(sourceCode),
 					"",
 					module,
 					*docId,
-					idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
-					idx.NewRangeFromTreeSitterPositions(constantNode.StartPoint(), constantNode.EndPoint()),
+					constantRange,
+					constantRange,
 				),
 			)
 		}
 	}
 
-	fault := idx.NewFault(
+	faultDef := idx.NewFaultDef(
 		"",
 		baseType,
 		constants,
@@ -58,6 +62,7 @@ func (p *Parser) nodeToFault(node *sitter.Node, currentModule *idx.Module, docId
 		idRange,
 		idx.NewRangeFromTreeSitterPositions(startPointSkippingDocComment(node), node.EndPoint()),
 	)
+	faultDef.SetAttributes(attributes)
 
-	return fault
+	return faultDef
 }

@@ -14,7 +14,7 @@ import (
 
 // TestState wraps the project state for testing
 type TestState struct {
-	State  project_state.ProjectState
+	State  *project_state.ProjectState
 	Docs   map[string]document.Document
 	Parser p.Parser
 }
@@ -31,7 +31,7 @@ func NewTestState(loggers ...commonlog.Logger) TestState {
 	l := project_state.NewProjectState(logger, option.Some("dummy"), false)
 
 	s := TestState{
-		State:  l,
+		State:  &l,
 		Docs:   make(map[string]document.Document, 0),
 		Parser: p.NewParser(logger),
 	}

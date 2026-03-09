@@ -141,7 +141,7 @@ func NewSearchResultEmptyWithTraversedModules(traversedModules map[string]bool) 
 
 func _NewSearchResult(result option.Option[symbols.Indexable], trackedModules TrackedModules) SearchResult {
 	traversedModules := make(map[string]bool)
-	for moduleName, _ := range trackedModules {
+	for moduleName := range trackedModules {
 		traversedModules[moduleName] = true
 	}
 	return SearchResult{

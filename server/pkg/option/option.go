@@ -18,6 +18,18 @@ func None[T any]() Option[T] {
 	return Option[T]{isFull: false}
 }
 
+// Get retrieves the value from Some option.
+//
+// PANICS if called on None option. Always check IsSome() before calling Get().
+//
+// Example:
+//
+//	opt := Some(42)
+//	if opt.IsSome() {
+//	    value := opt.Get() // Safe
+//	}
+//
+// For a non-panicking alternative, use GetOrElse(defaultValue).
 func (s Option[T]) Get() T {
 	if s.isFull {
 		return s.value

@@ -6,14 +6,14 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-type Distinct struct {
+type TypeDef struct {
 	baseType *Type
 	inline   bool
 	BaseIndexable
 }
 
-func NewDistinct(name string, baseType *Type, inline bool, resolvesTo string, module string, docId string, idRange Range, docRange Range) Distinct {
-	return Distinct{
+func NewTypeDef(name string, baseType *Type, inline bool, resolvesTo string, module string, docId string, idRange Range, docRange Range) TypeDef {
+	return TypeDef{
 		baseType: baseType,
 		inline:   inline,
 		BaseIndexable: NewBaseIndexable(
@@ -27,7 +27,7 @@ func NewDistinct(name string, baseType *Type, inline bool, resolvesTo string, mo
 	}
 }
 
-func (d *Distinct) GetBaseType() *Type {
+func (d *TypeDef) GetBaseType() *Type {
 	if d.baseType == nil {
 		empty := Type{}
 		return &empty
@@ -36,15 +36,15 @@ func (d *Distinct) GetBaseType() *Type {
 	return d.baseType
 }
 
-func (d *Distinct) IsInline() bool {
+func (d *TypeDef) IsInline() bool {
 	return d.inline
 }
 
-func (d *Distinct) SetInline(inline bool) {
+func (d *TypeDef) SetInline(inline bool) {
 	d.inline = inline
 }
 
-func (d Distinct) GetHoverInfo() string {
+func (d TypeDef) GetHoverInfo() string {
 	if d.baseType == nil {
 		if d.inline {
 			return fmt.Sprintf("distinct %s = inline ?", d.Name)
@@ -63,6 +63,6 @@ func (d Distinct) GetHoverInfo() string {
 	return fmt.Sprintf("distinct %s = %s%s", d.Name, inline, baseType)
 }
 
-func (d Distinct) GetCompletionDetail() string {
+func (d TypeDef) GetCompletionDetail() string {
 	return "Type"
 }

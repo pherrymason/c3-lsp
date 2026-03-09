@@ -11,9 +11,10 @@ const (
 )
 
 func CpuArchitecture() uint {
-	if runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64" {
+	switch runtime.GOARCH {
+	case "amd64", "arm64":
 		return CPU_64
-	} else if runtime.GOARCH == "386" || runtime.GOARCH == "arm" {
+	case "386", "arm":
 		return CPU_32
 	}
 

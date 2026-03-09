@@ -31,7 +31,7 @@ func SearchUnderCursor_AccessPath(body string, optionalState ...TestState) Searc
 		position,
 	)
 
-	return search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+	return search.findClosestSymbolDeclaration(searchParams, state.state, debugger)
 }
 
 func TestProjectState_findClosestSymbolDeclaration_access_path(t *testing.T) {
@@ -887,7 +887,7 @@ func TestProjectState_findClosestSymbolDeclaration_access_path_with_generics(t *
 		position := buildPosition(14, 23) // Cursor is at home.rooms.p|aint()
 		searchParams := search_params.BuildSearchBySymbolUnderCursor(&doc, *state.state.GetUnitModulesByDoc(doc.URI), position)
 
-		symbolOption := search.findClosestSymbolDeclaration(searchParams, &state.state, debugger)
+		symbolOption := search.findClosestSymbolDeclaration(searchParams, state.state, debugger)
 
 		assert.True(t, symbolOption.IsSome(), "Struct method not found")
 		fun := symbolOption.Get().(*idx.Function)

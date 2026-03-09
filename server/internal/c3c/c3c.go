@@ -2,6 +2,7 @@ package c3c
 
 import (
 	"bytes"
+	"context"
 	"log"
 	"os/exec"
 	"regexp"
@@ -46,6 +47,10 @@ func GetC3Version(c3Path option.Option[string]) option.Option[string] {
 }
 
 func CheckC3ErrorsCommand(c3Options C3Opts, projectPath string) (bytes.Buffer, bytes.Buffer, error) {
+	return CheckC3ErrorsCommandContext(context.Background(), c3Options, projectPath)
+}
+
+func CheckC3ErrorsCommandContext(ctx context.Context, c3Options C3Opts, projectPath string) (bytes.Buffer, bytes.Buffer, error) {
 	binary := binaryPath(c3Options.Path)
 
 	args := []string{"build", "--lsp"}
@@ -53,7 +58,7 @@ func CheckC3ErrorsCommand(c3Options C3Opts, projectPath string) (bytes.Buffer, b
 		args = append(args, c3Options.CompileArgs...)
 	}
 
-	command := exec.Command(binary, args...)
+	command := exec.CommandContext(ctx, binary, args...)
 	command.Dir = projectPath
 
 	// set var to get the output

@@ -37,11 +37,11 @@ alias_declaration: $ => seq(
 
 ),
 */
-func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Def {
+func (p *Parser) nodeToAlias(node *sitter.Node, currentModule *idx.Module, docId *string, sourceCode []byte) idx.Alias {
 	//fmt.Println(node)
-	// TODO: attributes
+	attributes := parseNodeAttributes(node, sourceCode)
 	start := startPointSkippingDocComment(node)
-	defBuilder := idx.NewDefBuilder("", currentModule.GetModuleString(), *docId).
+	aliasBuilder := idx.NewAliasBuilder("", currentModule.GetModuleString(), *docId).
 		WithDocumentRange(
 			uint(start.Row),
 			uint(start.Column),
@@ -49,7 +49,7 @@ func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *
 			uint(node.EndPoint().Column),
 		)
 	if nameNode := node.ChildByFieldName("name"); nameNode != nil {
-		defBuilder.WithName(nameNode.Content(sourceCode)).
+		aliasBuilder.WithName(nameNode.Content(sourceCode)).
 			WithIdentifierRange(
 				uint(nameNode.StartPoint().Row),
 				uint(nameNode.StartPoint().Column),
@@ -67,10 +67,13 @@ func (p *Parser) nodeToDef(node *sitter.Node, currentModule *idx.Module, docId *
 	if bodyNode.Type() == "type" {
 		// Might contain module path
 		type_ := p.typeNodeToType(bodyNode, currentModule, sourceCode)
-		defBuilder.WithResolvesToType(type_)
+		aliasBuilder.WithResolvesToType(type_)
 	} else {
-		defBuilder.WithResolvesTo(bodyNode.Content(sourceCode))
+		aliasBuilder.WithResolvesTo(bodyNode.Content(sourceCode))
 	}
 
-	return *defBuilder.Build()
+	alias := aliasBuilder.Build()
+	alias.SetAttributes(attributes)
+
+	return *alias
 }

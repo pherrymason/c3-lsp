@@ -4,13 +4,13 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-type DistinctBuilder struct {
-	distinct Distinct
+type TypeDefBuilder struct {
+	distinct TypeDef
 }
 
-func NewDistinctBuilder(name string, module string, docId string) *DistinctBuilder {
-	return &DistinctBuilder{
-		distinct: Distinct{
+func NewTypeDefBuilder(name string, module string, docId string) *TypeDefBuilder {
+	return &TypeDefBuilder{
+		distinct: TypeDef{
 			baseType: nil,
 			inline:   false,
 			BaseIndexable: NewBaseIndexable(
@@ -25,44 +25,44 @@ func NewDistinctBuilder(name string, module string, docId string) *DistinctBuild
 	}
 }
 
-func (d *DistinctBuilder) WithName(name string) *DistinctBuilder {
+func (d *TypeDefBuilder) WithName(name string) *TypeDefBuilder {
 	d.distinct.Name = name
 	return d
 }
 
-func (d *DistinctBuilder) WithBaseType(baseType Type) *DistinctBuilder {
+func (d *TypeDefBuilder) WithBaseType(baseType Type) *TypeDefBuilder {
 	d.distinct.baseType = &baseType
 	return d
 }
 
-func (d *DistinctBuilder) WithInline(inline bool) *DistinctBuilder {
+func (d *TypeDefBuilder) WithInline(inline bool) *TypeDefBuilder {
 	d.distinct.inline = inline
 	return d
 }
 
-func (d *DistinctBuilder) WithoutSourceCode() *DistinctBuilder {
-	d.distinct.BaseIndexable.HasSourceCode_ = false
+func (d *TypeDefBuilder) WithoutSourceCode() *TypeDefBuilder {
+	d.distinct.HasSourceCode_ = false
 	return d
 }
 
-func (d *DistinctBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *DistinctBuilder {
-	d.distinct.BaseIndexable.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+func (d *TypeDefBuilder) WithIdentifierRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *TypeDefBuilder {
+	d.distinct.IdRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return d
 }
 
-func (d *DistinctBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *DistinctBuilder {
-	d.distinct.BaseIndexable.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
+func (d *TypeDefBuilder) WithDocumentRange(lineStart uint, CharStart uint, lineEnd uint, CharEnd uint) *TypeDefBuilder {
+	d.distinct.DocRange = NewRange(lineStart, CharStart, lineEnd, CharEnd)
 	return d
 }
 
-func (d *DistinctBuilder) WithDocs(docs string) *DistinctBuilder {
+func (d *TypeDefBuilder) WithDocs(docs string) *TypeDefBuilder {
 	// Only modules, functions and macros can have contracts, so a string is enough
 	// Theoretically, there can be custom contracts here, but the stdlib shouldn't be creating them
 	docComment := NewDocComment(docs)
-	d.distinct.BaseIndexable.DocComment = &docComment
+	d.distinct.DocComment = &docComment
 	return d
 }
 
-func (d *DistinctBuilder) Build() *Distinct {
+func (d *TypeDefBuilder) Build() *TypeDef {
 	return &d.distinct
 }

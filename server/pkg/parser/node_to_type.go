@@ -16,8 +16,6 @@ func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module
 	modulePath := currentModule.GetModuleString()
 	generic_arguments := []symbols.Type{}
 
-	parsedType := symbols.Type{}
-
 	tailChild := node.Child(int(node.ChildCount()) - 1)
 	isOptional := !tailChild.IsNamed() && tailChild.Content(sourceCode) == "?"
 
@@ -77,13 +75,13 @@ func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module
 
 	// Is baseType a module generic argument? Flag it.
 	isGenericArgument := false
-	for genericId, _ := range currentModule.GenericParameters {
+	for genericId := range currentModule.GenericParameters {
 		if genericId == baseType {
 			isGenericArgument = true
 		}
 	}
 
-	//var parsedType symbols.Type
+	var parsedType symbols.Type
 	if len(generic_arguments) == 0 {
 		if isOptional {
 			parsedType = symbols.NewOptionalType(baseTypeLanguage, baseType, pointerCount, isGenericArgument, isCollection, collectionSize, modulePath)
@@ -99,6 +97,17 @@ func (p *Parser) typeNodeToType(node *sitter.Node, currentModule *symbols.Module
 }
 
 func parse_path_type_ident(n *sitter.Node, sourceCode []byte, modulePath, baseType *string) {
+	content := strings.TrimSpace(n.Content(sourceCode))
+	if sep := strings.LastIndex(content, "::"); sep >= 0 {
+		prefix := strings.TrimSpace(content[:sep])
+		suffix := strings.TrimSpace(content[sep+2:])
+		if prefix != "" && suffix != "" {
+			*modulePath = strings.Trim(prefix, ":")
+			*baseType = suffix
+			return
+		}
+	}
+
 	if n.ChildCount() == 2 {
 		*modulePath = strings.Trim(n.Child(0).Content(sourceCode), ":")
 		*baseType = n.Child(1).Content(sourceCode)

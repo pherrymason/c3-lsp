@@ -113,3 +113,18 @@ func TestSearchParams_BuildSearchBySymbolUnderCursor_finds_full_module_path(t *t
 		})
 	}
 }
+
+func TestSearchParams_TrackTraversedModule_blocks_after_second_visit(t *testing.T) {
+	sp := SearchParams{trackedModules: make(TrackedModules)}
+
+	if !sp.TrackTraversedModule("app::net") {
+		t.Fatalf("expected first traversal to be allowed")
+	}
+	if !sp.TrackTraversedModule("app::net") {
+		t.Fatalf("expected second traversal to be allowed and lock module")
+	}
+
+	if sp.TrackTraversedModule("app::net") {
+		t.Fatalf("expected third traversal to be blocked")
+	}
+}

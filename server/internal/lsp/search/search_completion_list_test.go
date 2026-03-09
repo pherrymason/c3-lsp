@@ -50,7 +50,7 @@ func CompleteAtCursor(body string) []protocol.CompletionItem {
 			Position: position,
 			DocURI:   "app.c3",
 		},
-		&state.state)
+		state.state)
 }
 
 func Test_isCompletingAChain(t *testing.T) {
@@ -250,7 +250,7 @@ func TestBuildCompletionList_should_return_nil_when_cursor_is_in_literal(t *test
 			DocURI:    "test.c3",
 			IsLiteral: true,
 		},
-		&state.state)
+		state.state)
 
 	assert.Equal(t, 0, len(completionList))
 }
@@ -337,7 +337,7 @@ func TestBuildCompletionList_suggests_C3_keywords(t *testing.T) {
 					Position: position,
 					DocURI:   "test.c3",
 				},
-				&state.state)
+				state.state)
 
 			expectedMap := make(map[string]bool)
 			for _, exp := range tt.expected {
@@ -399,7 +399,7 @@ func TestBuildCompletionList(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				filteredCompletionList := filterOutKeywordSuggestions(completionList)
 
@@ -441,7 +441,7 @@ func TestBuildCompletionList(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				filteredCompletionList := filterOutKeywordSuggestions(completionList)
 
@@ -484,7 +484,7 @@ func TestBuildCompletionList(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -526,7 +526,7 @@ func TestBuildCompletionList(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -577,7 +577,7 @@ func TestBuildCompletionList(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -621,7 +621,7 @@ func TestBuildCompletionList_struct_type(t *testing.T) {
 					Position: position,
 					DocURI:   "test.c3",
 				},
-				&state.state)
+				state.state)
 
 			assert.Equal(t, len(tt.expected), len(completionList))
 			assert.Equal(t, tt.expected, completionList)
@@ -678,7 +678,7 @@ func TestBuildCompletionList_struct_suggest_all_its_members(t *testing.T) {
 			Position: position,
 			DocURI:   "test.c3",
 		},
-		&state.state)
+		state.state)
 
 	assert.Equal(t, 4, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
@@ -720,7 +720,7 @@ func TestBuildCompletionList_struct_suggest_members_starting_with_prefix(t *test
 			Position: position,
 			DocURI:   "test.c3",
 		},
-		&state.state)
+		state.state)
 
 	filteredCompletionList := filterOutKeywordSuggestions(completionList)
 
@@ -756,7 +756,7 @@ func TestBuildCompletionList_struct_suggest_members_of_substruct(t *testing.T) {
 			Position: position,
 			DocURI:   "test.c3",
 		},
-		&state.state)
+		state.state)
 
 	assert.Equal(t, 4, len(completionList))
 	assert.Equal(t, []protocol.CompletionItem{
@@ -871,7 +871,7 @@ func TestBuildCompletionList_map_hashmap_members_on_imported_generic_instance(t 
 			Position: position,
 			DocURI:   "app.c3",
 		},
-		&state.state,
+		state.state,
 	)
 
 	filteredCompletionList := filterOutKeywordSuggestions(completionList)
@@ -911,7 +911,7 @@ func TestBuildCompletionList_list_members_on_imported_collections_root(t *testin
 			Position: position,
 			DocURI:   "app.c3",
 		},
-		&state.state,
+		state.state,
 	)
 
 	filteredCompletionList := filterOutKeywordSuggestions(completionList)
@@ -949,7 +949,7 @@ func TestBuildCompletionList_struct_suggest_members_with_prefix_of_substruct(t *
 			Position: position,
 			DocURI:   "test.c3",
 		},
-		&state.state)
+		state.state)
 
 	filteredCompletionList := filterOutKeywordSuggestions(completionList)
 
@@ -983,7 +983,7 @@ func TestBuildCompletionList_struct_suggest_method_with_prefix_of_substruct(t *t
 			Position: position,
 			DocURI:   "test.c3",
 		},
-		&state.state)
+		state.state)
 	filteredCompletionList := filterOutKeywordSuggestions(completionList)
 	assert.Equal(t, 1, len(filteredCompletionList))
 	assert.Equal(t, []protocol.CompletionItem{
@@ -1035,7 +1035,7 @@ func TestBuildCompletionList_enums(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -1094,7 +1094,7 @@ func TestBuildCompletionList_enums(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -1166,7 +1166,7 @@ clr.asso`,
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				filtered := filterOutKeywordSuggestions(completionList)
 
@@ -1304,7 +1304,7 @@ green.transp`,
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -1350,7 +1350,7 @@ func TestBuildCompletionList_faults(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList), source+tt.input)
 				assert.Equal(t, tt.expected, completionList)
@@ -1432,7 +1432,7 @@ func TestBuildCompletionList_modules(t *testing.T) {
 						Position: tt.position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -1550,7 +1550,7 @@ func TestBuildCompletionList_modules(t *testing.T) {
 						Position: tt.position,
 						DocURI:   "app.c3",
 					},
-					&state.state)
+					state.state)
 
 				filteredCompletionList := filterOutKeywordSuggestions(completionList)
 
@@ -1613,7 +1613,7 @@ func TestBuildCompletionList_macros(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -1696,7 +1696,7 @@ func TestBuildCompletionList_definitions(t *testing.T) {
 						Position: position,
 						DocURI:   "test.c3",
 					},
-					&state.state)
+					state.state)
 
 				assert.Equal(t, len(tt.expected), len(completionList))
 				assert.Equal(t, tt.expected, completionList)
@@ -2347,7 +2347,7 @@ func TestBuildCompletionList_interfaces(t *testing.T) {
 				Position: buildPosition(7, 18),
 				DocURI:   "app.c3",
 			},
-			&state.state)
+			state.state)
 
 		assert.Equal(t, 1, len(completionList), "Different items to suggest")
 		assert.Equal(
@@ -2402,7 +2402,7 @@ func TestBuildCompletionList_should_resolve_(t *testing.T) {
 			Position: buildPosition(4, 7),
 			DocURI:   "app.c3",
 		},
-		&state.state)
+		state.state)
 
 	assert.Equal(t, 1, len(completionList), "Wrong number of items to suggest")
 	assert.Equal(
@@ -2448,7 +2448,7 @@ func TestBuildCompletionList_module_import_completion_excludes_private_symbols(t
 			Position: position,
 			DocURI:   "app.c3",
 		},
-		&state.state,
+		state.state,
 	)
 
 	labels := []string{}
@@ -2488,7 +2488,7 @@ func TestBuildCompletionList_module_local_visibility_is_scoped_to_declaration_se
 			Position: part1Position,
 			DocURI:   "example.c3",
 		},
-		&state.state,
+		state.state,
 	)
 
 	part1Labels := []string{}
@@ -2521,7 +2521,7 @@ func TestBuildCompletionList_module_local_visibility_is_scoped_to_declaration_se
 			Position: part2Position,
 			DocURI:   "example.c3",
 		},
-		&state.state,
+		state.state,
 	)
 
 	part2Labels := []string{}
@@ -2551,13 +2551,11 @@ func TestBuildCompletionList_module_path_completion_has_no_duplicates_inside_sam
 			Position: position,
 			DocURI:   "example.c3",
 		},
-		&state.state,
+		state.state,
 	)
 
-	labels := []string{}
 	labelCount := map[string]int{}
 	for _, item := range completionList {
-		labels = append(labels, item.Label)
 		labelCount[item.Label]++
 	}
 
@@ -2594,7 +2592,7 @@ func TestBuildCompletionList_empty_line_shows_in_scope_suggestions(t *testing.T)
 			Position: position,
 			DocURI:   "app.c3",
 		},
-		&state.state,
+		state.state,
 	)
 
 	labels := []string{}

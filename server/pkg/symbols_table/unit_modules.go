@@ -130,8 +130,9 @@ func (ps UnitModules) Modules() []*idx.Module {
 }
 
 func (ps UnitModules) FindContextModuleInCursorPosition(position idx.Position) string {
-	closerPreviousRange := idx.NewRange(0, 0, 0, 0)
 	priorModule := ""
+	var priorStart idx.Position
+	havePrior := false
 	for _, module := range ps.modules.Values() {
 
 		if module.GetDocumentRange().HasPosition(position) {
@@ -139,9 +140,11 @@ func (ps UnitModules) FindContextModuleInCursorPosition(position idx.Position) s
 		}
 
 		if module.GetDocumentRange().IsBeforePosition(position) {
-			if closerPreviousRange.IsAfter(module.GetDocumentRange()) {
-				closerPreviousRange = module.GetDocumentRange()
+			moduleStart := module.GetDocumentRange().Start
+			if !havePrior || isPositionAfter(moduleStart, priorStart) {
+				priorStart = moduleStart
 				priorModule = module.GetName()
+				havePrior = true
 			}
 		}
 	}
@@ -152,4 +155,15 @@ func (ps UnitModules) FindContextModuleInCursorPosition(position idx.Position) s
 	}
 
 	return ""
+}
+
+func isPositionAfter(a idx.Position, b idx.Position) bool {
+	if a.Line > b.Line {
+		return true
+	}
+	if a.Line < b.Line {
+		return false
+	}
+
+	return a.Character > b.Character
 }

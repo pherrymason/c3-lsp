@@ -6,9 +6,24 @@ import (
 )
 
 func (s *Server) TextDocumentDidChange(context *glsp.Context, params *protocol.DidChangeTextDocumentParams) error {
-	s.state.UpdateDocument(params.TextDocument.URI, params.ContentChanges, s.parser)
+	if !s.shouldProcessNotification(protocol.MethodTextDocumentDidChange) {
+		return nil
+	}
+	if params == nil {
+		return nil
+	}
 
-	s.RunDiagnostics(s.state, context.Notify, true, &params.TextDocument.URI)
+	docID := s.normalizedDocIDFromURI(params.TextDocument.URI)
+	s.state.UpdateDocumentByNormalizedID(docID, params.TextDocument.Version, params.ContentChanges, s.parser)
+	if len(params.ContentChanges) == 0 {
+		return nil
+	}
+
+	notify := noopNotify
+	if context != nil {
+		notify = context.Notify
+	}
+	s.RunDiagnosticsQuick(s.state, notify, true, &params.TextDocument.URI)
 
 	return nil
 }

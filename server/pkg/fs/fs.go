@@ -2,10 +2,12 @@ package fs
 
 import (
 	"errors"
+	iofs "io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/pherrymason/c3-lsp/pkg/option"
@@ -35,17 +37,71 @@ func ConvertPathToURI(path string, stdlibPath option.Option[string]) string {
 }
 
 func ScanForC3(basePath string) ([]string, error) {
-	var files []string
-	extensions := []string{"c3", "c3i"}
+	files, _, err := ScanForC3WithOptions(basePath, ScanOptions{})
+	return files, err
+}
 
-	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+type ScanOptions struct {
+	IgnoreDirs   []string
+	PriorityDirs []string
+}
+
+type ScanStats struct {
+	VisitedDirs int
+	SkippedDirs int
+	Matched     int
+}
+
+func DefaultC3ScanIgnoreDirs() []string {
+	return []string{
+		".git",
+		".hg",
+		".svn",
+		"node_modules",
+		"target",
+		"build",
+		"dist",
+		"out",
+		"bin",
+		"obj",
+		".idea",
+		".vscode",
+	}
+}
+
+func ScanForC3WithOptions(basePath string, options ScanOptions) ([]string, ScanStats, error) {
+	var files []string
+	extensions := []string{"c3", "c3i", "c3l"}
+	stats := ScanStats{}
+
+	ignore := make(map[string]struct{}, len(options.IgnoreDirs))
+	for _, d := range options.IgnoreDirs {
+		ignore[d] = struct{}{}
+	}
+
+	priority := make(map[string]int, len(options.PriorityDirs))
+	for i, p := range options.PriorityDirs {
+		priority[GetCanonicalPath(p)] = i
+	}
+
+	err := filepath.WalkDir(basePath, func(path string, d iofs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
+		if d.IsDir() {
+			stats.VisitedDirs++
+			if _, skip := ignore[d.Name()]; skip {
+				stats.SkippedDirs++
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
 		for _, ext := range extensions {
-			if !info.IsDir() && filepath.Ext(path) == "."+ext {
+			if filepath.Ext(path) == "."+ext {
 				files = append(files, path)
+				stats.Matched++
 			}
 		}
 
@@ -53,10 +109,32 @@ func ScanForC3(basePath string) ([]string, error) {
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, stats, err
 	}
 
-	return files, nil
+	sort.SliceStable(files, func(i, j int) bool {
+		iPri := priorityIndex(files[i], priority)
+		jPri := priorityIndex(files[j], priority)
+		if iPri != jPri {
+			return iPri < jPri
+		}
+		return files[i] < files[j]
+	})
+
+	return files, stats, nil
+}
+
+func priorityIndex(path string, priority map[string]int) int {
+	canonical := GetCanonicalPath(path)
+	best := int(^uint(0) >> 1)
+	for p, idx := range priority {
+		if canonical == p || strings.HasPrefix(canonical, p+string(os.PathSeparator)) {
+			if idx < best {
+				best = idx
+			}
+		}
+	}
+	return best
 }
 
 func UriToPath(uri string) (string, error) {

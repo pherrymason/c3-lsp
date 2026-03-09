@@ -88,10 +88,7 @@ func countWrittenArguments(startArgumentsPosition symbols.Position, s sourcecode
 	index := startArgumentsPosition.IndexIn(s.Text)
 	commas := uint32(0)
 	length := len(s.Text)
-	for {
-		if index >= length {
-			break
-		}
+	for index < length {
 
 		if rune(s.Text[index]) == ')' {
 			return option.None[uint32]()

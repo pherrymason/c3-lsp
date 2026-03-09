@@ -2,6 +2,7 @@ package search_v2
 
 import (
 	"github.com/pherrymason/c3-lsp/internal/lsp/project_state"
+	searchv1 "github.com/pherrymason/c3-lsp/internal/lsp/search"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 )
 
@@ -25,7 +26,7 @@ func (r *TypeResolver) ResolveToInspectable(
 	for depth := 0; depth < MAX_RESOLUTION_DEPTH; depth++ {
 		// If we're at the last segment and hit a distinct, don't resolve it
 		if isLastSegment {
-			if _, ok := symbol.(*symbols.Distinct); ok {
+			if _, ok := symbol.(*symbols.TypeDef); ok {
 				return symbol, ctx, true
 			}
 		}
@@ -50,50 +51,12 @@ func (r *TypeResolver) ResolveToInspectable(
 }
 
 func (r *TypeResolver) resolveOneLevel(symbol symbols.Indexable) symbols.Indexable {
-	switch s := symbol.(type) {
-	case *symbols.Variable:
-		return r.lookupType(s.GetType().GetFullQualifiedName())
-
-	case *symbols.StructMember:
-		if s.IsStruct() {
-			return s.Substruct().Get()
-		}
-		return r.lookupType(s.GetType().GetFullQualifiedName())
-
-	case *symbols.Function:
-		returnType := s.GetReturnType()
-		return r.lookupType(returnType.GetFullQualifiedName())
-
-	case *symbols.Def:
-		if s.ResolvesToType() {
-			return r.lookupType(s.ResolvedType().GetFullQualifiedName())
-		}
-		return r.lookupType(s.GetModuleString() + "::" + s.GetResolvesTo())
-
-	case *symbols.Distinct:
-		baseType := s.GetBaseType()
-		if baseType == nil || baseType.GetName() == "" {
-			return nil
-		}
-
-		return r.lookupType(baseType.GetFullQualifiedName())
-
-	default:
-		return nil
-	}
-}
-
-func (r *TypeResolver) lookupType(fqn string) symbols.Indexable {
-	results := r.projState.SearchByFQN(fqn)
-	if len(results) > 0 {
-		return results[0]
-	}
-	return nil
+	return searchv1.ResolveOneLevelSymbol(symbol, r.projState, nil)
 }
 
 func (r *TypeResolver) isInspectable(elm symbols.Indexable) bool {
 	switch elm.(type) {
-	case *symbols.Variable, *symbols.Function, *symbols.StructMember, *symbols.Def, *symbols.Distinct:
+	case *symbols.Variable, *symbols.Function, *symbols.StructMember, *symbols.Alias, *symbols.TypeDef:
 		return false
 	default:
 		return true

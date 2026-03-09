@@ -44,6 +44,13 @@ type Indexable interface {
 	ChildrenNames() []string
 	NestedScopes() []Indexable
 	ChildrenWithoutScopes() []Indexable
+}
+
+// Insertable extends Indexable with mutation methods used during symbol
+// construction. These are intentionally excluded from Indexable because
+// callers should not insert children through the read-only interface.
+type Insertable interface {
+	Indexable
 	Insert(symbol Indexable)
 	InsertNestedScope(symbol Indexable)
 }
@@ -176,10 +183,6 @@ func (b *BaseIndexable) InsertNestedScope(symbol Indexable) {
 
 func (b *BaseIndexable) SetDocComment(docComment *DocComment) {
 	b.DocComment = docComment
-}
-
-func (b *BaseIndexable) formatSource(source string) string {
-	return fmt.Sprintf("```c3\n%s```", source)
 }
 
 func NewBaseIndexable(name string, module string, docId protocol.DocumentUri, idRange Range, docRange Range, kind protocol.CompletionItemKind) BaseIndexable {
