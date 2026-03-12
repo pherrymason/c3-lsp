@@ -44,7 +44,7 @@ work with `c3-lsp`. Add the [syntax highlighting package](https://github.com/c3l
       "enabled": true,
       // The command line required to run the server.
       "command": [
-        "c3-lsp",
+        "c3lsp",
       ],
 
       "selector": "source.c3",
@@ -67,7 +67,7 @@ local lspconfig = require('lspconfig')
   if not configs.c3_lsp then
 	  configs.c3_lsp = {
 	  	default_config = {
-	  		cmd = { "/path/to/c3-lsp" },
+	  		cmd = { "/path/to/c3lsp" },
 	  		filetypes = { "c3", "c3i" },
 	  		root_dir = function(fname)
 	      		return util.find_git_ancestor(fname)
