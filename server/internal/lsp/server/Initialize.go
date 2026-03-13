@@ -72,11 +72,70 @@ func (s *Server) Initialize(serverName string, serverVersion string, capabilitie
 
 func (h *Server) indexWorkspace() {
 	path := h.state.GetProjectRootURI()
-	files, _ := fs.ScanForC3(fs.GetCanonicalPath(path))
+	canonicalPath := fs.GetCanonicalPath(path)
 
+	// Index workspace source files
+	files, _ := fs.ScanForC3(canonicalPath)
 	for _, filePath := range files {
 		content, _ := os.ReadFile(filePath)
 		doc := document.NewDocumentFromString(filePath, string(content))
 		h.state.RefreshDocumentIdentifiers(&doc, h.parser)
+	}
+
+	// Index dependency libraries from project.json
+	h.indexDependencies(canonicalPath)
+}
+
+// indexDependencies reads the project.json file in the workspace root,
+// resolves declared dependencies by searching dependency-search-paths
+// for .c3l library directories, and indexes all .c3/.c3i files found
+// in those libraries.
+func (h *Server) indexDependencies(projectDir string) {
+	config, err := fs.ReadC3ProjectConfig(projectDir)
+	if err != nil {
+		h.server.Log.Warningf("Failed to read project.json: %v", err)
+		return
+	}
+
+	if config == nil {
+		// No project.json found — nothing to resolve
+		return
+	}
+
+	if len(config.Dependencies) == 0 {
+		return
+	}
+
+	h.server.Log.Infof("project.json: found %d dependencies: %v", len(config.Dependencies), config.Dependencies)
+	h.server.Log.Infof("project.json: dependency search paths: %v", config.DependencySearchPaths)
+
+	resolutions := fs.ResolveDependencies(projectDir, config)
+
+	for _, res := range resolutions {
+		if !res.Found {
+			h.server.Log.Warningf("Dependency '%s' not found in any search path. Autocompletion for this library will not be available.", res.Name)
+			h.server.Log.Warningf("  Searched paths: %v", config.DependencySearchPaths)
+			continue
+		}
+
+		h.server.Log.Infof("Resolved dependency '%s' at: %s", res.Name, res.Path)
+
+		depFiles, err := fs.ScanDependencyForC3(res.Path)
+		if err != nil {
+			h.server.Log.Warningf("Failed to scan dependency '%s' at %s: %v", res.Name, res.Path, err)
+			continue
+		}
+
+		h.server.Log.Infof("  Found %d source files in dependency '%s'", len(depFiles), res.Name)
+
+		for _, filePath := range depFiles {
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				h.server.Log.Warningf("  Failed to read %s: %v", filePath, err)
+				continue
+			}
+			doc := document.NewDocumentFromString(filePath, string(content))
+			h.state.RefreshDocumentIdentifiers(&doc, h.parser)
+		}
 	}
 }
