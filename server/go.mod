@@ -1,6 +1,6 @@
 module github.com/pherrymason/c3-lsp
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/pkg/errors v0.9.1
@@ -9,8 +9,6 @@ require (
 	github.com/tliron/commonlog v0.2.19
 	github.com/tliron/glsp v0.2.3-0.20240511204206-c63625272e79
 )
-
-require golang.org/x/mod v0.32.0
 
 require github.com/bep/debounce v1.2.1
 
