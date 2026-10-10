@@ -1,7 +1,6 @@
 package symbols_table
 
 import (
-	"github.com/pherrymason/c3-lsp/pkg/option"
 	"github.com/pherrymason/c3-lsp/pkg/symbols"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
@@ -60,6 +59,10 @@ func (st SymbolsTable) All() map[protocol.DocumentUri]UnitModules {
 
 // Processes pending Types to resolve, searching
 func (st *SymbolsTable) resolveTypes() {
+	// Lookups are built lazily and shared by every pending type of this pass.
+	// Rebuilding them per pending type made indexing quadratic on the number
+	// of registered documents (stdlib alone registers one document per file).
+	var lookup *typeResolutionLookup
 
 	// Review all pending types, and see if we can resolve them
 	for moduleName, typesContext := range st.pendingToResolve.typesByModule {
@@ -69,7 +72,10 @@ func (st *SymbolsTable) resolveTypes() {
 				continue
 			}
 
-			st.tryToSolveType(&typesContext[x], moduleName)
+			if lookup == nil {
+				lookup = st.newTypeResolutionLookup()
+			}
+			st.tryToSolveType(&typesContext[x], moduleName, lookup)
 		}
 	}
 
@@ -77,41 +83,19 @@ func (st *SymbolsTable) resolveTypes() {
 	st.expendStructSubtypes()
 }
 
-func (st *SymbolsTable) tryToSolveType(typeContext *PendingTypeContext, moduleName string) {
-	if len(typeContext.contextModule.Imports) > 0 {
-		// Check inside imported modules
-		for _, imported := range typeContext.contextModule.Imports {
-			mpath := symbols.NewModulePathFromString(imported)
-
-			// Loop through project modules searching for `imported`
-			for _, parsedModules := range st.parsedModulesByDocument {
-
-				if !parsedModules.HasExplicitlyImportedModules(mpath) {
-					continue
-				}
-
-				moduleOption := st.findTypeInModules(typeContext.vType)
-				if moduleOption.IsSome() {
-					// Found in same file! Fix it
-					typeContext.vType.SetModule(moduleOption.Get())
-					typeContext.Solve()
-				}
-
-			}
-		}
-		// Not found! Keep it registered as pending
-	} else {
-		moduleOption := st.findTypeInModules(typeContext.vType)
-		if moduleOption.IsSome() {
-			// Found in same file! Fix it
-			typeContext.vType.SetModule(moduleOption.Get())
-			typeContext.Solve()
-		}
-	}
+// typeResolutionLookup caches, for a single resolveTypes pass, which module
+// owns each symbol name and whether an imported module path exists.
+type typeResolutionLookup struct {
+	moduleBySymbolName map[string]string
+	importFound        map[string]bool
 }
 
-func (st *SymbolsTable) findTypeInModules(vType *symbols.Type) option.Option[string] {
-	vTypeName := vType.GetName()
+func (st *SymbolsTable) newTypeResolutionLookup() *typeResolutionLookup {
+	lookup := &typeResolutionLookup{
+		moduleBySymbolName: make(map[string]string),
+		importFound:        make(map[string]bool),
+	}
+
 	for _, parsedModules := range st.parsedModulesByDocument {
 		// Use ModuleIds() to cheaply copy the slice of module names
 		// Using Modules() appears to lead to expensive clones
@@ -121,15 +105,54 @@ func (st *SymbolsTable) findTypeInModules(vType *symbols.Type) option.Option[str
 			// Use ChildrenNames() since we are only comparing names
 			// Avoid expensive cloning of children
 			for _, childName := range module.ChildrenNames() {
-				if childName == vTypeName {
-					// Found!
-					return option.Some(module.GetName())
+				if _, exists := lookup.moduleBySymbolName[childName]; !exists {
+					lookup.moduleBySymbolName[childName] = module.GetName()
 				}
 			}
 		}
 	}
 
-	return option.None[string]()
+	return lookup
+}
+
+func (st *SymbolsTable) isImportedModuleRegistered(imported string, lookup *typeResolutionLookup) bool {
+	if found, cached := lookup.importFound[imported]; cached {
+		return found
+	}
+
+	mpath := symbols.NewModulePathFromString(imported)
+	found := false
+	for _, parsedModules := range st.parsedModulesByDocument {
+		if parsedModules.HasExplicitlyImportedModules(mpath) {
+			found = true
+			break
+		}
+	}
+	lookup.importFound[imported] = found
+
+	return found
+}
+
+func (st *SymbolsTable) tryToSolveType(typeContext *PendingTypeContext, moduleName string, lookup *typeResolutionLookup) {
+	if len(typeContext.contextModule.Imports) > 0 {
+		// Only search when at least one imported module is registered.
+		importRegistered := false
+		for _, imported := range typeContext.contextModule.Imports {
+			if st.isImportedModuleRegistered(imported, lookup) {
+				importRegistered = true
+				break
+			}
+		}
+		if !importRegistered {
+			// Not found! Keep it registered as pending
+			return
+		}
+	}
+
+	if owner, ok := lookup.moduleBySymbolName[typeContext.vType.GetName()]; ok {
+		typeContext.vType.SetModule(owner)
+		typeContext.Solve()
+	}
 }
 
 // Resolves inline sub structs

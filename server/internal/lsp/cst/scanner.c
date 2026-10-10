@@ -244,6 +244,24 @@ static bool scan_real_literal(TSLexer *lexer) {
 
 bool tree_sitter_c3_external_scanner_scan(void *payload, TSLexer *lexer,
                                           const bool *valid_symbols) {
+  // During error recovery tree-sitter marks every external token as valid.
+  // Comment tokens are only meaningful after an opening '/*' or '<*', so
+  // scanning them here would swallow the rest of the file as comment text.
+  bool error_recovery = valid_symbols[BLOCK_COMMENT_TEXT] &&
+                        valid_symbols[BLOCK_COMMENT_END_OR_EOF] &&
+                        valid_symbols[DOC_COMMENT_TEXT] &&
+                        valid_symbols[REAL_LITERAL];
+  if (error_recovery) {
+    while (is_whitespace(lexer->lookahead)) {
+      lexer->advance(lexer, true);
+    }
+    if (scan_real_literal(lexer)) {
+      lexer->result_symbol = REAL_LITERAL;
+      return true;
+    }
+    return false;
+  }
+
   if (valid_symbols[BLOCK_COMMENT_TEXT] && scan_block_comment_text(lexer)) {
     lexer->result_symbol = BLOCK_COMMENT_TEXT;
     return true;

@@ -299,8 +299,9 @@ func TestParse_struct_subtyping_members_should_be_flagged(t *testing.T) {
 		symbols, _ := parser.ParseSymbols(&doc)
 		module := symbols.Get("x")
 
+		// Error recovery keeps the struct even with an incomplete member.
 		_, ok := module.Structs["ImportantPerson"]
-		assert.False(t, ok)
+		assert.True(t, ok)
 	})
 }
 
