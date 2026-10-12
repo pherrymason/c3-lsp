@@ -173,6 +173,7 @@ func loadStdlibFromCache(logger commonlog.Logger, version string) ([]symbols_tab
 		docId := entry.DocId
 		um := symbols_table.NewParsedModules(&docId)
 		for _, mod := range entry.Modules {
+			mod.RebuildAfterDeserialization()
 			um.RegisterModule(mod)
 		}
 		result = append(result, um)
