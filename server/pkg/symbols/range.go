@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sitter "github.com/tree-sitter/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
+	sitter "github.com/tree-sitter/go-tree-sitter"
 )
 
 type Range struct {

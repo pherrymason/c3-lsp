@@ -1,8 +1,11 @@
 package stdlib
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -22,8 +25,8 @@ var detectedC3Version string
 
 // In-memory stdlib cache to avoid re-indexing on every LSP restart.
 var (
-	memCacheMu     sync.RWMutex
-	memCache       = make(map[string][]symbols_table.UnitModules)
+	memCacheMu sync.RWMutex
+	memCache   = make(map[string][]symbols_table.UnitModules)
 )
 
 // SetC3CLibPath sets the global C3C library path and detects the installed version
@@ -119,10 +122,32 @@ type StdlibFileEntry struct {
 	Modules []*symbols.Module `json:"modules"`
 }
 
+// stdlibCacheFormatVersion must be bumped whenever the serialized symbol
+// format changes, so caches written by older builds are discarded.
+const stdlibCacheFormatVersion = 2
+
 // StdlibCache is the disk-cache representation for a stdlib version.
 type StdlibCache struct {
-	Version string             `json:"version"`
-	Files   []StdlibFileEntry  `json:"files"`
+	Version       string            `json:"version"`
+	FormatVersion int               `json:"formatVersion"`
+	Fingerprint   string            `json:"fingerprint"`
+	Files         []StdlibFileEntry `json:"files"`
+}
+
+// stdlibCacheFingerprint identifies what produced a cache: the LSP executable
+// (whose embedded grammar/parser determine the indexed symbols) and the stdlib
+// location. A cache with a different fingerprint is rebuilt from source.
+func stdlibCacheFingerprint(c3cLibPath string) string {
+	hash := sha256.New()
+	if executable, err := os.Executable(); err == nil {
+		if file, err := os.Open(executable); err == nil {
+			_, _ = io.Copy(hash, file)
+			file.Close()
+		}
+	}
+	hash.Write([]byte(fs.GetCanonicalPath(c3cLibPath)))
+
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // GetStdlibCachePath returns the path where stdlib cache files are stored.
@@ -148,7 +173,7 @@ func GetStdlibCacheFile(version string) (string, error) {
 }
 
 // loadStdlibFromCache attempts to load stdlib UnitModules from the disk cache.
-func loadStdlibFromCache(logger commonlog.Logger, version string) ([]symbols_table.UnitModules, error) {
+func loadStdlibFromCache(logger commonlog.Logger, version string, fingerprint string) ([]symbols_table.UnitModules, error) {
 	cacheFile, err := GetStdlibCacheFile(version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cache file path: %w", err)
@@ -168,6 +193,14 @@ func loadStdlibFromCache(logger commonlog.Logger, version string) ([]symbols_tab
 		return nil, fmt.Errorf("cache version mismatch: expected %s, got %s", version, cache.Version)
 	}
 
+	if cache.FormatVersion != stdlibCacheFormatVersion {
+		return nil, fmt.Errorf("cache format mismatch: expected %d, got %d", stdlibCacheFormatVersion, cache.FormatVersion)
+	}
+
+	if cache.Fingerprint != fingerprint {
+		return nil, fmt.Errorf("cache fingerprint mismatch: built by a different c3-lsp binary or stdlib path")
+	}
+
 	var result []symbols_table.UnitModules
 	for _, entry := range cache.Files {
 		docId := entry.DocId
@@ -184,7 +217,7 @@ func loadStdlibFromCache(logger commonlog.Logger, version string) ([]symbols_tab
 }
 
 // saveStdlibToCache saves stdlib UnitModules to the disk cache.
-func saveStdlibToCache(logger commonlog.Logger, version string, unitModules []symbols_table.UnitModules) error {
+func saveStdlibToCache(logger commonlog.Logger, version string, fingerprint string, unitModules []symbols_table.UnitModules) error {
 	cacheFile, err := GetStdlibCacheFile(version)
 	if err != nil {
 		return fmt.Errorf("failed to get cache file path: %w", err)
@@ -199,8 +232,10 @@ func saveStdlibToCache(logger commonlog.Logger, version string, unitModules []sy
 	}
 
 	cache := StdlibCache{
-		Version: version,
-		Files:   entries,
+		Version:       version,
+		FormatVersion: stdlibCacheFormatVersion,
+		Fingerprint:   fingerprint,
+		Files:         entries,
 	}
 
 	data, err := json.Marshal(cache)
@@ -230,7 +265,8 @@ func LoadOrBuildStdlibByFile(logger commonlog.Logger, version string, c3cLibPath
 	memCacheMu.RUnlock()
 
 	// 2. Disk cache
-	if modules, err := loadStdlibFromCache(logger, version); err == nil {
+	fingerprint := stdlibCacheFingerprint(c3cLibPath)
+	if modules, err := loadStdlibFromCache(logger, version, fingerprint); err == nil {
 		memCacheMu.Lock()
 		memCache[version] = modules
 		memCacheMu.Unlock()
@@ -251,7 +287,7 @@ func LoadOrBuildStdlibByFile(logger commonlog.Logger, version string, c3cLibPath
 	memCacheMu.Unlock()
 
 	// Persist to disk
-	if err := saveStdlibToCache(logger, version, modules); err != nil {
+	if err := saveStdlibToCache(logger, version, fingerprint, modules); err != nil {
 		logger.Warningf("Failed to save stdlib cache: %v", err)
 	}
 
