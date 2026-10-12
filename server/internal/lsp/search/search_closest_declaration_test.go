@@ -457,6 +457,45 @@ func TestLanguage_findClosestSymbolDeclaration_enums(t *testing.T) {
 		assert.True(t, ok, fmt.Sprintf("The symbol is not a method, %s was found", reflect.TypeOf(symbolOption.Get())))
 		assert.Equal(t, "WindowStatus.isOpen", symbolOption.Get().GetName())
 	})
+
+	t.Run("Should find inferred enumerator defined in another file of the same module", func(t *testing.T) {
+		state := NewTestState()
+		state.registerDoc("status.c3", `module app;
+			enum WindowStatus { OPEN, BACKGROUND, MINIMIZED }`)
+
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`module app;
+			fn void main() {
+				WindowStatus status = BACK|||GROUND;
+			}`,
+			state,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Enumerator)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "BACKGROUND", symbolOption.Get().GetName())
+	})
+
+	t.Run("Should find inferred constdef constant defined in an imported module", func(t *testing.T) {
+		state := NewTestState()
+		state.registerDoc("opt.c3", `module ui;
+			constdef Opt : inline int { ALIGNCENTER = 1 << 0, ALIGNRIGHT = 1 << 1 }`)
+
+		symbolOption := SearchUnderCursor_ClosestDecl(
+			`module app;
+			import ui;
+			fn void main() {
+				ui::Opt opt = ALIGN|||RIGHT;
+			}`,
+			state,
+		)
+
+		assert.False(t, symbolOption.IsNone(), "Element not found")
+		_, ok := symbolOption.Get().(*idx.Enumerator)
+		assert.True(t, ok, fmt.Sprintf("The symbol is not an enumerator, %s was found", reflect.TypeOf(symbolOption.Get())))
+		assert.Equal(t, "ALIGNRIGHT", symbolOption.Get().GetName())
+	})
 }
 
 func TestLanguage_findClosestSymbolDeclaration_faults(t *testing.T) {

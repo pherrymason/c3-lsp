@@ -50,6 +50,17 @@ func findDeepFirst(identifier string, position symbols.Position, node symbols.In
 				return child, depth
 			}
 		}
+		// Enum/constdef values can be used unqualified (inferred), so they are
+		// reachable from the module root too.
+		for _, child := range node.Children() {
+			if enum, ok := child.(*symbols.Enum); ok {
+				for _, enumerator := range enum.GetEnumerators() {
+					if enumerator.GetName() == identifier {
+						return enumerator, depth + 1
+					}
+				}
+			}
+		}
 	}
 
 	// All elements found in nestable symbols checked, check node itself
