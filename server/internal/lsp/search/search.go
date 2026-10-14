@@ -293,6 +293,7 @@ func (self Search) findClosestSymbolDeclaration(searchParams search_params.Searc
 // Search symbols inside a given module
 func (l *Search) findSymbolDeclarationInModule(searchParams search_params.SearchParams, moduleToSearch symbols.ModulePath, projState *project_state.ProjectState, debugger FindDebugger) SearchResult {
 	searchResult := NewSearchResult(searchParams.TrackTraversedModules())
+	canTraverse := newModuleTraversalGate(&searchParams)
 
 	for docId, modulesByDoc := range projState.GetAllUnitModules() {
 		//for _, scope := range modulesByDoc.GetLoadableModules(searchParams.ModulePathInCursor()) {
@@ -303,7 +304,7 @@ func (l *Search) findSymbolDeclarationInModule(searchParams search_params.Search
 			//	continue
 			//}
 
-			if !searchParams.TrackTraversedModule(scope.GetModuleString()) {
+			if !canTraverse(scope.GetModuleString()) {
 				continue
 			}
 			l.debug(fmt.Sprintf("findSymbolDeclarationInModule: search symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
@@ -333,11 +334,12 @@ func (l *Search) strictFindSymbolDeclarationInModule(searchParams search_params.
 		identifier symbols.Indexable
 		score      int
 	}{}
+	canTraverse := newModuleTraversalGate(&searchParams)
 
 	for docId, modulesByDoc := range projState.GetAllUnitModules() {
 		for _, scope := range modulesByDoc.GetLoadableModules(moduleToSearch) {
 			searchResult.TrackTraversedModule(scope.GetModuleString())
-			if !searchParams.TrackTraversedModule(scope.GetModuleString()) {
+			if !canTraverse(scope.GetModuleString()) {
 				continue
 			}
 			l.debug(fmt.Sprintf("strictFindSymbolDeclarationInModule: search symbols in module \"%s\" file \"%s\"", scope.GetModuleString(), docId), debugger)
@@ -385,6 +387,24 @@ func (l *Search) strictFindSymbolDeclarationInModule(searchParams search_params.
 
 	searchResult.Set(results[0].identifier)
 	return searchResult
+}
+
+// newModuleTraversalGate decides once per module name whether it may be
+// traversed. A module can span several files (the stdlib splits most modules
+// across files), so every file of an allowed module must be searched instead
+// of only the first ones the map iteration happens to visit.
+func newModuleTraversalGate(searchParams *search_params.SearchParams) func(string) bool {
+	decided := make(map[string]bool)
+
+	return func(module string) bool {
+		if allowed, ok := decided[module]; ok {
+			return allowed
+		}
+		allowed := searchParams.TrackTraversedModule(module)
+		decided[module] = allowed
+
+		return allowed
+	}
 }
 
 func (l Search) findModuleNameInTraversedModules(searchParams search_params.SearchParams, traversedModules map[string]bool, projState *project_state.ProjectState) []*symbols.Module {

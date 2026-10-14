@@ -5,6 +5,7 @@ enum TokenType {
   BLOCK_COMMENT_END_OR_EOF,
   DOC_COMMENT_TEXT,
   REAL_LITERAL,
+  ERROR_SENTINEL,
 };
 
 void *tree_sitter_c3_external_scanner_create() { return NULL; }
@@ -244,6 +245,12 @@ static bool scan_real_literal(TSLexer *lexer) {
 
 bool tree_sitter_c3_external_scanner_scan(void *payload, TSLexer *lexer,
                                           const bool *valid_symbols) {
+  // Bail out when tree-sitter is in error-recovery mode 
+  // See https://tree-sitter.github.io/tree-sitter/creating-parsers/4-external-scanners.html#other-external-scanner-details
+  if (valid_symbols[ERROR_SENTINEL]) {
+    return false;
+  }
+
   if (valid_symbols[BLOCK_COMMENT_TEXT] && scan_block_comment_text(lexer)) {
     lexer->result_symbol = BLOCK_COMMENT_TEXT;
     return true;

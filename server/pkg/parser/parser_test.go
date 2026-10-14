@@ -357,6 +357,44 @@ func TestParses_UnTypedEnums(t *testing.T) {
 	})
 }
 
+func TestParses_Constdef(t *testing.T) {
+	docId := "doc"
+	source := `<*
+		abc
+	*>
+	constdef Opt : inline int @constinit
+	{
+		ALIGNCENTER = 1 << 0,
+		ALIGNRIGHT = 1 << 1,
+		ALIGNBOTH = Opt.ALIGNCENTER | Opt.ALIGNRIGHT,
+	}`
+	doc := document.NewDocument(docId, source)
+	parser := createParser()
+
+	t.Run("finds Opt constdef identifier", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		scope := symbols.Get("doc")
+
+		assert.NotNil(t, scope.Enums["Opt"])
+		assert.Equal(t, "Opt", scope.Enums["Opt"].GetName())
+		assert.Equal(t, "int", scope.Enums["Opt"].GetType())
+		assert.Equal(t, findRange(source, "Opt"), scope.Enums["Opt"].GetIdRange())
+		assert.Equal(t, "abc", scope.Enums["Opt"].GetDocComment().GetBody())
+	})
+
+	t.Run("finds defined constants", func(t *testing.T) {
+		symbols, _ := parser.ParseSymbols(&doc)
+
+		enum := symbols.Get("doc").Enums["Opt"]
+		for _, name := range []string{"ALIGNCENTER", "ALIGNRIGHT", "ALIGNBOTH"} {
+			e := enum.GetEnumerator(name)
+			assert.Equal(t, name, e.GetName())
+			assert.Equal(t, findRange(source, name), e.GetIdRange())
+		}
+	})
+}
+
 func TestParse_fault(t *testing.T) {
 	docId := "doc"
 	source := `<* docs *>

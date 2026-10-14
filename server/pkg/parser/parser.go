@@ -138,7 +138,9 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 					function.SetDocComment(p.extractDocComment(&c.Node, sourceCode))
 				}
 
-			case "enum_declaration":
+			// constdef (C3 0.8) shares enum_spec/enum_body with enums and its
+			// constants are accessed the same way (Type.NAME), so index it as an enum.
+			case "enum_declaration", "constdef_declaration":
 				enum := p.nodeToEnum(&c.Node, moduleSymbol, &doc.URI, sourceCode)
 				moduleSymbol.AddEnum(&enum)
 				enum.SetDocComment(p.extractDocComment(&c.Node, sourceCode))
@@ -194,8 +196,8 @@ func (p *Parser) ParseSymbols(doc *document.Document) (symbols_table.UnitModules
 					macro.SetDocComment(p.extractDocComment(&c.Node, sourceCode))
 				}
 
-			case "constdef_dec", "attrdef_dec":
-				// new 0.8 declarations — not yet handled, skip
+			case "attrdef_declaration":
+				// new 0.8 declaration — not yet handled, skip
 
 			default:
 				continue
