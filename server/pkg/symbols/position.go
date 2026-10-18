@@ -4,8 +4,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	sitter "github.com/tree-sitter/go-tree-sitter"
 	protocol "github.com/tliron/glsp/protocol_3_16"
+	sitter "github.com/tree-sitter/go-tree-sitter"
 )
 
 type Position struct {

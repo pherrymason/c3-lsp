@@ -47,15 +47,74 @@ func (m *Module) RebuildAfterDeserialization() {
 	// The parser inserts children in source order; maps lose it.
 	sortBySourcePosition(children)
 	for _, child := range children {
-		if r, ok := child.(modulePathRebuilder); ok {
-			r.ReconstructModulePath()
-		}
+		rebuildSymbolAfterDeserialization(child)
 		m.Insert(child)
 	}
 
 	for _, fn := range m.ChildrenFunctions {
 		fn.rebuildAfterDeserialization()
 		m.InsertNestedScope(fn)
+	}
+}
+
+// rebuildSymbolAfterDeserialization mirrors the Insert/InsertNestedScope calls
+// done by each symbol constructor, so the rebuilt tree matches a fresh parse.
+func rebuildSymbolAfterDeserialization(symbol Indexable) {
+	if r, ok := symbol.(modulePathRebuilder); ok {
+		r.ReconstructModulePath()
+	}
+
+	switch s := symbol.(type) {
+	case *Enum:
+		s.resetDerivedIndexes()
+		for _, enumerator := range s.enumerators {
+			rebuildSymbolAfterDeserialization(enumerator)
+			s.Insert(enumerator)
+		}
+	case *Enumerator:
+		s.resetDerivedIndexes()
+		for i := range s.AssociatedValues {
+			s.AssociatedValues[i].ReconstructModulePath()
+			s.InsertNestedScope(&s.AssociatedValues[i])
+		}
+	case *Struct:
+		s.resetDerivedIndexes()
+		for _, member := range s.members {
+			rebuildSymbolAfterDeserialization(member)
+			s.Insert(member)
+		}
+	case *StructMember:
+		s.resetDerivedIndexes()
+		if s.subStruct.IsSome() {
+			subStruct := s.subStruct.Get()
+			rebuildSymbolAfterDeserialization(subStruct)
+			s.Insert(subStruct)
+		}
+	case *Bitstruct:
+		s.resetDerivedIndexes()
+		for _, member := range s.members {
+			rebuildSymbolAfterDeserialization(member)
+			s.Insert(member)
+		}
+	case *Fault:
+		s.resetDerivedIndexes()
+		for _, constant := range s.constants {
+			rebuildSymbolAfterDeserialization(constant)
+			s.Insert(constant)
+		}
+	case *Interface:
+		s.resetDerivedIndexes()
+		methods := make([]Indexable, 0, len(s.methods))
+		for _, method := range s.methods {
+			methods = append(methods, method)
+		}
+		sortBySourcePosition(methods)
+		for _, method := range methods {
+			method.(*Function).rebuildAfterDeserialization()
+			s.Insert(method)
+		}
+	case *Function:
+		s.rebuildAfterDeserialization()
 	}
 }
 
